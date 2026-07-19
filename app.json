@@ -1,16 +1,17 @@
 {
   "expo": {
-    "name": "meetpr-rn",
-    "slug": "meetpr-rn",
-    "version": "1.0.0",
+    "name": "MeetPR",
+    "slug": "meetpr",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "meetprrn",
+    "scheme": "meetpr",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.meetpr.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
