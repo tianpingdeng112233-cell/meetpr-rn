@@ -17,6 +17,7 @@
 
 | 功能区 | 状态 | 备注 |
 |---|---|---|
+| Analytics 客户端 + 隐私告知 | 🔨 | W1-c 第 2 轮返修;网络恢复 flush、隐私显隐与 config 解耦、存储 token 请求头、413 毒事件持久隔离均已补齐;lint/tsc/Jest 通过,待互审收货 |
 | Onboarding | ☐ | |
 | Bind | ☐ | |
 | Dashboard(含 e1RM 图) | ☐ | 口径按 spec 050 |
