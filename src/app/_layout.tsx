@@ -1,7 +1,15 @@
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+import {
+  AnalyticsEvent,
+  configure,
+  flushNow,
+  isPrivacyNoticeConfirmed,
+  PrivacyNoticeSheet,
+  track,
+} from '@/analytics';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
 import { colors } from '@/design';
@@ -53,16 +61,42 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const bootstrap = useSessionStore((state) => state.bootstrap);
+  const [privacyNoticeVisible, setPrivacyNoticeVisible] = useState(false);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    let mounted = true;
+    void isPrivacyNoticeConfirmed()
+      .then((confirmed) => {
+        if (!mounted) {
+          return;
+        }
+        setPrivacyNoticeVisible(!confirmed);
+      })
+      .catch(() => undefined);
+
+    void configure()
+      .then(() => track(AnalyticsEvent.AppOpen, { cold: true }))
+      .then(() => flushNow())
+      .catch(() => undefined);
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <QueryProvider>
       <ThemeProvider value={meetPrDarkTheme}>
         <StatusBar style="light" />
         <RootNavigator />
+        <PrivacyNoticeSheet
+          onConfirmed={() => setPrivacyNoticeVisible(false)}
+          visible={privacyNoticeVisible}
+        />
       </ThemeProvider>
     </QueryProvider>
   );
