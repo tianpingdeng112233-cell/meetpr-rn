@@ -22,6 +22,10 @@ export type SessionStatus = 'anonymous' | 'authenticating' | 'authenticated';
 type SessionStore = {
   status: SessionStatus;
   user: User | null;
+  authenticationError: unknown | null;
+  /** False until the cold-start bootstrap has settled — routing must show the
+   * loading screen (not the login screen) before then. */
+  bootstrapped: boolean;
   bootstrap: () => Promise<void>;
   login: (input: LoginRequest) => Promise<User>;
   register: (input: RegisterRequest) => Promise<User>;
@@ -221,7 +225,11 @@ async function authenticate(
 ): Promise<User> {
   cancelRefresh();
   const capturedGeneration = ++generation;
-  useSessionStore.setState({ status: 'authenticating', user: null });
+  useSessionStore.setState({
+    status: 'authenticating',
+    user: null,
+    authenticationError: null,
+  });
   try {
     // Drop any previous account's credentials before the login round-trip so a
     // same-generation refresh cannot rotate the old account's tokens underneath
@@ -234,12 +242,20 @@ async function authenticate(
     const response = await operation();
     const user = await persistAuthenticatedResponse(response, capturedGeneration);
     if (capturedGeneration === generation) {
-      useSessionStore.setState({ status: 'authenticated', user });
+      useSessionStore.setState({
+        status: 'authenticated',
+        user,
+        authenticationError: null,
+      });
     }
     return user;
   } catch (error) {
     if (capturedGeneration === generation) {
-      useSessionStore.setState({ status: 'anonymous', user: null });
+      useSessionStore.setState({
+        status: 'anonymous',
+        user: null,
+        authenticationError: error,
+      });
     }
     throw error;
   }
@@ -248,14 +264,37 @@ async function authenticate(
 export const useSessionStore = create<SessionStore>((set, get) => ({
   status: 'anonymous',
   user: null,
+  authenticationError: null,
+  bootstrapped: false,
 
   bootstrap: async () => {
-    if (get().status !== 'anonymous') {
+    if (get().status !== 'anonymous' || get().bootstrapped) {
       return;
     }
+    try {
+      await runBootstrap(set);
+    } finally {
+      set({ bootstrapped: true });
+    }
+  },
 
+  login: (input) => authenticate(() => loginRequest(input)),
+  register: (input) => authenticate(() => registerRequest(input)),
+
+  logout: async () => {
+    ++generation;
+    cancelRefresh();
+    set({ status: 'anonymous', user: null, authenticationError: null });
+    await queueCredentialMutation(tokenStore.clearSession);
+  },
+}));
+
+async function runBootstrap(
+  set: (partial: Partial<SessionStore>) => void,
+): Promise<void> {
+  {
     const capturedGeneration = generation;
-    set({ status: 'authenticating', user: null });
+    set({ status: 'authenticating', user: null, authenticationError: null });
     let storedRefreshToken: string | null = null;
     let cachedUser: User | null = null;
     try {
@@ -310,18 +349,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
         set({ status: 'anonymous', user: null });
       }
     }
-  },
-
-  login: (input) => authenticate(() => loginRequest(input)),
-  register: (input) => authenticate(() => registerRequest(input)),
-
-  logout: async () => {
-    ++generation;
-    cancelRefresh();
-    set({ status: 'anonymous', user: null });
-    await queueCredentialMutation(tokenStore.clearSession);
-  },
-}));
+  }
+}
 
 export async function authenticatedRequest<T = unknown>(
   path: string,
@@ -387,5 +416,10 @@ export function resetSessionForTests(): void {
   cancelRefresh();
   generation = 0;
   credentialMutationQueue = Promise.resolve();
-  useSessionStore.setState({ status: 'anonymous', user: null });
+  useSessionStore.setState({
+    status: 'anonymous',
+    user: null,
+    authenticationError: null,
+    bootstrapped: false,
+  });
 }

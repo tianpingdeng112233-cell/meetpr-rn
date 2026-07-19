@@ -8,10 +8,10 @@
 
 | 项 | 状态 | 备注 |
 |---|---|---|
-| 设计 tokens 主题包 | 🔨 | W0-A:dark-only tokens + Screen/Card/AppButton/ListRow;lint+tsc 通过 |
-| API client + auth 全链 | 🔨 | W0-B 已实装并以 mock 单测验收;staging 冒烟留待联网/模拟器出口验收 |
-| 导航骨架 + BindGate(评估封存照抄) | ☐ | 学员/教练两套 tab |
-| CI(ubuntu) | ☐ | lint+tsc+jest+assembleDebug |
+| 设计 tokens 主题包 | ✅ | W0-A;模拟器冒烟走查通过(2026-07-19) |
+| API client + auth 全链 | ✅ | W0-B;staging 真登录/登出冒烟通过;⚠️后端响应 camelCase 已勘误进参照包 |
+| 导航骨架 + BindGate(评估封存照抄) | ✅ | W0-C;教练 5 tab/学员 4 tab/登出模拟器实测 |
+| CI(ubuntu) | ✅ | lint+tsc+jest+assembleDebug,APK artifact 7 天 |
 
 ## 学员端(W1)
 
@@ -58,6 +58,7 @@
 | 项 | 状态 | 备注 |
 |---|---|---|
 | 真机矩阵(David 的安卓机 + 小米/华为抽查) | ☐ | |
+| 品牌资产(App icon/adaptive icon/启动屏) | ☐ | 现为占位;需 David 出设计,分发一级前替换 |
 | release keystore(密码入 Bitwarden) | ☐ | 定稿后终身不换 |
 | app 内自更新检查 | ☐ | 无商店必做 |
 | 海外下载页 + APK 分发一级 | ☐ | Cloudflare Pages/R2 |

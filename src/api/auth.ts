@@ -15,12 +15,32 @@ export const UserRoleSchema = z.enum([
   'self_train_student',
 ]);
 
-export const UserSchema = z.object({
-  id: z.string().uuid(),
-  phone: z.string(),
-  role: UserRoleSchema,
-  created_at: Iso8601DateTimeSchema,
-});
+// The backend responds in camelCase while requests are accepted in snake_case;
+// iOS's convertFromSnakeCase decoder tolerates both, so we must too.
+function tolerateCamelCase(aliases: Record<string, string>) {
+  return (value: unknown): unknown => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      return value;
+    }
+    const record = { ...(value as Record<string, unknown>) };
+    for (const [snake, camel] of Object.entries(aliases)) {
+      if (record[snake] === undefined && record[camel] !== undefined) {
+        record[snake] = record[camel];
+      }
+    }
+    return record;
+  };
+}
+
+export const UserSchema = z.preprocess(
+  tolerateCamelCase({ created_at: 'createdAt' }),
+  z.object({
+    id: z.string().uuid(),
+    phone: z.string(),
+    role: UserRoleSchema,
+    created_at: Iso8601DateTimeSchema,
+  }),
+);
 
 export const RegisterRequestSchema = z.object({
   phone: z.string(),
@@ -37,16 +57,22 @@ export const RefreshRequestSchema = z.object({
   refresh_token: z.string(),
 });
 
-export const AuthResponseSchema = z.object({
-  user: UserSchema,
-  access_token: z.string(),
-  refresh_token: z.string(),
-});
+export const AuthResponseSchema = z.preprocess(
+  tolerateCamelCase({ access_token: 'accessToken', refresh_token: 'refreshToken' }),
+  z.object({
+    user: UserSchema,
+    access_token: z.string(),
+    refresh_token: z.string(),
+  }),
+);
 
-export const RefreshResponseSchema = z.object({
-  access_token: z.string(),
-  refresh_token: z.string(),
-});
+export const RefreshResponseSchema = z.preprocess(
+  tolerateCamelCase({ access_token: 'accessToken', refresh_token: 'refreshToken' }),
+  z.object({
+    access_token: z.string(),
+    refresh_token: z.string(),
+  }),
+);
 
 export type UserRole = z.infer<typeof UserRoleSchema>;
 export type User = z.infer<typeof UserSchema>;
