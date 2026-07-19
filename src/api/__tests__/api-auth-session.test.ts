@@ -99,7 +99,7 @@ describe('API error classification', () => {
       mockResponse(400, {
         error: 'VALIDATION_ERROR',
         missing_fields: ['phone'],
-        issues: [{ path: ['phone'], message: 'Required' }],
+        issues: [{ path: ['parts', 0, 'etag'], message: 'Required' }],
       }),
     );
 
@@ -107,9 +107,25 @@ describe('API error classification', () => {
       kind: 'backend',
       status: 400,
       code: 'VALIDATION_ERROR',
-      envelope: { missing_fields: ['phone'] },
+      envelope: {
+        missing_fields: ['phone'],
+        issues: [{ path: ['parts', 0, 'etag'], message: 'Required' }],
+      },
     });
   });
+
+  test.each(['BIND_REQUEST_NOT_FOUND', 'ATTACHMENT_NOT_FOUND'] as const)(
+    'classifies %s as a known backend error',
+    async (code) => {
+      jest.mocked(fetch).mockResolvedValueOnce(mockResponse(404, { error: code }));
+
+      await expect(apiRequest('/missing-resource')).rejects.toMatchObject({
+        kind: 'backend',
+        status: 404,
+        code,
+      });
+    },
+  );
 
   test('classifies an envelope-free 5xx response as server', async () => {
     jest.mocked(fetch).mockResolvedValueOnce(mockResponse(503, '<html>down</html>'));
