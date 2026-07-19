@@ -23,10 +23,10 @@
 | Onboarding | ☐ | |
 | Bind | ☐ | |
 | Dashboard(含 e1RM 图) | ☐ | 口径按 spec 050 |
-| TodayWorkout | ☐ | 组卡/RPE/RIR/教练备注 |
+| TodayWorkout | 🔨 | W1-d;周/月日历、计划×日志草稿、组卡/录入、RPE 建议/RIR、休息计时、回顾/PR、视频 stub;定向返修已收 raw/competition metadata seam、未解析跳过 e1RM、per-day 回顾隔离、e1RM 活更新、04:00 切点重校验及 tab 埋点;待模拟器走查对齐 |
 | WeekOverview | ☐ | |
 | TrainingHistory | ☐ | |
-| Readiness | ☐ | |
+| Readiness | 🔨 | W1-d;训练 tab opt-in 两步 sheet、per-day skip、心形完成态;待模拟器走查对齐 |
 | FeedbackInbox | ☐ | |
 | VideoUpload | ☐ | 选片+压缩+OSS 分片 |
 | MyProfile | ☐ | |
