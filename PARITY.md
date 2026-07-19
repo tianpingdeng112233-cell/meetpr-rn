@@ -22,12 +22,12 @@
 | Analytics 客户端 + 隐私告知 | 🔨 | W1-c;队列/采样同构/session 轮换/413 两振隔离/隐私门根接线;互审 14 BLOCKER 已修收敛 |
 | Onboarding | ☐ | |
 | Bind | ☐ | |
-| Dashboard(含 e1RM 图) | ☐ | 口径按 spec 050 |
+| Dashboard(含 e1RM 图) | 🔨 | W1-f;定向返修收敛:e1RM 自 1970 且沿用 plan 默认 scope/catalog×profile 仅降级主项解析,不连坐周计划与资料区独立重试;GrowthCurve 入口暂为占位,待 W3 图表走查 |
 | TodayWorkout | 🔨 | W1-d;周/月日历、计划×日志草稿、组卡/录入、RPE 建议/RIR、休息计时、回顾/PR、视频 stub;定向返修已收 raw/competition metadata seam、未解析跳过 e1RM、per-day 回顾隔离、e1RM 活更新、04:00 切点重校验及 tab 埋点;待模拟器走查对齐 |
-| WeekOverview | ☐ | |
+| WeekOverview | 🔨 | W1-f;整 cycle 拉取+UTC 周窗过滤,消费 planRevision |
 | TrainingHistory | ☐ | |
 | Readiness | 🔨 | W1-d;训练 tab opt-in 两步 sheet、per-day skip、心形完成态;待模拟器走查对齐 |
-| FeedbackInbox | ☐ | |
+| FeedbackInbox | 🔨 | W1-f;共享 VM/未读计数+Today 内联卡/通知中心已接;成长列表消费接口已留 |
 | VideoUpload | ☐ | 选片+压缩+OSS 分片 |
 | MyProfile | ☐ | |
 | Evaluation | — | 硬封存,不复刻 UI,仅 BindGate 跳过逻辑 |

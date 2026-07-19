@@ -97,6 +97,23 @@ describe('domain repositories through authenticatedRequest', () => {
     });
   });
 
+  test('GETs the dashboard e1RM range without overriding the plan scope default', async () => {
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(200, { logs: [] }));
+
+    await expect(
+      setsRepository.range(STUDENT_ID, {
+        from: '1970-01-01',
+        to: '2026-07-19',
+      }),
+    ).resolves.toEqual({ logs: [] });
+
+    const [url] = jest.mocked(fetch).mock.calls[0];
+    const parsed = new URL(String(url));
+    expect(parsed.searchParams.get('from')).toBe('1970-01-01');
+    expect(parsed.searchParams.get('to')).toBe('2026-07-19');
+    expect(parsed.searchParams.has('scope')).toBe(false);
+  });
+
   test('maps onboarding 404 to the null query empty state', async () => {
     jest.mocked(fetch).mockResolvedValueOnce(
       mockResponse(404, { error: 'ONBOARDING_NOT_FOUND' }),

@@ -4,9 +4,11 @@ import { StyleSheet } from 'react-native';
 
 import { useSessionStore } from '@/api/session';
 import { colors } from '@/design';
+import { useStudentTabsStore } from '@/features/student-tabs';
 import { BindGate } from '@/navigation/BindGate';
 
 function StudentTabs() {
+  const bumpTodayReload = useStudentTabsStore((state) => state.bumpTodayReload);
   return (
     <Tabs
       screenOptions={{
@@ -17,6 +19,7 @@ function StudentTabs() {
       }}>
       <Tabs.Screen
         name="today"
+        listeners={{ tabPress: bumpTodayReload }}
         options={{
           title: '今日',
           tabBarIcon: ({ color, size }) => (
@@ -51,6 +54,7 @@ function StudentTabs() {
           ),
         }}
       />
+      <Tabs.Screen name="growth-curve" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -16,9 +16,9 @@ export const ExerciseSchema = z.object({
   exercise_type: z.string(),
   main_lift_family: z.enum(['squat', 'bench', 'deadlift']).nullable(),
   is_competition_lift: z.boolean(),
-  competition_stance: z
-    .enum(['low_bar', 'high_bar', 'conventional', 'sumo'])
-    .nullable(),
+  // Permissive on purpose: an unknown future stance value must not break
+  // parsing of the whole catalog — the resolver only interprets known values.
+  competition_stance: z.string().nullable(),
   muscle_groups: z.array(z.string()).nullable(),
   equipment: z.array(z.string()).nullable(),
   movement_pattern: z.string().nullable(),
