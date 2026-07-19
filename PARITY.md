@@ -8,7 +8,7 @@
 
 | 项 | 状态 | 备注 |
 |---|---|---|
-| 设计 tokens 主题包 | ☐ | 对照 Modules/DesignSystem |
+| 设计 tokens 主题包 | 🔨 | W0-A:dark-only tokens + Screen/Card/AppButton/ListRow;lint+tsc 通过 |
 | API client + auth 全链 | ☐ | 登录/刷新/登出,staging 冒烟 |
 | 导航骨架 + BindGate(评估封存照抄) | ☐ | 学员/教练两套 tab |
 | CI(ubuntu) | ☐ | lint+tsc+jest+assembleDebug |
