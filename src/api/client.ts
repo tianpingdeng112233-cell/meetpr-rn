@@ -9,10 +9,11 @@ export const API_BASE_URL = (
 const ErrorEnvelopeSchema = z.object({
   error: z.string(),
   missing_fields: z.array(z.string()).optional(),
+  status: z.string().optional(),
   issues: z
     .array(
       z.object({
-        path: z.array(z.string()),
+        path: z.array(z.union([z.string(), z.number()])),
         message: z.string(),
       }),
     )
@@ -22,19 +23,56 @@ const ErrorEnvelopeSchema = z.object({
 export type ErrorEnvelope = z.infer<typeof ErrorEnvelopeSchema>;
 export type ApiErrorKind = 'backend' | 'server' | 'network';
 
-const knownBackendCodes = new Set([
+export const KNOWN_BACKEND_ERROR_CODES = [
   'AUTH_INVALID_CREDENTIALS',
   'AUTH_INVALID_REFRESH',
+  'AUTH_INVALID_TOKEN',
   'AUTH_PHONE_TAKEN',
+  'AUTHORIZATION_FORBIDDEN',
   'RATE_LIMITED',
   'AUTH_REFRESH_EXPIRED',
   'VALIDATION_ERROR',
-]);
+  'PLAN_NOT_FOUND',
+  'PLAN_NOT_ACTIVE',
+  'SHIFT_ONLY_TODAY',
+  'ALREADY_STARTED',
+  'NOT_PLAN_STUDENT',
+  'NO_ACTIVE_SHIFT',
+  'UNDO_WINDOW_PASSED',
+  'SETS_PLAN_EXERCISE_NOT_PUBLISHED',
+  'SETS_EXERCISE_NOT_FOUND',
+  'FEEDBACK_NOT_FOUND',
+  'UPLOADS_NOT_CONFIGURED',
+  'UPLOAD_CONTENT_TYPE_MISMATCH',
+  'UPLOAD_TOO_LARGE',
+  'SET_LOG_NOT_FOUND',
+  'UPLOAD_QUOTA_EXCEEDED',
+  'UPLOAD_INVALID_STATE',
+  'UPLOAD_SIZE_MISMATCH',
+  'UPLOAD_INVALID_PARTS',
+  'UPLOAD_SIZE_VERIFICATION_FAILED',
+  'UPLOAD_ABORT_FAILED',
+  'ATTACHMENT_NOT_FOUND',
+  'ATTACHMENT_NOT_READY',
+  'INVITE_CODE_INVALID',
+  'BIND_REQUEST_ALREADY_PENDING',
+  'BIND_ALREADY_BOUND',
+  'BIND_REQUEST_NOT_FOUND',
+  'BIND_REQUEST_NOT_PENDING',
+  'ONBOARDING_NOT_FOUND',
+  'ONE_RM_LOCKED',
+  'ONBOARDING_INCOMPLETE',
+  'PASSWORD_MISMATCH',
+] as const;
+
+export type ApiErrorCode = (typeof KNOWN_BACKEND_ERROR_CODES)[number];
+
+const knownBackendCodes = new Set<string>(KNOWN_BACKEND_ERROR_CODES);
 
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;
   readonly status?: number;
-  readonly code?: string;
+  readonly code?: ApiErrorCode;
   readonly envelope?: ErrorEnvelope;
   override readonly cause?: unknown;
 
@@ -43,7 +81,7 @@ export class ApiError extends Error {
     message: string,
     options: {
       status?: number;
-      code?: string;
+      code?: ApiErrorCode;
       envelope?: ErrorEnvelope;
       cause?: unknown;
     } = {},
@@ -123,7 +161,7 @@ export async function apiRequest<T = unknown>(
     if (envelopeResult.success && knownBackendCodes.has(envelopeResult.data.error)) {
       throw new ApiError('backend', envelopeResult.data.error, {
         status: response.status,
-        code: envelopeResult.data.error,
+        code: envelopeResult.data.error as ApiErrorCode,
         envelope: envelopeResult.data,
       });
     }
