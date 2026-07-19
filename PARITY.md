@@ -8,10 +8,10 @@
 
 | 项 | 状态 | 备注 |
 |---|---|---|
-| 设计 tokens 主题包 | 🔨 | W0-A:dark-only tokens + Screen/Card/AppButton/ListRow;lint+tsc 通过 |
-| API client + auth 全链 | 🔨 | W0-B 已实装并以 mock 单测验收;staging 冒烟留待联网/模拟器出口验收 |
-| 导航骨架 + BindGate(评估封存照抄) | 🔨 | W0-C:根 session/role 分流、学员 4 tab、教练 5 tab、BindGate stub 骨架;lint+tsc+33 tests+Android 离线 bundle 通过,AVD 待沙箱外走查 |
-| CI(ubuntu) | ☐ | lint+tsc+jest+assembleDebug |
+| 设计 tokens 主题包 | ✅ | W0-A;模拟器冒烟走查通过(2026-07-19) |
+| API client + auth 全链 | ✅ | W0-B;staging 真登录/登出冒烟通过;⚠️后端响应 camelCase 已勘误进参照包 |
+| 导航骨架 + BindGate(评估封存照抄) | ✅ | W0-C;教练 5 tab/学员 4 tab/登出模拟器实测 |
+| CI(ubuntu) | ✅ | lint+tsc+jest+assembleDebug,APK artifact 7 天 |
 
 ## 学员端(W1)
 

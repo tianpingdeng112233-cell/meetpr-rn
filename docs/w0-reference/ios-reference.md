@@ -64,7 +64,9 @@
 | refresh | /auth/refresh | POST | 不带 Authorization |
 | logout | (无) | — | 纯客户端:清 TokenStore + 回登录页,不打后端 |
 
-### 2.2 DTO(线格式 snake_case,日期 ISO8601)
+### 2.2 DTO(请求 snake_case,日期 ISO8601)
+
+> ⚠️ **2026-07-19 实测修正**:auth **响应是 camelCase**(`accessToken`/`refreshToken`/`createdAt`),与本节最初的"全 snake_case"记载不符——iOS 的 `convertFromSnakeCase` 解码器两种命名都容忍,故 iOS 从未暴露此差异。RN 端所有响应 schema 必须同时容忍两种命名(见 `src/api/auth.ts` 的 `tolerateCamelCase`);后续 W1/W2 提取各域 DTO 时,**每个响应形状都要 curl 实测,别信 Swift 属性名的直译**。请求侧照旧发 snake_case。
 
 - **register 请求**:`{phone, password, role}`;role 线值 = `"coach" | "coached_student" | "self_train_student"`
 - **login 请求**:`{phone, password}`

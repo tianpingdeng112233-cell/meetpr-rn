@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
+import { AuthResponseSchema, RefreshResponseSchema } from '../auth';
 import {
   authenticatedRequest,
   getAccessToken,
@@ -47,6 +48,21 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.clearAllMocks();
+});
+
+describe('wire casing tolerance', () => {
+  test('accepts the camelCase auth response the backend actually sends', () => {
+    const auth = AuthResponseSchema.parse({
+      user: { ...cachedUser, created_at: undefined, createdAt: '2026-07-19T12:00:00Z' },
+      accessToken: 'a',
+      refreshToken: 'r',
+    });
+    expect(auth.access_token).toBe('a');
+    expect(auth.user.created_at).toBe('2026-07-19T12:00:00Z');
+
+    const refreshed = RefreshResponseSchema.parse({ accessToken: 'a2', refreshToken: 'r2' });
+    expect(refreshed.refresh_token).toBe('r2');
+  });
 });
 
 describe('session hardening', () => {
