@@ -1,18 +1,69 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { QueryProvider } from '@/api/query';
+import { useSessionStore } from '@/api/session';
+import { colors } from '@/design';
 
-SplashScreen.preventAutoHideAsync();
+const meetPrDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: colors.brandRed,
+    background: colors.bg,
+    card: colors.surface1,
+    text: colors.fgPrimary,
+    border: colors.border,
+  },
+};
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+function RootNavigator() {
+  const status = useSessionStore((state) => state.status);
+  const user = useSessionStore((state) => state.user);
+  const bootstrapped = useSessionStore((state) => state.bootstrapped);
+
+  const isCoach = status === 'authenticated' && user?.role === 'coach';
+  const isStudent =
+    status === 'authenticated' &&
+    (user?.role === 'coached_student' || user?.role === 'self_train_student');
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        contentStyle: { backgroundColor: colors.bg },
+        headerShown: false,
+      }}>
+      <Stack.Screen name="index" />
+      <Stack.Protected guard={!bootstrapped || status === 'authenticating'}>
+        <Stack.Screen name="validating" />
+      </Stack.Protected>
+      <Stack.Protected guard={bootstrapped && status === 'anonymous'}>
+        <Stack.Screen name="login" />
+      </Stack.Protected>
+      <Stack.Protected guard={isCoach}>
+        <Stack.Screen name="(coach)" />
+      </Stack.Protected>
+      <Stack.Protected guard={isStudent}>
+        <Stack.Screen name="(student)" />
+      </Stack.Protected>
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  const bootstrap = useSessionStore((state) => state.bootstrap);
+
+  useEffect(() => {
+    void bootstrap();
+  }, [bootstrap]);
+
+  return (
+    <QueryProvider>
+      <ThemeProvider value={meetPrDarkTheme}>
+        <StatusBar style="light" />
+        <RootNavigator />
+      </ThemeProvider>
+    </QueryProvider>
   );
 }

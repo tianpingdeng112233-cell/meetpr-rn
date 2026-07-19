@@ -10,7 +10,7 @@
 |---|---|---|
 | 设计 tokens 主题包 | 🔨 | W0-A:dark-only tokens + Screen/Card/AppButton/ListRow;lint+tsc 通过 |
 | API client + auth 全链 | 🔨 | W0-B 已实装并以 mock 单测验收;staging 冒烟留待联网/模拟器出口验收 |
-| 导航骨架 + BindGate(评估封存照抄) | ☐ | 学员/教练两套 tab |
+| 导航骨架 + BindGate(评估封存照抄) | 🔨 | W0-C:根 session/role 分流、学员 4 tab、教练 5 tab、BindGate stub 骨架;lint+tsc+33 tests+Android 离线 bundle 通过,AVD 待沙箱外走查 |
 | CI(ubuntu) | ☐ | lint+tsc+jest+assembleDebug |
 
 ## 学员端(W1)
@@ -58,6 +58,7 @@
 | 项 | 状态 | 备注 |
 |---|---|---|
 | 真机矩阵(David 的安卓机 + 小米/华为抽查) | ☐ | |
+| 品牌资产(App icon/adaptive icon/启动屏) | ☐ | 现为占位;需 David 出设计,分发一级前替换 |
 | release keystore(密码入 Bitwarden) | ☐ | 定稿后终身不换 |
 | app 内自更新检查 | ☐ | 无商店必做 |
 | 海外下载页 + APK 分发一级 | ☐ | Cloudflare Pages/R2 |
