@@ -9,7 +9,7 @@
 | 项 | 状态 | 备注 |
 |---|---|---|
 | 设计 tokens 主题包 | ☐ | 对照 Modules/DesignSystem |
-| API client + auth 全链 | ☐ | 登录/刷新/登出,staging 冒烟 |
+| API client + auth 全链 | 🔨 | W0-B 已实装并以 mock 单测验收;staging 冒烟留待联网/模拟器出口验收 |
 | 导航骨架 + BindGate(评估封存照抄) | ☐ | 学员/教练两套 tab |
 | CI(ubuntu) | ☐ | lint+tsc+jest+assembleDebug |
 
