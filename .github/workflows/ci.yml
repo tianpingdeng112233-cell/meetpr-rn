@@ -27,6 +27,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: check
     steps:
+      # The RN android build (incl. react-native-svg native compile) exhausts
+      # the ~14GB free disk on hosted runners and kills the runner mid-gradle.
+      # Drop preinstalled toolchains we never use (~25GB reclaimed).
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk \
+            /usr/share/swift
+          df -h /
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
