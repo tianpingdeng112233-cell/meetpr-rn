@@ -127,13 +127,16 @@ export const onboardingKeys = {
   profile: (studentId: string) => ['onboarding', studentId] as const,
 };
 
-export function useOnboarding(studentId: string) {
+export function useOnboardingProfile(studentId: string) {
   return useQuery({
     queryKey: onboardingKeys.profile(studentId),
     queryFn: () => onboardingRepository.get(studentId),
     enabled: Boolean(studentId),
   });
 }
+
+/** Backward-compatible name for call sites that predate the profile reader. */
+export const useOnboarding = useOnboardingProfile;
 
 export function useUpsertOnboarding() {
   const queryClient = useQueryClient();

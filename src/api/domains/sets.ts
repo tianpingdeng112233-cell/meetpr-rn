@@ -78,7 +78,7 @@ export const SetLogRangeSchema = z
     from: DateTextSchema,
     /** DATE-text upper bound. */
     to: DateTextSchema,
-    scope: z.enum(['plan', 'all']).optional().default('plan'),
+    scope: z.enum(['plan', 'all']).optional(),
   })
   .strict();
 
@@ -123,11 +123,15 @@ export const setKeys = {
     ] as const,
 };
 
-export function useSetLogs(studentId: string, input: SetLogRange) {
+export function useSetLogs(
+  studentId: string,
+  input: SetLogRange,
+  enabled = true,
+) {
   return useQuery({
     queryKey: setKeys.range(studentId, input),
     queryFn: () => setsRepository.range(studentId, input),
-    enabled: Boolean(studentId),
+    enabled: enabled && Boolean(studentId),
   });
 }
 
