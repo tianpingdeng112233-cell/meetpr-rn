@@ -60,8 +60,6 @@ describe('PR boundary semantics', () => {
   });
 
   test('an improvement inside the noise band over an existing record is not a PR', async () => {
-    const repository = new InMemoryE1RMRepository();
-    const recorder = new E1RMRecorder(repository, { idFactory: nextId, now: () => now });
     const base = {
       studentId,
       exerciseId,
@@ -75,7 +73,7 @@ describe('PR boundary semantics', () => {
     // Non-PR points still enter history and raise previousMax, so each edge
     // case gets its own fresh baseline of exactly 100kg.
     // noise band = max(0.5, 100 * 0.03) = 3kg; <= semantics: 103 is NOT a PR.
-    const cases: Array<{ weightKg: number; isPR: boolean }> = [
+    const cases: { weightKg: number; isPR: boolean }[] = [
       { weightKg: 102, isPR: false },
       { weightKg: 103, isPR: false },
       { weightKg: 103.5, isPR: true },

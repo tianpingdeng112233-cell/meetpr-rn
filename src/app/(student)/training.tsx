@@ -1,5 +1,5 @@
-import { FeaturePlaceholderScreen } from '@/navigation/FeaturePlaceholderScreen';
+import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 
 export default function StudentTrainingScreen() {
-  return <FeaturePlaceholderScreen title="训练" />;
+  return <TodayWorkoutView />;
 }

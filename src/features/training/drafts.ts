@@ -1,0 +1,59 @@
+import type { PlanDay } from '@/api/domains/plans';
+import type { SetLog } from '@/api/domains/sets';
+
+import type { WorkoutSetDraft } from './model';
+import { formatWeight, planSetPrescription } from './policy';
+
+export function synthesizeDrafts(
+  planDay: PlanDay,
+  logs: readonly SetLog[],
+): WorkoutSetDraft[] {
+  return [...planDay.exercises]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .flatMap((exercise, exerciseOrdinal) =>
+      [...exercise.sets]
+        .sort((a, b) => a.set_number - b.set_number)
+        .map((planSet, setIndex) => {
+          const log = logs.find(
+            (candidate) =>
+              candidate.plan_exercise_id === exercise.id &&
+              candidate.set_index === setIndex,
+          );
+          const prescription = planSetPrescription(planSet);
+          return {
+            stableSetId: planSet.id,
+            exercise,
+            planSet,
+            exerciseOrdinal,
+            setIndex,
+            status: log?.failed
+              ? 'failed'
+              : log?.completed
+                ? 'complete'
+                : 'pending',
+            weightText:
+              log?.weight_kg ??
+              (prescription.weightKg === null
+                ? ''
+                : formatWeight(prescription.weightKg)),
+            repsText: String(log?.reps ?? prescription.reps),
+            rpeText:
+              log?.rpe ??
+              (prescription.rpe === null ? '' : formatWeight(prescription.rpe)),
+            sourceLog: log ?? null,
+          } satisfies WorkoutSetDraft;
+        }),
+    );
+}
+
+export function mergeLiveDrafts(
+  synthesized: readonly WorkoutSetDraft[],
+  live: readonly WorkoutSetDraft[],
+): WorkoutSetDraft[] {
+  const existing = new Map(live.map((draft) => [draft.stableSetId, draft]));
+  return synthesized.map((draft) => existing.get(draft.stableSetId) ?? draft);
+}
+
+export function isDraftTerminal(draft: WorkoutSetDraft): boolean {
+  return draft.status === 'complete' || draft.status === 'failed';
+}
