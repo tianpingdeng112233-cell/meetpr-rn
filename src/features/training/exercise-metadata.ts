@@ -11,6 +11,7 @@ import {
 } from '@/api/domains/onboarding';
 import {
   resolveCompetitionLiftFamily,
+  type CompetitionStance,
   type DeadliftStyle,
   type LiftFamily,
   type OnboardingLiftProfile,
@@ -72,13 +73,30 @@ export function createExerciseMetadataResolver(
       competitionFamily: resolveCompetitionLiftFamily(
         {
           mainLiftFamily: exercise.main_lift_family,
-          competitionStance: exercise.competition_stance,
+          competitionStance: narrowCompetitionStance(exercise.competition_stance),
           isCompetitionLift: exercise.is_competition_lift,
         },
         profile,
       ),
     };
   };
+}
+
+const KNOWN_COMPETITION_STANCES: readonly CompetitionStance[] = [
+  'low_bar',
+  'high_bar',
+  'conventional',
+  'sumo',
+];
+
+// The catalog schema is deliberately permissive (an unknown stance string must
+// not break catalog parsing); narrow here so the resolver only ever sees known
+// stances and treats anything else as unresolved.
+function narrowCompetitionStance(value: string | null): CompetitionStance | null {
+  return value !== null &&
+    (KNOWN_COMPETITION_STANCES as readonly string[]).includes(value)
+    ? (value as CompetitionStance)
+    : null;
 }
 
 export function useExerciseMetadataResolver(
