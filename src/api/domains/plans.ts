@@ -99,6 +99,9 @@ export const ShiftPlanResponseSchema = z.object({
 });
 
 export type PlanSummary = z.infer<typeof PlanSummarySchema>;
+export type PlanSet = z.infer<typeof PlanSetSchema>;
+export type PlanExercise = z.infer<typeof PlanExerciseSchema>;
+export type PlanDay = z.infer<typeof PlanDaySchema>;
 export type PlanDetail = z.infer<typeof PlanDetailSchema>;
 export type PlansResponse = z.infer<typeof PlansResponseSchema>;
 export type ShiftPlanResponse = z.infer<typeof ShiftPlanResponseSchema>;

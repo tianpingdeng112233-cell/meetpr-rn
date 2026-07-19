@@ -1,12 +1,15 @@
 import type { PropsWithChildren } from 'react';
-import { StyleSheet, type ViewProps } from 'react-native';
+import { StyleSheet } from 'react-native';
 // RN's built-in SafeAreaView is a no-op on Android; with edge-to-edge (SDK 35)
 // content would slide under the system bars without this implementation.
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  type SafeAreaViewProps,
+} from 'react-native-safe-area-context';
 
 import { colors } from './tokens';
 
-export type ScreenProps = PropsWithChildren<ViewProps>;
+export type ScreenProps = PropsWithChildren<SafeAreaViewProps>;
 
 export function Screen({ children, style, ...props }: ScreenProps) {
   return (

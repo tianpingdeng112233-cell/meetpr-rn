@@ -14,10 +14,13 @@ type StudentTabsStore = {
   planRevision: number;
   /** Bumped after imported-history backfill — 成长 tab reloads. */
   importedHistoryRefreshToken: number;
+  /** Dashboard feedback card asks 成长 to focus its feedback section. */
+  feedbackJumpToken: number;
   bumpTodayReload: () => void;
   bumpTrainingJump: () => void;
   bumpPlanRevision: () => void;
   bumpImportedHistoryRefresh: () => void;
+  bumpFeedbackJump: () => void;
 };
 
 export const useStudentTabsStore = create<StudentTabsStore>((set) => ({
@@ -25,9 +28,13 @@ export const useStudentTabsStore = create<StudentTabsStore>((set) => ({
   trainingJumpToken: 0,
   planRevision: 0,
   importedHistoryRefreshToken: 0,
+  feedbackJumpToken: 0,
   bumpTodayReload: () => set((s) => ({ todayReloadToken: s.todayReloadToken + 1 })),
   bumpTrainingJump: () => set((s) => ({ trainingJumpToken: s.trainingJumpToken + 1 })),
   bumpPlanRevision: () => set((s) => ({ planRevision: s.planRevision + 1 })),
   bumpImportedHistoryRefresh: () =>
     set((s) => ({ importedHistoryRefreshToken: s.importedHistoryRefreshToken + 1 })),
+  // TODO(W1 Growth): consume this token and scroll to 教练反馈记录.
+  bumpFeedbackJump: () =>
+    set((s) => ({ feedbackJumpToken: s.feedbackJumpToken + 1 })),
 }));

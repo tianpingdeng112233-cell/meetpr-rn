@@ -1,5 +1,5 @@
-import { FeaturePlaceholderScreen } from '@/navigation/FeaturePlaceholderScreen';
+import { DashboardScreen } from '@/features/dashboard';
 
 export default function StudentTodayScreen() {
-  return <FeaturePlaceholderScreen title="今日" />;
+  return <DashboardScreen />;
 }
