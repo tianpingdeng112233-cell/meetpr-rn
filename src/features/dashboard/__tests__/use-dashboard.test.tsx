@@ -1,4 +1,4 @@
-import { expect, jest, test } from '@jest/globals';
+import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
 
@@ -62,6 +62,10 @@ jest.mock('../week-overview', () => ({
 const STUDENT_ID = '10000000-0000-4000-8000-000000000000';
 const PLAN_ID = '30000000-0000-4000-8000-000000000000';
 const DAY_ID = '40000000-0000-4000-8000-000000000000';
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 const plan: PlanDetail = {
   id: PLAN_ID,
@@ -171,6 +175,8 @@ test('a failed profile request surfaces an e1RM error instead of nil-profile fam
 });
 
 test('a catalog failure does not hide the week grid or disable its CTA', () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-07-19T12:00:00Z'));
   const refetch = jest.fn(async () => undefined);
   const selectDate = jest.fn();
   const openTraining = jest.fn();
