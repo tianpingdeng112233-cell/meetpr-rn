@@ -1,7 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useSessionStore } from '@/api/session';
-import { AppButton, Card, Screen, colors, spacing, typography } from '@/design';
+import { Card, Screen, colors, spacing, typography } from '@/design';
 
 type FeaturePlaceholderScreenProps = {
   title: string;
@@ -21,12 +22,15 @@ export function FeaturePlaceholderScreen({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.detail}>W1 实装</Text>
           {showLogout ? (
-            <AppButton
-              label="退出登录"
+            <Pressable
+              accessibilityRole="button"
               onPress={() => {
                 void logout().catch(() => undefined);
               }}
-            />
+              style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}>
+              <MaterialCommunityIcons color={colors.brandRed} name="logout" size={20} />
+              <Text style={styles.logoutLabel}>退出登录</Text>
+            </Pressable>
           ) : null}
         </Card>
       </View>
@@ -51,5 +55,20 @@ const styles = StyleSheet.create({
   detail: {
     color: colors.fgSecondary,
     ...typography.body,
+  },
+  logout: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 44,
+  },
+  logoutPressed: {
+    opacity: 0.6,
+  },
+  logoutLabel: {
+    color: colors.brandRed,
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

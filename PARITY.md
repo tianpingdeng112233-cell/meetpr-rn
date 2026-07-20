@@ -30,6 +30,7 @@
 | FeedbackInbox | 🔨 | W1-f;共享 VM/未读计数+Today 内联卡/通知中心已接;成长列表消费接口已留 |
 | VideoUpload | ☐ | 选片+压缩+OSS 分片 |
 | MyProfile | ☐ | |
+| 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
 | Evaluation | — | 硬封存,不复刻 UI,仅 BindGate 跳过逻辑 |
 
 ## 教练端(W2)

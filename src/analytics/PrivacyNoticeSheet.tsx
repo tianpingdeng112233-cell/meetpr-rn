@@ -63,6 +63,7 @@ export function PrivacyNoticeSheet({
             label="知道了"
             onPress={() => void handleConfirm()}
             style={styles.button}
+            variant="accent"
           />
         </View>
       </View>
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
     ...typography.body,
   },
   link: {
-    color: colors.brandRed,
+    color: colors.fgPrimary,
     marginTop: spacing.base,
     textDecorationLine: 'underline',
     ...typography.bodyEmphasis,
@@ -105,6 +106,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   button: {
+    alignSelf: 'flex-end',
     marginTop: spacing.lg,
   },
 });

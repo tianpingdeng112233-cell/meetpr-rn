@@ -91,7 +91,7 @@ export function WorkoutBody({
 
 const styles = StyleSheet.create({
   hero: { gap: spacing.base, padding: spacing.lg },
-  eyebrow: { color: colors.brandRed, ...typography.monoLabel },
+  eyebrow: { color: colors.fgSecondary, ...typography.monoLabel },
   heroNumbers: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.sm },
   heroValue: { color: colors.fgPrimary, ...typography.displayNumeral },
   unit: { color: colors.fgSecondary, textAlign: 'center', ...typography.displayUnit },

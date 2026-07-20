@@ -169,6 +169,6 @@ const styles = StyleSheet.create({
   selectedDay: { backgroundColor: colors.brandRedSoft, borderColor: colors.brandRed },
   today: { borderColor: colors.green },
   dayText: { color: colors.fgPrimary, ...typography.footnote },
-  selectedDayText: { color: colors.brandRed, fontWeight: '700' },
+  selectedDayText: { color: colors.fgPrimary, fontWeight: '700' },
   statusDot: { borderRadius: radius.pill, height: 4, marginTop: 2, width: 4 },
 });
