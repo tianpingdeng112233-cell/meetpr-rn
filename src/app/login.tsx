@@ -56,6 +56,7 @@ export default function LoginScreen() {
           <View style={styles.heading}>
             <Text style={styles.title}>MeetPR</Text>
             <Text style={styles.subtitle}>登录你的训练账户</Text>
+            <View style={styles.accent} />
           </View>
 
           <Card style={styles.card}>
@@ -118,6 +119,13 @@ const styles = StyleSheet.create({
   },
   heading: {
     gap: spacing.sm,
+  },
+  accent: {
+    backgroundColor: colors.brandRed,
+    borderRadius: radius.pill,
+    height: 3,
+    marginTop: spacing.xs,
+    width: 48,
   },
   title: {
     color: colors.fgPrimary,

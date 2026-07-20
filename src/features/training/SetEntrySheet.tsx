@@ -62,9 +62,9 @@ function Stepper({
     <Card style={styles.stepperCard}>
       <View style={styles.stepperHeader}><Text style={styles.sectionLabel}>{label}</Text><Text style={styles.stepLabel}>{stepLabel}</Text></View>
       <View style={styles.stepperRow}>
-        <Pressable onPress={() => onChange(-1)} style={styles.stepperButton}><MaterialCommunityIcons color={colors.fgPrimary} name="minus" size={24} /></Pressable>
+        <Pressable onPress={() => onChange(-1)} style={styles.stepperButton}><MaterialCommunityIcons color={colors.brandRed} name="minus" size={24} /></Pressable>
         <Text style={styles.stepperValue}>{value || '—'}</Text>
-        <Pressable onPress={() => onChange(1)} style={styles.stepperButton}><MaterialCommunityIcons color={colors.fgPrimary} name="plus" size={24} /></Pressable>
+        <Pressable onPress={() => onChange(1)} style={styles.stepperButton}><MaterialCommunityIcons color={colors.brandRed} name="plus" size={24} /></Pressable>
       </View>
     </Card>
   );
@@ -225,8 +225,30 @@ export function SetEntrySheet({
           </Card>
         </ScrollView>
         <View style={styles.footer}>
-          <AppButton disabled={!editable || saving} label={saving ? '保存中…' : '完成本组'} onPress={() => void save(false)} />
-          <Pressable disabled={!editable || saving} onPress={() => void save(true)} style={styles.failedButton}><Text style={styles.failedText}>未完成 / 失败</Text></Pressable>
+          <Pressable
+            accessibilityRole="button"
+            disabled={!editable || saving}
+            onPress={() => void save(false)}
+            style={({ pressed }) => [
+              styles.completeButton,
+              pressed && styles.footerPressed,
+              (!editable || saving) && styles.footerDisabled,
+            ]}>
+            <MaterialCommunityIcons color={colors.bg} name="check" size={18} />
+            <Text style={styles.completeText}>{saving ? '保存中…' : '完成本组'}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            disabled={!editable || saving}
+            onPress={() => void save(true)}
+            style={({ pressed }) => [
+              styles.failedButton,
+              pressed && styles.footerPressed,
+              (!editable || saving) && styles.footerDisabled,
+            ]}>
+            <MaterialCommunityIcons color={colors.fgSecondary} name="close" size={18} />
+            <Text style={styles.failedText}>未完成 / 失败</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     </Modal>
@@ -261,7 +283,7 @@ const styles = StyleSheet.create({
   stepperHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   stepLabel: { color: colors.fgTertiary, ...typography.footnote },
   stepperRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  stepperButton: { alignItems: 'center', backgroundColor: colors.surface3, borderRadius: radius.pill, height: 44, justifyContent: 'center', width: 44 },
+  stepperButton: { alignItems: 'center', backgroundColor: colors.brandRedSoft, borderColor: 'rgba(229,34,30,0.3)', borderRadius: radius.pill, borderWidth: 1, height: 52, justifyContent: 'center', width: 52 },
   stepperValue: { color: colors.fgPrimary, ...typography.headline },
   rpeCard: { gap: spacing.md, padding: spacing.base },
   rpeHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
@@ -278,6 +300,10 @@ const styles = StyleSheet.create({
   videoStub: { color: colors.fgTertiary, marginTop: spacing.xs, ...typography.caption },
   videoActions: { flexDirection: 'row', gap: spacing.sm },
   footer: { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, gap: spacing.sm, padding: spacing.base },
-  failedButton: { alignItems: 'center', borderColor: colors.borderStrong, borderRadius: radius.md, borderWidth: 1, padding: spacing.md },
-  failedText: { color: colors.amber, ...typography.bodyEmphasis },
+  completeButton: { alignItems: 'center', backgroundColor: colors.fgPrimary, borderRadius: radius.lg, flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 52, paddingHorizontal: spacing.lg },
+  completeText: { color: colors.bg, fontSize: 16, fontWeight: '600' },
+  failedButton: { alignItems: 'center', backgroundColor: colors.surface1, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', minHeight: 52, paddingHorizontal: spacing.lg },
+  failedText: { color: colors.fgSecondary, fontSize: 16, fontWeight: '600' },
+  footerPressed: { opacity: 0.6 },
+  footerDisabled: { opacity: 0.35 },
 });

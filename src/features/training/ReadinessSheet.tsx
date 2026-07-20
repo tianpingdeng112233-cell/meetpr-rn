@@ -99,6 +99,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
                   setError('');
                   setStep(2);
                 }}
+                variant="accent"
               />
             </>
           ) : (
@@ -128,7 +129,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <View style={styles.bottomActions}>
                 <Pressable onPress={() => setStep(1)} style={styles.back}><Text style={styles.backText}>上一步</Text></Pressable>
-                <AppButton disabled={submit.isPending} label={submit.isPending ? '提交中…' : '完成'} onPress={() => void complete()} style={styles.complete} />
+                <AppButton disabled={submit.isPending} label={submit.isPending ? '提交中…' : '完成'} onPress={() => void complete()} style={styles.complete} variant="accent" />
               </View>
             </>
           )}
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
   chipText: { color: colors.fgSecondary, ...typography.body },
   chipTextSelected: { color: colors.green },
   bottomActions: { flexDirection: 'row', gap: spacing.md, marginTop: 'auto' },
-  back: { alignItems: 'center', borderColor: colors.borderStrong, borderRadius: radius.md, borderWidth: 1, flex: 1, justifyContent: 'center' },
-  backText: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  back: { alignItems: 'center', borderColor: colors.fgSecondary, borderRadius: radius.lg, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 44 },
+  backText: { color: colors.fgSecondary, ...typography.bodyEmphasis },
   complete: { flex: 2 },
 });

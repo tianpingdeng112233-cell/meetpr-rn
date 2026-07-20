@@ -36,7 +36,7 @@ export function SlideToCompleteButton({ onComplete }: { onComplete: () => void }
       style={styles.slider}>
       <Text style={styles.sliderLabel}>滑动完成今日训练</Text>
       <View style={[styles.sliderThumb, { left: progress * Math.max(0, width - 56) }]}>
-        <MaterialCommunityIcons color={colors.fgPrimary} name="chevron-double-right" size={24} />
+        <MaterialCommunityIcons color={colors.green} name="chevron-double-right" size={24} />
       </View>
     </View>
   );
@@ -45,7 +45,10 @@ export function SlideToCompleteButton({ onComplete }: { onComplete: () => void }
 export function DayCompletionBanner({ count, onPress }: { count: number; onPress: () => void }) {
   return (
     <Card style={styles.banner}>
-      <Text style={styles.bannerTitle}>今日训练完成 · {count} 组</Text>
+      <View style={styles.bannerCopy}>
+        <MaterialCommunityIcons color={colors.green} name="check-decagram" size={22} />
+        <Text style={styles.bannerTitle}>今日训练完成 · {count} 组</Text>
+      </View>
       <Pressable onPress={onPress}><Text style={styles.reviewLink}>查看回顾</Text></Pressable>
     </Card>
   );
@@ -107,16 +110,17 @@ export function SessionSummaryView({
 }
 
 const styles = StyleSheet.create({
-  slider: { backgroundColor: colors.surface2, borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: 1, height: 58, justifyContent: 'center', overflow: 'hidden' },
-  sliderLabel: { color: colors.fgSecondary, textAlign: 'center', ...typography.bodyEmphasis },
-  sliderThumb: { alignItems: 'center', backgroundColor: colors.brandRed, borderRadius: radius.pill, height: 50, justifyContent: 'center', position: 'absolute', width: 50 },
-  banner: { alignItems: 'center', backgroundColor: colors.greenSoft, borderColor: colors.green, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
+  slider: { backgroundColor: colors.green, borderColor: colors.green, borderRadius: radius.pill, borderWidth: 1, height: 58, justifyContent: 'center', overflow: 'hidden' },
+  sliderLabel: { color: '#FFFFFF', textAlign: 'center', ...typography.bodyEmphasis },
+  sliderThumb: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: radius.pill, height: 50, justifyContent: 'center', position: 'absolute', width: 50 },
+  banner: { alignItems: 'center', backgroundColor: colors.greenSoft, borderColor: 'rgba(31,179,88,0.4)', borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
+  bannerCopy: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   bannerTitle: { color: colors.green, ...typography.bodyEmphasis },
   reviewLink: { color: colors.fgPrimary, ...typography.footnote },
   summaryRoot: { backgroundColor: colors.bg, flex: 1 },
   summaryNav: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingHorizontal: spacing.base },
   summaryNavTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  done: { color: colors.brandRed, ...typography.bodyEmphasis },
+  done: { color: colors.fgPrimary, ...typography.bodyEmphasis },
   summaryContent: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xxl },
   summaryHero: { color: colors.fgPrimary, ...typography.title1 },
   overview: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.sm },

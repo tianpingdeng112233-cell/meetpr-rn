@@ -259,8 +259,8 @@ export function DashboardScreen() {
                   accessibilityRole="button"
                   disabled={undoPlanShift.isPending}
                   onPress={confirmUndoShift}
-                  style={({ pressed }) => [styles.shiftButton, pressed && styles.pressed]}>
-                  <Text style={styles.shiftLabel}>
+                  style={({ pressed }) => [styles.undoShiftButton, pressed && styles.pressed]}>
+                  <Text style={styles.undoShiftLabel}>
                     {undoPlanShift.isPending ? '撤销中…' : '撤销顺延'}
                   </Text>
                 </Pressable>
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
   feedbackCard: { gap: spacing.md, padding: spacing.base },
   feedbackTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   inlineDot: { backgroundColor: colors.brandRed, borderRadius: radius.pill, height: 8, width: 8 },
-  eyebrow: { color: colors.brandRed, ...typography.caption, letterSpacing: 0.8 },
+  eyebrow: { color: colors.fgSecondary, ...typography.caption, letterSpacing: 0.8 },
   feedbackBody: { color: colors.fgPrimary, ...typography.body },
   feedbackFooter: { color: colors.fgSecondary, ...typography.footnote },
   sectionHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
@@ -744,14 +744,14 @@ const styles = StyleSheet.create({
   liftEmptyText: { color: colors.fgTertiary, ...typography.body },
   cta: {
     alignItems: 'center',
-    backgroundColor: colors.brandRed,
-    borderRadius: radius.md,
+    backgroundColor: colors.fgPrimary,
+    borderRadius: radius.lg,
+    height: 50,
     justifyContent: 'center',
-    minHeight: 52,
     paddingHorizontal: spacing.base,
   },
-  ctaPressed: { backgroundColor: colors.brandRedPress },
-  ctaLabel: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  ctaPressed: { opacity: 0.6 },
+  ctaLabel: { color: colors.bg, ...typography.bodyEmphasis },
   restCTA: {
     alignItems: 'center',
     backgroundColor: colors.surface1,
@@ -760,8 +760,10 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   restLabel: { color: colors.fgTertiary, ...typography.bodyEmphasis },
-  shiftButton: { alignItems: 'center', paddingVertical: spacing.sm },
-  shiftLabel: { color: colors.brandRed, ...typography.bodyEmphasis },
+  shiftButton: { alignItems: 'center', backgroundColor: colors.surface1, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
+  shiftLabel: { color: colors.fgSecondary, ...typography.bodyEmphasis },
+  undoShiftButton: { alignItems: 'center', backgroundColor: colors.brandRedSoft, borderRadius: radius.lg, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
+  undoShiftLabel: { color: colors.brandRed, ...typography.bodyEmphasis },
   metricsRow: { flexDirection: 'row', gap: spacing.md },
   metricCard: { flex: 1, minHeight: 96, padding: spacing.base },
   metricLabel: { color: colors.fgSecondary, ...typography.footnote },
@@ -785,7 +787,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.base,
   },
   sheetTitle: { color: colors.fgPrimary, ...typography.headline },
-  done: { color: colors.brandRed, ...typography.bodyEmphasis },
+  done: { color: colors.fgPrimary, ...typography.bodyEmphasis },
   notificationEmpty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl },
   notificationEmptyTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
   notificationEmptyBody: { color: colors.fgTertiary, ...typography.footnote },
