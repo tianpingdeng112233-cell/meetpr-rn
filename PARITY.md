@@ -62,7 +62,7 @@
 | 项 | 状态 | 备注 |
 |---|---|---|
 | 真机矩阵(David 的安卓机 + 小米/华为抽查) | ☐ | |
-| 品牌资产(App icon/adaptive icon/启动屏) | ☐ | 现为占位;需 David 出设计,分发一级前替换 |
+| 品牌资产(App icon/adaptive icon/启动屏) | ◐ | App icon + adaptive(前景/背景/monochrome)已换成 David 2026-07-30 定稿「片里的折线」,与 iOS 同构;源与重出命令在 `docs/brand/`,AVD 抽屉亲验。**启动屏仍是占位**(`splash-icon.png` 是 1×1,splash 底色还是 `#000000`),分发一级前补 |
 | release keystore(密码入 Bitwarden) | ☐ | 定稿后终身不换 |
 | app 内自更新检查 | ☐ | 无商店必做 |
 | 海外下载页 + APK 分发一级 | ☐ | Cloudflare Pages/R2 |
