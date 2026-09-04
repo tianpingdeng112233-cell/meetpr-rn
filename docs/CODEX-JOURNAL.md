@@ -344,3 +344,144 @@ Ran all test suites.
 
 - 本地 Standards 检查：无未解决问题；本地 Spec 检查：17 个命中全替换、模板参数保留、剩余 missing 全分流、drift 不变。正式 code-review skill 未运行：`docs/agents/issue-tracker.md` 缺失，已提示用户调用 `$setup-matt-pocock-skills`；未声称双 agent review。沿用前轮 Android 模拟器未验收的限制，本轮不宣称视觉验收。
 - 保留全部前轮 G0-b 工作；未安装依赖、未编辑 node_modules、未 commit/push。PARITY 同步 R1 收货状态；本卡实现无偏离。
+
+## 2026-09-04 — W1-i return-fix R1
+
+Card: `/private/tmp/claude-501/-Users-david/a02c90bb-a740-4052-8cd6-9325d48a540d/scratchpad/card-w1i-return-1.md`.
+Worktree: `/Users/david/Projects/apps/meetpr-rn-wt-w1i`.
+
+Read the card first, then AGENTS.md and peripheral-screens.md sections 1, 2 and Appendix B; also read PLAN.md and the required Expo SDK 57 documentation. All edits stayed in this worktree. No commit or push. Existing edits to PARITY.md, peripheral-screens.md and src/api/domains/bind.ts were preserved without modification. The initial onboarding implementation and BindGate changes were already present at task start.
+
+### Files changed by this return-fix
+
+- `src/api/domains/onboarding.ts` — strict Appendix B enum validation in profile and upsert schemas.
+- `src/features/onboarding/catalog.ts` (new) — canonical tokens, Chinese labels, ordered equipment catalog, tier prefills and unknown-label fallback.
+- `src/features/onboarding/model.ts` — canonical form values, bidirectional weekday mapping, shared RTS estimator and conservative estimate rounded from the raw engine result.
+- `src/features/onboarding/storage.ts` — canonical draft enum validation; obsolete drafts still read as null.
+- `src/features/onboarding/controls.tsx` — preserve token types through generic MultiChoice.
+- `src/features/onboarding/OnboardingSteps.tsx` — catalog labels, four equipment sections with tier filtering, exclusive dumbbell limit, shared estimator results, estimator Android back dismissal.
+- `src/features/onboarding/OnboardingWizard.tsx` — reset loading before rendering each reopened modal; Android back uses save-and-exit and is guarded while loading or saving.
+- `src/navigation/BindGate.tsx` — open the wizard on both needsOnboarding entry paths; retain the stashed/submitted name and clear the code after invalid-code or direct submission failures. Handoff network failures retain the existing retry screen and stash.
+- `src/features/onboarding/__tests__/model.test.ts` — wire round-trip, API schema, and estimator regressions; corrected existing fixture tokens.
+- `src/features/onboarding/__tests__/catalog.test.ts` (new) — ordered home/professional prefills and unknown token label.
+- `src/features/onboarding/__tests__/wizard.test.tsx` (new) — reopening, back handling, equipment interaction, and draft compatibility.
+- `src/navigation/__tests__/BindGate.test.tsx` (new) — automatic entry, interstitial continuation, and name prefill.
+- `docs/CODEX-JOURNAL.md` (new) — this record.
+
+### Requirement-to-test mapping
+
+1. Wire values, catalog and schemas:
+   - `fullOnboardingPatch serializes a filled form with canonical tokens`
+   - `formFromServer restores canonical tokens and numeric training days`
+   - `lb and every weekday round-trip through the server mapping`
+   - `canonical profile and full patch pass the tightened API schemas`
+   - `API profile and upsert reject obsolete tokens: %j` (nine cases)
+   - `prefillEquipment home_with_rack contains its complete catalog in order`
+   - `prefillEquipment professional includes every powerlifting item`
+   - `equipmentLabel preserves unknown legacy tokens`
+   - `equipment sections filter by tier and dumbbell limits are mutually exclusive`
+   - `canonical drafts round-trip while obsolete units and gym tiers read as null`
+2. Shared 1RM engine:
+   - `estimateOneRepMax rounds the shared RTS engine result to 0.5 kg`
+   - `the conservative estimate applies 90% before rounding the shared engine result`
+3. Automatic wizard entry and interstitial resume:
+   - `needsOnboarding opens immediately and save-and-exit allows continuing from the interstitial`
+   - `submitting a code for an incomplete profile opens onboarding immediately`
+4. Name prefill / empty code:
+   - `invalid stashed invite returns to an empty code field with the stashed name`
+   - `invalid invite clears the submitted code while prefilling the submitted name`
+   - `network failure clears the submitted code while prefilling the submitted name`
+5. Reopening loading state:
+   - `reopening the wizard hides the old form until the draft is loaded`
+6. Android back:
+   - `Android wizard back saves the draft and exits only after the save completes`
+   - `Android estimator back closes the estimator without changing the lift`
+
+### Verification
+
+The card's specified model/catalog tests were written and run before implementation changes. Initial red run, `npx jest src/features/onboarding src/navigation --runInBand`: exit 1; 2 suites failed, 1 passed; 3 assertions failed and all 22 original tests passed. Catalog failed to load because it did not yet exist; serialization, reverse mapping and RTS expectations failed for the intended reasons. After implementation, all 28 tests at those seams passed. The conservative estimator regression was subsequently run red (expected 115.5, received 128), then made green. Component/schema/draft regression checks were added during verification.
+
+Final requested commands, all with `/opt/homebrew/bin` prepended to PATH:
+
+- `npm run lint`: exit 0; no errors or warnings.
+- `npx tsc --noEmit`: exit 0; no output.
+- `npx jest src/features/onboarding src/navigation`: exit 0; **5 suites passed, 50 tests passed, 0 snapshots**; reported time 1.352 s. All 22 original tests remain green.
+- `git diff --check`: exit 0; no output.
+
+Additional API compatibility check: `npx jest src/features/onboarding src/navigation src/api/domains/__tests__/domain-schemas.test.ts --runInBand` passed all 6 suites / 60 tests at that stage (before the additional conservative-estimate regression).
+
+### Review and verification limitations
+
+Direct Standards review: changes stay within the card's allowed source/test paths plus its explicitly requested journal; no design-token changes, backend changes, commit, push, or PARITY edits. Direct Spec review: all six requested code changes are implemented and covered above. No remaining code findings.
+
+The formal code-review skill workflow was not run: `docs/agents/issue-tracker.md` is missing, and that skill requires requesting `/setup-matt-pocock-skills`. The user was informed and asked to invoke `$setup-matt-pocock-skills`; repository tracker scaffolding was not added.
+
+Android visual verification and screenshot evidence could not be completed. Attempted `npx expo run:android` with the documented PATH, JAVA_HOME and ANDROID_HOME; it exited 1 before building because ADB could not start its socket listener: `could not install *smartsocket* listener: Operation not permitted` (adb start-server exit 255). The session does not permit sandbox escalation. Component tests verify the modal/back/state behavior but do not substitute for emulator visual acceptance.
+
+### Claude 收货补记(2026-09-04)
+
+- 直改三处(单文件小改,不另派卡):① `catalog.ts` 标签改为 iOS xcstrings zh 逐字(equipmentCatalog001–024 / onboardingLabels / step4 副标题);② `OnboardingSteps.tsx` 器械四段改为展示全部 token(参照包附 B 首版写错「按场馆过滤」,已勘误),`wizard.test.tsx` 断言同步;③ `controls.tsx` 日期轮 FlatList→ScrollView,消除 VirtualizedLists 嵌套警告。
+- 模拟器走查(AVD meetpr,staging 学员号):登录→输码→自动弹向导→7 步→完成→自动重提交 stash→等待屏→教练 accept→回前台进 tabs,全程通过;截图见会话 scratch。
+
+## 2026-09-04 — W1-i return-fix R2
+
+Card: `/private/tmp/claude-501/-Users-david/a02c90bb-a740-4052-8cd6-9325d48a540d/scratchpad/card-w1i-return-2.md`.
+Worktree: `/Users/david/Projects/apps/meetpr-rn-wt-w1i`.
+
+Read the card first, then AGENTS.md, peripheral-screens.md sections 1, 2 and Appendix B, and the journal including Claude 收货补记. Also read PLAN.md, the TDD skill and its test/mocking references, and https://docs.expo.dev/versions/v57.0.0/ before editing code. Used the card's explicitly authorized test seams. Preserved R1 and Claude's Chinese catalog labels, full four-group equipment display (tiers only control prefills), and ScrollView date wheels. No commit or push.
+
+### R2 files changed
+
+- `src/api/domains/onboarding.ts` — tolerant string profile enums and equipment; unchanged strict upsert schema. `OnboardingUpsertInput` represents form patches that can retain legacy equipment before request validation.
+- `src/features/onboarding/model.ts` — preserve legacy equipment, map unknown scalar enums to null and omit unknown array enum entries; nullable unit selection; shared birthday/competition date bounds and day-level validation, including inclusive endpoints and the ten-year competition limit.
+- `src/features/onboarding/storage.ts` — retain legacy equipment and unset unit selection through draft persistence; obsolete non-null unit/gym values remain rejected.
+- `src/features/onboarding/controls.tsx` — one-row top/bottom wheel padding, centered initial offset and momentum selection; minDate/maxDate month/day clipping and automatic clamping.
+- `src/features/onboarding/OnboardingSteps.tsx` — removable raw-label legacy equipment; local imperial input text with conversion to metric form values and normalization on blur/unit change; selected gym no-op; bounded date call sites and birthday error border.
+- `src/features/onboarding/__tests__/model.test.ts` — profile compatibility and date validation regressions. The nine existing obsolete-token cases retain strict upsert rejection; removed their profile rejection assertions because R2 explicitly changes reads to be tolerant.
+- `src/features/onboarding/__tests__/wizard.test.tsx` — imperial editing, gym no-op, legacy draft/chip, date clipping/clamping and centered wheel regressions.
+- `docs/CODEX-JOURNAL.md` — this R2 record.
+
+### Requirement-to-test mapping
+
+1. Tolerant profile reads / strict writes / legacy equipment:
+   - `legacy equipment parses and survives form mapping while upsert rejects it`
+   - `unknown profile enums parse and map to unset form values`
+   - `legacy equipment survives drafts and displays its raw token until deselected`
+   - Existing `API upsert rejects obsolete tokens: %j` (nine cases).
+2. Centered wheel selection:
+   - `Wheel centers the initial value and selects options[k] at ROW_HEIGHT times k` (first, interior and last day; verifies padding and initial offset).
+3. Imperial raw input:
+   - `imperial height input preserves each keystroke while storing centimeters` (`1`, `1.`, `7`, `70`, `70.`, `70.5`; blur and unit switches).
+   - `imperial weight input preserves raw text until blur or a unit change`.
+4. Repeated selected gym:
+   - `pressing the selected gym preserves customized equipment without an alert or update`.
+5. Day-level date boundaries:
+   - `tomorrow birthday and yesterday competition date are invalid in steps 1 and 7` (also verifies today, pre-1930 and beyond-ten-year limits).
+   - `DateWheel clips same-month options from %s to %s` (equal min/max and a three-day range).
+   - `DateWheel automatically clamps out-of-range value %s` (both boundaries).
+
+### Verification
+
+All new regressions were written and run before production edits, as explicitly requested by the card. Red run: `npx jest src/features/onboarding src/navigation --runInBand`, exit 1; **2 suites failed / 3 passed; 12 tests failed / 50 passed**. Failures reproduced legacy profile/draft rejection, unknown enum rejection, date validation, imperial text replacement, selected-gym reset, unclipped date options, missing automatic clamping and missing center padding. After implementation: all 62 tests passed.
+
+Final requested commands, each with `/opt/homebrew/bin` prepended to PATH:
+
+- `npm run lint`: **exit 0**, no errors or warnings.
+- `npx tsc --noEmit`: **exit 2**, only the two explicitly exempted **TS2345** diagnostics in `src/design/__tests__/AppButton.test.tsx(29,46)` and `(30,47)`: `{ pressed: false }` / `{ pressed: true }` lacks required `hovered`. No other TypeScript errors. The test and local `expo-env.d.ts` were not edited.
+- `npx jest src/features/onboarding src/navigation`: **exit 0; 5 suites passed; 62 tests passed; 0 snapshots; 1.199 s**.
+- `git diff --check`: exit 0, no output; also checked the R2 additions in initially untracked files for trailing whitespace.
+
+### Review and limitations
+
+Standards review (direct): no remaining findings in the R2 diff. Edits are limited to the card's source/test paths and explicitly requested journal. Existing PARITY.md, peripheral-screens.md, bind API, BindGate, catalog labels and wizard lifecycle code are preserved; no tokens, backend, navigation or unrelated test changes.
+
+Spec review (direct): all five R2 fixes are implemented and covered above. All 50 pre-existing test cases remain passing, with obsolete-profile expectations updated to the new tolerant-read contract. Legacy equipment remains in the form/patch until removed, and the unchanged upsert schema still rejects it before network submission.
+
+Formal code-review skill workflow could not run because `docs/agents/issue-tracker.md` is missing. Its SKILL.md says to request `/setup-matt-pocock-skills`; the user was informed and asked to invoke `$setup-matt-pocock-skills`. No tracker scaffolding was added.
+
+Android build/visual acceptance and R2 screenshots could not be completed. Attempted `npx expo run:android` with the documented PATH, JAVA_HOME and ANDROID_HOME. Exit 1 before building: ADB startup failed with `could not install *smartsocket* listener: Operation not permitted` (`adb start-server` exit 255). This session disallows sandbox escalation. Tests do not replace emulator visual acceptance.
+
+### Claude 收货补记 R2(2026-09-04)
+
+- R2 卡第 1 项我写错了口径,收货时纠正:iOS 把老 profile 里的 legacy 器械 token **原样写回**(后端 `equipment_overrides: string[]` 接受任意字串),所以 upsert schema 的 `equipment_overrides` 也改为 `z.array(z.string())`,UI 只提供正典 token;对应测试改为「legacy token 读写都通过」。
+- 模拟器抽查(新学员号):输码→向导自动弹出;磅·英寸模式输入 `70.5` 逐字保留(体重自动换算 183 lb 显示);日期轮见截图。

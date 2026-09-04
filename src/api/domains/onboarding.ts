@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
+import {
+  BENCH_GRIPS, DEADLIFT_STYLES, GENDERS, GYM_TIERS,
+  INJURY_AREAS, MUSCLE_GROUPS, SQUAT_STANCES, TRAINING_DAYS, UNIT_PREFERENCES,
+} from '@/features/onboarding/catalog';
+
 import { ApiError } from '../client';
 import { authenticatedRequest } from '../session';
 import {
@@ -11,8 +16,8 @@ import {
 } from './shared';
 
 const OnboardingUpsertFieldsSchema = z.object({
-  unit_preference: z.string().optional(),
-  gender: z.string().optional(),
+  unit_preference: z.enum(UNIT_PREFERENCES).optional(),
+  gender: z.enum(GENDERS).optional(),
   /** Optional DATE-text column. */
   birth_date: DateTextSchema.optional(),
   /** Optional Decimal wire value; kept as a string. */
@@ -20,25 +25,26 @@ const OnboardingUpsertFieldsSchema = z.object({
   /** Optional Decimal wire value; kept as a string. */
   weight_kg: DecimalStringSchema.optional(),
   training_years: z.number().optional(),
-  squat_stance: z.string().optional(),
-  deadlift_style: z.string().optional(),
-  bench_grip: z.string().nullish(),
+  squat_stance: z.enum(SQUAT_STANCES).optional(),
+  deadlift_style: z.enum(DEADLIFT_STYLES).optional(),
+  bench_grip: z.enum(BENCH_GRIPS).nullish(),
   /** Optional Decimal wire value; kept as a string. */
   squat_1rm_kg: DecimalStringSchema.optional(),
   /** Optional Decimal wire value; kept as a string. */
   bench_1rm_kg: DecimalStringSchema.optional(),
   /** Optional Decimal wire value; kept as a string. */
   deadlift_1rm_kg: DecimalStringSchema.optional(),
-  training_days: z.array(z.number().int()).nullish(),
-  gym_tier: z.string().optional(),
+  training_days: z.array(z.enum(TRAINING_DAYS)).nullish(),
+  gym_tier: z.enum(GYM_TIERS).optional(),
+  /** Read/write tolerant: iOS writes legacy tokens back verbatim and the backend accepts any string. */
   equipment_overrides: z.array(z.string()).nullish(),
   daily_life_intensity: z.number().int().optional(),
   life_stress: z.number().int().optional(),
   recovery_speed: z.number().int().optional(),
   sleep_hours: z.number().optional(),
-  muscle_groups_to_strengthen: z.array(z.string()).nullish(),
+  muscle_groups_to_strengthen: z.array(z.enum(MUSCLE_GROUPS)).nullish(),
   injury_notes: z.string().nullish(),
-  injury_areas: z.array(z.string()).nullish(),
+  injury_areas: z.array(z.enum(INJURY_AREAS)).nullish(),
   is_competing: z.boolean().optional(),
   /** Optional DATE-text column. */
   competition_date: DateTextSchema.nullish(),
@@ -63,7 +69,7 @@ export const OnboardingProfileSchema = z.object({
   squat_1rm_kg: DecimalStringSchema.nullable(),
   bench_1rm_kg: DecimalStringSchema.nullable(),
   deadlift_1rm_kg: DecimalStringSchema.nullable(),
-  training_days: z.array(z.number().int()).nullable(),
+  training_days: z.array(z.string()).nullable(),
   gym_tier: z.string().nullable(),
   equipment_overrides: z.array(z.string()).nullable(),
   daily_life_intensity: z.number().int().nullable(),
@@ -86,6 +92,7 @@ export const OnboardingProfileSchema = z.object({
 export type OnboardingUpsertRequest = z.infer<
   typeof OnboardingUpsertRequestSchema
 >;
+export type OnboardingUpsertInput = OnboardingUpsertRequest;
 export type OnboardingProfile = z.infer<typeof OnboardingProfileSchema>;
 
 async function get(studentId: string): Promise<OnboardingProfile | null> {
@@ -103,7 +110,7 @@ async function get(studentId: string): Promise<OnboardingProfile | null> {
 }
 
 async function upsert(
-  input: OnboardingUpsertRequest,
+  input: OnboardingUpsertInput,
 ): Promise<OnboardingProfile> {
   const body = OnboardingUpsertRequestSchema.parse(input);
   return authenticatedRequest('/students/me/onboarding', {
