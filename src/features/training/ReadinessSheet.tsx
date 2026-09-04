@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnalyticsEvent, track } from '@/analytics';
 import { useSubmitReadiness } from '@/api/domains/readiness';
-import { AppButton, Card, colors, radius, spacing, typography } from '@/design';
+import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
 
 import { READINESS_MUSCLES, STORAGE_KEYS } from './constants';
 import { writeBoolean } from './storage';
@@ -25,6 +25,8 @@ const QUESTIONS = [
 ] as const;
 
 export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const submit = useSubmitReadiness();
   const [step, setStep] = useState<1 | 2>(1);
   const [scores, setScores] = useState<Scores>({ sleep: null, mood: null, stress: null });
@@ -99,7 +101,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
                   setError('');
                   setStep(2);
                 }}
-                variant="accent"
+                variant="primary"
               />
             </>
           ) : (
@@ -129,7 +131,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <View style={styles.bottomActions}>
                 <Pressable onPress={() => setStep(1)} style={styles.back}><Text style={styles.backText}>上一步</Text></Pressable>
-                <AppButton disabled={submit.isPending} label={submit.isPending ? '提交中…' : '完成'} onPress={() => void complete()} style={styles.complete} variant="accent" />
+                <AppButton disabled={submit.isPending} label={submit.isPending ? '提交中…' : '完成'} onPress={() => void complete()} style={styles.complete} variant="primary" />
               </View>
             </>
           )}
@@ -139,32 +141,32 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { backgroundColor: colors.bg, flex: 1 },
-  nav: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 52, paddingHorizontal: spacing.base },
-  skip: { color: colors.fgSecondary, width: 64, ...typography.body },
-  title: { color: colors.fgPrimary, flex: 1, textAlign: 'center', ...typography.bodyEmphasis },
+const createStyles = (colors: Colors) => StyleSheet.create({
+  root: { backgroundColor: colors.bgBase, flex: 1 },
+  nav: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 52, paddingHorizontal: spacing.base },
+  skip: { color: colors.textSecondary, width: 64, ...typography.body },
+  title: { color: colors.textPrimary, flex: 1, textAlign: 'center', ...typography.bodyEmphasis },
   spacer: { width: 64 },
   content: { flex: 1, gap: spacing.md, padding: spacing.base },
   questionCard: { gap: spacing.md, padding: spacing.base },
-  question: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  question: { color: colors.textPrimary, ...typography.bodyEmphasis },
   scoreRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  score: { alignItems: 'center', backgroundColor: colors.surface3, borderRadius: radius.pill, height: 44, justifyContent: 'center', width: 44 },
-  scoreSelected: { backgroundColor: colors.green },
-  scoreText: { color: colors.fgSecondary, ...typography.bodyEmphasis },
-  scoreTextSelected: { color: colors.fgPrimary },
+  score: { alignItems: 'center', backgroundColor: colors.bgStack, borderRadius: radius.pill, height: 44, justifyContent: 'center', width: 44 },
+  scoreSelected: { backgroundColor: colors.success },
+  scoreText: { color: colors.textSecondary, ...typography.bodyEmphasis },
+  scoreTextSelected: { color: colors.textPrimary },
   ends: { flexDirection: 'row', justifyContent: 'space-between' },
-  endText: { color: colors.fgTertiary, ...typography.caption },
-  error: { color: colors.brandRed, textAlign: 'center', ...typography.footnote },
-  heading: { color: colors.fgPrimary, marginTop: spacing.lg, ...typography.title2 },
-  help: { color: colors.fgSecondary, lineHeight: 23, ...typography.body },
+  endText: { color: colors.textTertiary, ...typography.caption },
+  error: { color: colors.danger, textAlign: 'center', ...typography.footnote },
+  heading: { color: colors.textPrimary, marginTop: spacing.lg, ...typography.title2 },
+  help: { color: colors.textSecondary, lineHeight: 23, ...typography.body },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { backgroundColor: colors.surface2, borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
-  chipSelected: { backgroundColor: colors.greenSoft, borderColor: colors.green },
-  chipText: { color: colors.fgSecondary, ...typography.body },
-  chipTextSelected: { color: colors.green },
+  chip: { backgroundColor: colors.bgInset, borderColor: colors.borderStrong, borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  chipSelected: { backgroundColor: colors.successTint, borderColor: colors.success },
+  chipText: { color: colors.textSecondary, ...typography.body },
+  chipTextSelected: { color: colors.success },
   bottomActions: { flexDirection: 'row', gap: spacing.md, marginTop: 'auto' },
-  back: { alignItems: 'center', borderColor: colors.fgSecondary, borderRadius: radius.lg, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 44 },
-  backText: { color: colors.fgSecondary, ...typography.bodyEmphasis },
+  back: { alignItems: 'center', borderColor: colors.textSecondary, borderRadius: radius.lg, borderWidth: 1, flex: 1, justifyContent: 'center', minHeight: 44 },
+  backText: { color: colors.textSecondary, ...typography.bodyEmphasis },
   complete: { flex: 2 },
 });

@@ -9,7 +9,7 @@ import { usePlan, usePlans, type PlanDay, type PlanDetail } from '@/api/domains/
 import { readinessKeys, useReadiness } from '@/api/domains/readiness';
 import { useSetLogs, useUpsertSetLog, type SetLog } from '@/api/domains/sets';
 import { useSessionStore } from '@/api/session';
-import { Card, colors, Screen, spacing, typography } from '@/design';
+import { Card, useColors, type Colors, Screen, spacing, typography } from '@/design';
 import { buildE1RMSeries, E1RMRecorder, type PRBreakthroughEvent } from '@/domain/e1rm';
 import { useStudentTabsStore } from '@/features/student-tabs';
 
@@ -74,6 +74,8 @@ function PRBanner({
   event: PRBreakthroughEvent;
   exerciseName: string;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Card style={styles.prBanner}>
       <Text style={styles.prTitle}>🎉 今天你的{exerciseName} e1RM 突破!</Text>
@@ -88,6 +90,8 @@ function PRBanner({
 }
 
 export function TodayWorkoutView() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
@@ -454,15 +458,15 @@ export function TodayWorkoutView() {
         <View><Text style={styles.navTitle}>{planDay ? `W${planDay.week_number}D${planDay.day_of_week} · ${exerciseTitle(resolveExerciseMetadata((planDay.exercises.find((exercise) => exercise.is_main_lift) ?? planDay.exercises[0])?.exercise_id ?? ''))}` : '锻炼'}</Text><Text style={styles.navDate}>{selectedDate}</Text></View>
         <View style={styles.navActions}>
           <Pressable accessibilityLabel={readinessLabel} onPress={() => setReadinessVisible(true)}>
-            <MaterialCommunityIcons color={readinessDone ? colors.green : colors.fgSecondary} name={readinessDone ? 'heart' : 'heart-outline'} size={25} />
+            <MaterialCommunityIcons color={readinessDone ? colors.success : colors.textSecondary} name={readinessDone ? 'heart' : 'heart-outline'} size={25} />
           </Pressable>
-          <Pressable accessibilityLabel="刷新训练" onPress={() => void refresh()}><MaterialCommunityIcons color={colors.fgSecondary} name="refresh" size={25} /></Pressable>
+          <Pressable accessibilityLabel="刷新训练" onPress={() => void refresh()}><MaterialCommunityIcons color={colors.textSecondary} name="refresh" size={25} /></Pressable>
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <TrainingCalendarView selectedDate={selectedDate} statusForDate={(date) => stateForDay(plan, logs, date)} today={today} onSelectDate={selectDate} />
         {prEvent ? <PRBanner event={prEvent} exerciseName={exerciseTitle(resolveExerciseMetadata(prEvent.exerciseId))} /> : null}
-        {state.kind === 'loading' ? <ActivityIndicator color={colors.brandRed} size="large" style={styles.center} /> : null}
+        {state.kind === 'loading' ? <ActivityIndicator color={colors.gold500} size="large" style={styles.center} /> : null}
         {state.kind === 'error' ? <Card style={styles.empty}><Text style={styles.emptyTitle}>加载失败</Text><Pressable onPress={() => void refresh()}><Text style={styles.retry}>重试</Text></Pressable></Card> : null}
         {state.kind === 'rest' ? <Card style={styles.empty}><Text style={styles.emptyTitle}>{selectedDate === today ? '今日休息' : '这天休息'}</Text><Text style={styles.emptySub}>看本周计划</Text></Card> : null}
         {(state.kind === 'loaded' || state.kind === 'recording') ? (
@@ -548,21 +552,21 @@ export function TodayWorkoutView() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   screen: { flex: 1 },
-  nav: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingHorizontal: spacing.base },
-  navTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  navDate: { color: colors.fgTertiary, marginTop: 2, ...typography.caption },
+  nav: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 64, paddingHorizontal: spacing.base },
+  navTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  navDate: { color: colors.textTertiary, marginTop: 2, ...typography.caption },
   navActions: { flexDirection: 'row', gap: spacing.base },
   content: { gap: spacing.md, padding: spacing.base, paddingBottom: 120 },
   center: { marginVertical: spacing.xxl },
   empty: { alignItems: 'center', gap: spacing.md, padding: spacing.xl },
-  emptyTitle: { color: colors.fgPrimary, ...typography.headline },
-  emptySub: { color: colors.fgSecondary, ...typography.body },
-  retry: { color: colors.brandRed, ...typography.bodyEmphasis },
-  readOnly: { backgroundColor: colors.surface2, borderRadius: 8, padding: spacing.md },
-  readOnlyText: { color: colors.fgSecondary, textAlign: 'center', ...typography.footnote },
-  prBanner: { backgroundColor: colors.greenSoft, borderColor: colors.green, gap: spacing.xs, padding: spacing.base },
-  prTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  prValue: { color: colors.green, ...typography.footnote },
+  emptyTitle: { color: colors.textPrimary, ...typography.headline },
+  emptySub: { color: colors.textSecondary, ...typography.body },
+  retry: { color: colors.gold500, ...typography.bodyEmphasis },
+  readOnly: { backgroundColor: colors.bgInset, borderRadius: 8, padding: spacing.md },
+  readOnlyText: { color: colors.textSecondary, textAlign: 'center', ...typography.footnote },
+  prBanner: { backgroundColor: colors.successTint, borderColor: colors.success, gap: spacing.xs, padding: spacing.base },
+  prTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  prValue: { color: colors.success, ...typography.footnote },
 });

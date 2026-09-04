@@ -1,8 +1,8 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 
-import { AppButton, Card, colors, radius, spacing, typography } from '@/design';
+import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
 import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
 import { readBoolean, writeBoolean } from './storage';
@@ -18,6 +18,8 @@ function formatClock(seconds: number): string {
 }
 
 export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
   const [showExplanation, setShowExplanation] = useState(false);
   const [endAt, setEndAt] = useState(
@@ -65,7 +67,7 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
     <>
       <Card style={styles.overlay}>
         <View style={styles.timerCopy}>
-          <MaterialCommunityIcons color={colors.green} name="timer-outline" size={22} />
+          <MaterialCommunityIcons color={colors.success} name="timer-outline" size={22} />
           <View>
             <Text style={styles.label}>{remaining === 0 ? '休息结束 💪' : '组间休息'}</Text>
             {remaining > 0 ? <Text style={styles.clock}>{formatClock(remaining)}</Text> : null}
@@ -102,7 +104,7 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   overlay: {
     alignItems: 'center',
     bottom: spacing.base,
@@ -116,13 +118,13 @@ const styles = StyleSheet.create({
     zIndex: 20,
   },
   timerCopy: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.sm },
-  label: { color: colors.fgSecondary, ...typography.footnote },
-  clock: { color: colors.fgPrimary, fontSize: 24, fontVariant: ['tabular-nums'], fontWeight: '700' },
+  label: { color: colors.textSecondary, ...typography.footnote },
+  clock: { color: colors.textPrimary, ...font.mono(24, 'bold') },
   actions: { flexDirection: 'row', gap: spacing.xs },
-  action: { backgroundColor: colors.surface3, borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.md },
-  actionText: { color: colors.fgPrimary, ...typography.footnote },
+  action: { backgroundColor: colors.bgStack, borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.md },
+  actionText: { color: colors.textPrimary, ...typography.footnote },
   modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'center', padding: spacing.lg },
   explanation: { gap: spacing.base, padding: spacing.lg },
-  explanationTitle: { color: colors.fgPrimary, ...typography.headline },
-  explanationText: { color: colors.fgSecondary, lineHeight: 23, ...typography.body },
+  explanationTitle: { color: colors.textPrimary, ...typography.headline },
+  explanationText: { color: colors.textSecondary, lineHeight: 23, ...typography.body },
 });

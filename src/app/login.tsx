@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,7 +14,7 @@ import {
   AppButton,
   Card,
   Screen,
-  colors,
+  useColors, type Colors,
   radius,
   spacing,
   typography,
@@ -36,6 +36,8 @@ function loginErrorMessage(error: unknown): string | null {
 }
 
 export default function LoginScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const login = useSessionStore((state) => state.login);
   const authenticationError = useSessionStore((state) => state.authenticationError);
   const [phone, setPhone] = useState('');
@@ -68,7 +70,7 @@ export default function LoginScreen() {
                 keyboardType="phone-pad"
                 onChangeText={setPhone}
                 placeholder="请输入手机号"
-                placeholderTextColor={colors.fgTertiary}
+                placeholderTextColor={colors.textTertiary}
                 style={styles.input}
                 value={phone}
               />
@@ -81,7 +83,7 @@ export default function LoginScreen() {
                 autoComplete="password"
                 onChangeText={setPassword}
                 placeholder="请输入密码"
-                placeholderTextColor={colors.fgTertiary}
+                placeholderTextColor={colors.textTertiary}
                 secureTextEntry
                 style={styles.input}
                 value={password}
@@ -107,7 +109,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   keyboard: {
     flex: 1,
   },
@@ -121,18 +123,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   accent: {
-    backgroundColor: colors.brandRed,
+    backgroundColor: colors.gold500,
     borderRadius: radius.pill,
     height: 3,
     marginTop: spacing.xs,
     width: 48,
   },
   title: {
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     ...typography.title1,
   },
   subtitle: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     ...typography.body,
   },
   card: {
@@ -143,21 +145,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     ...typography.footnote,
   },
   input: {
-    backgroundColor: colors.surface2,
-    borderColor: colors.border,
+    backgroundColor: colors.bgInset,
+    borderColor: colors.borderDefault,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
     ...typography.body,
   },
   error: {
-    color: colors.brandRed,
+    color: colors.danger,
     ...typography.footnote,
   },
 });

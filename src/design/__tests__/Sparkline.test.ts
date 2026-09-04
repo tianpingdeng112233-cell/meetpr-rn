@@ -1,4 +1,4 @@
-import { expect, test } from '@jest/globals';
+import { expect, jest, test } from '@jest/globals';
 
 import { buildStepSparklinePath } from '../Sparkline';
 
@@ -14,3 +14,7 @@ test('record sparkline holds each plateau then jumps at the next record', () => 
   expect(geometry.d.match(/H /g)).toHaveLength(2);
   expect(geometry.d.match(/V /g)).toHaveLength(2);
 });
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

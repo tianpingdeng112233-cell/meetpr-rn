@@ -1,12 +1,12 @@
 import type { PropsWithChildren } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   AppButton,
   Card,
   Screen,
-  colors,
+  useColors, type Colors,
   radius,
   spacing,
   typography,
@@ -46,6 +46,8 @@ type BindGateProps = PropsWithChildren<{
 }>;
 
 export function BindGate({ children, repository = stubBindRepository }: BindGateProps) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [state, setState] = useState<BindGateState>('loading');
   const [notice, setNotice] = useState<string | null>(null);
   const [inviteCode, setInviteCode] = useState('');
@@ -101,7 +103,7 @@ export function BindGate({ children, repository = stubBindRepository }: BindGate
   if (state === 'loading') {
     return (
       <GateFrame title="正在检查绑定状态">
-        <ActivityIndicator color={colors.brandRed} size="large" />
+        <ActivityIndicator color={colors.gold500} size="large" />
       </GateFrame>
     );
   }
@@ -114,7 +116,7 @@ export function BindGate({ children, repository = stubBindRepository }: BindGate
           autoCapitalize="characters"
           onChangeText={setInviteCode}
           placeholder="请输入邀请码"
-          placeholderTextColor={colors.fgTertiary}
+          placeholderTextColor={colors.textTertiary}
           style={styles.input}
           value={inviteCode}
         />
@@ -148,6 +150,8 @@ export function BindGate({ children, repository = stubBindRepository }: BindGate
 }
 
 function GateFrame({ children, title }: PropsWithChildren<{ title: string }>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Screen>
       <View style={styles.content}>
@@ -160,7 +164,7 @@ function GateFrame({ children, title }: PropsWithChildren<{ title: string }>) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -171,25 +175,25 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   title: {
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     ...typography.headline,
   },
   detail: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     ...typography.body,
   },
   input: {
-    backgroundColor: colors.surface2,
-    borderColor: colors.border,
+    backgroundColor: colors.bgInset,
+    borderColor: colors.borderDefault,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
     ...typography.body,
   },
   wireNotice: {
-    color: colors.fgTertiary,
+    color: colors.textTertiary,
     textAlign: 'center',
     ...typography.footnote,
   },

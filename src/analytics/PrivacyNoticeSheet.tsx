@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '@/design/AppButton';
-import { colors, radius, spacing, typography } from '@/design/tokens';
+import { useColors } from '@/design/theme';
+import { type Colors, radius, spacing, typography } from '@/design/tokens';
 
 import { confirmPrivacyNotice } from './client';
 
@@ -20,6 +21,8 @@ export function PrivacyNoticeSheet({
   visible,
   onConfirmed,
 }: PrivacyNoticeSheetProps) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [confirming, setConfirming] = useState(false);
 
   const handleConfirm = async () => {
@@ -63,7 +66,7 @@ export function PrivacyNoticeSheet({
             label="知道了"
             onPress={() => void handleConfirm()}
             style={styles.button}
-            variant="accent"
+            variant="primary"
           />
         </View>
       </View>
@@ -71,15 +74,15 @@ export function PrivacyNoticeSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   backdrop: {
     flex: 1,
     justifyContent: 'flex-end',
     backgroundColor: 'rgba(0,0,0,0.72)',
   },
   sheet: {
-    backgroundColor: colors.surface2,
-    borderColor: colors.border,
+    backgroundColor: colors.bgInset,
+    borderColor: colors.borderDefault,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     borderWidth: 1,
@@ -88,16 +91,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   title: {
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     ...typography.headline,
   },
   body: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     marginTop: spacing.md,
     ...typography.body,
   },
   link: {
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     marginTop: spacing.base,
     textDecorationLine: 'underline',
     ...typography.bodyEmphasis,

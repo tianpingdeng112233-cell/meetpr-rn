@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppButton, Card, colors, radius, spacing, typography } from '@/design';
+import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
 
 import { TRAINING_LIMITS } from './constants';
 import type { SessionReflection, WorkoutSetDraft } from './model';
@@ -11,6 +11,8 @@ import { isDraftTerminal } from './drafts';
 import { parseFiniteDecimal } from './policy';
 
 export function SlideToCompleteButton({ onComplete }: { onComplete: () => void }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [progress, setProgress] = useState(0);
   const [width, setWidth] = useState(1);
   const pan = useMemo(
@@ -36,17 +38,19 @@ export function SlideToCompleteButton({ onComplete }: { onComplete: () => void }
       style={styles.slider}>
       <Text style={styles.sliderLabel}>滑动完成今日训练</Text>
       <View style={[styles.sliderThumb, { left: progress * Math.max(0, width - 56) }]}>
-        <MaterialCommunityIcons color={colors.green} name="chevron-double-right" size={24} />
+        <MaterialCommunityIcons color={colors.success} name="chevron-double-right" size={24} />
       </View>
     </View>
   );
 }
 
 export function DayCompletionBanner({ count, onPress }: { count: number; onPress: () => void }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Card style={styles.banner}>
       <View style={styles.bannerCopy}>
-        <MaterialCommunityIcons color={colors.green} name="check-decagram" size={22} />
+        <MaterialCommunityIcons color={colors.success} name="check-decagram" size={22} />
         <Text style={styles.bannerTitle}>今日训练完成 · {count} 组</Text>
       </View>
       <Pressable onPress={onPress}><Text style={styles.reviewLink}>查看回顾</Text></Pressable>
@@ -65,6 +69,8 @@ export function SessionSummaryView({
   onClose: () => void;
   onComplete: (reflection: SessionReflection) => Promise<void>;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [reflection, setReflection] = useState<SessionReflection>(initialReflection ?? { goal: '', achieved: '', improve: '' });
   const [saving, setSaving] = useState(false);
   const completed = drafts.filter(isDraftTerminal);
@@ -93,7 +99,7 @@ export function SessionSummaryView({
             ['achieved', '做到了什么', '这次训练有哪些收获?'],
             ['improve', '可以更好', '哪里还能做得更好?'],
           ] as const).map(([key, label, placeholder]) => (
-            <Card key={key} style={styles.reflectionCard}><Text style={styles.performanceLabel}>{label}</Text><TextInput multiline onChangeText={(value) => setReflection((current) => ({ ...current, [key]: value }))} placeholder={placeholder} placeholderTextColor={colors.fgTertiary} style={styles.reflectionInput} value={reflection[key]} /></Card>
+            <Card key={key} style={styles.reflectionCard}><Text style={styles.performanceLabel}>{label}</Text><TextInput multiline onChangeText={(value) => setReflection((current) => ({ ...current, [key]: value }))} placeholder={placeholder} placeholderTextColor={colors.textTertiary} style={styles.reflectionInput} value={reflection[key]} /></Card>
           ))}
           <AppButton
             disabled={saving}
@@ -109,29 +115,29 @@ export function SessionSummaryView({
   );
 }
 
-const styles = StyleSheet.create({
-  slider: { backgroundColor: colors.green, borderColor: colors.green, borderRadius: radius.pill, borderWidth: 1, height: 58, justifyContent: 'center', overflow: 'hidden' },
+const createStyles = (colors: Colors) => StyleSheet.create({
+  slider: { backgroundColor: colors.success, borderColor: colors.success, borderRadius: radius.pill, borderWidth: 1, height: 58, justifyContent: 'center', overflow: 'hidden' },
   sliderLabel: { color: '#FFFFFF', textAlign: 'center', ...typography.bodyEmphasis },
   sliderThumb: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: radius.pill, height: 50, justifyContent: 'center', position: 'absolute', width: 50 },
-  banner: { alignItems: 'center', backgroundColor: colors.greenSoft, borderColor: 'rgba(31,179,88,0.4)', borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
+  banner: { alignItems: 'center', backgroundColor: colors.successTint, borderColor: `${colors.success}66`, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
   bannerCopy: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  bannerTitle: { color: colors.green, ...typography.bodyEmphasis },
-  reviewLink: { color: colors.fgPrimary, ...typography.footnote },
-  summaryRoot: { backgroundColor: colors.bg, flex: 1 },
-  summaryNav: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingHorizontal: spacing.base },
-  summaryNavTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  done: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  bannerTitle: { color: colors.success, ...typography.bodyEmphasis },
+  reviewLink: { color: colors.textPrimary, ...typography.footnote },
+  summaryRoot: { backgroundColor: colors.bgBase, flex: 1 },
+  summaryNav: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingHorizontal: spacing.base },
+  summaryNavTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  done: { color: colors.textPrimary, ...typography.bodyEmphasis },
   summaryContent: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xxl },
-  summaryHero: { color: colors.fgPrimary, ...typography.title1 },
+  summaryHero: { color: colors.textPrimary, ...typography.title1 },
   overview: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.sm },
   metric: { padding: spacing.md, width: '50%' },
-  metricValue: { color: colors.fgPrimary, ...typography.headline },
-  metricLabel: { color: colors.fgSecondary, marginTop: spacing.xs, ...typography.caption },
-  sectionTitle: { color: colors.fgPrimary, ...typography.headline },
+  metricValue: { color: colors.textPrimary, ...typography.headline },
+  metricLabel: { color: colors.textSecondary, marginTop: spacing.xs, ...typography.caption },
+  sectionTitle: { color: colors.textPrimary, ...typography.headline },
   performance: { flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
-  performanceLabel: { color: colors.fgSecondary, ...typography.footnote },
-  performanceValue: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  privateNote: { color: colors.fgTertiary, marginTop: spacing.xs, ...typography.footnote },
+  performanceLabel: { color: colors.textSecondary, ...typography.footnote },
+  performanceValue: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  privateNote: { color: colors.textTertiary, marginTop: spacing.xs, ...typography.footnote },
   reflectionCard: { gap: spacing.sm, padding: spacing.base },
-  reflectionInput: { color: colors.fgPrimary, minHeight: 72, textAlignVertical: 'top', ...typography.body },
+  reflectionInput: { color: colors.textPrimary, minHeight: 72, textAlignVertical: 'top', ...typography.body },
 });

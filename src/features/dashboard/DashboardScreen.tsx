@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,8 +18,9 @@ import { useShiftPlan, useUndoPlanShift, type FeedbackItem } from '@/api/domains
 import { AnalyticsScreen, screen } from '@/analytics';
 import type { E1RMSample } from '@/domain/e1rm';
 import {
+  AppButton,
   Card,
-  colors,
+  useColors, type Colors, font,
   radius,
   Screen,
   Sparkline,
@@ -47,12 +48,12 @@ import type {
 } from './types';
 import { useDashboardViewModel } from './use-dashboard';
 
-const STATUS_COLORS: Record<WorkoutDayStatus, string> = {
-  notStarted: colors.brandRed,
-  partial: colors.amber,
-  complete: colors.green,
-  noPlan: colors.fgTertiary,
-};
+const statusColors = (colors: Colors): Record<WorkoutDayStatus, string> => ({
+  notStarted: colors.danger,
+  partial: colors.gold500,
+  complete: colors.success,
+  noPlan: colors.textTertiary,
+});
 
 export function DashboardAsyncSection({
   isError,
@@ -63,6 +64,8 @@ export function DashboardAsyncSection({
   onRetry: () => void;
   children: ReactNode;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (!isError) return <>{children}</>;
   return (
     <View style={styles.errorRow}>
@@ -78,6 +81,8 @@ export function DashboardAsyncSection({
 }
 
 export function DashboardScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const router = useRouter();
   const vm = useDashboardViewModel(studentId);
@@ -170,7 +175,7 @@ export function DashboardScreen() {
           <RefreshControl
             onRefresh={() => void vm.reload()}
             refreshing={vm.isRefreshing}
-            tintColor={colors.brandRed}
+            tintColor={colors.gold500}
           />
         }
         showsVerticalScrollIndicator={false}>
@@ -183,7 +188,7 @@ export function DashboardScreen() {
             onPress={() => setNotificationsOpen(true)}
             style={({ pressed }) => [styles.bell, pressed && styles.pressed]}>
             <MaterialCommunityIcons
-              color={colors.fgPrimary}
+              color={colors.textPrimary}
               name={vm.notifications.length > 0 ? 'bell-badge-outline' : 'bell-outline'}
               size={27}
             />
@@ -208,7 +213,7 @@ export function DashboardScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>本周</Text>
           {vm.week.status === 'loading' ? (
-            <ActivityIndicator color={colors.fgTertiary} size="small" />
+            <ActivityIndicator color={colors.textTertiary} size="small" />
           ) : null}
         </View>
         <DashboardAsyncSection
@@ -292,6 +297,8 @@ export function DashboardScreen() {
 }
 
 function ProgressSegments({ week }: { week: ReturnType<typeof useDashboardViewModel>['week'] }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (week.status === 'idle' || week.status === 'error') return null;
   if (week.status === 'loading') {
     return <View style={styles.progressSkeleton} />;
@@ -306,7 +313,7 @@ function ProgressSegments({ week }: { week: ReturnType<typeof useDashboardViewMo
             style={[
               styles.progressFill,
               {
-                backgroundColor: STATUS_COLORS[day.status],
+                backgroundColor: statusColors(colors)[day.status],
                 width: `${Math.round(day.completion * 100)}%`,
               },
             ]}
@@ -326,6 +333,8 @@ function FeedbackCard({
   now: Date;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const eyebrow = feedback.day_date
     ? `教练反馈 · 周${chineseWeekday(feedback.day_date)}`
     : '教练反馈';
@@ -358,6 +367,8 @@ export function WeekGrid({
   selectedDate: string | null;
   onSelect: (date: string) => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const ordered = [...days].sort((left, right) => {
     const leftWeekday = mondayOffset(
       new Date(`${left.date}T00:00:00Z`).getUTCDay() + 1,
@@ -394,8 +405,8 @@ export function WeekGrid({
                 styles.liftInitial,
                 {
                   color: day.day
-                    ? STATUS_COLORS[day.status]
-                    : colors.fgTertiary,
+                    ? statusColors(colors)[day.status]
+                    : colors.textTertiary,
                 },
               ]}>
               {day.lift?.initial ?? '·'}
@@ -414,13 +425,10 @@ export function TrainingCTA({
   cta: ReturnType<typeof useDashboardViewModel>['cta'];
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return cta.interactive ? (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}>
-      <Text style={styles.ctaLabel}>{cta.label}</Text>
-    </Pressable>
+    <AppButton label={cta.label} onPress={onPress} />
   ) : (
     <View style={styles.restCTA}>
       <Text style={styles.restLabel}>{cta.label}</Text>
@@ -445,9 +453,11 @@ function LiftCard({
   onPress: () => void;
   trajectory: readonly E1RMSample[];
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const lift = day?.lift;
   const deltaColor =
-    delta > 0 ? colors.green : delta < 0 ? colors.brandRed : colors.fgSecondary;
+    delta > 0 ? colors.success : delta < 0 ? colors.danger : colors.textSecondary;
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       {({ pressed }) => (
@@ -459,7 +469,7 @@ function LiftCard({
                   {lift.name} E1RM · {periodLabel}
                 </Text>
                 <MaterialCommunityIcons
-                  color={colors.fgTertiary}
+                  color={colors.textTertiary}
                   name="chevron-right"
                   size={22}
                 />
@@ -486,10 +496,10 @@ function LiftCard({
               <View style={styles.liftTitleRow}>
                 <Text style={styles.liftTitle}>成长曲线</Text>
                 {loading ? (
-                  <ActivityIndicator color={colors.fgTertiary} size="small" />
+                  <ActivityIndicator color={colors.textTertiary} size="small" />
                 ) : (
                   <MaterialCommunityIcons
-                    color={colors.fgTertiary}
+                    color={colors.textTertiary}
                     name="chevron-right"
                     size={22}
                   />
@@ -517,6 +527,8 @@ export function ProfileMetrics({
   profileError: boolean;
   onRetry: () => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (profileError) {
     return (
       <DashboardAsyncSection isError onRetry={onRetry}>
@@ -560,6 +572,8 @@ function NotificationCenterSheet({
   onFeedback: () => void;
   onPlan: () => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal
       animationType="slide"
@@ -578,7 +592,7 @@ function NotificationCenterSheet({
           {notifications.length === 0 ? (
             <View style={styles.notificationEmpty}>
               <MaterialCommunityIcons
-                color={colors.fgTertiary}
+                color={colors.textTertiary}
                 name="bell-outline"
                 size={38}
               />
@@ -637,31 +651,33 @@ function NotificationRow({
   subtitle: string;
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.notificationRow, pressed && styles.pressed]}>
       <View style={styles.notificationIcon}>
-        <MaterialCommunityIcons color={colors.brandRed} name={icon} size={22} />
+        <MaterialCommunityIcons color={colors.gold500} name={icon} size={22} />
       </View>
       <View style={styles.notificationText}>
         <Text style={styles.notificationTitle}>{title}</Text>
         <Text style={styles.notificationSubtitle}>{subtitle}</Text>
       </View>
-      <MaterialCommunityIcons color={colors.fgTertiary} name="chevron-right" size={21} />
+      <MaterialCommunityIcons color={colors.textTertiary} name="chevron-right" size={21} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   content: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xxl },
   heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  hero: { color: colors.fgPrimary, fontSize: 36, fontWeight: '900', lineHeight: 40 },
+  hero: { color: colors.textPrimary, ...font.display(36, 'black'), lineHeight: 40 },
   bell: { borderRadius: radius.pill, padding: spacing.sm },
   redDot: {
-    backgroundColor: colors.brandRed,
-    borderColor: colors.bg,
+    backgroundColor: colors.dangerFill,
+    borderColor: colors.bgBase,
     borderRadius: radius.pill,
     borderWidth: 2,
     height: 10,
@@ -673,26 +689,26 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.72 },
   progressRow: { flexDirection: 'row', gap: spacing.xs },
   progressTrack: {
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.bgStack,
     borderRadius: radius.pill,
     flex: 1,
     height: 6,
     overflow: 'hidden',
   },
   progressFill: { borderRadius: radius.pill, height: 6 },
-  progressSkeleton: { backgroundColor: colors.surface3, borderRadius: radius.pill, height: 6 },
+  progressSkeleton: { backgroundColor: colors.bgStack, borderRadius: radius.pill, height: 6 },
   feedbackCard: { gap: spacing.md, padding: spacing.base },
   feedbackTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  inlineDot: { backgroundColor: colors.brandRed, borderRadius: radius.pill, height: 8, width: 8 },
-  eyebrow: { color: colors.fgSecondary, ...typography.caption, letterSpacing: 0.8 },
-  feedbackBody: { color: colors.fgPrimary, ...typography.body },
-  feedbackFooter: { color: colors.fgSecondary, ...typography.footnote },
+  inlineDot: { backgroundColor: colors.dangerFill, borderRadius: radius.pill, height: 8, width: 8 },
+  eyebrow: { color: colors.textSecondary, ...typography.caption, letterSpacing: 0.8 },
+  feedbackBody: { color: colors.textPrimary, ...typography.body },
+  feedbackFooter: { color: colors.textSecondary, ...typography.footnote },
   sectionHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  sectionTitle: { color: colors.fgPrimary, ...typography.headline },
+  sectionTitle: { color: colors.textPrimary, ...typography.headline },
   errorRow: {
     alignItems: 'center',
-    backgroundColor: colors.surface1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    borderColor: colors.borderDefault,
     borderRadius: radius.md,
     borderWidth: 1,
     flexDirection: 'row',
@@ -700,13 +716,13 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing.base,
   },
-  errorText: { color: colors.fgTertiary, ...typography.footnote },
-  retryText: { color: colors.brandRed, ...typography.footnote },
+  errorText: { color: colors.textTertiary, ...typography.footnote },
+  retryText: { color: colors.gold500, ...typography.footnote },
   weekGrid: { flexDirection: 'row', gap: spacing.xs },
   weekCell: {
     alignItems: 'center',
-    backgroundColor: colors.surface1,
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceCard,
+    borderColor: colors.borderDefault,
     borderRadius: radius.md,
     borderWidth: 1,
     flex: 1,
@@ -715,11 +731,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingVertical: spacing.sm,
   },
-  weekCellSelected: { backgroundColor: colors.brandRedSoft, borderColor: colors.brandRed },
+  weekCellSelected: { backgroundColor: colors.goldSoft, borderColor: colors.gold500 },
   completeTriangle: {
     borderLeftColor: 'transparent',
     borderLeftWidth: 9,
-    borderTopColor: colors.brandRed,
+    borderTopColor: colors.success,
     borderTopWidth: 9,
     height: 0,
     position: 'absolute',
@@ -727,51 +743,41 @@ const styles = StyleSheet.create({
     top: 0,
     width: 0,
   },
-  weekday: { color: colors.fgSecondary, ...typography.caption },
-  selectedText: { color: colors.fgPrimary },
-  liftInitial: { fontSize: 18, fontWeight: '800' },
-  weekGridSkeleton: { backgroundColor: colors.surface1, borderRadius: radius.md, height: 62 },
+  weekday: { color: colors.textSecondary, ...typography.caption },
+  selectedText: { color: colors.textPrimary },
+  liftInitial: { ...font.display(18) },
+  weekGridSkeleton: { backgroundColor: colors.surfaceCard, borderRadius: radius.md, height: 62 },
   liftCard: { minHeight: 150, padding: spacing.base },
   liftTitleRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  liftTitle: { color: colors.fgSecondary, ...typography.footnote },
+  liftTitle: { color: colors.textSecondary, ...typography.footnote },
   numberRow: { alignItems: 'baseline', flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  bigNumber: { color: colors.fgPrimary, ...typography.displayNumeral },
-  bigUnit: { color: colors.fgPrimary, ...typography.displayUnit },
-  delta: { ...typography.footnote, fontWeight: '600' },
+  bigNumber: { color: colors.textPrimary, ...typography.displayNumeral },
+  bigUnit: { color: colors.textPrimary, ...typography.displayUnit },
+  delta: { ...font.body(13, 'semibold') },
   sparkline: { marginTop: spacing.md },
-  liftFooter: { color: colors.fgTertiary, marginTop: spacing.md, ...typography.caption },
+  liftFooter: { color: colors.textTertiary, marginTop: spacing.md, ...typography.caption },
   liftEmpty: { flex: 1, gap: spacing.md, justifyContent: 'space-between' },
-  liftEmptyText: { color: colors.fgTertiary, ...typography.body },
-  cta: {
-    alignItems: 'center',
-    backgroundColor: colors.fgPrimary,
-    borderRadius: radius.lg,
-    height: 50,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.base,
-  },
-  ctaPressed: { opacity: 0.6 },
-  ctaLabel: { color: colors.bg, ...typography.bodyEmphasis },
+  liftEmptyText: { color: colors.textTertiary, ...typography.body },
   restCTA: {
     alignItems: 'center',
-    backgroundColor: colors.surface1,
+    backgroundColor: colors.surfaceCard,
     borderRadius: radius.md,
     justifyContent: 'center',
     minHeight: 52,
   },
-  restLabel: { color: colors.fgTertiary, ...typography.bodyEmphasis },
-  shiftButton: { alignItems: 'center', backgroundColor: colors.surface1, borderColor: colors.border, borderRadius: radius.lg, borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
-  shiftLabel: { color: colors.fgSecondary, ...typography.bodyEmphasis },
-  undoShiftButton: { alignItems: 'center', backgroundColor: colors.brandRedSoft, borderRadius: radius.lg, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
-  undoShiftLabel: { color: colors.brandRed, ...typography.bodyEmphasis },
+  restLabel: { color: colors.textTertiary, ...typography.bodyEmphasis },
+  shiftButton: { alignItems: 'center', backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, borderRadius: radius.lg, borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
+  shiftLabel: { color: colors.textSecondary, ...typography.bodyEmphasis },
+  undoShiftButton: { alignItems: 'center', backgroundColor: colors.goldSoft, borderRadius: radius.lg, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
+  undoShiftLabel: { color: colors.gold500, ...typography.bodyEmphasis },
   metricsRow: { flexDirection: 'row', gap: spacing.md },
   metricCard: { flex: 1, minHeight: 96, padding: spacing.base },
-  metricLabel: { color: colors.fgSecondary, ...typography.footnote },
-  metricValue: { color: colors.fgPrimary, marginTop: spacing.sm, ...typography.headline },
-  metricFooter: { color: colors.fgTertiary, marginTop: spacing.xs, ...typography.caption },
+  metricLabel: { color: colors.textSecondary, ...typography.footnote },
+  metricValue: { color: colors.textPrimary, marginTop: spacing.sm, ...typography.headline },
+  metricFooter: { color: colors.textTertiary, marginTop: spacing.xs, ...typography.caption },
   scrim: { backgroundColor: 'rgba(0,0,0,0.62)', flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: colors.surface1,
+    backgroundColor: colors.surfaceCard,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     minHeight: 290,
@@ -780,20 +786,20 @@ const styles = StyleSheet.create({
   },
   sheetHeader: {
     alignItems: 'center',
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderDefault,
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: spacing.base,
   },
-  sheetTitle: { color: colors.fgPrimary, ...typography.headline },
-  done: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  sheetTitle: { color: colors.textPrimary, ...typography.headline },
+  done: { color: colors.textPrimary, ...typography.bodyEmphasis },
   notificationEmpty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl },
-  notificationEmptyTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  notificationEmptyBody: { color: colors.fgTertiary, ...typography.footnote },
+  notificationEmptyTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  notificationEmptyBody: { color: colors.textTertiary, ...typography.footnote },
   notificationRow: {
     alignItems: 'center',
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderDefault,
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: spacing.md,
@@ -801,13 +807,13 @@ const styles = StyleSheet.create({
   },
   notificationIcon: {
     alignItems: 'center',
-    backgroundColor: colors.brandRedSoft,
+    backgroundColor: colors.goldSoft,
     borderRadius: radius.pill,
     height: 40,
     justifyContent: 'center',
     width: 40,
   },
   notificationText: { flex: 1, gap: spacing.xs },
-  notificationTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  notificationSubtitle: { color: colors.fgSecondary, ...typography.footnote },
+  notificationTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  notificationSubtitle: { color: colors.textSecondary, ...typography.footnote },
 });
