@@ -37,7 +37,6 @@ function StudentTabs() {
           title: t('student.studentRootView.copy004'),
         }}
       />
-      <Tabs.Screen name="growth-curve" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -1,6 +1,8 @@
+import { exerciseDisplayName, t } from '@/i18n';
 import type {
   Exercise,
   FeedbackItem,
+  OnboardingProfile,
   PlanDetail,
   SetLog,
 } from '@/api/domains';
@@ -32,11 +34,11 @@ import type {
 
 export const LIFT_PRESENTATION: Record<
   LiftFamily,
-  { name: '深蹲' | '卧推' | '硬拉'; initial: 'S' | 'B' | 'D' }
+  { name: string; initial: 'S' | 'B' | 'D' }
 > = {
-  squat: { name: '深蹲', initial: 'S' },
-  bench: { name: '卧推', initial: 'B' },
-  deadlift: { name: '硬拉', initial: 'D' },
+  squat: { get name() { return t('student.growthCurveView.copy002'); }, initial: 'S' },
+  bench: { get name() { return t('student.growthCurveView.copy003'); }, initial: 'B' },
+  deadlift: { get name() { return t('student.growthCurveView.copy004'); }, initial: 'D' },
 };
 
 export const LIFT_FAMILIES: readonly LiftFamily[] = [
@@ -97,20 +99,109 @@ export function buildGrowthCurves(
   return { squat: build('squat'), bench: build('bench'), deadlift: build('deadlift') };
 }
 
+export const TREND_UNLOCK_THRESHOLD = 3;
+
+function localLogDate(log: SetLog): string {
+  const date = new Date(log.logged_at);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function historyStats(logs: readonly SetLog[]) {
+  const completed = completedHistoryLogs(logs);
+  const trainingSessionCount = new Set(completed.map(localLogDate)).size;
+  return {
+    trainingSessionCount,
+    trainingWeekCount: new Set(completed.map(log => isoWeekKey(localLogDate(log)))).size,
+    totalVolumeKg: completed.reduce((total, log) => total + Number(log.weight_kg) * log.reps, 0),
+    unlocksTrends: trainingSessionCount >= TREND_UNLOCK_THRESHOLD,
+  };
+}
+
+export function e1rmCardState({
+  familyTotalDataPointCount,
+  windowDataPointCount,
+  windowMainLinePointCount,
+  windowMainLineValueRangeKg,
+}: {
+  familyTotalDataPointCount: number;
+  windowDataPointCount: number;
+  windowMainLinePointCount: number;
+  windowMainLineValueRangeKg: number | null;
+}): 'zero' | 'formingProgress' | 'formingWindowSparse' | 'chart' {
+  const total = Math.max(0, familyTotalDataPointCount);
+  const window = Math.min(Math.max(0, windowDataPointCount), total);
+  const mainLine = Math.min(Math.max(0, windowMainLinePointCount), window);
+  if (total === 0) return 'zero';
+  if (total < TREND_UNLOCK_THRESHOLD) return 'formingProgress';
+  if (
+    mainLine < TREND_UNLOCK_THRESHOLD ||
+    windowMainLineValueRangeKg === null ||
+    !(windowMainLineValueRangeKg > 0)
+  ) return 'formingWindowSparse';
+  return 'chart';
+}
+
 export function buildGrowthStats(
   logs: readonly SetLog[],
   curves: Record<LiftFamily, GrowthCurve>,
+  profile: OnboardingProfile | null = null,
 ): GrowthStats {
-  const eligible = completedHistoryLogs(logs);
-  const trainingDays = new Set(eligible.map((log) => log.logged_date)).size;
-  const trainingWeeks = new Set(eligible.map((log) => isoWeekKey(log.logged_date))).size;
-  const liftValues = LIFT_FAMILIES.map(
-    (family) => curves[family].point?.valueKg ?? null,
-  );
-  const sbdTotalKg = liftValues.every((value): value is number => value !== null)
-    ? liftValues.reduce((total, value) => total + value, 0)
-    : null;
-  return { trainingDays, trainingWeeks, sbdTotalKg };
+  const sumComplete = (values: (number | null)[]) => values.every((value): value is number => value !== null)
+    ? values.reduce((total, value) => total + value, 0) : null;
+  return {
+    ...historyStats(logs),
+    sbdTotalKg: sumComplete(LIFT_FAMILIES.map(family => growthSnapshot(curves[family], 'all').currentKg)),
+    trainingTotalKg: sumComplete(LIFT_FAMILIES.map(family => {
+      const value = profile?.[`${family}_1rm_kg`];
+      return value == null ? null : Number(value);
+    })),
+  };
+}
+
+export type GrowthTimeRange = '30' | '90' | 'all';
+export function growthRangeLabel(range: GrowthTimeRange): string {
+  return t(range === '30' ? 'student.growthScreenPresentation.copy001' : range === '90' ? 'student.growthScreenPresentation.copy002' : 'student.growthScreenPresentation.copy003');
+}
+
+/** Pinned iOS uses daily best eligible samples; low-confidence days stay scatter-only. */
+export function growthSnapshot(curve: GrowthCurve, range: GrowthTimeRange, now = new Date()) {
+  const daily = new Map<string, GrowthCurve['series']['rawEligible'][number]>();
+  for (const point of curve.series.rawEligible) {
+    const day = `${point.date.getFullYear()}-${point.date.getMonth()}-${point.date.getDate()}`;
+    const previous = daily.get(day);
+    const winsTie = previous && point.valueKg === previous.valueKg && (
+      point.winnerConfidence !== previous.winnerConfidence
+        ? point.winnerConfidence === 'normal'
+        : point.date.getTime() > previous.date.getTime()
+    );
+    if (!previous || point.valueKg > previous.valueKg || winsTie) daily.set(day, point);
+  }
+  const all = [...daily.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+  // The iOS 30-day label maps to its four-week rolling window (28 days).
+  const days = range === '30' ? E1RM_POLICY.rollingWindowDays : 90;
+  const cutoff = range === 'all' ? -Infinity : now.getTime() - days * E1RM_MATH.millisecondsPerDay;
+  const rawEligiblePoints = all.filter(point => point.date.getTime() >= cutoff);
+  const samples = rawEligiblePoints.filter(point => point.winnerConfidence === 'normal');
+  const values = samples.map(point => point.valueKg);
+  const lastSmoothed = curve.series.smoothed.at(-1);
+  const headline = curve.series.rawEligible.find(point => point.winnerPointId === lastSmoothed?.winnerPointId) ?? null;
+  const state = e1rmCardState({
+    familyTotalDataPointCount: all.length,
+    windowDataPointCount: rawEligiblePoints.length,
+    windowMainLinePointCount: samples.length,
+    windowMainLineValueRangeKg: values.length ? Math.max(...values) - Math.min(...values) : null,
+  });
+  return {
+    samples,
+    rawEligiblePoints,
+    windowDataPointCount: rawEligiblePoints.length,
+    eligibleDataPointCount: all.length,
+    currentKg: headline?.valueKg ?? null,
+    deltaKg: samples.length > 1 ? samples[samples.length - 1].valueKg - samples[0].valueKg : null,
+    latestRecordDate: headline?.date ?? rawEligiblePoints.at(-1)?.date ?? null,
+    chartCurrentPoint: samples.at(-1) ?? null,
+    state,
+  };
 }
 
 export function historyWeekNumber(startDate: string, dateText: string): number {
@@ -129,7 +220,8 @@ function exerciseName(
   exerciseId: string,
   exerciseIndex: ReadonlyMap<string, Exercise>,
 ): string {
-  return exerciseIndex.get(exerciseId)?.name ?? '动作';
+  const exercise = exerciseIndex.get(exerciseId);
+  return exercise ? exerciseDisplayName(exercise) : t('student.sessionSummaryView.copy006');
 }
 
 export function buildHistoryWeeks(
@@ -220,13 +312,14 @@ export function buildHistoryWeeks(
 
 export function buildVolumeIntensitySeries(
   logs: readonly SetLog[],
+  maximumCount = Infinity,
 ): VolumeIntensitySeries {
   const buckets = new Map<
     string,
     { startDate: string; volumeKg: number; rpes: number[] }
   >();
   for (const log of completedHistoryLogs(logs)) {
-    const key = isoWeekKey(log.logged_date);
+    const key = isoWeekKey(localLogDate(log));
     const bucket = buckets.get(key) ?? { startDate: key, volumeKg: 0, rpes: [] };
     const weight = Number(log.weight_kg);
     if (Number.isFinite(weight)) {
@@ -240,6 +333,7 @@ export function buildVolumeIntensitySeries(
   }
   const basePoints = [...buckets.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
+    .slice(-maximumCount)
     .map(([key, bucket]) => ({
       key,
       startDate: bucket.startDate,
@@ -259,6 +353,10 @@ export function buildVolumeIntensitySeries(
         point.averageRPE === null ? null : (point.averageRPE / 10) * scale,
     })),
   };
+}
+
+export function chartBuckets(logs: readonly SetLog[]): VolumeIntensitySeries {
+  return buildVolumeIntensitySeries(logs, 6);
 }
 
 export function feedbackTitle(
@@ -287,8 +385,8 @@ export function feedbackTitle(
   const family = item.plan_exercise_id
     ? familyByPlanExerciseId.get(item.plan_exercise_id)
     : null;
-  const familyName = family ? LIFT_PRESENTATION[family].name : '训练';
-  return `${week ? `第 ${week} 周` : '训练'} · ${familyName}`;
+  const familyName = family ? LIFT_PRESENTATION[family].name : t('student.studentRootView.copy002');
+  return `${week ? t('student.historyEntriesView.copy002', [week]) : t('student.studentRootView.copy002')} · ${familyName}`;
 }
 
 export function feedbackDate(item: FeedbackItem): string {

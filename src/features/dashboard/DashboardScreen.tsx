@@ -237,7 +237,7 @@ export function DashboardScreen() {
                   loading={vm.e1rm.isLoading}
                   onPress={() =>
                     router.push({
-                      pathname: '/(student)/growth-curve',
+                      pathname: '/(student)/growth',
                       params: { lift: vm.selectedDay?.lift?.name ?? t('student.growthCurveView.copy001') },
                     })
                   }

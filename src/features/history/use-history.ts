@@ -19,6 +19,7 @@ import {
   utcDateText,
 } from '@/features/dashboard/model';
 import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
+import { exerciseDisplayName, t } from '@/i18n';
 import { useStudentTabsStore } from '@/features/student-tabs';
 import { trainingE1RMRepository } from '@/features/training/storage';
 
@@ -26,7 +27,7 @@ import {
   buildGrowthCurves,
   buildGrowthStats,
   buildHistoryWeeks,
-  buildVolumeIntensitySeries,
+  chartBuckets,
   LIFT_FAMILIES,
 } from './model';
 import type { GrowthState } from './types';
@@ -203,7 +204,6 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
       profileQuery.isPending ||
       feedback.isLoading ||
       detailQueries.some((query) => query.isPending);
-    if (loading) return { status: 'loading' };
     const errorQuery = detailQueries.find((query) => query.isError);
     if (
       plansQuery.isError ||
@@ -221,9 +221,10 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
           exerciseQuery.error ??
           profileQuery.error ??
           errorQuery?.error ??
-          new Error('Feedback failed to load'),
+          new Error(t('student.trainingHistoryView.copy022')),
       };
     }
+    if (loading) return { status: 'loading' };
     const logs = logsQuery.data?.logs ?? [];
     const curves = buildGrowthCurves(logs, familyByExerciseId, now);
     const familyByPlanExerciseId = new Map<string, LiftFamily>();
@@ -242,12 +243,12 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
       logs,
       feedback: feedback.items,
       curves,
-      stats: buildGrowthStats(logs, curves),
-      volumeIntensity: buildVolumeIntensitySeries(logs),
+      stats: buildGrowthStats(logs, curves, profileQuery.data ?? null),
+      volumeIntensity: chartBuckets(logs),
       familyByExerciseId,
       familyByPlanExerciseId,
       exerciseNames: new Map(
-        [...exerciseIndex].map(([id, exercise]) => [id, exercise.name]),
+        [...exerciseIndex].map(([id, exercise]) => [id, exerciseDisplayName(exercise)]),
       ),
       prEvents,
     };
@@ -271,6 +272,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
     plansQuery.isError,
     plansQuery.isPending,
     prEvents,
+    profileQuery.data,
     profileQuery.error,
     profileQuery.isError,
     profileQuery.isPending,

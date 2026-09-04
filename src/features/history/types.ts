@@ -9,17 +9,20 @@ import type { E1RMSample, E1RMSeries, LiftFamily, PRBreakthroughEvent } from '@/
 
 export type GrowthCurve = {
   family: LiftFamily;
-  name: '深蹲' | '卧推' | '硬拉';
+  name: string;
   series: E1RMSeries;
   point: E1RMSample | null;
-  periodLabel: '90 天' | '历史最佳';
+  periodLabel: string;
   trajectory: readonly E1RMSample[];
   lowConfidence: readonly E1RMSample[];
 };
 
 export type GrowthStats = {
-  trainingDays: number;
-  trainingWeeks: number;
+  trainingSessionCount: number;
+  trainingWeekCount: number;
+  totalVolumeKg: number;
+  unlocksTrends: boolean;
+  trainingTotalKg: number | null;
   sbdTotalKg: number | null;
 };
 

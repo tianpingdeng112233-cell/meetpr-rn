@@ -1,4 +1,6 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { t } from '@/i18n';
 import Svg, {
   Circle,
   Line,
@@ -7,7 +9,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 
-import { colors, radius, spacing, typography } from '@/design';
+import { useColors, radius, spacing, typography } from '@/design';
 
 import type { VolumeIntensitySeries } from './types';
 
@@ -16,22 +18,25 @@ const HEIGHT = 210;
 const TOP = 18;
 const BOTTOM = 34;
 const PLOT_HEIGHT = HEIGHT - TOP - BOTTOM;
-const BAR_COLOR = 'rgba(229,34,30,0.32)';
+
 
 export function VolumeIntensityChart({
   series,
+  isUnlocked,
 }: {
   series: VolumeIntensitySeries;
+  isUnlocked: boolean;
 }) {
-  if (series.points.length === 0) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  if (!isUnlocked || series.points.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyTitle}>还没有训练记录</Text>
-        <Text style={styles.emptyBody}>完成训练后会显示每周容量和平均 RPE</Text>
+        <Text style={styles.emptyTitle}>{t('student.volumeIntensityChart.copy003')}</Text>
       </View>
     );
   }
-  const points = series.points.slice(-12);
+  const points = series.points;
   const slot = WIDTH / points.length;
   const barWidth = Math.min(32, slot * 0.52);
   const x = (index: number) => slot * index + slot / 2;
@@ -48,13 +53,13 @@ export function VolumeIntensityChart({
   return (
     <View>
       <Svg
-        accessibilityLabel="每周训练容量和平均 RPE"
+        accessibilityLabel={t('student.volumeIntensityChart.copy004', [points.length])}
         height={HEIGHT}
         preserveAspectRatio="none"
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         width="100%">
         <Line
-          stroke={colors.border}
+          stroke={colors.chartLine}
           strokeWidth={1}
           x1={0}
           x2={WIDTH}
@@ -65,7 +70,7 @@ export function VolumeIntensityChart({
           const barY = y(point.volumeKg);
           return (
             <Rect
-              fill={BAR_COLOR}
+              fill={colors.goldSoft}
               height={TOP + PLOT_HEIGHT - barY}
               key={point.key}
               rx={4}
@@ -79,7 +84,7 @@ export function VolumeIntensityChart({
           <Path
             d={linePath}
             fill="none"
-            stroke={colors.green}
+            stroke={colors.chartLine}
             strokeLinejoin="round"
             strokeWidth={2.5}
           />
@@ -88,14 +93,14 @@ export function VolumeIntensityChart({
           <Circle
             cx={point.x}
             cy={point.y}
-            fill={colors.green}
+            fill={colors.chartLine}
             key={point.key}
             r={4}
           />
         ))}
         {points.map((point, index) => (
           <SvgText
-            fill={colors.fgTertiary}
+            fill={colors.textMuted}
             fontSize={18}
             key={`label-${point.key}`}
             textAnchor="middle"
@@ -108,26 +113,26 @@ export function VolumeIntensityChart({
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={styles.volumeSwatch} />
-          <Text style={styles.legendText}>训练容量 kg</Text>
+          <Text style={styles.legendText}>{t('student.volumeIntensityChart.copy001')}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={styles.rpeSwatch} />
-          <Text style={styles.legendText}>平均 RPE</Text>
+          <Text style={styles.legendText}>{t('student.volumeIntensityChart.copy002')}</Text>
         </View>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   empty: {
     alignItems: 'center',
     gap: spacing.sm,
     justifyContent: 'center',
     minHeight: 180,
   },
-  emptyTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  emptyBody: { color: colors.fgTertiary, textAlign: 'center', ...typography.footnote },
+  emptyTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  emptyBody: { color: colors.textMuted, textAlign: 'center', ...typography.footnote },
   legend: {
     flexDirection: 'row',
     gap: spacing.base,
@@ -135,12 +140,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   legendItem: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  legendText: { color: colors.fgSecondary, ...typography.caption },
+  legendText: { color: colors.textSecondary, ...typography.caption },
   volumeSwatch: {
-    backgroundColor: BAR_COLOR,
+    backgroundColor: colors.goldSoft,
     borderRadius: radius.sm,
     height: 9,
     width: 18,
   },
-  rpeSwatch: { backgroundColor: colors.green, borderRadius: radius.pill, height: 8, width: 8 },
+  rpeSwatch: { backgroundColor: colors.chartLine, borderRadius: radius.pill, height: 8, width: 8 },
 });

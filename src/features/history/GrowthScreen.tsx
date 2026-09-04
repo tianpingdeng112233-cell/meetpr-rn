@@ -1,8 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   RefreshControl,
@@ -12,35 +11,38 @@ import {
   View,
 } from 'react-native';
 
+import { getLocale, t } from '@/i18n';
 import { useMarkFeedbackRead, type FeedbackItem } from '@/api/domains';
 import { useSessionStore } from '@/api/session';
-import { AnalyticsScreen, screen } from '@/analytics';
+import { AnalyticsEvent, AnalyticsScreen, screen, track } from '@/analytics';
 import {
   AppButton,
   Card,
-  colors,
+  useColors,
+  LargeTitleBar,
+  StatTile,
+  font,
   radius,
   Screen,
   spacing,
   typography,
 } from '@/design';
-import type { PRBreakthroughEvent } from '@/domain/e1rm';
-import { chineseMonthDay, formatKg, utcDateText } from '@/features/dashboard/model';
+import { formatKg } from '@/features/dashboard/model';
 import { useStudentTabsStore } from '@/features/student-tabs';
 
-import { E1RMChart } from './E1RMChart';
+import { GrowthE1RMCard } from './GrowthE1RMCard';
 import { HistoryEntriesView } from './HistoryEntriesView';
 import {
   feedbackDate,
   feedbackTitle,
   LIFT_FAMILIES,
-  LIFT_PRESENTATION,
 } from './model';
-import type { GrowthCurve, GrowthLoaded } from './types';
+import type { GrowthLoaded } from './types';
 import { useHistoryViewModel } from './use-history';
 import { VolumeIntensityChart } from './VolumeIntensityChart';
 
 export function GrowthScreen() {
+  const { colors, styles } = useStyles();
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const router = useRouter();
   const vm = useHistoryViewModel(studentId);
@@ -49,6 +51,7 @@ export function GrowthScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const feedbackY = useRef<number | null>(null);
   const previousFeedbackToken = useRef(0);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null);
   const [locallyRead, setLocallyRead] = useState<ReadonlySet<string>>(new Set());
@@ -56,6 +59,8 @@ export function GrowthScreen() {
   useFocusEffect(
     useCallback(() => {
       void screen(AnalyticsScreen.ProgressHistory);
+      void track(AnalyticsEvent.ProgressViewed, { tab: 'e1rm' });
+      void track(AnalyticsEvent.ProgressViewed, { tab: 'volume' });
     }, []),
   );
 
@@ -72,21 +77,22 @@ export function GrowthScreen() {
   }, [feedbackJumpToken, vm.state.status]);
 
   if (vm.state.status === 'idle' || vm.state.status === 'loading') {
-    return (
-      <Screen style={styles.center}>
-        <ActivityIndicator color={colors.fgTertiary} size="large" />
-      </Screen>
-    );
+    return <Screen accessibilityLabel={t('student.trainingHistoryView.copy021')} style={styles.content}>
+      <LargeTitleBar title={t('student.trainingHistoryView.copy013')} />
+      {[0, 1, 2].map(index => <View key={index} style={{ height: 220, backgroundColor: colors.surfaceElevated, borderRadius: radius.card }} />)}
+    </Screen>;
   }
   if (vm.state.status === 'error') {
-    return (
-      <Screen style={styles.center}>
-        <Text style={styles.errorTitle}>加载失败</Text>
-        <AppButton label="重试" onPress={() => void vm.reload()} style={styles.retryButton} />
-      </Screen>
-    );
+    return <Screen style={styles.center}>
+      <Card style={styles.failureCard}>
+        <Text style={styles.errorTitle}>{t('student.trainingHistoryView.copy022')}</Text>
+        {vm.state.error instanceof Error ? <Text style={styles.explainer}>{vm.state.error.message}</Text> : null}
+        <AppButton label={t('student.trainingHistoryView.copy023')} onPress={() => void vm.reload()} style={styles.retryButton} />
+      </Card>
+    </Screen>;
   }
   const data = vm.state;
+  const isZeroTraining = data.stats.trainingSessionCount === 0;
   const openFeedback = (item: FeedbackItem) => {
     setSelectedFeedback(item);
     if (item.read_at === null && !locallyRead.has(item.id)) {
@@ -104,35 +110,21 @@ export function GrowthScreen() {
           <RefreshControl
             onRefresh={() => void vm.refresh()}
             refreshing={vm.isRefreshing}
-            tintColor={colors.brandRed}
+            tintColor={colors.gold500}
           />
         }
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.hero}>成长</Text>
-
-        {data.prEvents[0] ? (
-          <GrowthPRBanner
-            data={data}
-            event={data.prEvents[0]}
-            onAcknowledge={() => void vm.acknowledgePR(data.prEvents[0].id)}
-          />
-        ) : null}
-
-        <Text style={styles.explainer}>E1RM = 用你完成的组数估算的单次最大重量</Text>
-
+        <LargeTitleBar title={t('student.trainingHistoryView.copy013')} subtitle={t('student.trainingHistoryView.copy014')} style={{ paddingHorizontal: 0 }} />
         <View style={styles.curveList}>
-          {LIFT_FAMILIES.map((family) => (
-            <GrowthCurveCard
-              curve={data.curves[family]}
-              key={family}
-              onPress={() =>
-                router.push({
-                  pathname: '/(student)/growth-curve',
-                  params: { family, lift: data.curves[family].name },
-                })
-              }
-            />
-          ))}
+          {LIFT_FAMILIES.map(family => <GrowthE1RMCard key={family} curve={data.curves[family]} isZeroTraining={isZeroTraining} onToday={() => router.navigate('/(student)/today')} />)}
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('student.trainingHistoryView.copy001')}</Text>
+          <View style={styles.statsRow}>
+            <StatTile label={t('student.trainingHistoryView.copy015')} value={data.stats.sbdTotalKg === null ? '—' : formatKg(data.stats.sbdTotalKg)} unit="kg" style={styles.comparisonTile} />
+            <StatTile label={t('student.trainingHistoryView.copy016')} value={data.stats.trainingTotalKg === null ? '—' : formatKg(data.stats.trainingTotalKg)} unit="kg" style={styles.comparisonTile} />
+          </View>
+          {data.stats.sbdTotalKg !== null && data.stats.trainingTotalKg !== null && data.stats.trainingTotalKg > 0 && data.stats.sbdTotalKg > data.stats.trainingTotalKg ? <Text style={styles.breakthrough}>{t('student.trainingHistoryView.copy017', [Math.round(data.stats.sbdTotalKg / data.stats.trainingTotalKg * 100)])}</Text> : null}
         </View>
 
         <View
@@ -152,66 +144,37 @@ export function GrowthScreen() {
             }
           }}
           style={styles.section}>
-          <Text style={styles.sectionTitle}>教练反馈记录</Text>
-          {data.feedback.length === 0 ? (
-            <Card style={styles.inlineEmpty}>
-              <Text style={styles.inlineEmptyText}>还没有教练反馈</Text>
-            </Card>
-          ) : (
-            <Card style={styles.feedbackList}>
-              {data.feedback.map((item, index) => (
-                <FeedbackRow
-                  data={data}
-                  item={item}
-                  key={item.id}
-                  last={index === data.feedback.length - 1}
-                  locallyRead={locallyRead.has(item.id)}
-                  onPress={() => openFeedback(item)}
-                />
-              ))}
-            </Card>
-          )}
+          <Text style={styles.sectionTitle}>{t('student.trainingHistoryView.copy002')}</Text>
+          <GrowthNavigationCard title={t('student.trainingHistoryView.copy009')} subtitle={data.feedback.length ? t('student.trainingHistoryView.copy010', [data.feedback.length]) : t('student.trainingHistoryView.copy011')} icon="message-text-outline" disabled={data.feedback.length === 0} onPress={() => setArchiveOpen(true)} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>全部历史</Text>
-          <View style={styles.statsRow}>
-            <StatCard label="训练次数" value={String(data.stats.trainingDays)} />
-            <StatCard label="训练周" value={String(data.stats.trainingWeeks)} />
-            <StatCard
-              label="三大项合计"
-              value={
-                data.stats.sbdTotalKg === null
-                  ? '—'
-                  : `${formatKg(data.stats.sbdTotalKg)} KG`
-              }
-            />
-          </View>
+          <Text style={styles.sectionTitle}>{t('student.trainingHistoryView.copy003')}</Text>
+          <Card style={styles.statsRow}>
+            <StatCard label={t('student.trainingHistoryView.copy018')} value={isZeroTraining ? '—' : String(data.stats.trainingSessionCount)} />
+            <StatCard label={t('student.trainingHistoryView.copy019')} value={isZeroTraining ? '—' : String(data.stats.trainingWeekCount)} />
+            <StatCard label={t('student.trainingHistoryView.copy020')} value={isZeroTraining ? '—' : data.stats.totalVolumeKg.toLocaleString(getLocale())} unit="kg" />
+          </Card>
+          <GrowthNavigationCard title={t('student.trainingHistoryView.copy004')} subtitle={t(isZeroTraining ? 'student.trainingHistoryView.copy005' : 'student.trainingHistoryView.copy006')} icon="history" disabled={isZeroTraining} onPress={() => { void track(AnalyticsEvent.ProgressViewed, { tab: 'history' }); setHistoryOpen(true); }} />
         </View>
 
-        <Pressable accessibilityRole="button" onPress={() => setHistoryOpen(true)}>
-          {({ pressed }) => (
-            <Card style={[styles.historyEntry, pressed && styles.pressed]}>
-              <View style={styles.historyIcon}>
-                <MaterialCommunityIcons color={colors.brandRed} name="history" size={23} />
-              </View>
-              <View style={styles.historyText}>
-                <Text style={styles.historyTitle}>全部训练历史</Text>
-                <Text style={styles.historySubtitle}>按周 / 月查看 · 含每组数据</Text>
-              </View>
-              <MaterialCommunityIcons color={colors.fgTertiary} name="chevron-right" size={23} />
-            </Card>
-          )}
-        </Pressable>
-
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>容量 / 强度</Text>
+          <Text style={styles.sectionTitle}>{t('student.trainingHistoryView.copy008')}</Text>
           <Card style={styles.volumeCard}>
-            <VolumeIntensityChart series={data.volumeIntensity} />
+            <VolumeIntensityChart series={data.volumeIntensity} isUnlocked={data.stats.unlocksTrends} />
           </Card>
         </View>
       </ScrollView>
 
+      <Modal animationType="slide" presentationStyle="fullScreen" visible={archiveOpen && selectedFeedback === null} onRequestClose={() => setArchiveOpen(false)}>
+        <Screen style={styles.detailScreen}>
+          <View style={styles.detailHeader}>
+            <Text style={styles.detailTitle}>{t('student.trainingHistoryView.copy009')}</Text>
+            <Pressable accessibilityRole="button" onPress={() => setArchiveOpen(false)}><Text style={styles.detailDone}>{t('student.workoutCompletionFlowView.copy003')}</Text></Pressable>
+          </View>
+          <ScrollView><Card style={styles.feedbackList}>{data.feedback.map((item, index) => <FeedbackRow data={data} item={item} key={item.id} last={index === data.feedback.length - 1} locallyRead={locallyRead.has(item.id)} onPress={() => openFeedback(item)} />)}</Card></ScrollView>
+        </Screen>
+      </Modal>
       <HistoryEntriesView
         onClose={() => setHistoryOpen(false)}
         visible={historyOpen}
@@ -225,71 +188,15 @@ export function GrowthScreen() {
   );
 }
 
-function GrowthPRBanner({
-  data,
-  event,
-  onAcknowledge,
-}: {
-  data: GrowthLoaded;
-  event: PRBreakthroughEvent;
-  onAcknowledge: () => void;
-}) {
-  const today = utcDateText(new Date());
-  const occurred = utcDateText(event.occurredAt);
-  const family = data.familyByExerciseId.get(event.exerciseId);
-  const familyName = family ? LIFT_PRESENTATION[family].name : '三大项';
-  return (
-    <Pressable
-      accessibilityHint="点按确认这条纪录"
-      accessibilityRole="button"
-      onPress={onAcknowledge}>
-      {({ pressed }) => (
-        <Card style={[styles.prBanner, pressed && styles.pressed]}>
-          <View style={styles.prIcon}>
-            <MaterialCommunityIcons color={colors.brandRed} name="trophy" size={25} />
-          </View>
-          <View style={styles.prText}>
-            <Text style={styles.prEyebrow}>
-              新 e1RM PR · {occurred === today ? '今天' : chineseMonthDay(occurred)}
-            </Text>
-            <Text style={styles.prTitle}>
-              {familyName} e1RM 突破 {formatKg(event.breakthroughE1RMKg)} KG
-            </Text>
-          </View>
-        </Card>
-      )}
-    </Pressable>
-  );
-}
-
-function GrowthCurveCard({
-  curve,
-  onPress,
-}: {
-  curve: GrowthCurve;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      {({ pressed }) => (
-        <Card style={[styles.curveCard, pressed && styles.pressed]}>
-          <View style={styles.curveHeader}>
-            <Text style={styles.curveTitle}>
-              {curve.name} E1RM · {curve.periodLabel}
-            </Text>
-            <MaterialCommunityIcons color={colors.fgTertiary} name="chevron-right" size={22} />
-          </View>
-          <View style={styles.curveNumberRow}>
-            <Text style={styles.curveNumber}>
-              {curve.point ? formatKg(curve.point.valueKg) : '—'}
-            </Text>
-            {curve.point ? <Text style={styles.curveUnit}>KG</Text> : null}
-          </View>
-          <E1RMChart curve={curve} height={140} />
-        </Card>
-      )}
-    </Pressable>
-  );
+function GrowthNavigationCard({ title, subtitle, icon, disabled, onPress }: { title: string; subtitle: string; icon: 'history' | 'message-text-outline'; disabled: boolean; onPress: () => void }) {
+  const { colors, styles } = useStyles();
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}>
+    {({ pressed }) => <Card style={[styles.historyEntry, disabled && { opacity: 0.55 }, pressed && styles.pressed]}>
+      <View style={styles.historyIcon}><MaterialCommunityIcons color={colors.gold500} name={icon} size={23} /></View>
+      <View style={styles.historyText}><Text style={styles.historyTitle}>{title}</Text><Text style={styles.historySubtitle}>{subtitle}</Text></View>
+      <MaterialCommunityIcons color={colors.textMuted} name="chevron-right" size={23} />
+    </Card>}
+  </Pressable>;
 }
 
 function FeedbackRow({
@@ -305,6 +212,7 @@ function FeedbackRow({
   locallyRead: boolean;
   onPress: () => void;
 }) {
+  const { colors, styles } = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -325,19 +233,19 @@ function FeedbackRow({
       </View>
       <View style={styles.feedbackMeta}>
         <Text style={styles.feedbackDate}>{feedbackDate(item)}</Text>
-        <MaterialCommunityIcons color={colors.fgTertiary} name="chevron-right" size={20} />
+        <MaterialCommunityIcons color={colors.textMuted} name="chevron-right" size={20} />
       </View>
     </Pressable>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card style={styles.statCard}>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </Card>
-  );
+function StatCard({ label, value, unit }: { label: string; value: string; unit?: string }) {
+  const { styles } = useStyles();
+  return <View style={styles.statCard}>
+    <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statValue}>{value}</Text>
+    {unit ? <Text style={styles.statLabel}>{unit}</Text> : null}
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>;
 }
 
 function FeedbackDetail({
@@ -347,6 +255,7 @@ function FeedbackDetail({
   item: FeedbackItem | null;
   onClose: () => void;
 }) {
+  const { styles } = useStyles();
   return (
     <Modal
       animationType="slide"
@@ -355,9 +264,9 @@ function FeedbackDetail({
       visible={item !== null}>
       <Screen style={styles.detailScreen}>
         <View style={styles.detailHeader}>
-          <Text style={styles.detailTitle}>教练反馈</Text>
+          <Text style={styles.detailTitle}>{t('student.feedbackDetailView.copy001')}</Text>
           <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}>
-            <Text style={styles.detailDone}>完成</Text>
+            <Text style={styles.detailDone}>{t('student.workoutCompletionFlowView.copy003')}</Text>
           </Pressable>
         </View>
         {item ? (
@@ -371,55 +280,50 @@ function FeedbackDetail({
   );
 }
 
-const styles = StyleSheet.create({
+function useStyles() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return { colors, styles };
+}
+
+const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
+  failureCard: { gap: 14, padding: 20 },
+  comparisonTile: { flex: 1, padding: 12, gap: 8 },
+  breakthrough: { color: colors.success, ...typography.footnote },
   center: { alignItems: 'center', gap: spacing.base, justifyContent: 'center', padding: spacing.lg },
-  errorTitle: { color: colors.fgPrimary, ...typography.headline },
+  errorTitle: { color: colors.textPrimary, ...typography.headline },
   retryButton: { minWidth: 128 },
-  content: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xxl },
-  hero: { color: colors.fgPrimary, fontSize: 36, fontWeight: '900', lineHeight: 40 },
+  content: { gap: 14, padding: 20, paddingBottom: spacing.xxl },
   pressed: { opacity: 0.6 },
-  prBanner: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, padding: spacing.base },
-  prIcon: { alignItems: 'center', backgroundColor: colors.brandRedSoft, borderRadius: radius.pill, height: 46, justifyContent: 'center', width: 46 },
-  prText: { flex: 1, gap: spacing.xs },
-  prEyebrow: { color: colors.fgSecondary, ...typography.footnote },
-  prTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  explainer: { color: colors.fgSecondary, ...typography.footnote },
-  curveList: { gap: spacing.md },
-  curveCard: { gap: spacing.sm, padding: spacing.base },
-  curveHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  curveTitle: { color: colors.fgSecondary, ...typography.footnote },
-  curveNumberRow: { alignItems: 'baseline', flexDirection: 'row', gap: spacing.sm },
-  curveNumber: { color: colors.fgPrimary, ...typography.displayNumeral },
-  curveUnit: { color: colors.fgPrimary, ...typography.displayUnit },
+  explainer: { color: colors.textSecondary, ...typography.footnote },
+  curveList: { gap: 14 },
   section: { gap: spacing.md, marginTop: spacing.sm },
-  sectionTitle: { color: colors.fgPrimary, ...typography.headline },
-  inlineEmpty: { alignItems: 'center', padding: spacing.lg },
-  inlineEmptyText: { color: colors.fgTertiary, ...typography.footnote },
+  sectionTitle: { color: colors.textSecondary, ...font.mono(13) },
   feedbackList: { overflow: 'hidden', paddingHorizontal: spacing.base },
   feedbackRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between', minHeight: 78, paddingVertical: spacing.md },
-  feedbackBorder: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
+  feedbackBorder: { borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth },
   feedbackLead: { alignItems: 'flex-start', flex: 1, flexDirection: 'row', gap: spacing.sm },
-  unreadDot: { backgroundColor: colors.brandRed, borderRadius: radius.pill, height: 8, marginTop: 6, width: 8 },
+  unreadDot: { backgroundColor: colors.dangerFill, borderRadius: radius.pill, height: 8, marginTop: 6, width: 8 },
   feedbackText: { flex: 1, gap: spacing.xs },
-  feedbackTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  feedbackPreview: { color: colors.fgSecondary, ...typography.footnote },
+  feedbackTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  feedbackPreview: { color: colors.textSecondary, ...typography.footnote },
   feedbackMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  feedbackDate: { color: colors.fgTertiary, ...typography.caption },
+  feedbackDate: { color: colors.textMuted, ...typography.caption },
   statsRow: { flexDirection: 'row', gap: spacing.sm },
   statCard: { alignItems: 'center', flex: 1, gap: spacing.sm, minHeight: 88, justifyContent: 'center', padding: spacing.sm },
-  statValue: { color: colors.fgPrimary, fontSize: 20, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  statLabel: { color: colors.fgSecondary, textAlign: 'center', ...typography.caption },
+  statValue: { color: colors.textPrimary, ...font.mono(20, 'bold') },
+  statLabel: { color: colors.textSecondary, textAlign: 'center', ...typography.caption },
   historyEntry: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, padding: spacing.base },
-  historyIcon: { alignItems: 'center', backgroundColor: colors.brandRedSoft, borderRadius: radius.md, height: 42, justifyContent: 'center', width: 42 },
+  historyIcon: { alignItems: 'center', backgroundColor: colors.goldSoft, borderRadius: radius.md, height: 42, justifyContent: 'center', width: 42 },
   historyText: { flex: 1, gap: spacing.xs },
-  historyTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
-  historySubtitle: { color: colors.fgSecondary, ...typography.footnote },
+  historyTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  historySubtitle: { color: colors.textSecondary, ...typography.footnote },
   volumeCard: { padding: spacing.base },
   detailScreen: { paddingHorizontal: spacing.base },
-  detailHeader: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.base },
-  detailTitle: { color: colors.fgPrimary, ...typography.headline },
-  detailDone: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  detailHeader: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.base },
+  detailTitle: { color: colors.textPrimary, ...typography.headline },
+  detailDone: { color: colors.textPrimary, ...typography.bodyEmphasis },
   detailBody: { gap: spacing.base, paddingVertical: spacing.lg },
-  detailDate: { color: colors.fgSecondary, ...typography.footnote },
-  detailText: { color: colors.fgPrimary, ...typography.body },
+  detailDate: { color: colors.textSecondary, ...typography.footnote },
+  detailText: { color: colors.textPrimary, ...typography.body },
 });

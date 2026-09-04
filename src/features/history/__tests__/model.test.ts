@@ -9,6 +9,10 @@ import {
   buildHistoryWeeks,
   buildVolumeIntensitySeries,
   historyWeekNumber,
+  historyStats,
+  growthSnapshot,
+  e1rmCardState,
+  chartBuckets,
 } from '../model';
 import type { GrowthCurve } from '../types';
 
@@ -83,8 +87,11 @@ describe('growth summary statistics', () => {
       deadlift: curve('deadlift', 120),
     };
     expect(buildGrowthStats(baseLogs, curves)).toEqual({
-      trainingDays: 2,
-      trainingWeeks: 2,
+      trainingSessionCount: 2,
+      trainingWeekCount: 2,
+      totalVolumeKg: 300,
+      unlocksTrends: false,
+      trainingTotalKg: null,
       sbdTotalKg: 300,
     });
   });
@@ -185,4 +192,59 @@ describe('growth e1RM projection', () => {
       curves.squat.point?.valueKg,
     );
   });
+});
+
+
+describe('v2 growth presentation', () => {
+  test('historyStats deduplicates local logged-at days and ISO weeks, excluding assumed and unfinished sets', () => {
+    const logs = [
+      log('a', '2025-12-20', 'squat', { logged_at: new Date(2025, 11, 29, 12).toISOString(), reps: 5 }),
+      log('b', '2025-12-21', 'bench', { logged_at: new Date(2025, 11, 29, 18).toISOString(), weight_kg: '80', reps: 5 }),
+      log('c', '2025-12-22', 'squat', { logged_at: new Date(2026, 0, 2, 12).toISOString() }),
+      log('d', '2026-01-05', 'squat'),
+      log('assumed', '2026-01-12', 'squat', { assumed: true }),
+      log('unfinished', '2026-01-19', 'squat', { completed: false }),
+    ];
+    expect(historyStats(logs)).toEqual({ trainingSessionCount: 3, trainingWeekCount: 2, totalVolumeKg: 1100, unlocksTrends: true });
+    expect(historyStats(logs.slice(0, 3)).unlocksTrends).toBe(false);
+    expect(historyStats([])).toEqual({ trainingSessionCount: 0, trainingWeekCount: 0, totalVolumeKg: 0, unlocksTrends: false });
+  });
+
+  test.each([
+    [0, 0, 0, null, 'zero'],
+    [1, 1, 1, 0, 'formingProgress'],
+    [2, 2, 2, 10, 'formingProgress'],
+    [3, 2, 2, 10, 'formingWindowSparse'],
+    [3, 3, 3, 0, 'formingWindowSparse'],
+    [3, 3, 3, 10, 'chart'],
+    [5, 2, 3, 10, 'formingWindowSparse'],
+  ] as [number, number, number, number | null, string][])('e1rmCardState total %s, window %s, main line %s, range %s yields %s', (total, window, mainLine, range, expected) => {
+    expect(e1rmCardState({ familyTotalDataPointCount: total, windowDataPointCount: window, windowMainLinePointCount: mainLine, windowMainLineValueRangeKg: range })).toBe(expected);
+  });
+
+  test('chartBuckets retains only the latest six recorded ISO weeks and recalculates the scale', () => {
+    const logs = ['2025-12-01', '2025-12-08', '2025-12-15', '2025-12-22', '2025-12-29', '2026-01-05', '2026-01-12'].map((date, i) => log(String(i), date, 'squat', { weight_kg: i === 0 ? '9999' : '100' }));
+    expect(chartBuckets(logs).points.map(point => point.key)).toEqual(['2025-12-08', '2025-12-15', '2025-12-22', '2025-12-29', '2026-01-05', '2026-01-12']);
+    expect(chartBuckets(logs).scale).toBeCloseTo(115);
+  });
+});
+
+test('daily-best ties prefer trusted points then the latest record, keeping low-confidence days off the main line', () => {
+  const fixture = curve('squat', 100);
+  const sample = (id: string, hour: number, value: number, confidence: 'normal' | 'low' = 'normal'): E1RMSample => ({ sampleId: id, winnerPointId: id, winnerOrigin: 'logged', winnerConfidence: confidence, date: new Date(2026, 7, 1, hour), valueKg: value });
+  const raw = [sample('low', 10, 100, 'low'), sample('trusted', 11, 100), sample('latest', 12, 100)];
+  const snapshot = growthSnapshot({ ...fixture, series: { ...fixture.series, rawEligible: raw } }, 'all');
+  expect(snapshot.eligibleDataPointCount).toBe(1);
+  expect(snapshot.samples.map(point => point.sampleId)).toEqual(['latest']);
+});
+
+test('daily-best chart uses declining window values and the smoothed winner as headline, independently of old records', () => {
+  const fixture = curve('squat', 999);
+  const raw = [150, 130, 140].map((valueKg, index): E1RMSample => ({ sampleId: String(index), winnerPointId: String(index), winnerOrigin: 'logged', winnerConfidence: 'normal', date: new Date(2026, 7, index + 1, 12), valueKg }));
+  const snapshot = growthSnapshot({ ...fixture, series: { ...fixture.series, rawEligible: raw, smoothed: [{ ...raw[2], valueKg: 150, winnerPointId: '0' }] } }, '30', new Date(2026, 7, 4, 12));
+  expect(snapshot.state).toBe('chart');
+  expect(snapshot.currentKg).toBe(150);
+  expect(snapshot.deltaKg).toBe(-10);
+  expect(snapshot.chartCurrentPoint?.valueKg).toBe(140);
+  expect(snapshot.latestRecordDate).toEqual(raw[0].date);
 });
