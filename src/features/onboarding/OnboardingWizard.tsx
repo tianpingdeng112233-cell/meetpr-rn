@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { t } from '@/i18n';
+
+import { useEffect, useState, useMemo } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,7 +19,7 @@ import {
   onboardingRepository,
   type OnboardingProfile,
 } from '@/api/domains/onboarding';
-import { AppButton, colors, spacing, typography } from '@/design';
+import { AppButton, useColors, type Colors, spacing, typography } from '@/design';
 
 import {
   canAdvance,
@@ -27,7 +29,7 @@ import {
   invalidFieldsForStep,
   mergeServerAndDraft,
   ONBOARDING_STEP_COUNT,
-  ONBOARDING_STEP_TITLES,
+  getOnboardingStepTitles,
   onboardingPatchForStep,
   resumeStep,
   type OnboardingForm,
@@ -61,6 +63,8 @@ export function OnboardingWizard({
   studentId,
   visible,
 }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [form, setForm] = useState<OnboardingForm>(() => createEmptyOnboardingForm());
   const [step, setStep] = useState<OnboardingStep>(1);
   const [loading, setLoading] = useState(true);
@@ -135,7 +139,7 @@ export function OnboardingWizard({
       await onboardingRepository.upsert(onboardingPatchForStep(form, currentStep));
       setSaveBanner(null);
     } catch {
-      setSaveBanner('本步资料已暂存本机,提交完成时会自动补传');
+      setSaveBanner(t('student.onboardingWizardViewModel.copy004'));
     }
   };
 
@@ -159,8 +163,8 @@ export function OnboardingWizard({
     } catch (error) {
       setCompletionError(
         error instanceof ApiError && error.code === 'ONE_RM_LOCKED'
-          ? '1RM 已锁定,请联系教练修改'
-          : '网络异常,资料未能提交,请重试',
+          ? t('student.onboardingWizardViewModel.copy001')
+          : t('student.onboardingWizardViewModel.copy002'),
       );
       return;
     }
@@ -175,9 +179,9 @@ export function OnboardingWizard({
       if (validation) {
         setErrorFields(validation.errorFields);
         setStep(validation.step);
-        setCompletionError('请补全标红的必填资料');
+        setCompletionError('请补全标红的必填资料' /* TODO(i18n:missing) */);
       } else {
-        setCompletionError('网络异常,资料未能提交,请重试');
+        setCompletionError(t('student.onboardingWizardViewModel.copy002'));
       }
     }
   };
@@ -206,13 +210,13 @@ export function OnboardingWizard({
       <SafeAreaView style={styles.root}>
         {loading ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.brandRed} size="large" />
+            <ActivityIndicator color={colors.gold500} size="large" />
           </View>
         ) : (
           <KeyboardAvoidingView style={styles.root}>
             <View style={styles.nav}>
               <Pressable disabled={editing} onPress={() => void saveAndExit()}>
-                <Text style={[styles.exit, editing && styles.disabled]}>保存并退出</Text>
+                <Text style={[styles.exit, editing && styles.disabled]}>{t('student.onboardingWizardView.copy011')}</Text>
               </Pressable>
               <Text style={styles.stepLabel}>Step {step} of 7</Text>
               <View style={styles.navSpacer} />
@@ -224,7 +228,7 @@ export function OnboardingWizard({
               contentContainerStyle={styles.content}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}>
-              <Text style={styles.title}>{ONBOARDING_STEP_TITLES[step - 1]}</Text>
+              <Text style={styles.title}>{getOnboardingStepTitles()[step - 1]}</Text>
               <OnboardingStepContent
                 errorFields={errorFields}
                 form={form}
@@ -237,7 +241,7 @@ export function OnboardingWizard({
             <View style={styles.footer}>
               <AppButton
                 disabled={editing || step === 1}
-                label="上一步"
+                label={t('student.onboardingWizardView.copy012')}
                 onPress={() => setStep((step - 1) as OnboardingStep)}
                 style={styles.back}
                 variant="secondary"
@@ -246,10 +250,10 @@ export function OnboardingWizard({
                 disabled={editing || !canAdvance(form, step)}
                 label={
                   editing
-                    ? '保存中…'
+                    ? '保存中…' /* TODO(i18n:missing) */
                     : step === 7
-                      ? '完成,开始训练!'
-                      : '下一步'
+                      ? t('student.onboardingWizardView.copy013')
+                      : t('student.onboardingWizardView.copy014')
                 }
                 onPress={() => void advance()}
                 style={styles.next}
@@ -262,21 +266,21 @@ export function OnboardingWizard({
   );
 }
 
-const styles = StyleSheet.create({
-  root: { backgroundColor: colors.bg, flex: 1 },
+const createStyles = (colors: Colors) => StyleSheet.create({
+  root: { backgroundColor: colors.bgBase, flex: 1 },
   loading: { alignItems: 'center', flex: 1, justifyContent: 'center' },
   nav: { alignItems: 'center', flexDirection: 'row', minHeight: 52, paddingHorizontal: spacing.base },
-  exit: { color: colors.fgPrimary, width: 112, ...typography.body },
+  exit: { color: colors.textPrimary, width: 112, ...typography.body },
   disabled: { opacity: 0.35 },
-  stepLabel: { color: colors.fgSecondary, flex: 1, textAlign: 'center', ...typography.bodyEmphasis },
+  stepLabel: { color: colors.textSecondary, flex: 1, textAlign: 'center', ...typography.bodyEmphasis },
   navSpacer: { width: 112 },
-  progressTrack: { backgroundColor: colors.surface3, height: 3 },
-  progressFill: { backgroundColor: colors.brandRed, height: 3 },
+  progressTrack: { backgroundColor: colors.bgStack, height: 3 },
+  progressFill: { backgroundColor: colors.gold500, height: 3 },
   content: { gap: spacing.lg, padding: spacing.base, paddingBottom: spacing.xl },
-  title: { color: colors.fgPrimary, ...typography.title1 },
-  saveBanner: { backgroundColor: colors.surface2, color: colors.fgSecondary, padding: spacing.md, ...typography.footnote },
-  error: { color: colors.brandRed, textAlign: 'center', ...typography.footnote },
-  footer: { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.md, padding: spacing.base },
+  title: { color: colors.textPrimary, ...typography.title1 },
+  saveBanner: { backgroundColor: colors.bgInset, color: colors.textSecondary, padding: spacing.md, ...typography.footnote },
+  error: { color: colors.danger, textAlign: 'center', ...typography.footnote },
+  footer: { borderTopColor: colors.borderDefault, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', gap: spacing.md, padding: spacing.base },
   back: { flex: 1 },
   next: { flex: 2 },
 });

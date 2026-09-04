@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
@@ -83,7 +85,7 @@ test('Android estimator back closes the estimator without changing the lift', ()
   act(() => {
     renderer = create(<OnboardingStepContent errorFields={new Set()} form={createEmptyOnboardingForm()} step={3} update={update} />);
   });
-  act(() => press('🧮 估算器'));
+  act(() => press(t('student.step3StrengthSection.copy005', ['🧮'])));
   expect(renderer.root.findAllByType(Modal)).toHaveLength(1);
   act(() => renderer.root.findByType(Modal).props.onRequestClose());
   expect(renderer.root.findAllByType(Modal)).toHaveLength(0);
@@ -102,14 +104,14 @@ test('equipment sections show the full catalog and dumbbell limits are mutually 
   }
   act(() => { renderer = create(<Environment />); });
   const copy = renderer.root.findAllByType(Text).map((node) => node.props.children);
-  expect(copy).toEqual(expect.arrayContaining(['基础', '哑铃最大重量', '固定器械', '力量举专项', '哑铃 ≤20kg', '哑铃 >40kg']));
+  expect(copy).toEqual(expect.arrayContaining([t('student.step4EnvironmentSection.copy014'), t('student.step4EnvironmentSection.copy015'), t('student.step4EnvironmentSection.copy017'), t('student.step4EnvironmentSection.copy018'), t('student.equipmentCatalog.copy004'), t('student.equipmentCatalog.copy006')]));
   // iOS shows every catalog item in each group; tiers only drive the prefill.
-  expect(copy).toContain('哑铃 ≤40kg');
+  expect(copy).toContain(t('student.equipmentCatalog.copy005'));
   expect(copy).toContain(equipmentLabel('smith_machine'));
   expect(copy).toContain(equipmentLabel('deadlift_bar'));
-  act(() => press('哑铃 >40kg'));
+  act(() => press(t('student.equipmentCatalog.copy006')));
   expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_40_plus']);
-  act(() => press('哑铃 ≤20kg'));
+  act(() => press(t('student.equipmentCatalog.copy004')));
   expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_20']);
 });
 

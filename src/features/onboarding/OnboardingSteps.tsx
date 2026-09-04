@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { t } from '@/i18n';
+
+import { useState, useMemo } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppButton, Card, colors, radius, spacing, typography } from '@/design';
+import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
 
 import {
   BENCH_GRIPS, BENCH_GRIP_LABELS, DEADLIFT_STYLES, DEADLIFT_STYLE_LABELS,
@@ -50,31 +52,33 @@ function metricStored(value: string, factor: number): string {
 }
 
 function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const imperial = form.unitPreference === 'lb';
   const [heightText, setHeightText] = useState(() => metricDisplay(form.heightCm, 0.3937007874));
   const [weightText, setWeightText] = useState(() => metricDisplay(form.weightKg, 2.2046226218));
   return (
     <View style={styles.section}>
-      <FieldLabel>单位</FieldLabel>
+      <FieldLabel>{"单位" /* TODO(i18n:missing) */}</FieldLabel>
       <ChoiceGroup
         choices={UNIT_PREFERENCES.map((value) => ({ value, label: UNIT_LABELS[value] }))}
         onChange={(unitPreference) => update({ unitPreference })}
         selected={form.unitPreference}
       />
-      <FieldLabel>性别</FieldLabel>
+      <FieldLabel>{t('student.step1BasicsSection.copy001')}</FieldLabel>
       <ChoiceGroup
         choices={GENDERS.map((value) => ({ value, label: GENDER_LABELS[value] }))}
         error={errorFields.has('gender')}
         onChange={(gender) => update({ gender })}
         selected={form.gender}
       />
-      <FieldLabel>生日</FieldLabel>
+      <FieldLabel>{t('student.step1BasicsSection.copy007')}</FieldLabel>
       <View style={errorFields.has('birthDate') && styles.dateError}>
         <DateWheel {...onboardingDateBounds().birth} onChange={(birthDate) => update({ birthDate })} value={form.birthDate} />
       </View>
       <View style={styles.twoColumns}>
         <View style={styles.column}>
-          <FieldLabel>身高({imperial ? 'in' : 'cm'})</FieldLabel>
+          <FieldLabel>{t('student.step1BasicsSection.copy002')}({imperial ? 'in' : 'cm'})</FieldLabel>
           <FormInput
             error={errorFields.has('heightCm')}
             keyboardType="decimal-pad"
@@ -88,7 +92,7 @@ function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
           />
         </View>
         <View style={styles.column}>
-          <FieldLabel>体重({imperial ? 'lb' : 'kg'})</FieldLabel>
+          <FieldLabel>{t('student.step1BasicsSection.copy003')}({imperial ? 'lb' : 'kg'})</FieldLabel>
           <FormInput
             error={errorFields.has('weightKg')}
             keyboardType="decimal-pad"
@@ -107,31 +111,33 @@ function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
 }
 
 function BackgroundStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const yearsLabel =
     form.trainingYears === 0
-      ? '<1 年'
+      ? t('student.onboardingLabels.copy045')
       : form.trainingYears === 10
-        ? '10+ 年'
-        : `${form.trainingYears} 年`;
+        ? t('student.onboardingLabels.copy046')
+        : t(form.trainingYears === 1 ? 'student.onboardingLabels.copy047.one' : 'student.onboardingLabels.copy047', [form.trainingYears]);
   return (
     <View style={styles.section}>
-      <FieldLabel>训练年限 · {yearsLabel}</FieldLabel>
+      <FieldLabel>{t('student.step2BackgroundSection.copy003')} · {yearsLabel}</FieldLabel>
       <DiscreteSlider max={10} min={0} onChange={(trainingYears) => update({ trainingYears })} value={form.trainingYears} />
-      <FieldLabel>深蹲杠位</FieldLabel>
+      <FieldLabel>{t('student.step2BackgroundSection.copy001')}</FieldLabel>
       <ChoiceGroup
         choices={SQUAT_STANCES.map((value) => ({ value, label: SQUAT_STANCE_LABELS[value] }))}
         error={errorFields.has('squatStance')}
         onChange={(squatStance) => update({ squatStance })}
         selected={form.squatStance}
       />
-      <FieldLabel>硬拉</FieldLabel>
+      <FieldLabel>{t('coach.planning.lift.deadlift')}</FieldLabel>
       <ChoiceGroup
         choices={DEADLIFT_STYLES.map((value) => ({ value, label: DEADLIFT_STYLE_LABELS[value] }))}
         error={errorFields.has('deadliftStyle')}
         onChange={(deadliftStyle) => update({ deadliftStyle })}
         selected={form.deadliftStyle}
       />
-      <FieldLabel>卧推握距(选填)</FieldLabel>
+      <FieldLabel>{t('student.step2BackgroundSection.copy006')}</FieldLabel>
       <ChoiceGroup
         choices={BENCH_GRIPS.map((value) => ({ value, label: BENCH_GRIP_LABELS[value] }))}
         onChange={(benchGrip) => update({ benchGrip })}
@@ -139,7 +145,7 @@ function BackgroundStep({ errorFields, form, update }: Omit<Props, 'step'>) {
       />
       {form.benchGrip ? (
         <Pressable onPress={() => update({ benchGrip: null })}>
-          <Text style={styles.link}>跳过此项</Text>
+          <Text style={styles.link}>{t('student.step2BackgroundSection.copy007')}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -155,6 +161,8 @@ function OneRMEstimator({
   onClose: () => void;
   onFill: (value: string) => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const [rpe, setRpe] = useState(8);
@@ -164,27 +172,27 @@ function OneRMEstimator({
     <Modal animationType="slide" onRequestClose={onClose} visible>
       <SafeAreaView style={styles.modalRoot}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>用近期训练估算 1RM</Text>
-          <Pressable onPress={onClose}><Text style={styles.link}>关闭</Text></Pressable>
+          <Text style={styles.modalTitle}>{t('student.step3StrengthSection.copy006')}</Text>
+          <Pressable onPress={onClose}><Text style={styles.link}>{t('chat.close')}</Text></Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.modalContent}>
-          <FieldLabel>重量(kg)</FieldLabel>
+          <FieldLabel>{t('student.step3StrengthSection.copy007')}(kg)</FieldLabel>
           <FormInput keyboardType="decimal-pad" onChangeText={(v) => setWeight(decimalInput(v))} value={weight} />
-          <FieldLabel>次数</FieldLabel>
+          <FieldLabel>{t('student.step3StrengthSection.copy008')}</FieldLabel>
           <FormInput keyboardType="number-pad" onChangeText={(v) => setReps(v.replace(/\D/g, ''))} value={reps} />
           <FieldLabel>RPE · {rpe.toFixed(1)}</FieldLabel>
           <DiscreteSlider max={10} min={6} onChange={setRpe} step={0.5} value={rpe} />
           <Text style={styles.help}>
-            RPE = 这组做完有多吃力:10=力竭、9=还能多做 1 次、8=还能多做 2 次。
+            {t('student.step3StrengthSection.copy010')}
           </Text>
           {estimate === null ? (
-            <Text style={styles.empty}>输入重量与次数后显示估算结果</Text>
+            <Text style={styles.empty}>{t('student.step3StrengthSection.copy014')}</Text>
           ) : (
             <>
-              <Text style={styles.estimate}>估算 1RM ≈ {estimate} kg</Text>
-              <AppButton label="填入估算值" onPress={() => onFill(String(estimate))} />
+              <Text style={styles.estimate}>{t('student.step3StrengthSection.copy011', [estimate])}</Text>
+              <AppButton label={t('student.step3StrengthSection.copy012')} onPress={() => onFill(String(estimate))} />
               <AppButton
-                label={`保守填入 90% (${conservativeEstimate} kg)`}
+                label={t('student.step3StrengthSection.copy013', [String(conservativeEstimate)])}
                 onPress={() => onFill(String(conservativeEstimate))}
                 variant="secondary"
               />
@@ -209,6 +217,8 @@ function LiftingInput({
   label: string;
   update: Props['update'];
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [estimatorOpen, setEstimatorOpen] = useState(false);
   return (
     <Card style={styles.liftCard}>
@@ -223,7 +233,7 @@ function LiftingInput({
           value={form[field]}
         />
         <Pressable onPress={() => setEstimatorOpen(true)} style={styles.calculator}>
-          <Text style={styles.calculatorText}>🧮 估算器</Text>
+          <Text style={styles.calculatorText}>{t('student.step3StrengthSection.copy005', ['🧮'])}</Text>
         </Pressable>
       </View>
       {estimatorOpen ? (
@@ -240,31 +250,35 @@ function LiftingInput({
 }
 
 function LiftsStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
-      <Text style={styles.warning}>⚠️ 1RM 一旦填写,完成后只有教练能改</Text>
-      <LiftingInput error={errorFields.has('squat1RMKg')} field="squat1RMKg" form={form} label="深蹲" update={update} />
-      <LiftingInput error={errorFields.has('bench1RMKg')} field="bench1RMKg" form={form} label="卧推" update={update} />
-      <LiftingInput error={errorFields.has('deadlift1RMKg')} field="deadlift1RMKg" form={form} label="硬拉" update={update} />
+      <Text style={styles.warning}>{t('student.step3StrengthSection.copy001')}</Text>
+      <LiftingInput error={errorFields.has('squat1RMKg')} field="squat1RMKg" form={form} label={t('coach.planning.lift.squat')} update={update} />
+      <LiftingInput error={errorFields.has('bench1RMKg')} field="bench1RMKg" form={form} label={t('coach.planning.lift.benchPress')} update={update} />
+      <LiftingInput error={errorFields.has('deadlift1RMKg')} field="deadlift1RMKg" form={form} label={t('coach.planning.lift.deadlift')} update={update} />
     </View>
   );
 }
 
 function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const legacyEquipment = form.equipmentOverrides.filter((token) => !EQUIPMENT_CATALOG.some((item) => item.token === token));
   const chooseGym = (gymTier: NonNullable<OnboardingForm['gymTier']>) => {
     if (gymTier === form.gymTier) return;
     const apply = () => update({ gymTier, equipmentOverrides: prefillEquipment(gymTier) });
     if (form.gymTier) {
-      Alert.alert('切换场馆类型?', undefined, [
-        { text: '取消', style: 'cancel' },
-        { text: '切换并重置器械清单', onPress: apply },
+      Alert.alert(t('student.step4EnvironmentSection.copy002'), undefined, [
+        { text: t('student.step4EnvironmentSection.copy004'), style: 'cancel' },
+        { text: t('student.step4EnvironmentSection.copy003'), onPress: apply },
       ]);
     } else apply();
   };
   return (
     <View style={styles.section}>
-      <FieldLabel>每周哪几天能练?</FieldLabel>
+      <FieldLabel>{t('student.step4EnvironmentSection.copy001')}</FieldLabel>
       <MultiChoice
         choices={TRAINING_DAYS.map((day, index) => ({ label: TRAINING_DAY_LABELS[day], value: String(index + 1) }))}
         error={errorFields.has('trainingDays')}
@@ -273,15 +287,15 @@ function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
         selected={form.trainingDays.map(String)}
       />
       {form.trainingDays.length < 2 ? (
-        <Text style={styles.error}>已选 {form.trainingDays.length} 天/周 — 至少选 2 天</Text>
+        <Text style={styles.error}>{t(form.trainingDays.length === 1 ? 'student.step4EnvironmentSection.copy006.one' : 'student.step4EnvironmentSection.copy006', [form.trainingDays.length])}</Text>
       ) : (
-        <Text style={styles.help}>已选 {form.trainingDays.length} 天/周</Text>
+        <Text style={styles.help}>{t('student.step4EnvironmentSection.copy007', [form.trainingDays.length])}</Text>
       )}
-      <FieldLabel>训练场馆</FieldLabel>
+      <FieldLabel>{t('student.step4EnvironmentSection.copy008')}</FieldLabel>
       <ChoiceGroup error={errorFields.has('gymTier')} choices={GYM_TIERS.map((value) => ({ value, label: GYM_TIER_LABELS[value], subtitle: GYM_TIER_SUBTITLES[value] }))} onChange={chooseGym} selected={form.gymTier} />
       {form.gymTier ? (
         <Card style={styles.equipmentCard}>
-          <FieldLabel>器械微调</FieldLabel>
+          <FieldLabel>{t('student.step4EnvironmentSection.copy012')}</FieldLabel>
           {EQUIPMENT_GROUPS.map((group) => {
             const items = EQUIPMENT_CATALOG.filter((item) => item.group === group);
             const choices = items
@@ -325,63 +339,69 @@ function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
 }
 
 function RecoveryStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
       <Scale
         error={errorFields.has('dailyLifeIntensity')}
-        footnote="按身体消耗选择 — 久坐 ≠ 低消耗,也请考虑通勤和站立时间。"
-        labels={['轻松', '很累']}
+        footnote={"按身体消耗选择 — 久坐 ≠ 低消耗,也请考虑通勤和站立时间。" /* TODO(i18n:missing) */}
+        labels={['轻松' /* TODO(i18n:missing) */, '很累' /* TODO(i18n:missing) */]}
         onChange={(dailyLifeIntensity) => update({ dailyLifeIntensity })}
-        title="学习/工作强度"
+        title={t('student.step5RecoverySection.copy001')}
         value={form.dailyLifeIntensity}
       />
-      <Scale error={errorFields.has('lifeStress')} labels={['很低', '很高']} onChange={(lifeStress) => update({ lifeStress })} title="生活压力" value={form.lifeStress} />
+      <Scale error={errorFields.has('lifeStress')} labels={[t('student.onboardingLabels.copy048'), '很高' /* TODO(i18n:missing) */]} onChange={(lifeStress) => update({ lifeStress })} title={t('student.step5RecoverySection.copy003')} value={form.lifeStress} />
       <Scale
         error={errorFields.has('recoverySpeed')}
-        footnote="按训练后恢复到正常状态所需时间选择,拿不准就选 3。"
-        labels={['很快', '很慢']}
+        footnote={"按训练后恢复到正常状态所需时间选择,拿不准就选 3。" /* TODO(i18n:missing) */}
+        labels={['很快' /* TODO(i18n:missing) */, '很慢' /* TODO(i18n:missing) */]}
         onChange={(recoverySpeed) => update({ recoverySpeed })}
-        title="练后恢复时长"
+        title={t('student.step5RecoverySection.copy004')}
         value={form.recoverySpeed}
       />
-      <Scale error={errorFields.has('sleepHours')} labels={['≤5h', '9h+']} onChange={(sleepHours) => update({ sleepHours })} title="睡眠时长" value={form.sleepHours} />
+      <Scale error={errorFields.has('sleepHours')} labels={['≤5h', '9h+']} onChange={(sleepHours) => update({ sleepHours })} title={t('student.step5RecoverySection.copy006')} value={form.sleepHours} />
     </View>
   );
 }
 
 function MaterialsStep({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
-      {['上传训练视频', '上传训练资料'].map((title) => (
+      {['上传训练视频' /* TODO(i18n:missing) */, '上传训练资料' /* TODO(i18n:missing) */].map((title) => (
         <Card key={title} style={styles.disabledUpload}>
           <Text style={styles.uploadTitle}>{title}</Text>
-          <Text style={styles.disabledText}>即将开放</Text>
+          <Text style={styles.disabledText}>{t('student.step6MaterialsSection.copy005')}</Text>
         </Card>
       ))}
-      <FieldLabel>想增强的肌群(最多 3 个,可选)</FieldLabel>
+      <FieldLabel>{t('student.step6MaterialsSection.copy004')}</FieldLabel>
       <MultiChoice choices={MUSCLE_GROUPS.map((value) => ({ value, label: MUSCLE_GROUP_LABELS[value] }))} max={3} onChange={(muscleGroupsToStrengthen) => update({ muscleGroupsToStrengthen })} selected={form.muscleGroupsToStrengthen} />
     </View>
   );
 }
 
 function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
-      <FieldLabel>伤病记录</FieldLabel>
+      <FieldLabel>{t('student.myProfileView.copy005')}</FieldLabel>
       <FormInput
         multiline
         onChangeText={(injuryNotes) => update({ injuryNotes })}
-        placeholder="如:左肩撞击综合征,深蹲低杠位时疼"
+        placeholder={t('student.step7ExtrasSection.copy002')}
         style={styles.textArea}
         value={form.injuryNotes}
       />
-      <FieldLabel>伤病部位</FieldLabel>
+      <FieldLabel>{"伤病部位" /* TODO(i18n:missing) */}</FieldLabel>
       <MultiChoice choices={INJURY_AREAS.map((value) => ({ value, label: INJURY_AREA_LABELS[value] }))} max={8} onChange={(injuryAreas) => update({ injuryAreas })} selected={form.injuryAreas} />
-      <FieldLabel>是否在备赛?</FieldLabel>
+      <FieldLabel>{t('student.step7ExtrasSection.copy004')}</FieldLabel>
       <ChoiceGroup
         choices={[
-          { label: '没有', value: 'no' },
-          { label: '有比赛计划', value: 'yes' },
+          { label: t('student.step7ExtrasSection.copy005'), value: 'no' },
+          { label: t('student.step7ExtrasSection.copy006'), value: 'yes' },
         ]}
         error={errorFields.has('isCompeting')}
         onChange={(value) => update({ isCompeting: value === 'yes' })}
@@ -389,7 +409,7 @@ function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
       />
       {form.isCompeting ? (
         <>
-          <FieldLabel>比赛日期</FieldLabel>
+          <FieldLabel>{t('student.step7ExtrasSection.copy011')}</FieldLabel>
           <View style={errorFields.has('competitionDate') && styles.dateError}>
             <DateWheel
               {...onboardingDateBounds().competition}
@@ -397,12 +417,12 @@ function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
               value={form.competitionDate}
             />
           </View>
-          <FieldLabel>目标体重级别</FieldLabel>
-          <FormInput onChangeText={(targetWeightClass) => update({ targetWeightClass })} placeholder="例:IPF 83kg / WP -82.5kg" value={form.targetWeightClass} />
+          <FieldLabel>{"目标体重级别" /* TODO(i18n:missing) */}</FieldLabel>
+          <FormInput onChangeText={(targetWeightClass) => update({ targetWeightClass })} placeholder={t('student.step7ExtrasSection.copy008')} value={form.targetWeightClass} />
         </>
       ) : null}
-      <FieldLabel>想对教练说什么?(可选)</FieldLabel>
-      <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder="目标、习惯、顾虑都可以写" style={styles.textArea} value={form.noteToCoach} />
+      <FieldLabel>{t('student.step7ExtrasSection.copy009')}</FieldLabel>
+      <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder={t('student.step7ExtrasSection.copy010')} style={styles.textArea} value={form.noteToCoach} />
     </View>
   );
 }
@@ -427,29 +447,29 @@ export function OnboardingStepContent(props: Props) {
   }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   section: { gap: spacing.md },
   twoColumns: { flexDirection: 'row', gap: spacing.md },
   column: { flex: 1 },
-  link: { color: colors.fgPrimary, paddingVertical: spacing.sm, ...typography.bodyEmphasis },
-  help: { color: colors.fgSecondary, lineHeight: 20, ...typography.footnote },
-  empty: { color: colors.fgTertiary, paddingVertical: spacing.xl, textAlign: 'center', ...typography.body },
-  warning: { color: colors.brandRed, lineHeight: 22, ...typography.bodyEmphasis },
-  error: { color: colors.brandRed, ...typography.footnote },
+  link: { color: colors.textPrimary, paddingVertical: spacing.sm, ...typography.bodyEmphasis },
+  help: { color: colors.textSecondary, lineHeight: 20, ...typography.footnote },
+  empty: { color: colors.textTertiary, paddingVertical: spacing.xl, textAlign: 'center', ...typography.body },
+  warning: { color: colors.danger, lineHeight: 22, ...typography.bodyEmphasis },
+  error: { color: colors.danger, ...typography.footnote },
   liftCard: { gap: spacing.md, padding: spacing.base },
   liftRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
   liftInput: { flex: 1 },
-  calculator: { backgroundColor: colors.brandRedSoft, borderColor: colors.brandRed, borderRadius: radius.md, borderWidth: 1, minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.md },
-  calculatorText: { color: colors.brandRed, ...typography.bodyEmphasis },
-  modalRoot: { backgroundColor: colors.bg, flex: 1 },
-  modalHeader: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 56, paddingHorizontal: spacing.base },
-  modalTitle: { color: colors.fgPrimary, ...typography.headline },
+  calculator: { backgroundColor: colors.goldSoft, borderColor: colors.gold500, borderRadius: radius.md, borderWidth: 1, minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.md },
+  calculatorText: { color: colors.gold500, ...typography.bodyEmphasis },
+  modalRoot: { backgroundColor: colors.bgBase, flex: 1 },
+  modalHeader: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 56, paddingHorizontal: spacing.base },
+  modalTitle: { color: colors.textPrimary, ...typography.headline },
   modalContent: { gap: spacing.md, padding: spacing.base },
-  estimate: { color: colors.fgPrimary, paddingVertical: spacing.lg, textAlign: 'center', ...typography.title2 },
+  estimate: { color: colors.textPrimary, paddingVertical: spacing.lg, textAlign: 'center', ...typography.title2 },
   equipmentCard: { gap: spacing.md, padding: spacing.base },
   disabledUpload: { gap: spacing.sm, opacity: 0.55, padding: spacing.base },
-  uploadTitle: { color: colors.fgSecondary, ...typography.bodyEmphasis },
-  disabledText: { color: colors.fgTertiary, ...typography.footnote },
+  uploadTitle: { color: colors.textSecondary, ...typography.bodyEmphasis },
+  disabledText: { color: colors.textTertiary, ...typography.footnote },
   textArea: { minHeight: 104, textAlignVertical: 'top' },
-  dateError: { borderColor: colors.brandRed, borderRadius: radius.md, borderWidth: 1 },
+  dateError: { borderColor: colors.danger, borderRadius: radius.md, borderWidth: 1 },
 });

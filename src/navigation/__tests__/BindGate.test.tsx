@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Modal, Text, TextInput } from 'react-native';
@@ -60,9 +62,9 @@ test('needsOnboarding opens immediately and save-and-exit allows continuing from
   await inviteStashStorage.write(STUDENT_ID, stash);
   await renderGate();
   expect(renderer.root.findByType(Modal).props.visible).toBe(true);
-  await act(async () => press('保存并退出'));
+  await act(async () => press(t('student.onboardingWizardView.copy011')));
   expect(renderer.root.findByType(Modal).props.visible).toBe(false);
-  await act(async () => press('继续填写'));
+  await act(async () => press(t('student.onboardingWizardView.copy003')));
   expect(renderer.root.findByType(Modal).props.visible).toBe(true);
 });
 
@@ -70,7 +72,7 @@ test('submitting a code for an incomplete profile opens onboarding immediately',
   await renderGate();
   act(() => {
     renderer.root.findByProps({ placeholder: 'XXXXXXXXXX' }).props.onChangeText(stash.code);
-    renderer.root.findByProps({ placeholder: '填你自己的名字' }).props.onChangeText(stash.displayName);
+    renderer.root.findByProps({ placeholder: t('student.enterCodeView.copy002') }).props.onChangeText(stash.displayName);
   });
   await act(async () => press('提交'));
   expect(renderer.root.findByType(Modal).props.visible).toBe(true);
@@ -82,7 +84,7 @@ test('invalid stashed invite returns to an empty code field with the stashed nam
   await inviteStashStorage.write(STUDENT_ID, stash);
   await renderGate();
   expect(renderer.root.findByProps({ placeholder: 'XXXXXXXXXX' }).props.value).toBe('');
-  expect(renderer.root.findByProps({ placeholder: '填你自己的名字' }).props.value).toBe(stash.displayName);
+  expect(renderer.root.findByProps({ placeholder: t('student.enterCodeView.copy002') }).props.value).toBe(stash.displayName);
   expect(await inviteStashStorage.read(STUDENT_ID)).toBeNull();
   expect(renderer.root.findAllByType(Modal)).toHaveLength(0);
 });
@@ -100,5 +102,5 @@ test.each([
   });
   await act(async () => press('提交'));
   expect(renderer.root.findByProps({ placeholder: 'XXXXXXXXXX' }).props.value).toBe('');
-  expect(renderer.root.findByProps({ placeholder: '填你自己的名字' }).props.value).toBe(stash.displayName);
+  expect(renderer.root.findByProps({ placeholder: t('student.enterCodeView.copy002') }).props.value).toBe(stash.displayName);
 });

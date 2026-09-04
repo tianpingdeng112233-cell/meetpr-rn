@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 
-import { Card, colors, radius, spacing, typography } from '@/design';
+import { Card, useColors, type Colors, radius, spacing, typography } from '@/design';
 
 import { dateText } from './model';
 
@@ -20,13 +20,17 @@ export type Choice<T extends string | number> = {
 };
 
 export function FieldLabel({ children }: { children: ReactNode }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return <Text style={styles.fieldLabel}>{children}</Text>;
 }
 
 export function FormInput({ error, style, ...props }: TextInputProps & { error?: boolean }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <TextInput
-      placeholderTextColor={colors.fgTertiary}
+      placeholderTextColor={colors.textTertiary}
       style={[styles.input, error && styles.errorBorder, style]}
       {...props}
     />
@@ -44,6 +48,8 @@ export function ChoiceGroup<T extends string | number>({
   selected: T | null;
   error?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.wrap}>
       {choices.map((choice) => {
@@ -86,6 +92,8 @@ export function MultiChoice<T extends string>({
   selected: readonly T[];
   error?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.wrap}>
       {choices.map((choice) => {
@@ -125,6 +133,8 @@ export function Scale({
   title: string;
   value: number | null;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Card style={[styles.scaleCard, error && styles.errorBorder]}>
       <Text style={styles.scaleTitle}>{title}</Text>
@@ -165,6 +175,8 @@ export function DiscreteSlider({
   step?: number;
   value: number;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const values = Array.from(
     { length: Math.round((max - min) / step) + 1 },
     (_, index) => min + index * step,
@@ -201,6 +213,8 @@ function Wheel({
   options: readonly number[];
   value: number;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const initialIndex = Math.max(0, options.indexOf(value));
   return (
     <View style={styles.wheel}>
@@ -252,6 +266,8 @@ export function DateWheel({
   onChange: (value: string) => void;
   value: string;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const safeValue = clampDate(value, minDate, maxDate);
   const [year, month, day] = safeValue.split('-').map(Number);
   const [minYear, minMonth, minDay] = minDate.split('-').map(Number);
@@ -281,14 +297,14 @@ export function DateWheel({
   );
 }
 
-const styles = StyleSheet.create({
-  fieldLabel: { color: colors.fgPrimary, marginTop: spacing.sm, ...typography.bodyEmphasis },
+const createStyles = (colors: Colors) => StyleSheet.create({
+  fieldLabel: { color: colors.textPrimary, marginTop: spacing.sm, ...typography.bodyEmphasis },
   input: {
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.bgInset,
     borderColor: colors.borderStrong,
     borderRadius: radius.md,
     borderWidth: 1,
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     minHeight: 48,
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
@@ -296,7 +312,7 @@ const styles = StyleSheet.create({
   },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   choice: {
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.bgInset,
     borderColor: colors.borderStrong,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -306,17 +322,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   choiceCard: { flexBasis: '100%' },
-  selected: { backgroundColor: colors.brandRedSoft, borderColor: colors.brandRed },
-  errorBorder: { borderColor: colors.brandRed },
-  choiceText: { color: colors.fgSecondary, ...typography.body },
-  selectedText: { color: colors.fgPrimary },
-  choiceSubtitle: { color: colors.fgTertiary, marginTop: spacing.xs, ...typography.footnote },
+  selected: { backgroundColor: colors.goldSoft, borderColor: colors.gold500 },
+  errorBorder: { borderColor: colors.danger },
+  choiceText: { color: colors.textSecondary, ...typography.body },
+  selectedText: { color: colors.textPrimary },
+  choiceSubtitle: { color: colors.textTertiary, marginTop: spacing.xs, ...typography.footnote },
   scaleCard: { gap: spacing.md, padding: spacing.base },
-  scaleTitle: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  scaleTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
   scaleRow: { flexDirection: 'row', justifyContent: 'space-between' },
   scaleDot: {
     alignItems: 'center',
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.bgStack,
     borderColor: colors.borderStrong,
     borderRadius: radius.pill,
     borderWidth: 1,
@@ -325,21 +341,21 @@ const styles = StyleSheet.create({
     width: 44,
   },
   scaleEnds: { flexDirection: 'row', justifyContent: 'space-between' },
-  caption: { color: colors.fgTertiary, ...typography.caption },
-  footnote: { color: colors.fgSecondary, lineHeight: 18, ...typography.footnote },
+  caption: { color: colors.textTertiary, ...typography.caption },
+  footnote: { color: colors.textSecondary, lineHeight: 18, ...typography.footnote },
   slider: { height: 48, justifyContent: 'center' },
-  sliderRail: { backgroundColor: colors.surface3, borderRadius: radius.pill, height: 4, left: 10, position: 'absolute', right: 10 },
-  sliderFill: { backgroundColor: colors.brandRed, borderRadius: radius.pill, height: 4 },
+  sliderRail: { backgroundColor: colors.bgStack, borderRadius: radius.pill, height: 4, left: 10, position: 'absolute', right: 10 },
+  sliderFill: { backgroundColor: colors.gold500, borderRadius: radius.pill, height: 4 },
   sliderMarks: { flexDirection: 'row', justifyContent: 'space-between' },
   sliderHit: { alignItems: 'center', height: 44, justifyContent: 'center', width: 20 },
   sliderMark: { backgroundColor: colors.borderStrong, borderRadius: radius.pill, height: 8, width: 8 },
-  sliderThumb: { backgroundColor: colors.brandRed, borderColor: colors.fgPrimary, borderWidth: 2, height: 20, width: 20 },
+  sliderThumb: { backgroundColor: colors.gold500, borderColor: colors.textPrimary, borderWidth: 2, height: 20, width: 20 },
   dateWheel: { flexDirection: 'row', gap: spacing.sm },
   wheel: { flex: 1, height: ROW_HEIGHT * 3, overflow: 'hidden' },
   wheelContent: { paddingVertical: ROW_HEIGHT },
   wheelRow: { alignItems: 'center', height: ROW_HEIGHT, justifyContent: 'center' },
-  wheelText: { color: colors.fgTertiary, ...typography.body },
-  wheelSelected: { color: colors.fgPrimary, ...typography.bodyEmphasis },
+  wheelText: { color: colors.textTertiary, ...typography.body },
+  wheelSelected: { color: colors.textPrimary, ...typography.bodyEmphasis },
   wheelFocus: {
     borderBottomColor: colors.borderStrong,
     borderTopColor: colors.borderStrong,

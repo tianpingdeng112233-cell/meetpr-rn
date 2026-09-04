@@ -225,17 +225,6 @@ Received number of calls: 1
 | `src/features/training/policy.ts:208` | 建议 · 基于 e1RM ${formatWeight(e1RMKg)} | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
 | `src/features/training/policy.ts:219` | 建议 · 上次重量 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
 | `src/features/training/save-errors.ts:5` | 训练日已切换,本组无法保存。你的输入仍保留在本页,请刷新训练页后重新记录。 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
-| `src/navigation/BindGate.tsx:43` | 绑定申请尚未完成，请重新输入邀请码。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:114` | 绑定教练 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:119` | 请输入邀请码 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:124` | 提交邀请码 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:125` | W1 接线 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:132` | 完成训练信息 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:133` | W1 接入学员 Onboarding。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:140` | 等待教练确认 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:141` | 绑定申请处理中，请稍后查看。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:147` | 暂时无法检查绑定状态 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
-| `src/navigation/BindGate.tsx:148` | 请稍后再试。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
 | `src/navigation/FeaturePlaceholderScreen.tsx:27` | W1 实装 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
 
 ### G0-b 最终验证与限制
@@ -485,3 +474,71 @@ Android build/visual acceptance and R2 screenshots could not be completed. Attem
 
 - R2 卡第 1 项我写错了口径,收货时纠正:iOS 把老 profile 里的 legacy 器械 token **原样写回**(后端 `equipment_overrides: string[]` 接受任意字串),所以 upsert schema 的 `equipment_overrides` 也改为 `z.array(z.string())`,UI 只提供正典 token;对应测试改为「legacy token 读写都通过」。
 - 模拟器抽查(新学员号):输码→向导自动弹出;磅·英寸模式输入 `70.5` 逐字保留(体重自动换算 183 lb 显示);日期轮见截图。
+
+## 2026-09-05 — W1-i stack: v3 tokens + i18n
+
+- 先读卡、AGENTS、G0-a/G0-b、i18n/index、i18n/match、design/index、PLAN 和 Expo SDK 57 版本文档。仅本 worktree；未安装依赖、未动 node_modules symlink、未 commit/push。
+- 首跑指定两守卫：exit 1；2 failed suites，2 failed / 3 passed tests。legacy guard 报 4 个文件；中文 guard 报 BindGate 字面量。
+- onboarding/BindGate 消费新语义 token；组件 useColors + useMemo(createStyles)。错误/必填缺失/1RM 锁定警告 danger；选中/进度/加载/估算入口 gold500 + goldSoft。
+- 匹配 StudentKit 正典并以 t(key, params) 替换；训练年限、e1RM/保守值、每周天数、教练姓名、等待时长、上传数量保留参数。标签表与绑定通知 getter、步骤标题函数在读取时翻译，避免模块加载时冻结语言。其他模块仅复用逐字匹配的关闭/提交中/三大项名称/伤病记录 key，未改 catalog、线值、流程或状态机。
+- item 3：输码/姓名改 TextField（uppercase mono label、helper；输码 mono），保留输入归一化/长度/值与提交禁用条件；主行动 primary，取消请求 secondary，登出 link。已读 iOS 202e95db 的 BindGateView.swift：GateLogoutButton 使用 textSecondary，故选 link。GateFrame 已用 Card，保留共享 Card 与响应主题样式。
+- 删除 G0-b 表中已被 W1-i 替换的 11 条旧 BindGate 登记；下表为本卡全部未命中：21 个标记、17 个源码行。onboarding 仍在原全仓 guard 的历史排除范围内，本卡也逐条迁移/登记，未扩大代码修改范围。未新增译文或用近义文案替换不匹配项。
+- 按用户后续指令跳过 code-review skill 与 setup 工作流。卡限制改动范围，PARITY.md 未改。
+
+| 文件:行 | zh 原文 | 处理 |
+|---|---|---|
+| `src/features/onboarding/OnboardingSteps.tsx:62` | 单位 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:348` | 按身体消耗选择 — 久坐 ≠ 低消耗,也请考虑通勤和站立时间。 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:349` | 轻松；很累 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:354` | 很高 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:357` | 按训练后恢复到正常状态所需时间选择,拿不准就选 3。 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:358` | 很快；很慢 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:373` | 上传训练视频；上传训练资料 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:398` | 伤病部位 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingSteps.tsx:420` | 目标体重级别 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingWizard.tsx:182` | 请补全标红的必填资料 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/OnboardingWizard.tsx:253` | 保存中… | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/features/onboarding/catalog.ts:26` | 窄；宽 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/navigation/BindGate.tsx:312` | 没有教练?请向你的教练索取邀请码 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/navigation/BindGate.tsx:337` | 提交 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/navigation/BindGate.tsx:428` | 完整资料 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/navigation/BindGate.tsx:436` | 取消中… | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+| `src/navigation/BindGate.tsx:439` | 保留请求 | missing: 无逐字/标点归一化匹配，保留原文，交 Claude 定英文。 |
+
+### 验证结果与改动清单
+
+- 两守卫复跑：exit 0；2 passed suites / 5 passed tests。
+- `npx jest src/features/onboarding src/navigation`：exit 0；5 suites / 60 tests / 0 snapshots。卡写 62，本 checkout 实际为 60，未删除测试。相同测试通过临时 setup 在模块加载前设置 zh 后也全部通过（5 / 60，1.113 s）；首次临时 setup 在 beforeEach 才设置语言，导致 2 条表驱动期望在 en 初始化，与 zh 实际值不符，已修正临时 harness，无产品改动。
+- `npm run lint`：exit 0，无 warning/error；完整输出 `/private/tmp/w1i-stack-lint.log`：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+- `npx tsc --noEmit`：exit 0，无输出（`/private/tmp/w1i-stack-tsc.log`）。
+- `npx jest`：exit 0，完整输出 `/private/tmp/w1i-stack-jest.log`：
+
+```text
+Test Suites: 34 passed, 34 total
+Tests:       249 passed, 249 total
+Snapshots:   0 total
+Time:        1.928 s, estimated 4 s
+Ran all test suites.
+```
+
+- `git diff --check`：exit 0。
+- `EXPO_OFFLINE=1 npx expo run:android --no-install --no-bundler`：exit 1；ADB `could not install *smartsocket* listener: Operation not permitted` / `cannot connect to daemon`，无法连接 AVD meetpr；未完成亲眼走查或截图，不宣称视觉验收通过。完整输出 `/private/tmp/w1i-stack-android.log`。
+
+改动文件：
+
+- `docs/CODEX-JOURNAL.md`
+- `src/features/onboarding/OnboardingSteps.tsx`
+- `src/features/onboarding/OnboardingWizard.tsx`
+- `src/features/onboarding/__tests__/wizard.test.tsx`
+- `src/features/onboarding/bind-model.ts`
+- `src/features/onboarding/catalog.ts`
+- `src/features/onboarding/controls.tsx`
+- `src/features/onboarding/model.ts`
+- `src/navigation/BindGate.tsx`
+- `src/navigation/__tests__/BindGate.test.tsx`

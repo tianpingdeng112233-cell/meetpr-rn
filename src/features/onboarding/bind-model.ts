@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 import { ApiError } from '@/api/client';
 import type { BindRequest, BindRequestStatus } from '@/api/domains/bind';
 
@@ -19,10 +21,10 @@ export type BindGateResolution = {
 };
 
 export const BIND_NOTICES = {
-  rejected: '教练当前不接收新学员,请输入新邀请码或稍后再试',
-  expired: '上次请求 7 天未响应已自动过期,可重新发送或换教练',
-  invalidCode: '邀请码无效或已失效,请输入新邀请码',
-  network: '网络异常,绑定请求暂未发出,可下拉重试',
+  get rejected() { return t('student.bindGateViewModel.copy001'); },
+  get expired() { return t('student.bindGateViewModel.copy002'); },
+  get invalidCode() { return t('student.bindGateViewModel.copy003'); },
+  get network() { return t('student.bindGateViewModel.copy004'); },
 } as const;
 
 export function resolveBindGateState(

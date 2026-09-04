@@ -1,3 +1,5 @@
+import { t } from '@/i18n';
+
 import type {
   OnboardingProfile,
   OnboardingUpsertInput,
@@ -9,14 +11,14 @@ import { INJURY_AREAS, MUSCLE_GROUPS, TRAINING_DAYS, type GymTier, type InjuryAr
 
 export const ONBOARDING_STEP_COUNT = 7 as const;
 
-export const ONBOARDING_STEP_TITLES = [
-  '基础信息',
-  '训练背景',
-  '你的三大项极限是多少?',
-  '训练环境',
-  '恢复能力',
-  '训练资料',
-  '补充信息',
+export const getOnboardingStepTitles = () => [
+  t('student.onboardingWizardView.copy004'),
+  t('student.onboardingWizardView.copy005'),
+  t('student.onboardingWizardView.copy006'),
+  t('student.onboardingWizardView.copy007'),
+  t('student.onboardingWizardView.copy008'),
+  t('student.onboardingWizardView.copy009'),
+  t('student.onboardingWizardView.copy010'),
 ] as const;
 
 export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
