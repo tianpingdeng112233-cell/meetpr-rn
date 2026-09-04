@@ -4,7 +4,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 
 # meetpr-rn 身份卡
 
-MeetPR 安卓端(React Native/Expo)。⚖️2026-07-19 拍板 C:RN 只做安卓,iOS(`apps/MeetPR`,SwiftUI)保持不动;本仓目标 = **1:1 复刻 iOS `release/1.0` @ `3799f67`**,遵守安卓系统惯例,v1 严禁夹带新功能。
+MeetPR 安卓端(React Native/Expo)。⚖️2026-07-19 拍板 C:RN 只做安卓,iOS(`apps/MeetPR`,SwiftUI)保持不动;本仓目标 = **1:1 复刻 iOS `release/1.0` @ `202e95db` 的 Global 轨**(⚖️2026-09-04 重 pin + 海外优先;旧基线 3799f67 已废),遵守安卓系统惯例,v1 严禁夹带新功能。英文为主语言,CN 轨 v1 不做。
 
 ## 三份根文档
 - `PLAN.md` — 施工蓝图(W0-W4 分波、技术底座、三级分发路径)。改动方向先读它。
@@ -20,7 +20,8 @@ MeetPR 安卓端(React Native/Expo)。⚖️2026-07-19 拍板 C:RN 只做安卓,
 - 包名 `com.meetpr.app` 与 release keystore 一经对外发包终身锁死。
 - CI 只跑 ubuntu runner,不碰 macOS runner。
 - 评估期硬封存照抄(BindGate 直进 tabs),xlsx 导入不复刻(正典在 plan-web)。
-- 后端 = 现有 staging(`121.40.160.241:3000`),原则零后端改动;发现 iOS 假设开 backend 小卡,不在本仓绕。
+- 后端 = Global 生产 `https://api.meetpr.app`(DO NYC + R2);CN staging `121.40.160.241:3000` 仅作对照。原则零后端改动;发现 iOS 假设开 backend 小卡,不在本仓绕(已知一张:Google 多 audience)。
+- 凭证/密钥(Google OAuth client、keystore、测试账号密码)只在 Bitwarden,永不入卡与对话。
 
 ## 协作
 - Claude 拆卡/审/PR,Codex 实装(一卡一原子 diff),review-loop 互审;Codex 作业不 commit/push。
