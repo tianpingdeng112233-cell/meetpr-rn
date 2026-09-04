@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 
+import { BUILD_TRACK } from '@/config/build-track';
 import {
+  emailLogin,
+  emailRegister,
+  googleSignIn,
+  type EmailCredentials,
+  type GoogleSignIn,
   loginRequest,
   refreshRequest,
   registerRequest,
@@ -16,6 +22,7 @@ import {
   type ApiRequestOptions,
 } from './client';
 import * as tokenStore from './token-store';
+import { deviceTimezone, timezoneStore } from './timezone-store';
 
 export type SessionStatus = 'anonymous' | 'authenticating' | 'authenticated';
 
@@ -29,6 +36,10 @@ type SessionStore = {
   bootstrap: () => Promise<void>;
   login: (input: LoginRequest) => Promise<User>;
   register: (input: RegisterRequest) => Promise<User>;
+  loginWithEmail: (input: EmailCredentials) => Promise<User>;
+  registerWithEmail: (input: EmailCredentials) => Promise<User>;
+  loginWithGoogle: (input: Omit<GoogleSignIn, 'timezone'>) => Promise<User>;
+  reportTimezone: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -275,11 +286,21 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       await runBootstrap(set);
     } finally {
       set({ bootstrapped: true });
+      if (BUILD_TRACK === 'global') void get().reportTimezone();
     }
   },
 
   login: (input) => authenticate(() => loginRequest(input)),
   register: (input) => authenticate(() => registerRequest(input)),
+
+  loginWithEmail: async (input) => {
+    const user = await authenticate(() => emailLogin(input));
+    await get().reportTimezone();
+    return user;
+  },
+  registerWithEmail: (input) => authenticateWithTimezone((timezone) => emailRegister({ ...input, timezone })),
+  loginWithGoogle: (input) => authenticateWithTimezone((timezone) => googleSignIn({ ...input, timezone })),
+  reportTimezone: () => reportSessionTimezone(),
 
   logout: async () => {
     ++generation;
@@ -415,6 +436,7 @@ export async function authenticatedRequest<T = unknown>(
 export function resetSessionForTests(): void {
   cancelRefresh();
   generation = 0;
+  timezoneFlight = null;
   credentialMutationQueue = Promise.resolve();
   useSessionStore.setState({
     status: 'anonymous',
@@ -422,4 +444,43 @@ export function resetSessionForTests(): void {
     authenticationError: null,
     bootstrapped: false,
   });
+}
+
+async function authenticateWithTimezone(operation: (timezone: string) => Promise<AuthResponse>): Promise<User> {
+  const timezone = deviceTimezone();
+  return authenticate(async () => {
+    const response = await operation(timezone);
+    // The successful request already reported this value. Persistence failure
+    // must not turn successful authentication into a sign-in error.
+    await timezoneStore.setLastReported(response.user.id, timezone).catch(() => undefined);
+    return response;
+  });
+}
+
+export async function patchTimezone(timezone: string): Promise<void> {
+  await authenticatedRequest('/me/timezone', { method: 'PATCH', body: { timezone } });
+}
+
+let timezoneFlight: { generation: number; promise: Promise<void> } | null = null;
+function reportSessionTimezone(): Promise<void> {
+  const session = useSessionStore.getState();
+  if (BUILD_TRACK !== 'global' || session.status !== 'authenticated' || !session.user) return Promise.resolve();
+  const capturedGeneration = generation;
+  if (timezoneFlight?.generation === capturedGeneration) return timezoneFlight.promise;
+  const userId = session.user.id;
+  const promise = (async () => {
+    try {
+      const timezone = deviceTimezone();
+      const lastReported = await timezoneStore.getLastReported(userId);
+      if (capturedGeneration !== generation || timezone === lastReported) return;
+      await patchTimezone(timezone);
+      if (capturedGeneration === generation) await timezoneStore.setLastReported(userId, timezone);
+    } catch {
+      // Best effort: retry on the next foreground transition.
+    }
+  })();
+  const flight = { generation: capturedGeneration, promise };
+  timezoneFlight = flight;
+  void promise.finally(() => { if (timezoneFlight === flight) timezoneFlight = null; });
+  return promise;
 }

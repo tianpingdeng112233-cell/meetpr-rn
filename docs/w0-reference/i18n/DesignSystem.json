@@ -1,0 +1,330 @@
+{
+"designSystem.action.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"designSystem.action.confirm": {
+"en": "Confirm",
+"zh": "确定"
+},
+"designSystem.action.inProgress": {
+"en": "Action in progress",
+"zh": "操作进行中"
+},
+"designSystem.action.perform": {
+"en": "Perform this action",
+"zh": "执行此操作"
+},
+"designSystem.action.shiftOneDay": {
+"en": "Shift one day",
+"zh": "顺延一天"
+},
+"designSystem.action.signOut": {
+"en": "Sign out",
+"zh": "退出登录"
+},
+"designSystem.action.squatBenchDeadlift": {
+"en": "SQUAT · BENCH · DEADLIFT",
+"zh": "蹲·推·拉"
+},
+"designSystem.action.startTraining": {
+"en": "Start training",
+"zh": "开始训练"
+},
+"designSystem.appearance.dark": {
+"en": "Dark",
+"zh": "深色"
+},
+"designSystem.appearance.light": {
+"en": "Light",
+"zh": "浅色"
+},
+"designSystem.appearance.system": {
+"en": "System",
+"zh": "跟随系统"
+},
+"designSystem.chart.averageRPE": {
+"en": "Average RPE",
+"zh": "平均 RPE"
+},
+"designSystem.chart.date": {
+"en": "Date",
+"zh": "日期"
+},
+"designSystem.chart.segment": {
+"en": "Segment",
+"zh": "线段"
+},
+"designSystem.chart.trainingVolume": {
+"en": "Training volume",
+"zh": "训练容量"
+},
+"designSystem.chart.trainingVolumeKilograms": {
+"en": "Training volume kg",
+"zh": "训练容量 kg"
+},
+"designSystem.collapsed": {
+"en": "Collapsed",
+"zh": "已收起"
+},
+"designSystem.date.monthDay %@ %@": {
+"en": "%@/%@",
+"zh": "%@月%@日"
+},
+"designSystem.day.accessibilityLabel %@ %@ %@": {
+"en": "%@ %@, %@",
+"zh": "%@%@日，%@"
+},
+"designSystem.day.completed": {
+"en": "Completed",
+"zh": "已完成"
+},
+"designSystem.day.future": {
+"en": "Future",
+"zh": "未来"
+},
+"designSystem.day.plannedButIncomplete": {
+"en": "Planned, not completed",
+"zh": "有计划，未完成"
+},
+"designSystem.day.rest": {
+"en": "Rest day",
+"zh": "休息日"
+},
+"designSystem.day.today": {
+"en": "Today",
+"zh": "今天"
+},
+"designSystem.e1rm.chartLabel %@": {
+"en": "e1RM progress chart with %@ main data points",
+"zh": "e1RM 成长曲线，共 %@ 个主线数据点"
+},
+"designSystem.e1rm.chartLabelOne %@": {
+"en": "e1RM progress chart with %@ main data point",
+"zh": "e1RM 成长曲线，共 %@ 个主线数据点"
+},
+"designSystem.e1rm.importedHistoryLegend": {
+"en": "Dashed line = imported history",
+"zh": "虚线 = 导入的历史记录"
+},
+"designSystem.exercise.incompleteSet %@": {
+"en": " · %@ incomplete set",
+"zh": " · %@ 组未完成"
+},
+"designSystem.exercise.incompleteSets %@": {
+"en": " · %@ incomplete sets",
+"zh": " · %@ 组未完成"
+},
+"designSystem.exercise.recordedSets %@ of %@": {
+"en": "%@ of %@ sets logged",
+"zh": "%@ / %@ 组已记录"
+},
+"designSystem.exercise.summary %@ %@ %@": {
+"en": "%@ sets · %@%@",
+"zh": "%@ 组 · %@%@"
+},
+"designSystem.exercise.summaryOne %@ %@ %@": {
+"en": "%@ set · %@%@",
+"zh": "%@ 组 · %@%@"
+},
+"designSystem.expanded": {
+"en": "Expanded",
+"zh": "已展开"
+},
+"designSystem.numberPad.backspace": {
+"en": "Backspace",
+"zh": "退格"
+},
+"designSystem.numberPad.decimalPoint": {
+"en": "Decimal point",
+"zh": "小数点"
+},
+"designSystem.numberPad.enterReps": {
+"en": "Enter reps",
+"zh": "输入次数"
+},
+"designSystem.numberPad.enterWeight": {
+"en": "Enter weight",
+"zh": "输入重量"
+},
+"designSystem.plate.competitionCollarsOnly": {
+"en": "2.5 kg competition collars only",
+"zh": "仅 2.5kg 赛扣"
+},
+"designSystem.plate.emptyBar": {
+"en": "Empty 20 kg bar",
+"zh": "空杠 20kg"
+},
+"designSystem.plate.withCollars %@": {
+"en": "%@ + 2.5 kg competition collars",
+"zh": "%@ + 2.5kg 赛扣"
+},
+"designSystem.preview.bodyWeight": {
+"en": "Body weight",
+"zh": "体重"
+},
+"designSystem.preview.coachNotified": {
+"en": "Coach notified",
+"zh": "已通知教练"
+},
+"designSystem.preview.coachTopSetBackOff": {
+"en": "Coach Zhang · Top set + back-off",
+"zh": "张教练 · 顶组 + 减载"
+},
+"designSystem.preview.current": {
+"en": "Current",
+"zh": "当前"
+},
+"designSystem.preview.daysUnit": {
+"en": "days",
+"zh": "天"
+},
+"designSystem.preview.daysUntilMeet": {
+"en": "Meet in",
+"zh": "距比赛"
+},
+"designSystem.preview.deadlift": {
+"en": "Deadlift",
+"zh": "硬拉"
+},
+"designSystem.preview.deadliftNote": {
+"en": "Drive through the quads from the start",
+"zh": "注意启动时股四的蹬地"
+},
+"designSystem.preview.initials": {
+"en": "WW",
+"zh": "王五"
+},
+"designSystem.preview.mesocycleWeek": {
+"en": "MESOCYCLE · WEEK 03 / 04",
+"zh": "中周期 · 第 03 / 04 周"
+},
+"designSystem.preview.missedWorkout": {
+"en": "Missed workout",
+"zh": "漏练"
+},
+"designSystem.preview.previousBestDeadlift": {
+"en": "Last 170kg×3 @8 · Best 175kg×3 @8.5",
+"zh": "上次 170kg×3 @8 · 最佳 175kg×3 @8.5"
+},
+"designSystem.preview.previousBestTempoBench": {
+"en": "Last 87.5kg×2 @6 · Best 90kg×2 @6",
+"zh": "上次 87.5kg×2 @6 · 最佳 90kg×2 @6"
+},
+"designSystem.preview.streak": {
+"en": "Streak",
+"zh": "连胜"
+},
+"designSystem.preview.strengthBlock": {
+"en": "SBD STRENGTH BLOCK",
+"zh": "SBD 力量块"
+},
+"designSystem.preview.tempoBench": {
+"en": "Tempo Bench",
+"zh": "节奏卧推"
+},
+"designSystem.preview.threeDaysWithoutTraining": {
+"en": "3 days without training",
+"zh": "3 天未训练"
+},
+"designSystem.preview.timesUnit": {
+"en": "times",
+"zh": "次"
+},
+"designSystem.preview.todayTitle": {
+"en": "Today",
+"zh": "今日"
+},
+"designSystem.progress.weekly %@": {
+"en": "Weekly progress %@%%",
+"zh": "本周进度 %@ %%"
+},
+"designSystem.reps": {
+"en": "Reps",
+"zh": "次数"
+},
+"designSystem.repsUnit": {
+"en": "reps",
+"zh": "次"
+},
+"designSystem.setRow.accessibilityLabel %@ %@ %@ %@": {
+"en": "Set %@, %@, %@, %@",
+"zh": "第 %@ 组，%@，%@，%@"
+},
+"designSystem.setRow.done": {
+"en": "Set completed",
+"zh": "本组完成"
+},
+"designSystem.setRow.failed": {
+"en": "Set failed",
+"zh": "本组失败"
+},
+"designSystem.setRow.metrics %@ %@ %@": {
+"en": "%@, %@ reps, RPE %@",
+"zh": "%@，%@ 次，RPE %@"
+},
+"designSystem.setRow.noSuggestedWeight": {
+"en": "No suggested weight",
+"zh": "暂无建议重量"
+},
+"designSystem.setRow.pending": {
+"en": "Not logged",
+"zh": "尚未记录"
+},
+"designSystem.setRow.tapToEdit": {
+"en": "Tap to edit this set",
+"zh": "轻点编辑本组"
+},
+"designSystem.setRow.weight %@": {
+"en": "%@ kilograms",
+"zh": "%@ 千克"
+},
+"designSystem.stat.accessibilityLabel %@ %@ %@ %@": {
+"en": "%@, %@ %@%@",
+"zh": "%@，%@ %@%@"
+},
+"designSystem.stat.change %@": {
+"en": ", change %@",
+"zh": "，变化 %@"
+},
+"designSystem.video.attached": {
+"en": "Video attached",
+"zh": "已附视频"
+},
+"designSystem.video.none": {
+"en": "No video",
+"zh": "无视频"
+},
+"designSystem.video.uploadFailed": {
+"en": "Video upload failed",
+"zh": "视频上传失败"
+},
+"designSystem.video.uploadFailedRetry": {
+"en": "Video upload failed. Tap to retry.",
+"zh": "视频上传失败，轻点重试"
+},
+"designSystem.weekday.friday": {
+"en": "Fri",
+"zh": "五"
+},
+"designSystem.weekday.monday": {
+"en": "Mon",
+"zh": "一"
+},
+"designSystem.weekday.thursday": {
+"en": "Thu",
+"zh": "四"
+},
+"designSystem.weekday.tuesday": {
+"en": "Tue",
+"zh": "二"
+},
+"designSystem.weekday.wednesday": {
+"en": "Wed",
+"zh": "三"
+},
+"designSystem.weight": {
+"en": "Weight",
+"zh": "重量"
+}
+}

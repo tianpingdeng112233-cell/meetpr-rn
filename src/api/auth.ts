@@ -36,7 +36,8 @@ export const UserSchema = z.preprocess(
   tolerateCamelCase({ created_at: 'createdAt' }),
   z.object({
     id: z.string().uuid(),
-    phone: z.string(),
+    phone: z.string().nullable(),
+    email: z.string().nullable().optional(),
     role: UserRoleSchema,
     created_at: Iso8601DateTimeSchema,
   }),
@@ -135,4 +136,41 @@ export async function refreshRequest(
     schema: RefreshResponseSchema,
     signal,
   });
+}
+
+export type EmailCredentials = { email: string; password: string };
+export type EmailRegistration = EmailCredentials & { timezone: string };
+export type GoogleSignIn = { idToken: string; nonce?: string; timezone: string };
+
+export function fetchAuthChallenge() {
+  return apiRequest('/auth/challenge', {
+    method: 'POST',
+    schema: z.object({ nonce: z.string(), expiresAt: Iso8601DateTimeSchema }),
+  });
+}
+
+export function googleSignIn({ idToken, nonce, timezone }: GoogleSignIn): Promise<AuthResponse> {
+  return apiRequest('/auth/google', {
+    method: 'POST', body: { idToken, nonce, role: 'coached_student', timezone }, schema: AuthResponseSchema,
+  });
+}
+
+export function emailRegister({ email, password, timezone }: EmailRegistration): Promise<AuthResponse> {
+  return apiRequest('/auth/email/register', {
+    method: 'POST', body: { email: email.trim(), password, role: 'coached_student', timezone }, schema: AuthResponseSchema,
+  });
+}
+
+export function emailLogin({ email, password }: EmailCredentials): Promise<AuthResponse> {
+  return apiRequest('/auth/email/login', {
+    method: 'POST', body: { email: email.trim(), password }, schema: AuthResponseSchema,
+  });
+}
+
+export async function requestPasswordReset({ email }: { email: string }): Promise<void> {
+  await apiRequest('/auth/email/forgot', { method: 'POST', body: { email: email.trim() } });
+}
+
+export async function resetPassword({ email, code, newPassword }: { email: string; code: string; newPassword: string }): Promise<void> {
+  await apiRequest('/auth/email/reset', { method: 'POST', body: { email: email.trim(), code, newPassword } });
 }

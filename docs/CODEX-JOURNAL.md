@@ -145,3 +145,46 @@ Received number of calls: 1
 - `src/features/training/WorkoutBody.tsx`
 - `src/navigation/BindGate.tsx`
 - `src/navigation/FeaturePlaceholderScreen.tsx`
+
+## 2026-09-05 — G0-c Global auth
+
+- Card: `card-g0c-global-auth.md`; references: `global-auth.md` §§1–6 and `design-tokens-v3.md` §4. Read Expo SDK 57 versioned documentation before coding. Only this worktree changed; no install, commit, or push. The supplied package.json/package-lock.json dependency changes were preserved.
+- Global is the default build track and API host; China retains its original host and CN form. Dynamic Expo config enables cleartext only for China and registers the inverted Google client scheme only for Global. `.env.example` contains a blank public Google client ID.
+- Added nullable-phone/email user decoding, challenge/Google/email/register/recovery clients, all specified backend error codes, and three session actions through the existing authenticate generation guard and credential cleanup. Per-user AsyncStorage timezone reporting covers registration/Google, email login, bootstrap, and foreground changes; concurrent reports coalesce and failures are silent.
+- Added Global login, registration, and two-step recovery screens using the existing v3 components, exact English copy, UTF-8 password validation, six ASCII digit code filtering, and a three-second bottom toast. Global forms remain mounted during authentication; CN behavior and CN tests are unchanged. AuthSession uses code + S256 PKCE, browser cancellation is silent, and the native intent filter leaves OAuth callbacks to AuthSession rather than routing them to an unmatched screen.
+
+### Tests (written first)
+
+Initial red run: all five named suites failed (6 failed tests; three suites could not load missing modules). After implementing their seams: 5 suites / 50 tests passed.
+
+- `src/api/__tests__/auth-global.test.ts`: `accepts a Global user with nullable phone and email`; `registers email with the fixed student role and device timezone`; `accepts an empty 204 password reset request response`; `classifies the AUTH_EMAIL_TAKEN error envelope`.
+- `src/features/auth/__tests__/validation.test.ts`: `email %s is valid: %s`; `password boundary %#`; `reset code %s` (single @, domain segments, trimmed email length, 7/8 characters, 72/73 UTF-8 bytes including multibyte/emoji, and six ASCII digits).
+- `src/features/auth/__tests__/error-copy.test.ts`: `%s error copy` for every specified code; `fallback %#` for transport/server/decoding errors; `Google cancellation has no toast`.
+- `src/api/__tests__/timezone-report.test.ts`: `email login reports a changed device timezone exactly once`; `email login does not report the same timezone`; `timezone PATCH failure does not fail email login or mark it reported`.
+- `src/config/__tests__/build-track.test.ts`: `track %s` for unset/global and China environments.
+
+Final requested checks:
+
+- `npm run lint`: exit 0, no warnings or errors.
+- `npx tsc --noEmit`: exit 0, no output.
+- `npx jest`: exit 0; 31 passed / 31 suites; 228 passed / 228 tests; 0 snapshots; 3.235 s.
+- Global/China `expo config --json` checks with a synthetic public client ID: Global `[meetpr, com.googleusercontent.apps.123-example]` and cleartext false; China `[meetpr]` and cleartext true.
+- Offline Android Hermes export succeeded. Generated main Android manifest explicitly has `android:usesCleartextTraffic="false"`.
+- `EXPO_OFFLINE=1 npx expo run:android --no-install`: prebuild succeeded, then exit 1 because ADB could not install its smartsocket listener (`Operation not permitted`, child exit 255). No emulator walkthrough or screenshots; PARITY remains implemented, not visually verified. Generated Android directory is ignored by git.
+- Live Global backend and Google sign-in were not exercised: sandbox network restriction and card-documented external Google client / backend multiple-audience prerequisites. No credentials were requested or printed.
+- Local review checked Standards (scope, CN preservation, v3 components, no dependencies added by this run) and Spec (wire format, exact copy, route behavior, build flags, timezone handling). Formal code-review skill workflow was unavailable because `docs/agents/issue-tracker.md` is absent; requires user invocation of `$setup-matt-pocock-skills`. No tracker scaffolding was created.
+
+### Changed files
+
+- `.env.example`, `app.config.ts`, `app.json`, `PARITY.md`, `docs/CODEX-JOURNAL.md`.
+- `src/config/build-track.ts`, `src/config/__tests__/build-track.test.ts`.
+- `src/api/auth.ts`, `src/api/client.ts`, `src/api/session.ts`, `src/api/timezone-store.ts`, `src/api/__tests__/auth-global.test.ts`, `src/api/__tests__/timezone-report.test.ts`.
+- `src/app/_layout.tsx`, `src/app/login.tsx`, `src/app/register.tsx`, `src/app/forgot-password.tsx`, `src/app/+native-intent.tsx`.
+- `src/design/Toast.tsx`.
+- `src/features/auth/AuthForm.tsx`, `src/features/auth/GlobalLoginScreen.tsx`, `src/features/auth/GlobalRegisterScreen.tsx`, `src/features/auth/GlobalForgotPasswordScreen.tsx`, `src/features/auth/google-oauth.ts`, `src/features/auth/validation.ts`, `src/features/auth/error-copy.ts`, `src/features/auth/__tests__/validation.test.ts`, `src/features/auth/__tests__/error-copy.test.ts`.
+- Pre-existing user changes preserved: `package.json`, `package-lock.json`.
+
+### Claude 收货补记 G0-c(2026-09-05)
+
+- 直改一处:`src/analytics/client.ts` `confirmPrivacyNotice` 不再 await 首次上送(iOS 口径:确认即放行,上送 best-effort);加 `waitForFlush` 选项供测试等待。模拟器上 DNS 故障时该 await 曾让隐私弹层的「知道了」永久禁用。
+- 模拟器(重启后指定 DNS)亲验:Global 登录页全部元素;「Forgot password?」两步在 api.meetpr.app 上 204 → 进入 6 位码 + 新密码步。Google 通道待 David 建 Android OAuth client + backend #277 部署后再实测。
