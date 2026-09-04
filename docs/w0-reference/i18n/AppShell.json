@@ -1,0 +1,154 @@
+{
+"appShell.acknowledge": {
+"en": "Got it",
+"zh": "知道了"
+},
+"appShell.auth.hidePassword": {
+"en": "Hide password",
+"zh": "隐藏密码"
+},
+"appShell.auth.invalidCredentials": {
+"en": "Incorrect phone number or password",
+"zh": "手机号或密码错误"
+},
+"appShell.auth.invalidPassword": {
+"en": "Password must be 8 characters or more and no more than 72 bytes",
+"zh": "密码至少 8 字符,最多 72 字节"
+},
+"appShell.auth.invalidPhone": {
+"en": "Enter a valid phone number",
+"zh": "手机号格式不正确"
+},
+"appShell.auth.invalidPhoneWithPrefix": {
+"en": "Enter a valid phone number (starting with +86)",
+"zh": "手机号格式不对(+86 开头)"
+},
+"appShell.auth.networkUnstable": {
+"en": "Network connection is unstable. Try again.",
+"zh": "网络不稳定,重试"
+},
+"appShell.auth.password": {
+"en": "Password",
+"zh": "密码"
+},
+"appShell.auth.passwordInputHint": {
+"en": "Enter password",
+"zh": "输入密码"
+},
+"appShell.auth.phoneHelper": {
+"en": "11-digit mainland China phone number",
+"zh": "中国大陆 11 位手机号"
+},
+"appShell.auth.phoneInputHint": {
+"en": "Enter phone number",
+"zh": "输入手机号"
+},
+"appShell.auth.phoneNumber": {
+"en": "Phone number",
+"zh": "手机号"
+},
+"appShell.auth.phoneTaken": {
+"en": "This phone number is already registered",
+"zh": "该手机号已注册"
+},
+"appShell.auth.rateLimited": {
+"en": "Too many requests. Try again later.",
+"zh": "请求过于频繁,请稍后重试"
+},
+"appShell.auth.requestFailed": {
+"en": "Request failed. Try again later.",
+"zh": "请求失败,请稍后重试"
+},
+"appShell.auth.showPassword": {
+"en": "Show password",
+"zh": "显示密码"
+},
+"appShell.demo.coach": {
+"en": "Demo Coach",
+"zh": "演示教练"
+},
+"appShell.demo.student": {
+"en": "Demo Student",
+"zh": "演示学员"
+},
+"appShell.login.consent": {
+"en": "By continuing, you agree to the",
+"zh": "继续即表示同意"
+},
+"appShell.login.instructions": {
+"en": "Sign in with your phone number and password.",
+"zh": "用手机号和密码登录。"
+},
+"appShell.login.signIn": {
+"en": "Sign in",
+"zh": "登录"
+},
+"appShell.privacy.analytics.body": {
+"en": "To improve the training experience, MeetPR collects product interactions, an anonymous device identifier, and feedback text you choose to provide. This data is used only for product functionality, stored on our self-hosted Alibaba Cloud infrastructure in mainland China, and is not shared with third-party analytics SDKs, transferred overseas, or used for tracking or advertising. Data is retained for 90 days; uninstalling clears the anonymous installation identifier. You can delete your account or contact us to request deletion.",
+"zh": "为改进训练流程,MeetPR 会收集产品交互、匿名设备标识,以及你主动填写的反馈文本。数据仅用于产品功能,留存在境内自建阿里云,不接入第三方统计 SDK、不出境,也不用于追踪或广告。数据保留 90 天;卸载会清除匿名安装标识,你可通过删除账号或联系我们请求删除。"
+},
+"appShell.privacy.analytics.title": {
+"en": "About usage data",
+"zh": "使用数据说明"
+},
+"appShell.privacy.policy": {
+"en": "Privacy Policy",
+"zh": "隐私政策"
+},
+"appShell.root.validatingSession": {
+"en": "Verifying session…",
+"zh": "正在验证会话…"
+},
+"appShell.signup.eyebrow": {
+"en": "SIGN UP · ROLE",
+"zh": "注册 · 角色"
+},
+"appShell.signup.multiRoleLater": {
+"en": "Multi-role support will be considered for V1.5.",
+"zh": "多角色支持在 V1.5 评估。"
+},
+"appShell.signup.passwordMaximum": {
+"en": "72 bytes maximum",
+"zh": "最多 72 字节"
+},
+"appShell.signup.passwordMinimum": {
+"en": "At least 8 characters",
+"zh": "至少 8 字符"
+},
+"appShell.signup.role.coach": {
+"en": "Coach",
+"zh": "教练"
+},
+"appShell.signup.role.coach.description": {
+"en": "Program cycles · Review athletes · Give video feedback",
+"zh": "编排周期 · 审阅学员 · 反馈视频"
+},
+"appShell.signup.role.coachedStudent": {
+"en": "Athlete · With a coach",
+"zh": "学员 · 有教练"
+},
+"appShell.signup.role.coachedStudent.description": {
+"en": "Receive plans · Log training · Upload videos",
+"zh": "接收计划 · 记录训练 · 上传视频"
+},
+"appShell.signup.role.selfTrainingStudent": {
+"en": "Athlete · Self-coached",
+"zh": "学员 · 自己练"
+},
+"appShell.signup.role.selfTrainingStudent.description": {
+"en": "Choose a program · Train independently",
+"zh": "选择训练模板 · 自主跟练"
+},
+"appShell.signup.roleLocked": {
+"en": "Your role is locked after sign-up.",
+"zh": "注册后角色将锁定。"
+},
+"appShell.signup.signUp": {
+"en": "Sign up",
+"zh": "注册"
+},
+"appShell.signup.title": {
+"en": "Choose your role",
+"zh": "选择你的角色"
+}
+}
