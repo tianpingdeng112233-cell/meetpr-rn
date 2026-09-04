@@ -1,0 +1,22 @@
+{
+"repository.planDay.notActive": {
+"en": "This plan is no longer current",
+"zh": "这份计划已不是当前计划"
+},
+"repository.planDay.notPlanStudent": {
+"en": "This day's completion status cannot be changed",
+"zh": "无法修改这一天的完成状态"
+},
+"repository.planDay.onlyLatestCanBeUndone": {
+"en": "Only the most recently completed day can be undone",
+"zh": "只能撤销最近完成的一天"
+},
+"repository.planDay.unavailable": {
+"en": "This action is temporarily unavailable. Try again later.",
+"zh": "暂时无法完成操作，请稍后重试。"
+},
+"repository.planDay.undoTodayOnly": {
+"en": "Completion can only be undone on the same day",
+"zh": "只能在当天撤销"
+}
+}
