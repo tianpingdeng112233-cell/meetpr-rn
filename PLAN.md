@@ -4,7 +4,7 @@
 
 ## 0. 复刻基线(对齐点)
 
-- 基线 = **发版线 `release/1.0` 现头**(1.0(13) 所在 sha),开工时现场 `git -C apps/MeetPR log` 核实并 pin 死,记入新 repo PARITY.md 头部。main 上「降级待分诊」的内容**不进**复刻范围。
+- 基线 = **发版线 `release/1.0` 现头**。首 pin `3799f67`(1.0(13),2026-07-19);**⚖️2026-09-04 重 pin 为 `202e95db`**(2026-09-02,1.0(22) 进行中),并把目标轨改为 Global,见 §7。漂移明细在 PARITY.md「基线漂移清单」。main 上「降级待分诊」的内容**不进**复刻范围。
 - 照抄的裁决:评估期硬封存(BindGate 直进 5 tab、接收弹窗恒跳过)→ 安卓端同样封存,不做评估 UI;iOS xlsx 导入已封存 → 不复刻(导入正典在 plan-web)。
 - 「1:1」的定义:**信息架构、屏清单、交互流程、视觉 token 一比一**;但遵守安卓系统惯例(系统返回键/手势、Material 状态栏、无 iOS 左滑返回),不做 iOS 拟物。此条为 UI 闸门口径。
 
@@ -73,3 +73,13 @@
 - **签名红线**:release keystore 在**第一个对外 APK 之前**(W4 初)就定稿并终身沿用——安卓覆盖安装认签名,一级到三级必须同一 keystore 同一包名,否则老用户无法升级只能卸载重装。密码入 Bitwarden。
 - **自更新**:一、二级无商店通道,app 内版本检查(启动时对后端版本接口→提示跳下载页)是必做件,已并入 W4;JS 层热更(Pushy)作为后续可选项,不进 v1。
 - 节奏:类比网页端——直发迭代,不受 iOS P0-P2 班车约束,跨端问题各按各的节奏。iOS 侧零影响:发版线、prep-beta、台账流程全部照旧。
+
+## 7. 海外优先改向(⚖️2026-09-04 David 拍板:①优先开发海外版本 ②先重 pin 基线再开工)
+
+- **目标形态**:安卓 v1 = iOS **Global 轨**的 1:1 复刻(英文 UI、`https://api.meetpr.app`、邮箱密码 + Google 登录、注册角色固定 coached_student、设备时区契约)。CN 轨(手机号登录、121.40.160.241、中文)**v1 不做**,只保留 build variant 切轨口,不删已写的手机号登录代码。§6 的三级国内分发路径整体后移到 CN 轨启动时再议,备案/软著/国内商店零动作。
+- **基线纪律**:每波开工前 `git -C apps/MeetPR-release log -1 origin/release/1.0` 现场核实;基线只在波边界重 pin,波内不追。已按旧基线实装的三张悬空卡(w1g/w1h/w1i)不重派,先对照 PARITY 漂移清单逐卡复核再收货。
+- **登录**:SiwA 安卓不做(Apple 的 Android 方案是 web JS 流,内测形态不值当,⚖️待拍确认);Google 走 Android Credential Manager,id_token 的 aud = Web client id,**backend `GOOGLE_CLIENT_ID` 需放行多 audience**(小卡,零迁移)。Google Cloud 里建 Android/Web OAuth client 与 SHA-1 指纹登记 = David 亲手项。
+- **i18n**:英文为主语言,per-feature strings enum 镜像 iOS xcstrings 形制;译文先查 iOS `docs/i18n-glossary.md`,动作名直出 `name_en`。zh 作为第二语言保留键位但不在 v1 验收。
+- **推送**:Global iOS 用 APNs;安卓需 FCM 通道,backend 现状待核(可能是第二张 backend 小卡)。推送不阻塞 W1/W2。
+- **分发(⚖️待拍)**:推荐 **A. Google Play closed testing**(海外受众零「未知来源」摩擦、Play App Signing 托管 keystore、自更新由 Play 接管,W4 的「app 内自更新检查」可删);B. 沿用 §6 一级 APK 下载页(最快,但海外用户对 sideload 接受度差)。A 的人工前置:Google Play 开发者账号(25 USD,身份验证以周计),越早启动越好。
+- **iOS 侧零影响**:Global iOS 发版/送审流程照旧;本仓不碰 iOS 仓。
