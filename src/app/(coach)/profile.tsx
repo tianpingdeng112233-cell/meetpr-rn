@@ -1,5 +1,6 @@
+import { t } from '@/i18n';
 import { FeaturePlaceholderScreen } from '@/navigation/FeaturePlaceholderScreen';
 
 export default function CoachProfileScreen() {
-  return <FeaturePlaceholderScreen showLogout title="我的" />;
+  return <FeaturePlaceholderScreen showLogout title={t('student.studentRootView.copy004')} />;
 }

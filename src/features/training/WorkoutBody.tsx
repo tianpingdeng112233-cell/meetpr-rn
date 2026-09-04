@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import type { SetLog } from '@/api/domains/sets';
 import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
@@ -32,7 +33,7 @@ function reference(logs: readonly SetLog[], exerciseId: string): string | null {
   if (!relevant.length) return null;
   const last = [...relevant].sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
   const best = [...relevant].sort((a, b) => Number(b.weight_kg) - Number(a.weight_kg))[0];
-  return `上次 ${Number(last.weight_kg)}kg×${last.reps} · 最佳 ${Number(best.weight_kg)}kg×${best.reps}`;
+  return `${t('student.todayWorkoutPresentation.copy004', [Number(last.weight_kg), last.reps])} · ${t('student.todayWorkoutPresentation.copy005', [Number(best.weight_kg), best.reps])}`;
 }
 
 export function WorkoutBody({
@@ -55,15 +56,15 @@ export function WorkoutBody({
     <>
       {active ? (
         <Card style={styles.hero}>
-          <Text style={styles.eyebrow}>下一组 · {exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id))}</Text>
+          <Text style={styles.eyebrow}>{/* TODO(i18n:missing) */}下一组 · {exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id))}</Text>
           <View style={styles.heroNumbers}>
             <View><Text style={styles.heroValue}>{active.weightText || '—'}</Text><Text style={styles.unit}>KG</Text></View>
             <Text style={styles.multiply}>×</Text>
-            <View><Text style={styles.heroValue}>{active.repsText}</Text><Text style={styles.unit}>次</Text></View>
+            <View><Text style={styles.heroValue}>{active.repsText}</Text><Text style={styles.unit}>{t('student.setEntrySheet.copy004')}</Text></View>
             <View style={styles.rpeBlock}><Text style={styles.rpeLabel}>RPE</Text><Text style={styles.rpeHero}>{active.rpeText || '—'}</Text></View>
           </View>
-          {active.planSet.coach_note ?? active.exercise.notes ? <View style={styles.notePill}><Text style={styles.note}>教练备注 · {active.planSet.coach_note ?? active.exercise.notes}</Text></View> : null}
-          <AppButton disabled={!editable} label="记录此组" onPress={() => onRecord(active)} />
+          {active.planSet.coach_note ?? active.exercise.notes ? <View style={styles.notePill}><Text style={styles.note}>{t('student.todayWorkoutScreen.copy014')} · {active.planSet.coach_note ?? active.exercise.notes}</Text></View> : null}
+          <AppButton disabled={!editable} label={t('student.todayWorkoutScreen.copy015')} onPress={() => onRecord(active)} />
         </Card>
       ) : null}
       {groups.map(({ drafts: exerciseDrafts, exercise }, groupIndex) => {
@@ -71,11 +72,11 @@ export function WorkoutBody({
         return (
           <Card key={exercise.id} style={styles.exerciseCard}>
             <View style={styles.exerciseHeader}>
-              <View><Text style={styles.exerciseTitle}>{exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}</Text><Text style={styles.exerciseMeta}>{exercise.is_main_lift ? '主项' : `动作 ${groupIndex + 1}`} · {exerciseDrafts.length} 组</Text></View>
+              <View><Text style={styles.exerciseTitle}>{exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}</Text><Text style={styles.exerciseMeta}>{exercise.is_main_lift ? t('student.growthCurveView.copy001') : `${t('student.sessionSummaryView.copy006')} ${groupIndex + 1}`} · {t(exerciseDrafts.length === 1 ? 'student.todayWorkoutScreen.copy019.one' : 'student.todayWorkoutScreen.copy019', [exerciseDrafts.length])}</Text></View>
               <MaterialCommunityIcons color={colors.textTertiary} name="video-outline" size={20} />
             </View>
-            {!active && note ? <View style={styles.notePill}><Text style={styles.note}>教练备注 · {note}</Text></View> : null}
-            <View style={styles.tableHeader}><Text style={styles.numberColumn}>#</Text><Text style={styles.column}>重量</Text><Text style={styles.column}>次数</Text><Text style={styles.column}>RPE</Text><View style={styles.statusColumn} /></View>
+            {!active && note ? <View style={styles.notePill}><Text style={styles.note}>{t('student.todayWorkoutScreen.copy014')} · {note}</Text></View> : null}
+            <View style={styles.tableHeader}><Text style={styles.numberColumn}>#</Text><Text style={styles.column}>{t('student.setEntrySheet.copy001')}</Text><Text style={styles.column}>{t('student.setEntrySheet.copy003')}</Text><Text style={styles.column}>RPE</Text><View style={styles.statusColumn} /></View>
             {exerciseDrafts.map((draft) => {
               const status = statusMark(draft, colors);
               return (

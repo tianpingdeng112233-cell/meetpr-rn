@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { t } from '@/i18n';
 import { AnalyticsEvent, track } from '@/analytics';
 import { useSubmitReadiness } from '@/api/domains/readiness';
 import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
@@ -18,10 +19,10 @@ type Props = {
 
 type Scores = { sleep: number | null; mood: number | null; stress: number | null };
 
-const QUESTIONS = [
-  ['sleep', '昨晚睡得怎么样?', '很差', '很好'],
-  ['mood', '今天状态如何?', '很糟', '很棒'],
-  ['stress', '今天压力大吗?', '压力爆表', '很轻松'],
+const questions = () => [
+  ['sleep', t('student.readinessCheckinSheet.copy003'), t('student.readinessCheckinSheet.copy004'), t('student.readinessCheckinSheet.copy005')],
+  ['mood', t('student.readinessCheckinSheet.copy006'), t('student.readinessCheckinSheet.copy007'), t('student.readinessCheckinSheet.copy008')],
+  ['stress', t('student.readinessCheckinSheet.copy009'), t('student.readinessCheckinSheet.copy010'), t('student.readinessCheckinSheet.copy011')],
 ] as const;
 
 export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
@@ -40,7 +41,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
   };
   const complete = async () => {
     if (scores.sleep === null || scores.mood === null || scores.stress === null) {
-      setError('请先完成三项状态评分');
+      setError(t('student.readinessCheckinViewModel.copy001'));
       setStep(1);
       return;
     }
@@ -58,7 +59,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
       });
       onComplete();
     } catch {
-      setError('提交失败,请重试');
+      setError(t('student.readinessCheckinViewModel.copy002'));
     }
   };
 
@@ -66,14 +67,14 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
     <Modal animationType="slide" onRequestClose={() => undefined} visible>
       <SafeAreaView style={styles.root}>
         <View style={styles.nav}>
-          <Pressable onPress={skip}><Text style={styles.skip}>跳过</Text></Pressable>
-          <Text style={styles.title}>今日状态 {step}/2</Text>
+          <Pressable onPress={skip}><Text style={styles.skip}>{t('student.readinessCheckinSheet.copy002')}</Text></Pressable>
+          <Text style={styles.title}>{t('coach.detail.todayStatus')} {step}/2</Text>
           <View style={styles.spacer} />
         </View>
         <View style={styles.content}>
           {step === 1 ? (
             <>
-              {QUESTIONS.map(([key, question, low, high]) => (
+              {questions().map(([key, question, low, high]) => (
                 <Card key={key} style={styles.questionCard}>
                   <Text style={styles.question}>{question}</Text>
                   <View style={styles.scoreRow}>
@@ -92,10 +93,10 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
               ))}
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <AppButton
-                label="下一步"
+                label={t('student.readinessCheckinSheet.copy016')}
                 onPress={() => {
                   if (Object.values(scores).some((value) => value === null)) {
-                    setError('请先完成三项状态评分');
+                    setError(t('student.readinessCheckinViewModel.copy001'));
                     return;
                   }
                   setError('');
@@ -106,8 +107,8 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
             </>
           ) : (
             <>
-              <Text style={styles.heading}>今天哪些肌群还累?</Text>
-              <Text style={styles.help}>点一下:轻 → 中 → 重 → 取消。不累可以直接完成。</Text>
+              <Text style={styles.heading}>{t('student.readinessCheckinSheet.copy013')}</Text>
+              <Text style={styles.help}>{t('student.readinessCheckinSheet.copy014')}</Text>
               <View style={styles.chips}>
                 {READINESS_MUSCLES.map(([key, label]) => {
                   const severity = fatigue[key] ?? 0;
@@ -122,7 +123,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
                       })}
                       style={[styles.chip, severity > 0 && styles.chipSelected]}>
                       <Text style={[styles.chipText, severity > 0 && styles.chipTextSelected]}>
-                        {label}{severity > 0 ? ` · ${['轻', '中', '重'][severity - 1]}` : ''}
+                        {t(label)}{severity > 0 ? ` · ${[t('coach.shared.severity.light'), t('coach.shared.severity.moderate'), t('coach.shared.severity.heavy')][severity - 1]}` : ''}
                       </Text>
                     </Pressable>
                   );
@@ -130,8 +131,8 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
               </View>
               {error ? <Text style={styles.error}>{error}</Text> : null}
               <View style={styles.bottomActions}>
-                <Pressable onPress={() => setStep(1)} style={styles.back}><Text style={styles.backText}>上一步</Text></Pressable>
-                <AppButton disabled={submit.isPending} label={submit.isPending ? '提交中…' : '完成'} onPress={() => void complete()} style={styles.complete} variant="primary" />
+                <Pressable onPress={() => setStep(1)} style={styles.back}><Text style={styles.backText}>{t('student.readinessCheckinSheet.copy015')}</Text></Pressable>
+                <AppButton disabled={submit.isPending} label={submit.isPending ? t('student.readinessCheckinSheet.copy017') : t('student.readinessCheckinSheet.copy018')} onPress={() => void complete()} style={styles.complete} variant="primary" />
               </View>
             </>
           )}

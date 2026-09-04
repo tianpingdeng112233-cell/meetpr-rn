@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 
+import { t } from '@/i18n';
 import { TabBar } from '@/design';
 
 export default function CoachTabLayout() {
@@ -10,31 +11,31 @@ export default function CoachTabLayout() {
       <Tabs.Screen
         name="today"
         options={{
-          title: '今日',
+          title: t('coach.shell.today'),
         }}
       />
       <Tabs.Screen
         name="students"
         options={{
-          title: '学员',
+          title: t('coach.shell.students'),
         }}
       />
       <Tabs.Screen
         name="planning"
         options={{
-          title: '编排',
+          title: t('coach.workspace.title'),
         }}
       />
       <Tabs.Screen
         name="receiving"
         options={{
-          title: '接收',
+          title: t('coach.applicationProfile.accept'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: '我的',
+          title: t('student.studentRootView.copy004'),
         }}
       />
     </Tabs>

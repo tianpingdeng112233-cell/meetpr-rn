@@ -1,5 +1,6 @@
-import { describe, expect, test } from '@jest/globals';
+import { beforeEach, afterEach, describe, expect, test } from '@jest/globals';
 
+import { setLocaleOverride } from '@/i18n';
 import type { PlanDay, PlanExercise, PlanSet } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 
@@ -186,7 +187,7 @@ describe('rest, gym-day, and RIR policies', () => {
     [8.5, '还能多做 1-2 次'],
     [9, '还能多做 1 次'],
     [9.5, '或许还能多做 1 次'],
-    [10, '力竭,无保留'],
+    [10, '力竭，无保留'],
   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
     expect(rirCopy(rpe)).toBe(copy);
   });
@@ -199,3 +200,7 @@ describe('rest, gym-day, and RIR policies', () => {
     expect(historyRangeStart('2026-07-19')).toBe('2026-04-26');
   });
 });
+
+// Existing copy assertions pin the original Chinese presentation.
+beforeEach(() => setLocaleOverride('zh'));
+afterEach(() => setLocaleOverride(null));

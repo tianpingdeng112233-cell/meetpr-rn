@@ -1,3 +1,4 @@
+import { exerciseDisplayName, getLocale, t } from '@/i18n';
 import type {
   Exercise,
   FeedbackItem,
@@ -32,13 +33,8 @@ import type {
 } from './types';
 
 const DATE_TEXT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const FAMILY_PRESENTATION: Record<
-  LiftFamily,
-  Pick<DashboardLift, 'initial' | 'name'>
-> = {
-  squat: { initial: 'S', name: '深蹲' },
-  bench: { initial: 'B', name: '卧推' },
-  deadlift: { initial: 'D', name: '硬拉' },
+const FAMILY_INITIAL: Record<LiftFamily, DashboardLift['initial']> = {
+  squat: 'S', bench: 'B', deadlift: 'D',
 };
 
 export const DASHBOARD_E1RM_HISTORY_FROM = '1970-01-01';
@@ -207,11 +203,12 @@ export function resolveDashboardLifts(
   );
   for (const exerciseId of exerciseIds) {
     if (result.has(exerciseId)) continue;
-    const family = resolvedExerciseFamily(exerciseIndex.get(exerciseId), onboarding);
+    const exercise = exerciseIndex.get(exerciseId);
+    const family = resolvedExerciseFamily(exercise, onboarding);
     result.set(
       exerciseId,
-      family
-        ? { exerciseId, family, ...FAMILY_PRESENTATION[family] }
+      family && exercise
+        ? { exerciseId, family, initial: FAMILY_INITIAL[family], name: exerciseDisplayName(exercise) }
         : null,
     );
   }
@@ -300,24 +297,24 @@ export function buildDashboardWeekDays(
 }
 
 export function dashboardTitle(day: DashboardWeekDay | null): string {
-  return day?.day ? `W${day.day.week_number}D${day.day.sort_order}` : '今日';
+  return day?.day ? `W${day.day.week_number}D${day.day.sort_order}` : t('student.dashboardTodayScreen.copy001');
 }
 
 export function dashboardCTA(
   day: DashboardWeekDay | null,
 ): { interactive: boolean; label: string } {
   if (!day?.day) {
-    return { interactive: false, label: '今日休息' };
+    return { interactive: false, label: /* TODO(i18n:drift) */ '今日休息' };
   }
   const code = `W${day.day.week_number}D${day.day.sort_order}`;
-  const lift = day.lift?.name ?? '锻炼';
+  const lift = day.lift?.name ?? t('student.todayWorkoutView.copy011');
   if (day.status === 'complete') {
-    return { interactive: true, label: '今日已完成 · 查看' };
+    return { interactive: true, label: /* TODO(i18n:drift) */ '今日已完成 · 查看' };
   }
   if (day.status === 'partial') {
-    return { interactive: true, label: `继续 ${code} · ${lift}` };
+    return { interactive: true, label: /* TODO(i18n:drift) */ `继续 ${code} · ${lift}` };
   }
-  return { interactive: true, label: `开始 ${code} · ${lift}` };
+  return { interactive: true, label: /* TODO(i18n:drift) */ `开始 ${code} · ${lift}` };
 }
 
 export function replayE1RMSeries(
@@ -367,13 +364,13 @@ export function replayE1RMSeries(
   return buildE1RMSeries(points, family);
 }
 
-export function e1RMPeriodLabel(series: E1RMSeries, now: Date): '90 天' | '历史最佳' {
+export function e1RMPeriodLabel(series: E1RMSeries, now: Date): string {
   const point = displayPoint(series);
   if (!point) {
-    return '90 天';
+    return `90 ${t('student.dashboardProfileMetricsView.copy004')}`;
   }
   const cutoff = now.getTime() - E1RM_POLICY.rollingWindowDays * E1RM_MATH.millisecondsPerDay;
-  return point.date.getTime() < cutoff ? '历史最佳' : '90 天';
+  return point.date.getTime() < cutoff ? t('student.dashboardE1RmtrendViewModel.copy003') : `90 ${t('student.dashboardProfileMetricsView.copy004')}`;
 }
 
 export function e1RMDelta(series: E1RMSeries, now: Date): number {
@@ -433,17 +430,17 @@ export function canUndoPlanShift(
 }
 
 export type ShiftAlertCopy = {
-  title: '无法顺延' | '无法撤销';
+  title: string;
   message: string;
 };
 
 const SHIFT_MESSAGES: Partial<Record<string, string>> = {
-  PLAN_NOT_ACTIVE: '当前计划未生效,暂时不能顺延',
-  SHIFT_ONLY_TODAY: '只能顺延今天的训练',
-  ALREADY_STARTED: '今天的训练已经开始,不能顺延或撤销',
-  NOT_PLAN_STUDENT: '只有计划所属学员可以顺延',
-  NO_ACTIVE_SHIFT: '当前没有可撤销的顺延',
-  UNDO_WINDOW_PASSED: '只能在顺延当天撤销,请联系教练调整计划',
+  PLAN_NOT_ACTIVE: /* TODO(i18n:drift) */ '当前计划未生效,暂时不能顺延',
+  SHIFT_ONLY_TODAY: /* TODO(i18n:drift) */ '只能顺延今天的训练',
+  ALREADY_STARTED: /* TODO(i18n:drift) */ '今天的训练已经开始,不能顺延或撤销',
+  NOT_PLAN_STUDENT: /* TODO(i18n:drift) */ '只有计划所属学员可以顺延',
+  NO_ACTIVE_SHIFT: /* TODO(i18n:drift) */ '当前没有可撤销的顺延',
+  UNDO_WINDOW_PASSED: /* TODO(i18n:drift) */ '只能在顺延当天撤销,请联系教练调整计划',
 };
 
 export function planShiftErrorCopy(
@@ -457,18 +454,18 @@ export function planShiftErrorCopy(
     error.kind === 'backend' &&
     (error.status === 400 || error.status === 403);
   return {
-    title: operation === 'shift' ? '无法顺延' : '无法撤销',
+    title: operation === 'shift' ? /* TODO(i18n:drift) */ '无法顺延' : t('student.dashboardView.copy001'),
     message:
       known ??
-      (unsupported ? '当前计划暂不支持顺延' : undefined) ??
+      (unsupported ? /* TODO(i18n:drift) */ '当前计划暂不支持顺延' : undefined) ??
       (operation === 'shift'
-        ? '顺延失败,请检查网络后重试'
-        : '撤销顺延失败,请检查网络后重试'),
+        ? /* TODO(i18n:drift) */ '顺延失败,请检查网络后重试'
+        : /* TODO(i18n:drift) */ '撤销顺延失败,请检查网络后重试'),
   };
 }
 
 export function unsupportedPlanShiftCopy(): ShiftAlertCopy {
-  return { title: '无法顺延', message: '当前计划暂不支持顺延' };
+  return { title: /* TODO(i18n:drift) */ '无法顺延', message: /* TODO(i18n:drift) */ '当前计划暂不支持顺延' };
 }
 
 export function unreadFeedbackCount(items: readonly FeedbackItem[]): number {
@@ -511,21 +508,19 @@ export function localCompetitionDays(dateText: string, now: Date): number {
 
 export function chineseMonthDay(dateText: string): string {
   const date = parseDateTextUTC(dateText);
-  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日`;
+  return new Intl.DateTimeFormat(getLocale(), { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(date);
 }
 
 export function chineseWeekday(dateText: string): string {
-  return ['日', '一', '二', '三', '四', '五', '六'][
-    parseDateTextUTC(dateText).getUTCDay()
-  ];
+  return new Intl.DateTimeFormat(getLocale(), { weekday: 'short', timeZone: 'UTC' }).format(parseDateTextUTC(dateText));
 }
 
 export function relativeFeedbackTime(timestamp: string, now: Date): string {
   const elapsed = Math.max(0, now.getTime() - new Date(timestamp).getTime());
   const minutes = Math.floor(elapsed / 60_000);
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes} 分钟前`;
+  if (minutes < 1) return t('chat.relative.justNow');
+  if (minutes < 60) return t('coach.shared.relative.minutesAgo %lld', [minutes]);
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
+  if (hours < 24) return t('coach.shared.relative.hoursAgo %lld', [hours]);
   return chineseMonthDay(utcDateText(new Date(timestamp)));
 }

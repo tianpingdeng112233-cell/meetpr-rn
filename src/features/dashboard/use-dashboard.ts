@@ -76,7 +76,7 @@ export type DashboardViewModel = {
   e1rm: {
     series: E1RMSeries;
     point: ReturnType<typeof displayPoint>;
-    periodLabel: '90 天' | '历史最佳';
+    periodLabel: string;
     delta: number;
     trajectory: readonly E1RMSample[];
     isLoading: boolean;

@@ -145,3 +145,202 @@ Received number of calls: 1
 - `src/features/training/WorkoutBody.tsx`
 - `src/navigation/BindGate.tsx`
 - `src/navigation/FeaturePlaceholderScreen.tsx`
+
+## G0-b — i18n 基建与全仓英文化 (2026-09-05)
+
+- 正典：iOS `release/1.0 @ 202e95db` 的八份 JSON，原样复制到 `src/i18n/catalog/`。无安装、无 commit/push；已有 package.json/package-lock.json 改动未动。
+- 范围例外：按卡约束，guard 排除 `src/app/login.tsx` 和 `src/features/onboarding/**`；CN 登录中文保持不动，Global 登录由 G0-c 实装。注释不是字面量，guard 使用 TypeScript AST 扫描字符串、模板和 JSX 文本。
+- 先红：`npx jest src/i18n/__tests__ --runInBand`，2 failed suites；guard 实际报出 294 个未标记字面量条目，t 测试因运行时模块未存在而失败。证据 `/private/tmp/g0b-red.log`。替换前已确认 guard 红。
+- 字符串层：设备 zh* → zh，其余 → en；测试/调试覆盖可恢复设备选择；keyof catalog 编译期收窄；zh/key fallback、位置/printf 占位符、one/other。日期保留原 UTC/本地日期语义，显示改用 Intl；动作名称集中按 name_en/name 选择。
+- 组合文案用正典拆合（上次/最佳、教练备注、动作编号、组编号、完成组数横幅、赛扣后缀、90 天和反馈日期）；R1 按标点归一化重匹配，命中改用正典 key，zh 标点随 iOS 正典。
+- 初版 97 条登记对应 97 个 TODO 源码行：drift 33，missing 64；R1 消除 17 条后，以下 80 条登记对应 80 行：drift 33，missing 47；同一行多条残留合并登记。guard 同时核对数量上限和每个文件:行。
+
+| 文件:行 | zh 原文 | 处理 |
+|---|---|---|
+| `src/app/(student)/growth-curve.tsx:28` | 成长曲线 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/app/(student)/growth-curve.tsx:37` | 成长曲线 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/app/(student)/growth-curve.tsx:38` | 完整曲线将在成长页图表卡接入 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/features/dashboard/DashboardScreen.tsx:78` | 点击重试 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:123` | 把整份计划往后顺延一天? | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:124` | 今天的${course}课改到明天,之后的课依次顺延,本周期结束日变为${shiftedEnd} | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:128` | 确认顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:136` | 已累计顺延 ${result.total_offset_days} 天,建议联系教练调整计划 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:138` | 顺延成功 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:153` | 撤销顺延?；课程会回到${chineseMonthDay(utcDateText(vm.now))}。 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:154` | 保留顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:156` | 撤销顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:259` | 顺延中…；今天有事 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:270` | 撤销中…；撤销顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/DashboardScreen.tsx:310` | 本周训练进度 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:354` | · 在「成长」查看全部反馈 → | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:492` | 选中 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:498` | 成长曲线 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:510` | 练几次就有趋势了；选中训练日查看对应成长曲线 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:551` | 资料档案 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:600` | 暂无新通知 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:601` | 新的反馈和计划会在这里出现 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:611` | 第 ${notification.weekIndex} 周计划已可查看 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:622` | 查看教练最近的训练反馈 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:623` | ${notification.count} 条未读反馈 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:632` | 查看教练给你的评估结果 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/DashboardScreen.tsx:633` | 评估已完成 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/dashboard/model.ts:307` | 今日休息 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:312` | 今日已完成 · 查看 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:315` | 继续 ${code} · ${lift} | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:317` | 开始 ${code} · ${lift} | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:438` | 当前计划未生效,暂时不能顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:439` | 只能顺延今天的训练 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:440` | 今天的训练已经开始,不能顺延或撤销 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:441` | 只有计划所属学员可以顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:442` | 当前没有可撤销的顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:443` | 只能在顺延当天撤销,请联系教练调整计划 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:457` | 无法顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:460` | 当前计划暂不支持顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:462` | 顺延失败,请检查网络后重试 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:463` | 撤销顺延失败,请检查网络后重试 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:468` | 无法顺延；当前计划暂不支持顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/CompletionControls.tsx:40` | 滑动完成今日训练 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/CompletionControls.tsx:91` | 完成组数 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/CompletionControls.tsx:97` | 🔒 仅自己可见的训练笔记,保存在本机 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/CompletionControls.tsx:107` | 保存中… | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/SetEntrySheet.tsx:158` | 返回训练 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/SetEntrySheet.tsx:174` | kg / 侧 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/SetEntrySheet.tsx:225` | 松开确认 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/SetEntrySheet.tsx:228` | W1-h 接线 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/SetEntrySheet.tsx:243` | 保存中… | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:82` | 🎉 今天你的；e1RM 突破! | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:86` | (此前 ${formatWeight(event.previousMaxE1RMKg)} kg) | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:87` | ,第一个纪录点 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:451` | 今日状态已填写 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TodayWorkoutView.tsx:453` | 今日状态已跳过 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TodayWorkoutView.tsx:464` | 刷新训练 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:472` | 今日休息；这天休息；看本周计划 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TodayWorkoutView.tsx:475` | 历史记录 · 不可修改；未到训练日 · 仅预览 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TrainingCalendarView.tsx:83` | 上一段日期 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TrainingCalendarView.tsx:87` | 下一段日期 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TrainingCalendarView.tsx:97` | 月 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/WorkoutBody.tsx:59` | 下一组 · | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/policy.ts:124` | ${formatWeight(perSideKg)}kg 片 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/policy.ts:196` | 建议 · 同上组 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/policy.ts:208` | 建议 · 基于 e1RM ${formatWeight(e1RMKg)} | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/policy.ts:219` | 建议 · 上次重量 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/save-errors.ts:5` | 训练日已切换,本组无法保存。你的输入仍保留在本页,请刷新训练页后重新记录。 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/navigation/BindGate.tsx:43` | 绑定申请尚未完成，请重新输入邀请码。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:114` | 绑定教练 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:119` | 请输入邀请码 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:124` | 提交邀请码 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:125` | W1 接线 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:132` | 完成训练信息 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:133` | W1 接入学员 Onboarding。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:140` | 等待教练确认 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:141` | 绑定申请处理中，请稍后查看。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:147` | 暂时无法检查绑定状态 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/BindGate.tsx:148` | 请稍后再试。 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+| `src/navigation/FeaturePlaceholderScreen.tsx:27` | W1 实装 | missing: 将被 W1-i / W1-g 分支替换,合并后消失 |
+
+### G0-b 最终验证与限制
+
+- `npm run lint`:exit 0，0 errors / 0 warnings。完整输出：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+- `npx tsc --noEmit`:exit 0，无输出。
+- `npx jest`:exit 0；原始摘要：
+
+```text
+Test Suites: 28 passed, 28 total
+Tests:       187 passed, 187 total
+Snapshots:   0 total
+Time:        2.836 s
+Ran all test suites.
+```
+
+- `git diff --check`:exit 0。8 份 catalog 与 docs 正典逐字节相同，2,098 keys，无重复。CN login/onboarding 未动。
+- 补充日期 red-green：原 numeric 月日把中文变为斜线日期，改用 Intl short month，zh 保留 `7月19日`、en 输出 `Jul 19`；新增公开日期 seam 测试先红后绿。既有中文断言显式设置 locale override；补充 name_en 及 null 回退测试。
+- Android 模拟器未验证、无截图：`adb devices` exit 1，ADB 5037 smartsocket listener 被 sandbox 以 `Operation not permitted` 拒绝。未运行依赖 ADB 的 `npx expo run:android`，未生成 native 工程或修改 Android resources。
+- 本地 diff 检查：Standards 0 个未解决代码问题；Spec 0 个未解决代码问题，视觉验收仍待模拟器。正式 code-review skill 未执行：缺少 `docs/agents/issue-tracker.md`，已提示用户 `$setup-matt-pocock-skills`；不声称双 agent review。
+- 本卡不宣称整个应用已经全英文：§C 的 97 行保留文本待后续卡处理，CN 登录页由卡约束排除，Global 登录页待 G0-c。
+
+### G0-b 精确改动文件
+
+本轮共 47 个文件（不含用户预先更新的 `package.json` / `package-lock.json`）：
+
+- `PARITY.md`
+- `docs/CODEX-JOURNAL.md`
+- `src/analytics/PrivacyNoticeSheet.tsx`
+- `src/app/(coach)/_layout.tsx`
+- `src/app/(coach)/planning.tsx`
+- `src/app/(coach)/profile.tsx`
+- `src/app/(coach)/receiving.tsx`
+- `src/app/(coach)/students.tsx`
+- `src/app/(coach)/today.tsx`
+- `src/app/(student)/_layout.tsx`
+- `src/app/(student)/growth-curve.tsx`
+- `src/app/(student)/growth.tsx`
+- `src/app/(student)/profile.tsx`
+- `src/app/validating.tsx`
+- `src/features/dashboard/DashboardScreen.tsx`
+- `src/features/dashboard/__tests__/error-states.test.tsx`
+- `src/features/dashboard/__tests__/model.test.ts`
+- `src/features/dashboard/__tests__/use-dashboard.test.tsx`
+- `src/features/dashboard/model.ts`
+- `src/features/dashboard/types.ts`
+- `src/features/dashboard/use-dashboard.ts`
+- `src/features/training/CompletionControls.tsx`
+- `src/features/training/ReadinessSheet.tsx`
+- `src/features/training/RestTimer.tsx`
+- `src/features/training/SetEntrySheet.tsx`
+- `src/features/training/TodayWorkoutView.tsx`
+- `src/features/training/TrainingCalendarView.tsx`
+- `src/features/training/WorkoutBody.tsx`
+- `src/features/training/__tests__/exercise-metadata.test.ts`
+- `src/features/training/__tests__/training-policy.test.ts`
+- `src/features/training/constants.ts`
+- `src/features/training/exercise-metadata.ts`
+- `src/features/training/policy.ts`
+- `src/features/training/save-errors.ts`
+- `src/i18n/__tests__/no-literal-zh.test.ts`
+- `src/i18n/__tests__/t.test.ts`
+- `src/i18n/catalog/Analytics.json`
+- `src/i18n/catalog/AppShell.json`
+- `src/i18n/catalog/ChatUI.json`
+- `src/i18n/catalog/CoachKit.json`
+- `src/i18n/catalog/CoreModels.json`
+- `src/i18n/catalog/DesignSystem.json`
+- `src/i18n/catalog/RepositoryContracts.json`
+- `src/i18n/catalog/StudentKit.json`
+- `src/i18n/index.ts`
+- `src/navigation/BindGate.tsx`
+- `src/navigation/FeaturePlaceholderScreen.tsx`
+
+### G0-b 定向返修 R1 — 标点归一化再匹配 (2026-09-05)
+
+- 导出 `src/i18n/match.ts` 的 `punctuationMatches`；比较前统一卡指定的问号、逗号/顿号、冒号、感叹号、分号、括号、引号、省略号并去首尾空白，不改 catalog 显示文本。
+- 使用该函数重扫全部 missing 字符串、模板及 JSX 文本；模板将表达式和正典占位符按位置匹配。命中 17 行：ReadinessSheet 6、CompletionControls 3、RestTimer 2、policy 1、TodayWorkoutView 1、save-errors 4，全部改用正典 key；server error 参数仍为 `error.code ?? error.status ?? 500`。重扫无剩余标点匹配。RIR 其余白话原已使用正典 key，保持不动。
+- TODO 计数口径：工作目录文本文件排除 `.git`、`node_modules`、`.expo`，不跟随符号链接；全部标记出现次数 **108 → 91**（含 guard 测试中的 2 个查找字符串）；非测试源码标记出现次数 **106 → 89**，所在源码行数 **97 → 80**。同一源码行可能有多个标记。
+- 上方未命中表为 R1 当前状态：missing **64 → 47**；15 行归「将被 W1-i / W1-g 分支替换,合并后消失」，32 行归「W1-d/W1-f 推进制复核卡重写,随卡消灭」。其余交 Claude 定英文的 missing 列表为空。drift 33 行的代码和表项逐字保持不动；未命中代码不变，仅登记去向。
+- 严格先红后绿：第一处代码编辑是 normalization 测试。`npx jest src/i18n/__tests__/match.test.ts --runInBand` exit 1：`Cannot find module '../match'`，1 failed suite；最小实现后同命令 exit 0：1 passed suite / 1 passed test。新测试名：`normalization matches punctuation variants without matching different words`，PASS。原始证据：`/private/tmp/g0b-r1-red.log`、`/private/tmp/g0b-r1-green.log`。
+- 既有公开错误文案/RIR 测试更新为正典标点，保存错误覆盖 en/zh 与服务器参数；实装前跑得 3 failed / 19 passed（中文半角标点及英文未翻译），替换后 i18n + 两组策略测试共 5 suites / 30 tests 全绿，包含 no-literal-zh guard。证据：`/private/tmp/g0b-r1-copy-red.log`、`/private/tmp/g0b-r1-copy-green.log`。
+- `npm run lint`：PASS，exit 0，完整输出（`/private/tmp/g0b-r1-lint.log`）：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+- `npx tsc --noEmit`：PASS，exit 0，无输出（`/private/tmp/g0b-r1-tsc.log`）。
+- `npx jest`：PASS，exit 0；完整输出 `/private/tmp/g0b-r1-jest.log`，原始摘要：
+
+```text
+Test Suites: 29 passed, 29 total
+Tests:       189 passed, 189 total
+Snapshots:   0 total
+Time:        2.41 s
+Ran all test suites.
+```
+
+- 本地 Standards 检查：无未解决问题；本地 Spec 检查：17 个命中全替换、模板参数保留、剩余 missing 全分流、drift 不变。正式 code-review skill 未运行：`docs/agents/issue-tracker.md` 缺失，已提示用户调用 `$setup-matt-pocock-skills`；未声称双 agent review。沿用前轮 Android 模拟器未验收的限制，本轮不宣称视觉验收。
+- 保留全部前轮 G0-b 工作；未安装依赖、未编辑 node_modules、未 commit/push。PARITY 同步 R1 收货状态；本卡实现无偏离。

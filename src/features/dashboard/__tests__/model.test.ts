@@ -1,5 +1,6 @@
-import { describe, expect, test } from '@jest/globals';
+import { beforeEach, afterEach, describe, expect, test } from '@jest/globals';
 
+import { setLocaleOverride } from '@/i18n';
 import { ApiError, type ApiErrorCode } from '@/api/client';
 import {
   buildExerciseIndex,
@@ -11,6 +12,8 @@ import {
 import type { E1RMSeries } from '@/domain/e1rm';
 
 import {
+  chineseMonthDay,
+  chineseWeekday,
   dashboardCTA,
   dashboardE1RMRange,
   e1RMPeriodLabel,
@@ -344,4 +347,18 @@ describe('Dashboard all-time e1RM replay', () => {
     );
     expect(series.best?.valueKg).toBe(200);
   });
+});
+
+// Existing copy assertions pin the original Chinese presentation.
+beforeEach(() => setLocaleOverride('zh'));
+afterEach(() => setLocaleOverride(null));
+
+
+test('formats calendar labels in the selected locale without moving the UTC date', () => {
+  setLocaleOverride('en');
+  expect(chineseMonthDay('2026-07-19')).toBe('Jul 19');
+  expect(chineseWeekday('2026-07-19')).toBe('Sun');
+  setLocaleOverride('zh');
+  expect(chineseMonthDay('2026-07-19')).toBe('7月19日');
+  expect(chineseWeekday('2026-07-19')).toBe('周日');
 });

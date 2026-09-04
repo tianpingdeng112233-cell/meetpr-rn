@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { useSessionStore } from '@/api/session';
 import { Card, Screen, useColors, type Colors, font, spacing, typography } from '@/design';
 
@@ -23,7 +24,7 @@ export function FeaturePlaceholderScreen({
       <View style={styles.content}>
         <Card style={styles.card}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.detail}>W1 实装</Text>
+          <Text style={styles.detail}>{/* TODO(i18n:missing) */}W1 实装</Text>
           {showLogout ? (
             <Pressable
               accessibilityRole="button"
@@ -32,7 +33,7 @@ export function FeaturePlaceholderScreen({
               }}
               style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}>
               <MaterialCommunityIcons color={colors.danger} name="logout" size={20} />
-              <Text style={styles.logoutLabel}>退出登录</Text>
+              <Text style={styles.logoutLabel}>{t('student.bindGateView.copy007')}</Text>
             </Pressable>
           ) : null}
         </Card>

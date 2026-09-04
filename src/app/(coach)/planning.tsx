@@ -1,5 +1,6 @@
+import { t } from '@/i18n';
 import { FeaturePlaceholderScreen } from '@/navigation/FeaturePlaceholderScreen';
 
 export default function CoachPlanningScreen() {
-  return <FeaturePlaceholderScreen title="编排" />;
+  return <FeaturePlaceholderScreen title={t('coach.workspace.title')} />;
 }

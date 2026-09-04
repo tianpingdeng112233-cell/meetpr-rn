@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 
+import { t } from '@/i18n';
 import { useSessionStore } from '@/api/session';
 import { TabBar } from '@/design';
 import { useStudentTabsStore } from '@/features/student-tabs';
@@ -15,25 +16,25 @@ function StudentTabs() {
         name="today"
         listeners={{ tabPress: bumpTodayReload }}
         options={{
-          title: '今日',
+          title: t('student.studentRootView.copy001'),
         }}
       />
       <Tabs.Screen
         name="training"
         options={{
-          title: '训练',
+          title: t('student.studentRootView.copy002'),
         }}
       />
       <Tabs.Screen
         name="growth"
         options={{
-          title: '成长',
+          title: t('student.studentRootView.copy003'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: '我的',
+          title: t('student.studentRootView.copy004'),
         }}
       />
       <Tabs.Screen name="growth-curve" options={{ href: null }} />

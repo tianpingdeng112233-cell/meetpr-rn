@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { t } from '@/i18n';
 import { AnalyticsEvent, track } from '@/analytics';
 import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
@@ -154,11 +155,11 @@ export function SetEntrySheet({
       <SafeAreaView style={styles.root}>
         <View style={styles.nav}>
           <Pressable
-            accessibilityLabel="返回训练"
+            accessibilityLabel={/* TODO(i18n:missing) */ "返回训练"}
             onPress={close}>
             <MaterialCommunityIcons color={colors.textPrimary} name="arrow-left" size={26} />
           </Pressable>
-          <Text numberOfLines={1} style={styles.navTitle}>{exerciseName} · 第 {draft.setIndex + 1} 组</Text>
+          <Text numberOfLines={1} style={styles.navTitle}>{t('student.setEntrySheet.copy005', [exerciseName, draft.setIndex + 1])}</Text>
           <View style={styles.navSpacer} />
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -166,19 +167,19 @@ export function SetEntrySheet({
             <Card style={styles.plateCard}>
               <View style={styles.plateTop}>
                 <Text style={styles.plateDetail}>{loadout.detail}</Text>
-                <Pressable onPress={() => onChangeCollar(!collarOn)} style={[styles.collar, collarOn && styles.collarOn]}><Text style={styles.collarText}>上赛扣</Text></Pressable>
+                <Pressable onPress={() => onChangeCollar(!collarOn)} style={[styles.collar, collarOn && styles.collarOn]}><Text style={styles.collarText}>{t('student.setEntrySheet.copy007')}</Text></Pressable>
               </View>
               <View style={styles.barbell}>
                 <View style={styles.plate} /><View style={styles.bar} /><View style={styles.sleeve} />
-                <Text style={styles.perSide}>{formatWeight(loadout.perSideKg)}kg / 侧</Text>
+                <Text style={styles.perSide}>{formatWeight(loadout.perSideKg)}{/* TODO(i18n:missing) */}kg / 侧</Text>
                 <View style={styles.sleeve} /><View style={styles.bar} /><View style={styles.plate} />
               </View>
             </Card>
           )}
-          {coachNote ? <View style={styles.notePill}><Text style={styles.noteText}>教练备注 · {coachNote}</Text></View> : null}
+          {coachNote ? <View style={styles.notePill}><Text style={styles.noteText}>{t('student.todayWorkoutScreen.copy014')} · {coachNote}</Text></View> : null}
           {activeSuggestion ? <View style={styles.suggestion}><Text style={styles.suggestionText}>{activeSuggestion.label} · {formatWeight(activeSuggestion.weightKg)}kg</Text></View> : null}
           <Card style={styles.inputCard}>
-            <Text style={styles.sectionLabel}>重量 KG</Text>
+            <Text style={styles.sectionLabel}>{t('student.setEntrySheet.copy001')} KG</Text>
             <TextInput
               editable={editable}
               keyboardType="decimal-pad"
@@ -189,17 +190,17 @@ export function SetEntrySheet({
             />
           </Card>
           <Stepper
-            label="重量"
+            label={t('student.setEntrySheet.copy001')}
             onChange={(direction) => updateWeight(formatWeight(Math.max(0, parsedWeight + direction * TRAINING_LIMITS.weightStepKg)))}
             stepLabel="± 2.5"
             value={`${weightText || '0'} kg`}
           />
           <Card style={styles.inputCard}>
-            <Text style={styles.sectionLabel}>次数</Text>
+            <Text style={styles.sectionLabel}>{t('student.setEntrySheet.copy003')}</Text>
             <TextInput editable={editable} keyboardType="number-pad" onChangeText={setRepsText} selectTextOnFocus style={styles.bigInput} value={repsText} />
           </Card>
           <Stepper
-            label="次数"
+            label={t('student.setEntrySheet.copy003')}
             onChange={(direction) => setRepsText(String(Math.max(0, (Number(repsText) || 0) + direction * TRAINING_LIMITS.repsStep)))}
             stepLabel="± 1"
             value={repsText}
@@ -221,11 +222,11 @@ export function SetEntrySheet({
                 );
               })}
             </View>
-            <Text style={styles.rir}>{draggingRPE ? '松开确认' : rirCopy(rpe)}</Text>
+            <Text style={styles.rir}>{draggingRPE ? /* TODO(i18n:missing) */ '松开确认' : rirCopy(rpe)}</Text>
           </Card>
           <Card style={styles.videoCard}>
-            <View><Text style={styles.sectionLabel}>视频</Text><Text style={styles.videoStub}>W1-h 接线</Text></View>
-            <View style={styles.videoActions}><AppButton disabled label="拍摄" /><AppButton disabled label="相册" /></View>
+            <View><Text style={styles.sectionLabel}>{t('student.videoAttachmentSection.copy001')}</Text><Text style={styles.videoStub}>{/* TODO(i18n:missing) */}W1-h 接线</Text></View>
+            <View style={styles.videoActions}><AppButton disabled label={t('student.videoAttachmentV3Controls.copy001')} /><AppButton disabled label={t('student.videoAttachmentV3Controls.copy002')} /></View>
           </Card>
         </ScrollView>
         <View style={styles.footer}>
@@ -239,7 +240,7 @@ export function SetEntrySheet({
               (!editable || saving) && styles.footerDisabled,
             ]}>
             <MaterialCommunityIcons color={colors.ctaText} name="check" size={18} />
-            <Text style={styles.completeText}>{saving ? '保存中…' : '完成本组'}</Text>
+            <Text style={styles.completeText}>{saving ? /* TODO(i18n:missing) */ '保存中…' : t('student.setEntrySheet.copy012')}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -251,7 +252,7 @@ export function SetEntrySheet({
               (!editable || saving) && styles.footerDisabled,
             ]}>
             <MaterialCommunityIcons color={colors.textSecondary} name="close" size={18} />
-            <Text style={styles.failedText}>未完成 / 失败</Text>
+            <Text style={styles.failedText}>{t('student.setEntrySheet.copy009')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>

@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { useColors, type Colors, Screen, spacing, typography } from '@/design';
 
 export default function GrowthCurvePlaceholderScreen() {
@@ -14,7 +15,7 @@ export default function GrowthCurvePlaceholderScreen() {
     <Screen style={styles.screen}>
       <View style={styles.header}>
         <Pressable
-          accessibilityLabel="返回"
+          accessibilityLabel={t('student.feedbackInboxView.copy005')}
           accessibilityRole="button"
           hitSlop={12}
           onPress={() => router.back()}>
@@ -24,7 +25,7 @@ export default function GrowthCurvePlaceholderScreen() {
             size={26}
           />
         </Pressable>
-        <Text style={styles.title}>成长曲线</Text>
+        <Text style={styles.title}>{/* TODO(i18n:missing) */}成长曲线</Text>
         <View style={styles.headerSpacer} />
       </View>
       <View style={styles.empty}>
@@ -33,8 +34,8 @@ export default function GrowthCurvePlaceholderScreen() {
           name="chart-line"
           size={44}
         />
-        <Text style={styles.emptyTitle}>{lift ?? '主项'}成长曲线</Text>
-        <Text style={styles.emptyBody}>完整曲线将在成长页图表卡接入</Text>
+        <Text style={styles.emptyTitle}>{lift ?? t('student.growthCurveView.copy001')}{/* TODO(i18n:missing) */}成长曲线</Text>
+        <Text style={styles.emptyBody}>{/* TODO(i18n:missing) */}完整曲线将在成长页图表卡接入</Text>
       </View>
     </Screen>
   );

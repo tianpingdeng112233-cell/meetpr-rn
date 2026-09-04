@@ -19,29 +19,28 @@ export const REST_DEFAULTS = Object.freeze({
   nineOrAbove: 240,
 });
 
-export const RIR_COPY = Object.freeze({
-  5: '还能多做 5 次',
-  5.5: '还能多做 4-5 次',
-  6: '还能多做 4 次',
-  6.5: '还能多做 3-4 次',
-  7: '还能多做 3 次',
-  7.5: '还能多做 2-3 次',
-  8: '还能多做 2 次',
-  8.5: '还能多做 1-2 次',
-  9: '还能多做 1 次',
-  9.5: '或许还能多做 1 次',
-  10: '力竭,无保留',
-} satisfies Record<number, string>);
+export const RIR_KEYS = Object.freeze({
+  5: 'student.setEntryRpe.copy001',
+  5.5: 'student.setEntryRpe.copy002',
+  6: 'student.setEntryRpe.copy003',
+  6.5: 'student.setEntryRpe.copy004',
+  7: 'student.setEntryRpe.copy005',
+  7.5: 'student.setEntryRpe.copy006',
+  8: 'student.setEntryRpe.copy007',
+  8.5: 'student.setEntryRpe.copy008',
+  9: 'student.setEntryRpe.copy009',
+  9.5: 'student.setEntryRpe.copy010',
+} as const);
 
 export const READINESS_MUSCLES = Object.freeze([
-  ['quads', '股四'],
-  ['hamstrings', '腘绳'],
-  ['glutes', '臀'],
-  ['back', '背'],
-  ['chest', '胸'],
-  ['shoulders', '肩'],
-  ['triceps', '肱三头'],
-  ['core_lower_back', '核心·下背'],
+  ['quads', 'student.readinessCheckinSheet.copy020'],
+  ['hamstrings', 'student.readinessCheckinSheet.copy021'],
+  ['glutes', 'student.readinessCheckinSheet.copy022'],
+  ['back', 'student.readinessCheckinSheet.copy023'],
+  ['chest', 'student.readinessCheckinSheet.copy024'],
+  ['shoulders', 'student.readinessCheckinSheet.copy025'],
+  ['triceps', 'student.readinessCheckinSheet.copy026'],
+  ['core_lower_back', 'student.readinessCheckinSheet.copy027'],
 ] as const);
 
 export const STORAGE_KEYS = Object.freeze({

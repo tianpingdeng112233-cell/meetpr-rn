@@ -46,6 +46,7 @@
 | 项 | 状态 | 备注 |
 |---|---|---|
 | 设计 tokens 主题包 | 🔨 | G0-a:按 design-tokens-v3 / iOS 202e95db 重移植浅色默认、品牌金、三族十字面、主题/基础组件/自绘 tab;lint+tsc+177 Jest 通过,Android bundle 导出通过;ADB sandbox 权限阻断,待模拟器截图走查(旧 W0-A 走查不代表 v3 已对齐);2026-09-04 模拟器亲验 v3 登录页/BindGate 占位页(浅色底、白卡、金杠、Archivo 字标);逐屏视觉对齐随各功能卡走查 |
+| i18n 字符串层 + 全仓英文化 | 🔨 | G0-b:八模块正典 JSON 原样入 catalog、typed t/设备语言/占位/复数、Intl 日期、动作 name_en 回退;CN login/onboarding 按卡排除;R1 标点归一化消除 17 行,33 drift/47 missing 残留逐行登记并分流 CODEX-JOURNAL;lint/tsc/29 suites·189 Jest 通过;ADB socket 被 sandbox 拒绝,待模拟器截图验收 |
 | API client + auth 全链 | ✅ | W0-B;staging 真登录/登出冒烟通过;⚠️后端响应 camelCase 已勘误进参照包 |
 | 导航骨架 + BindGate(评估封存照抄) | ✅ | W0-C;教练 5 tab/学员 4 tab/登出模拟器实测 |
 | CI(ubuntu) | ✅ | lint+tsc+jest+assembleDebug,APK artifact 7 天 |

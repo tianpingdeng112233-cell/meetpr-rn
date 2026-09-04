@@ -7,7 +7,7 @@ export type DashboardLift = {
   exerciseId: string;
   family: LiftFamily;
   initial: 'S' | 'B' | 'D';
-  name: '深蹲' | '卧推' | '硬拉';
+  name: string;
 };
 
 export type DashboardWeekDay = {
