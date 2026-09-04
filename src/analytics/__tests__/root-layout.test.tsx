@@ -58,10 +58,13 @@ jest.mock('expo-router', () => {
   Stack.Protected = Protected;
   return {
     DarkTheme: { colors: {} },
+    DefaultTheme: { colors: {} },
     Stack,
     ThemeProvider,
   };
 });
+jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
+jest.mock('expo-splash-screen', () => ({ preventAutoHideAsync: jest.fn(), hideAsync: jest.fn() }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
 const mockedConfigure = jest.mocked(configure);
@@ -106,3 +109,7 @@ test('the privacy sheet is not blocked by a pending analytics config request', a
     renderer?.unmount();
   });
 });
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

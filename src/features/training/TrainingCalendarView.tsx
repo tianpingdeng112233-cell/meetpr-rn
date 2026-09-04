@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Card, colors, radius, spacing, typography } from '@/design';
+import { Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
 import type { CalendarDayStatus } from './model';
 import { addDays, localDateText, parseLocalDate } from './policy';
@@ -35,16 +35,16 @@ function monthGrid(dateText: string): (string | null)[] {
   ];
 }
 
-function statusColor(status: CalendarDayStatus): string {
+function statusColor(status: CalendarDayStatus, colors: Colors): string {
   switch (status) {
     case 'notStarted':
-      return colors.brandRed;
+      return colors.danger;
     case 'partial':
-      return colors.amber;
+      return colors.gold500;
     case 'complete':
-      return colors.green;
+      return colors.success;
     case 'noPlan':
-      return colors.fgTertiary;
+      return colors.textTertiary;
   }
 }
 
@@ -54,6 +54,8 @@ export function TrainingCalendarView({
   statusForDate,
   today,
 }: Props) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [mode, setMode] = useState<'week' | 'month'>('week');
   const [anchorDate, setAnchorDate] = useState(selectedDate);
   const dates = useMemo(
@@ -77,11 +79,11 @@ export function TrainingCalendarView({
     <Card style={styles.card}>
       <View style={styles.topRow}>
         <Pressable accessibilityLabel="上一段日期" onPress={() => move(-1)}>
-          <MaterialCommunityIcons color={colors.fgSecondary} name="chevron-left" size={26} />
+          <MaterialCommunityIcons color={colors.textSecondary} name="chevron-left" size={26} />
         </Pressable>
         <Text style={styles.month}>{title}</Text>
         <Pressable accessibilityLabel="下一段日期" onPress={() => move(1)}>
-          <MaterialCommunityIcons color={colors.fgSecondary} name="chevron-right" size={26} />
+          <MaterialCommunityIcons color={colors.textSecondary} name="chevron-right" size={26} />
         </Pressable>
         <View style={styles.segment}>
           {(['week', 'month'] as const).map((value) => (
@@ -128,7 +130,7 @@ export function TrainingCalendarView({
               <View
                 style={[
                   styles.statusDot,
-                  { backgroundColor: statusColor(statusForDate(date)) },
+                  { backgroundColor: statusColor(statusForDate(date), colors) },
                 ]}
               />
             </Pressable>
@@ -139,22 +141,22 @@ export function TrainingCalendarView({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   card: { gap: spacing.sm, padding: spacing.md },
   topRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
-  month: { color: colors.fgPrimary, flex: 1, ...typography.bodyEmphasis },
+  month: { color: colors.textPrimary, flex: 1, ...typography.bodyEmphasis },
   segment: {
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.bgStack,
     borderRadius: radius.md,
     flexDirection: 'row',
     padding: 2,
   },
   segmentButton: { borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: 5 },
   segmentSelected: { backgroundColor: colors.borderStrong },
-  segmentText: { color: colors.fgSecondary, ...typography.footnote },
-  segmentTextSelected: { color: colors.fgPrimary },
+  segmentText: { color: colors.textSecondary, ...typography.footnote },
+  segmentTextSelected: { color: colors.textPrimary },
   weekdayRow: { flexDirection: 'row' },
-  weekday: { color: colors.fgTertiary, flex: 1, textAlign: 'center', ...typography.caption },
+  weekday: { color: colors.textTertiary, flex: 1, textAlign: 'center', ...typography.caption },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: { alignItems: 'center', height: 48, justifyContent: 'center', width: '14.2857%' },
   dayCircle: {
@@ -166,9 +168,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 34,
   },
-  selectedDay: { backgroundColor: colors.brandRedSoft, borderColor: colors.brandRed },
-  today: { borderColor: colors.green },
-  dayText: { color: colors.fgPrimary, ...typography.footnote },
-  selectedDayText: { color: colors.fgPrimary, fontWeight: '700' },
+  selectedDay: { backgroundColor: colors.goldSoft, borderColor: colors.gold500 },
+  today: { borderColor: colors.success },
+  dayText: { color: colors.textPrimary, ...typography.footnote },
+  selectedDayText: { color: colors.textPrimary, ...font.body(13, 'bold') },
   statusDot: { borderRadius: radius.pill, height: 4, marginTop: 2, width: 4 },
 });

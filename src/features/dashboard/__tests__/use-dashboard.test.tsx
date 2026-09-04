@@ -280,3 +280,7 @@ test('a catalog failure does not hide the week grid or disable its CTA', () => {
   expect(openTraining).toHaveBeenCalledTimes(1);
   act(() => renderer?.unmount());
 });
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

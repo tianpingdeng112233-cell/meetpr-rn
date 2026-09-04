@@ -1,8 +1,9 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useSessionStore } from '@/api/session';
-import { Card, Screen, colors, spacing, typography } from '@/design';
+import { Card, Screen, useColors, type Colors, font, spacing, typography } from '@/design';
 
 type FeaturePlaceholderScreenProps = {
   title: string;
@@ -13,6 +14,8 @@ export function FeaturePlaceholderScreen({
   showLogout = false,
   title,
 }: FeaturePlaceholderScreenProps) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const logout = useSessionStore((state) => state.logout);
 
   return (
@@ -28,7 +31,7 @@ export function FeaturePlaceholderScreen({
                 void logout().catch(() => undefined);
               }}
               style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}>
-              <MaterialCommunityIcons color={colors.brandRed} name="logout" size={20} />
+              <MaterialCommunityIcons color={colors.danger} name="logout" size={20} />
               <Text style={styles.logoutLabel}>退出登录</Text>
             </Pressable>
           ) : null}
@@ -38,7 +41,7 @@ export function FeaturePlaceholderScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -49,11 +52,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   title: {
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     ...typography.headline,
   },
   detail: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     ...typography.body,
   },
   logout: {
@@ -67,8 +70,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   logoutLabel: {
-    color: colors.brandRed,
-    fontSize: 15,
-    fontWeight: '600',
+    color: colors.danger,
+    ...font.body(15, 'semibold'),
   },
 });
