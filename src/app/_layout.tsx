@@ -13,6 +13,10 @@ import { IBMPlexMono_600SemiBold } from '@expo-google-fonts/ibm-plex-mono/600Sem
 import { IBMPlexMono_700Bold } from '@expo-google-fonts/ibm-plex-mono/700Bold';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
+
+import { BUILD_TRACK } from '@/config/build-track';
+import { Toast } from '@/design/Toast';
 
 import {
   AnalyticsEvent,
@@ -59,11 +63,15 @@ function RootNavigator() {
         headerShown: false,
       }}>
       <Stack.Screen name="index" />
-      <Stack.Protected guard={!bootstrapped || status === 'authenticating'}>
+      <Stack.Protected guard={!bootstrapped || (BUILD_TRACK === 'china' && status === 'authenticating')}>
         <Stack.Screen name="validating" />
       </Stack.Protected>
-      <Stack.Protected guard={bootstrapped && status === 'anonymous'}>
+      <Stack.Protected guard={bootstrapped && (status === 'anonymous' || (BUILD_TRACK === 'global' && status === 'authenticating'))}>
         <Stack.Screen name="login" />
+        <Stack.Protected guard={BUILD_TRACK === 'global'}>
+          <Stack.Screen name="register" options={{ headerShown: true, title: 'Create account' }} />
+          <Stack.Screen name="forgot-password" options={{ headerShown: true, title: 'Forgot password' }} />
+        </Stack.Protected>
       </Stack.Protected>
       <Stack.Protected guard={isCoach}>
         <Stack.Screen name="(coach)" />
@@ -94,6 +102,11 @@ function ThemedRoot() {
 
   useEffect(() => {
     void bootstrap();
+    if (BUILD_TRACK !== 'global') return;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void useSessionStore.getState().reportTimezone();
+    });
+    return () => subscription.remove();
   }, [bootstrap]);
 
   useEffect(() => {
@@ -122,6 +135,7 @@ function ThemedRoot() {
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
         <RootNavigator />
+        <Toast />
         <PrivacyNoticeSheet
           onConfirmed={() => setPrivacyNoticeVisible(false)}
           visible={privacyNoticeVisible}
