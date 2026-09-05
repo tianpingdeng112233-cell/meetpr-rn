@@ -91,11 +91,28 @@ function ThemedRoot() {
     },
   };
   const bootstrap = useSessionStore((state) => state.bootstrap);
+  const user = useSessionStore((state) => state.user);
   const [privacyNoticeVisible, setPrivacyNoticeVisible] = useState(false);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    if (
+      user?.role !== 'coached_student' &&
+      user?.role !== 'self_train_student'
+    ) {
+      return;
+    }
+    let disposed = false;
+    let stop: (() => void) | undefined;
+    void import('@/features/training/video-upload/manager')
+      .then(({ videoUploadManager }) => disposed ? undefined : videoUploadManager.start(user.id))
+      .then(cleanup => { if (disposed) cleanup?.(); else stop = cleanup; })
+      .catch(() => undefined);
+    return () => { disposed = true; stop?.(); };
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     let mounted = true;
