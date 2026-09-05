@@ -13,7 +13,14 @@ export const TimestampSchema = z.string().regex(
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/,
 );
 
-export const UuidSchema = z.string().uuid();
+/**
+ * Backend ids are 8-4-4-4-12 hex GUIDs but not always RFC 4122 (the exercise catalog
+ * uses synthetic ids like 00000000-0000-0000-ca70-0000000000c1), so zod 4's strict
+ * `uuid()` (version/variant nibbles) must not be used on wire ids.
+ */
+export const UuidSchema = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Expected a GUID');
 
 export function isApiErrorCode<C extends ApiErrorCode>(
   error: unknown,

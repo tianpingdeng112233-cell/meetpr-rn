@@ -5,7 +5,9 @@ import {
   BindRequestSchema,
   MineBindRequestResponseSchema,
 } from '../bind';
+import { ExerciseSchema } from '../exercises';
 import { FeedbackResponseSchema } from '../feedback';
+import { UuidSchema } from '../shared';
 import {
   OnboardingProfileSchema,
   OnboardingUpsertRequestSchema,
@@ -427,4 +429,29 @@ describe('account snake_case schemas', () => {
       }).success,
     ).toBe(false);
   });
+});
+
+test('exercise catalog accepts movement_pattern as an array (staging 2026-08) or a legacy string', () => {
+  const base = {
+    id: '11111111-1111-4111-8111-111111111111',
+    name: '深蹲',
+    name_en: 'Squat',
+    exercise_type: 'main_lift',
+    main_lift_family: 'squat',
+    is_competition_lift: true,
+    competition_stance: null,
+    muscle_groups: ['quad'],
+    equipment: ['barbell'],
+    created_by_coach_id: null,
+    created_at: '2026-06-11T11:20:52.534Z',
+  };
+  expect(ExerciseSchema.safeParse({ ...base, movement_pattern: ['squat'] }).success).toBe(true);
+  expect(ExerciseSchema.safeParse({ ...base, movement_pattern: 'squat' }).success).toBe(true);
+  expect(ExerciseSchema.safeParse({ ...base, movement_pattern: null }).success).toBe(true);
+});
+
+test('wire ids accept synthetic non-RFC GUIDs used by the exercise catalog', () => {
+  expect(UuidSchema.safeParse('00000000-0000-0000-ca70-0000000000c1').success).toBe(true);
+  expect(UuidSchema.safeParse('28efff49-6273-4aea-8c1b-f9a570f1f732').success).toBe(true);
+  expect(UuidSchema.safeParse('not-a-guid').success).toBe(false);
 });
