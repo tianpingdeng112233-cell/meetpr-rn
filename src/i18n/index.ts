@@ -33,7 +33,11 @@ export function setLocaleOverride(locale: Locale | null = null): void {
 
 export function t(key: TranslationKey, params: readonly (string | number)[] = []): string {
   const locale = getLocale();
-  const entry = (catalog as Partial<Record<string, { en?: Translation; zh?: Translation }>>)[key];
+  const table = catalog as Partial<Record<string, { en?: Translation; zh?: Translation }>>;
+  // The xcstrings export flattens plural variants into sibling keys (`<key>.one`); pick
+  // the singular form when the first parameter is exactly 1 (en only — zh has no plural).
+  const singular = locale === 'en' && Number(params[0]) === 1 ? table[`${key}.one`] : undefined;
+  const entry = singular ?? table[key];
   let copy = entry?.[locale] ?? entry?.zh ?? key;
   if (typeof copy !== 'string') {
     copy = locale === 'en' && Number(params[0]) === 1 ? copy.one ?? copy.other : copy.other;
