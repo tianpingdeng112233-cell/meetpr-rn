@@ -318,7 +318,7 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
   historyText: { flex: 1, gap: spacing.xs },
   historyTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
   historySubtitle: { color: colors.textSecondary, ...typography.footnote },
-  volumeCard: { padding: spacing.base },
+  volumeCard: { paddingHorizontal: 14, paddingTop: 15, paddingBottom: spacing.space3 },
   detailScreen: { paddingHorizontal: spacing.base },
   detailHeader: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.base },
   detailTitle: { color: colors.textPrimary, ...typography.headline },

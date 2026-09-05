@@ -396,3 +396,17 @@ Ran all test suites.
 - `src/features/history/model.ts`
 - `src/features/history/types.ts`
 - `src/features/history/use-history.ts`
+
+## 2026-09-05 — W3-c 学员成长 tab 三种图表几何
+
+- 范围：仅 `feat/w3c-charts` worktree，基于 `feat/w1g-history`。按本卡要求未 commit/push、未运行 code-review 或任何 skill 安装流程；未改 dashboard/training、e1RM 引擎、history/model.ts、依赖或凭证。
+- 正典：已读 Expo SDK 57 版本文档、`docs/w3-reference/video-player-charts-v2.md` §4.2–4.5 / §5.4 / §6.3 W3-c、成长四态参照；只读核对 iOS `GrowthE1RMCard.swift`、`GrowthEmptyStates.swift`、`VolumeIntensityChart.swift` 的绘图实现。
+- `charts/growth-geometry.ts`：非对称值域 padding、span ≥ 1、date axis/单点一秒兜底、plotPoint 时间钳位、当前标签位置、直线/闭合面积/原始点菱形、日期与轴标坐标；forming 比例点位、单条 cubic 控制点、可信值刻度与 recordedCount 钳位均落纯函数。
+- `GrowthE1RMChart.tsx` 替换并删除旧 `E1RMChart.tsx`：320:118 自适应画布、L 轴/虚线中线、三段 gold 面积渐变、chartLine 直线、来源分色菱形、当前点及虚线引导/日期底色、三个 Y 标签（中间 textDim）、轴题及三日期（中点 x=173）。
+- `GrowthFormingTrendChart.tsx` 接入 formingProgress；126pt 状态区内用 iOS 默认 68pt 画布、9pt 已记录点/19pt 最后点光环/7pt 未来槽位、进度点及富文本。无可信 currentKg 不制造数字刻度。zero 改为独立 64pt 幽灵图并固定 228pt 状态区；formingWindowSparse 固定 126pt。此分支只有旧 DashboardScreen 内 Sparkline，没有 `DashboardE1RMRail` 对应接线口，本卡只接成长卡；成长 tab 无 Sparkline。
+- `charts/volume-geometry.ts` / `VolumeIntensityChart.tsx`：320:172 自适应、阶梯容量刻度、顶部二次曲线圆角柱/渐变、独立 RPE 标度（忽略旧 series.scale/rpePlotValue）、双层折线/点、DD/MM 日期及保留的奇数透明标签、9×9 图例。新增 `GrowthTrendEmptyState` 共用锁/空态 minHeight 172；外层卡 padding 14/15/12。数据继续来自现有 chartBuckets 尾六个 completed && !assumed ISO 周桶。
+- 本卡列出的全部颜色 token 已在 `src/design/tokens.ts` 同时具备 light/dark 值，因此未改 tokens，也未在图表内硬编码颜色。
+- TDD：growth/volume 两个指定纯函数 seam 按垂直切片先红后绿；新增 27 个几何用例覆盖要求及空日期、阈值边界、forming 比例点位/可信刻度。现有 model 与 growth-screen 测试无需改名，保持通过。
+- 验证：`npm run lint` exit 0；`npx tsc --noEmit` exit 0；`npx jest` 33 suites / 239 tests 全绿。
+- Android：执行 `CI=1 npx expo run:android --no-install --device meetpr --port 8081`，prebuild 成功且 package.json 无变化；随后 ADB 启动失败，`could not install *smartsocket* listener: Operation not permitted`，未能安装运行或取得本次模拟器截图。PARITY 保持 🔨，不能宣称像素验收完成。生成的 android 目录为 gitignored 本地构建产物。
+- 几何待人工核验/已知细节：① 本卡和 §4.2 明确写 Int(high/mid/low)，故 RN 使用 trunc；Swift 文件实际先 rounded() 再 Int，按本卡优先实现并记录差异。② viewBox 随容器等比缩放，轴字通过纯函数反向补偿维持 iOS 固定 9pt（容量日期 8pt）；轴题/当前日期随 mockup 缩放。文字 central baseline 逐个设在 SvgText 上，避免仅设置在 G 上被 Android 丢弃。③ 当前日期标签底板按 IBM Plex Mono 10pt 字符推进估算（每字 6pt + 横 padding 2pt），实际字体垂直度量与 Android baseline 需截图核。④ forming 的 126pt 按 iOS 调用点解释为整个状态区，画布为默认 68pt；几何中的控制点偏移、点直径保持绝对 pt，不随容器宽度缩放。
