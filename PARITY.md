@@ -100,7 +100,7 @@
 |---|---|---|
 | VideoPlayback / FeedbackVideoPlayer 全屏回放 | 🔨 | W3-a:自绘播放/暂停、四档会话倍速、250 ms 轮询、80 ms 拖拽 seek + generation、失败重试、打点三态面板/标注帧;组内薄封装 markers=null、本地优先/远端现取。单层 Modal 或 OverlayHost;平底材质;无刻度/级别色;W3-b 屏上浮层已做;⚖️烧录导出不做(播放器无导出钮);静态验证通过,ADB 拒绝导致视觉验收待补;Android seek tolerance 限制见 JOURNAL |
 | VideoBadge 学员端角标 / scrim | 🔨 | W3-b 屏上浮层已做;⚖️烧录导出不做(播放器无导出钮)。固定品牌色/468 基准卡片/底部 44% 渐变;默认展开、点按收起/展开、会话重置;反馈与组内当前草稿接 badge，setOrdinal 仅调用点 +1。StudentVideoSchema 仅 additive rpe 字串字段(⚖️David 2026-09-05);教练未接，allowsExpansion=false 预留;Android 阴影与实际叠层/触摸待 AVD 截图验收 |
-| CoachVideoPlayer 变速回放 | ☐ | 0.5/1.0/1.5/2.0x |
+| CoachVideoPlayer 变速回放 | 🔨 | W3-d 工作台形态;⚖️无导出。共享播放器内嵌 270 舞台/56 圆钮/四段倍速/白色进度条/可选 Add marker/教练恒收起角标;有标注行 pause+seek+舞台覆盖层,刷新按 id 换实例。静态验证通过,沙箱无 ADB,待 AVD 截图验收 |
 | e1RM + 容量/强度图表 | ☐ | victory-native |
 | 学员端走查对齐(36 项) | ☐ | |
 | 教练端走查对齐(20 项) | ☐ | |
