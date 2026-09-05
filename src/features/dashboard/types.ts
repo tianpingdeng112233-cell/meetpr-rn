@@ -1,7 +1,7 @@
 import type { PlanDay, PlanDetail } from '@/api/domains';
 import type { LiftFamily } from '@/domain/e1rm';
 
-export type WorkoutDayStatus = 'notStarted' | 'partial' | 'complete' | 'noPlan';
+export type WorkoutDayStatus = 'done' | 'current' | 'upcoming';
 
 export type DashboardLift = {
   exerciseId: string;
@@ -12,7 +12,7 @@ export type DashboardLift = {
 
 export type DashboardWeekDay = {
   date: string;
-  day: PlanDay | null;
+  day: PlanDay;
   lift: DashboardLift | null;
   completion: number;
   status: WorkoutDayStatus;

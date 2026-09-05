@@ -1,61 +1,31 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo, useState } from 'react';
-import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
-import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
+import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
-import { TRAINING_LIMITS } from './constants';
 import type { SessionReflection, WorkoutSetDraft } from './model';
 import { isDraftTerminal } from './drafts';
 import { parseFiniteDecimal } from './policy';
-
-export function SlideToCompleteButton({ onComplete }: { onComplete: () => void }) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const [progress, setProgress] = useState(0);
-  const [width, setWidth] = useState(1);
-  const pan = useMemo(
-    () => PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > Math.abs(gesture.dy),
-      onPanResponderMove: (_, gesture) => setProgress(Math.max(0, Math.min(1, gesture.dx / Math.max(1, width - 56)))),
-      onPanResponderRelease: (_, gesture) => {
-        const releasedProgress = Math.max(
-          0,
-          Math.min(1, gesture.dx / Math.max(1, width - 56)),
-        );
-        if (releasedProgress >= TRAINING_LIMITS.slideCompletionThreshold) onComplete();
-        setProgress(0);
-      },
-      onPanResponderTerminate: () => setProgress(0),
-    }),
-    [onComplete, width],
-  );
-  return (
-    <View
-      {...pan.panHandlers}
-      onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
-      style={styles.slider}>
-      <Text style={styles.sliderLabel}>{/* TODO(i18n:drift) */}滑动完成今日训练</Text>
-      <View style={[styles.sliderThumb, { left: progress * Math.max(0, width - 56) }]}>
-        <MaterialCommunityIcons color={colors.success} name="chevron-double-right" size={24} />
-      </View>
-    </View>
-  );
-}
 
 export function DayCompletionBanner({ count, onPress }: { count: number; onPress: () => void }) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <Card style={styles.banner}>
-      <View style={styles.bannerCopy}>
-        <MaterialCommunityIcons color={colors.success} name="check-decagram" size={22} />
-        <Text style={styles.bannerTitle}>{t(count === 1 ? 'student.dayCompletionBanner.copy001.one' : 'student.dayCompletionBanner.copy001', [count])}</Text>
-      </View>
-      <Pressable onPress={onPress}><Text style={styles.reviewLink}>{t('student.dayCompletionBanner.copy002')}</Text></Pressable>
-    </Card>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('student.dayCompletionBanner.copy003', [count])}
+      onPress={onPress}
+      style={styles.banner}
+    >
+      <MaterialCommunityIcons color={colors.success} name="check-decagram" size={22} />
+      <Text style={styles.bannerTitle}>{t('student.dayCompletionBanner.copy001', [count])}</Text>
+      <View style={styles.bannerSpacer} />
+      <Text style={styles.reviewLink}>{t('student.dayCompletionBanner.copy002')}</Text>
+      <MaterialCommunityIcons color={colors.textSecondary} name="chevron-right" size={11} />
+    </Pressable>
   );
 }
 
@@ -88,13 +58,13 @@ export function SessionSummaryView({
         <ScrollView contentContainerStyle={styles.summaryContent} keyboardShouldPersistTaps="handled">
           <Text style={styles.summaryHero}>{t('student.workoutCompletionFlowView.copy001')}</Text>
           <Card style={styles.overview}>
-            {[[/* TODO(i18n:missing) */ '完成组数', String(completed.length)], [t('student.sessionSummaryView.copy008'), String(totalReps)], [t('student.sessionSummaryView.copy005'), `${Math.round(totalVolume)} kg`], [t('student.sessionSummaryView.copy009'), averageRPE === null ? '—' : averageRPE.toFixed(1)]].map(([label, value]) => (
+            {[[t('student.progression.completedSets'), String(completed.length)], [t('student.sessionSummaryView.copy008'), String(totalReps)], [t('student.sessionSummaryView.copy005'), `${Math.round(totalVolume)} kg`], [t('student.sessionSummaryView.copy009'), averageRPE === null ? '—' : averageRPE.toFixed(1)]].map(([label, value]) => (
               <View key={label} style={styles.metric}><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>
             ))}
           </Card>
           <Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy001')}</Text>
           <Card style={styles.performance}><Text style={styles.performanceLabel}>{t('student.sessionSummaryView.copy010', ['']).trimEnd()}</Text><Text style={styles.performanceValue}>{heaviest ? `${heaviest.weightText}kg × ${heaviest.repsText}` : '—'}</Text></Card>
-          <View><Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy011')}</Text><Text style={styles.privateNote}>{/* TODO(i18n:missing) */}🔒 仅自己可见的训练笔记,保存在本机</Text></View>
+          <View><Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy011')}</Text><Text style={styles.privateNote}>🔒 {t('student.progression.privateNote')}</Text></View>
           {([
             ['goal', t('student.sessionSummaryView.copy013'), t('student.sessionSummaryView.copy014')],
             ['achieved', t('student.sessionSummaryView.copy015'), t('student.sessionSummaryView.copy016')],
@@ -104,7 +74,7 @@ export function SessionSummaryView({
           ))}
           <AppButton
             disabled={saving}
-            label={saving ? /* TODO(i18n:missing) */ '保存中…' : t('student.readinessCheckinSheet.copy018')}
+            label={saving ? t('student.progression.saving') : t('student.readinessCheckinSheet.copy018')}
             onPress={() => {
               setSaving(true);
               void onComplete(reflection).finally(() => setSaving(false));
@@ -120,10 +90,10 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   slider: { backgroundColor: colors.success, borderColor: colors.success, borderRadius: radius.pill, borderWidth: 1, height: 58, justifyContent: 'center', overflow: 'hidden' },
   sliderLabel: { color: '#FFFFFF', textAlign: 'center', ...typography.bodyEmphasis },
   sliderThumb: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: radius.pill, height: 50, justifyContent: 'center', position: 'absolute', width: 50 },
-  banner: { alignItems: 'center', backgroundColor: colors.successTint, borderColor: `${colors.success}66`, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
-  bannerCopy: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  bannerTitle: { color: colors.success, ...typography.bodyEmphasis },
-  reviewLink: { color: colors.textPrimary, ...typography.footnote },
+  banner: { alignItems: 'center', backgroundColor: `${colors.success}24`, borderColor: `${colors.success}66`, borderWidth: 1, borderRadius: radius.control, flexDirection: 'row', gap: 10, padding: 16 },
+  bannerSpacer: { flexGrow: 1 },
+  bannerTitle: { color: colors.textPrimary, ...font.body(16, 'bold'), flexShrink: 1 },
+  reviewLink: { color: colors.textSecondary, ...font.body(13) },
   summaryRoot: { backgroundColor: colors.bgBase, flex: 1 },
   summaryNav: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingHorizontal: spacing.base },
   summaryNavTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },

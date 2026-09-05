@@ -8,7 +8,6 @@ import { synthesizeDrafts } from '../drafts';
 import {
   gymDayText,
   historyRangeStart,
-  isGymDayEditable,
   resolveRestSeconds,
   rirCopy,
   selectWeightSuggestion,
@@ -48,7 +47,7 @@ function log(overrides: Partial<SetLog> = {}): SetLog {
     plan_exercise_id: exercise.id,
     exercise_id: exercise.exercise_id,
     set_index: 0,
-    weight_kg: '100.00',
+    weight_kg: '100',
     reps: 5,
     rpe: '8.0',
     completed: true,
@@ -82,7 +81,7 @@ describe('plan × log draft synthesis', () => {
 
     expect(drafts.map((draft) => draft.stableSetId)).toEqual([first.id, second.id]);
     expect(drafts.map((draft) => draft.status)).toEqual(['pending', 'failed']);
-    expect(drafts[1].weightText).toBe('100.00');
+    expect(drafts[1].weightText).toBe('100');
   });
 });
 
@@ -172,8 +171,6 @@ describe('rest, gym-day, and RIR policies', () => {
     const atCutoff = new Date(2026, 6, 19, 4, 0, 0);
     expect(gymDayText(before)).toBe('2026-07-18');
     expect(gymDayText(atCutoff)).toBe('2026-07-19');
-    expect(isGymDayEditable('2026-07-18', before)).toBe(true);
-    expect(isGymDayEditable('2026-07-18', atCutoff)).toBe(false);
   });
 
   test.each([
@@ -204,3 +201,13 @@ describe('rest, gym-day, and RIR policies', () => {
 // Existing copy assertions pin the original Chinese presentation.
 beforeEach(() => setLocaleOverride('zh'));
 afterEach(() => setLocaleOverride(null));
+
+test('cycle-wide draft synthesis chooses the newest real log for a stable set', () => {
+  const day: PlanDay = { id: exercise.plan_day_id, plan_id: '40000000-0000-4000-8000-000000000001', day_of_week: 1, week_number: 1, sort_order: 0, shifted_to_date: null, exercises: [{ ...exercise, sets: [planSet()] }] };
+  const drafts = synthesizeDrafts(day, [
+    log({ logged_at: '2026-07-19T08:00:00Z', weight_kg: '100' }),
+    log({ logged_at: '2026-07-20T08:00:00Z', weight_kg: '105' }),
+    log({ logged_at: '2026-07-21T08:00:00Z', weight_kg: '200', assumed: true }),
+  ]);
+  expect(drafts[0].weightText).toBe('105');
+});

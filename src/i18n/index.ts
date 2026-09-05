@@ -7,16 +7,30 @@ import CoachKit from './catalog/CoachKit.json';
 import CoreModels from './catalog/CoreModels.json';
 import DesignSystem from './catalog/DesignSystem.json';
 import RepositoryContracts from './catalog/RepositoryContracts.json';
+import RnExtras from './catalog/RnExtras.json';
 import StudentKit from './catalog/StudentKit.json';
 
 const catalog = {
   ...Analytics, ...AppShell, ...ChatUI, ...CoachKit, ...CoreModels,
   ...DesignSystem, ...RepositoryContracts, ...StudentKit,
+  // Android-only copy with no iOS counterpart; English approved by Claude, zh mirrors the RN literal.
+  ...RnExtras,
 } as const;
 
 export type TranslationKey = keyof typeof catalog;
 export type Locale = 'en' | 'zh';
 type Translation = string | { one?: string; other: string };
+// Mirrors StudentStrings.Key.countIndex; unlisted keys count their first parameter.
+const PLURAL_COUNT_INDEX: Record<string, number> = {
+  'student.dashboardPrimaryAction.copy007': 1,
+  'student.feedbackVideoPresentation.copy002': 1,
+  'student.growthE1Rmcard.copy005': 1,
+  'student.historyEntriesView.copy004': 1,
+  'student.onboardingSummaryFormatter.copy005': 1,
+  'student.trainingCalendarView.copy002': 1,
+  'student.trainingCalendarView.copy003': 1,
+  'student.todayWorkoutScreen.copy020': 2,
+};
 let localeOverride: Locale | null = null;
 
 export function getLocale(): Locale {
@@ -30,14 +44,12 @@ export function setLocaleOverride(locale: Locale | null = null): void {
 
 export function t(key: TranslationKey, params: readonly (string | number)[] = []): string {
   const locale = getLocale();
-  const table = catalog as Partial<Record<string, { en?: Translation; zh?: Translation }>>;
-  // The xcstrings export flattens plural variants into sibling keys (`<key>.one`); pick
-  // the singular form when the first parameter is exactly 1 (en only — zh has no plural).
-  const singular = locale === 'en' && Number(params[0]) === 1 ? table[`${key}.one`] : undefined;
-  const entry = singular ?? table[key];
+  const entries = catalog as Partial<Record<string, { en?: Translation; zh?: Translation }>>;
+  const isOne = locale === 'en' && Number(params[PLURAL_COUNT_INDEX[key] ?? 0]) === 1;
+  const entry = (isOne ? entries[`${key}.one`] : undefined) ?? entries[key];
   let copy = entry?.[locale] ?? entry?.zh ?? key;
   if (typeof copy !== 'string') {
-    copy = locale === 'en' && Number(params[0]) === 1 ? copy.one ?? copy.other : copy.other;
+    copy = isOne ? copy.one ?? copy.other : copy.other;
   }
   let sequentialIndex = 0;
   return copy.replace(/\{(\d+)\}|%@|%lld/g, (placeholder, position: string | undefined) => {

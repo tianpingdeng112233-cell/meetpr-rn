@@ -5,11 +5,10 @@ import type {
   OnboardingProfile,
   PlanDay,
   PlanDetail,
-  PlanSummary,
   SetLog,
   SetLogRange,
 } from '@/api/domains';
-import { ApiError } from '@/api/client';
+import { cursorDay, progressSegments, recommendedDate, selectCurrentPlan } from '@/domain/plan/sequence';
 import {
   buildE1RMSeries,
   calculateE1RM,
@@ -29,7 +28,6 @@ import type {
   DashboardLift,
   DashboardNotification,
   DashboardWeekDay,
-  WorkoutDayStatus,
 } from './types';
 
 const DATE_TEXT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -74,75 +72,8 @@ export function utcDayDistance(from: string, to: string): number {
   );
 }
 
-/** iOS Calendar weekday is Sunday=1 ... Saturday=7. */
-export function mondayOffset(weekday: number): number {
-  return (weekday + 5) % 7;
-}
-
-export function weekIndexForDate(
-  plan: Pick<PlanSummary, 'start_date' | 'plan_weeks'>,
-  dateText: string,
-): number {
-  const raw = Math.floor(utcDayDistance(plan.start_date, dateText) / 7) + 1;
-  return Math.min(plan.plan_weeks, Math.max(1, raw));
-}
-
-export function weekWindow(
-  plan: Pick<PlanSummary, 'start_date'>,
-  weekIndex: number,
-) {
-  const start = addUtcDays(plan.start_date, (weekIndex - 1) * 7);
-  return { start, endExclusive: addUtcDays(start, 7) };
-}
-
-export function effectivePlanEnd(
-  plan: Pick<PlanSummary, 'end_date' | 'total_shift_days'>,
-): string {
-  return addUtcDays(plan.end_date, Math.max(0, plan.total_shift_days));
-}
-
-export function selectDashboardPlan(
-  plans: readonly PlanSummary[],
-  today: string,
-): PlanSummary | null {
-  const sorted = [...plans].sort((left, right) =>
-    right.start_date.localeCompare(left.start_date),
-  );
-  return (
-    sorted.find(
-      (plan) =>
-        plan.status === 'published' &&
-        plan.start_date <= today &&
-        effectivePlanEnd(plan) >= today,
-    ) ??
-    sorted.find((plan) => plan.status === 'published') ??
-    null
-  );
-}
-
-export function selectLatestPublishedPlan(
-  plans: readonly PlanSummary[],
-): PlanSummary | null {
-  return (
-    [...plans]
-      .filter((plan) => plan.status === 'published')
-      .sort(
-        (left, right) =>
-          right.created_at.localeCompare(left.created_at) ||
-          right.id.localeCompare(left.id),
-      )[0] ?? null
-  );
-}
-
-export function scheduledDate(
-  plan: Pick<PlanDetail, 'start_date'>,
-  day: Pick<PlanDay, 'week_number' | 'day_of_week' | 'shifted_to_date'>,
-): string {
-  return (
-    day.shifted_to_date ??
-    addUtcDays(plan.start_date, (day.week_number - 1) * 7 + day.day_of_week - 1)
-  );
-}
+export const selectDashboardPlan = selectCurrentPlan;
+export const selectLatestPublishedPlan = selectCurrentPlan;
 
 function onboardingLiftProfile(
   profile: OnboardingProfile | null,
@@ -238,83 +169,14 @@ export function liftForDay(
   return main ? lifts.get(main.exercise_id) ?? null : null;
 }
 
-export function workoutDayProgress(day: PlanDay, logs: readonly SetLog[]) {
-  const exercises = new Set(day.exercises.map((exercise) => exercise.id));
-  const plannedSets = day.exercises.reduce(
-    (total, exercise) => total + exercise.sets.length,
-    0,
-  );
-  const completedSetKeys = new Set(
-    logs
-      .filter(
-        (log) =>
-          log.plan_exercise_id !== null &&
-          exercises.has(log.plan_exercise_id) &&
-          log.completed,
-      )
-      .map((log) => `${log.plan_exercise_id}:${log.set_index}`),
-  );
-  const dayLogs = logs.filter(
-    (log) => log.plan_exercise_id !== null && exercises.has(log.plan_exercise_id),
-  );
-  const completion =
-    plannedSets === 0 ? 0 : Math.min(1, completedSetKeys.size / plannedSets);
-  const status: WorkoutDayStatus =
-    completion >= 1 ? 'complete' : dayLogs.length > 0 ? 'partial' : 'notStarted';
-  return { completion, status };
-}
-
 export function buildDashboardWeekDays(
-  plan: PlanDetail,
-  cycleLogs: readonly SetLog[],
-  weekIndex: number,
-  exerciseIndex: ReadonlyMap<string, Exercise>,
-  onboarding: OnboardingProfile | null,
+  plan: PlanDetail, cycleLogs: readonly SetLog[], weekIndex: number,
+  exerciseIndex: ReadonlyMap<string, Exercise>, onboarding: OnboardingProfile | null,
 ): DashboardWeekDay[] {
-  const { start, endExclusive } = weekWindow(plan, weekIndex);
-  const weekLogs = cycleLogs.filter(
-    (log) => log.logged_date >= start && log.logged_date < endExclusive,
-  );
   const lifts = resolveDashboardLifts(plan, exerciseIndex, onboarding);
-  const daysByDate = new Map(
-    plan.days
-      .filter((day) => {
-        const date = scheduledDate(plan, day);
-        return date >= start && date < endExclusive;
-      })
-      .map((day) => [scheduledDate(plan, day), day] as const),
-  );
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = addUtcDays(start, index);
-    const day = daysByDate.get(date) ?? null;
-    if (!day) {
-      return { date, day, lift: null, completion: 0, status: 'noPlan' };
-    }
-    const progress = workoutDayProgress(day, weekLogs);
-    return { date, day, lift: liftForDay(day, lifts), ...progress };
-  });
-}
-
-export function dashboardTitle(day: DashboardWeekDay | null): string {
-  return day?.day ? `W${day.day.week_number}D${day.day.sort_order}` : t('student.dashboardTodayScreen.copy001');
-}
-
-export function dashboardCTA(
-  day: DashboardWeekDay | null,
-): { interactive: boolean; label: string } {
-  if (!day?.day) {
-    return { interactive: false, label: /* TODO(i18n:drift) */ '今日休息' };
-  }
-  const code = `W${day.day.week_number}D${day.day.sort_order}`;
-  const lift = day.lift?.name ?? t('student.todayWorkoutView.copy011');
-  if (day.status === 'complete') {
-    return { interactive: true, label: /* TODO(i18n:drift) */ '今日已完成 · 查看' };
-  }
-  if (day.status === 'partial') {
-    return { interactive: true, label: /* TODO(i18n:drift) */ `继续 ${code} · ${lift}` };
-  }
-  return { interactive: true, label: /* TODO(i18n:drift) */ `开始 ${code} · ${lift}` };
+  return progressSegments(plan.days.filter(day => day.week_number === weekIndex), cursorDay(plan.days)?.id).map(({ day, state }) => ({
+    date: recommendedDate(plan, day), day, lift: liftForDay(day, lifts), completion: state === 'done' ? 1 : 0, status: state,
+  }));
 }
 
 export function replayE1RMSeries(
@@ -395,77 +257,6 @@ export function formatDeltaKg(delta: number): string {
     return '0 KG';
   }
   return `${delta > 0 ? '+' : '−'}${formatKg(Math.abs(delta))} KG`;
-}
-
-export function shouldOfferPlanShift(input: {
-  role: string | null | undefined;
-  plan: PlanSummary | null;
-  todayDay: DashboardWeekDay | null;
-  todayLogs: readonly SetLog[];
-  now: Date;
-}): boolean {
-  const { role, plan, todayDay, todayLogs, now } = input;
-  if (
-    role !== 'coached_student' ||
-    !plan ||
-    plan.coach_id === null ||
-    plan.status !== 'published' ||
-    !todayDay?.day ||
-    todayDay.status !== 'notStarted'
-  ) {
-    return false;
-  }
-  const today = utcDateText(now);
-  return todayDay.date === today && todayLogs.length === 0;
-}
-
-export function canUndoPlanShift(
-  plan: PlanSummary | null,
-  now: Date,
-): boolean {
-  if (!plan || plan.total_shift_days < 1 || plan.latest_shift_created_at === null) {
-    return false;
-  }
-  return utcDateText(new Date(plan.latest_shift_created_at)) === utcDateText(now);
-}
-
-export type ShiftAlertCopy = {
-  title: string;
-  message: string;
-};
-
-const SHIFT_MESSAGES: Partial<Record<string, string>> = {
-  PLAN_NOT_ACTIVE: /* TODO(i18n:drift) */ '当前计划未生效,暂时不能顺延',
-  SHIFT_ONLY_TODAY: /* TODO(i18n:drift) */ '只能顺延今天的训练',
-  ALREADY_STARTED: /* TODO(i18n:drift) */ '今天的训练已经开始,不能顺延或撤销',
-  NOT_PLAN_STUDENT: /* TODO(i18n:drift) */ '只有计划所属学员可以顺延',
-  NO_ACTIVE_SHIFT: /* TODO(i18n:drift) */ '当前没有可撤销的顺延',
-  UNDO_WINDOW_PASSED: /* TODO(i18n:drift) */ '只能在顺延当天撤销,请联系教练调整计划',
-};
-
-export function planShiftErrorCopy(
-  error: unknown,
-  operation: 'shift' | 'undo',
-): ShiftAlertCopy {
-  const code = error instanceof ApiError ? error.code : undefined;
-  const known = code ? SHIFT_MESSAGES[code] : undefined;
-  const unsupported =
-    error instanceof ApiError &&
-    error.kind === 'backend' &&
-    (error.status === 400 || error.status === 403);
-  return {
-    title: operation === 'shift' ? /* TODO(i18n:drift) */ '无法顺延' : t('student.dashboardView.copy001'),
-    message:
-      known ??
-      (unsupported ? /* TODO(i18n:drift) */ '当前计划暂不支持顺延' : undefined) ??
-      (operation === 'shift'
-        ? /* TODO(i18n:drift) */ '顺延失败,请检查网络后重试'
-        : /* TODO(i18n:drift) */ '撤销顺延失败,请检查网络后重试'),
-  };
-}
-
-export function unsupportedPlanShiftCopy(): ShiftAlertCopy {
-  return { title: /* TODO(i18n:drift) */ '无法顺延', message: /* TODO(i18n:drift) */ '当前计划暂不支持顺延' };
 }
 
 export function unreadFeedbackCount(items: readonly FeedbackItem[]): number {

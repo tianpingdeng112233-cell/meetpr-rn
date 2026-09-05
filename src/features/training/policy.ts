@@ -1,29 +1,18 @@
+import { decodePrescription } from '@/domain/plan/prescription';
+import { gymDayToday, localDateText } from '@/domain/plan/workout-date-policy';
 import { t } from '@/i18n';
-import type { PlanDay, PlanExercise, PlanSet } from '@/api/domains/plans';
+import type { PlanExercise, PlanSet } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 import { suggestedWeightKg } from '@/domain/e1rm';
 
 import { REST_DEFAULTS, RIR_KEYS, TRAINING_LIMITS } from './constants';
 import type { WeightSuggestion, WorkoutSetDraft } from './model';
 
+export { localDateText };
+
 const DAY_MS = 86_400_000;
 
-export function localDateText(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-export function gymDayText(now = new Date()): string {
-  const gymDate = new Date(now);
-  gymDate.setHours(gymDate.getHours() - TRAINING_LIMITS.gymDayCutoffHour);
-  return localDateText(gymDate);
-}
-
-export function isGymDayEditable(dateText: string, now = new Date()): boolean {
-  return dateText === gymDayText(now);
-}
+export const gymDayText = gymDayToday;
 
 export function parseLocalDate(dateText: string): Date {
   const [year, month, day] = dateText.split('-').map(Number);
@@ -44,13 +33,6 @@ export function daysBetween(start: string, end: string): number {
   const startDate = parseLocalDate(start);
   const endDate = parseLocalDate(end);
   return Math.round((endDate.getTime() - startDate.getTime()) / DAY_MS);
-}
-
-export function scheduledDate(planStart: string, day: PlanDay): string {
-  return (
-    day.shifted_to_date ??
-    addDays(planStart, (day.week_number - 1) * 7 + day.day_of_week - 1)
-  );
 }
 
 export function restDefaultSeconds(rpe: number | null): number {
@@ -89,6 +71,7 @@ export function normalizeDecimalInput(value: string): string {
 }
 
 export function parseFiniteDecimal(value: string): number | null {
+  if (!normalizeDecimalInput(value)) return null;
   const parsed = Number(normalizeDecimalInput(value));
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -121,7 +104,7 @@ export function plateLoadout(totalWeightKg: number, collarOn: boolean): {
       remainder -= count * size;
     }
   }
-  const plateCopy = plates.join(' + ') || /* TODO(i18n:missing) */ `${formatWeight(perSideKg)}kg 片`;
+  const plateCopy = plates.join(' + ') || `${formatWeight(perSideKg)}kg`;
   return {
     perSideKg,
     detail: collarOn ? `${plateCopy}${t('student.setEntryPlateLoadout.copy002')}` : plateCopy,
@@ -133,12 +116,8 @@ export function planSetPrescription(planSet: PlanSet): {
   reps: number;
   rpe: number | null;
 } {
-  return {
-    weightKg:
-      planSet.intensity_mode === 'weight' ? Number(planSet.target_value) : null,
-    reps: planSet.target_reps,
-    rpe: planSet.intensity_mode === 'rpe' ? Number(planSet.target_value) : null,
-  };
+  const prescription = decodePrescription(planSet);
+  return { weightKg: prescription.weightKg ?? null, reps: prescription.reps, rpe: prescription.intensity?.kind === 'rpe' ? prescription.intensity.value : null };
 }
 
 function recentCompleted(
@@ -148,7 +127,7 @@ function recentCompleted(
   return [...logs]
     .filter(
       (log) =>
-        log.exercise_id === exerciseId && log.completed && !log.failed,
+        log.exercise_id === exerciseId && log.completed && !log.failed && !log.assumed,
     )
     .sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
 }
@@ -185,6 +164,7 @@ export function selectWeightSuggestion({
         return (
           draft.exercise.id === exercise.id &&
           draft.status === 'complete' &&
+          !draft.sourceLog?.assumed &&
           prior.reps === prescription.reps &&
           prior.rpe === prescription.rpe &&
           (parseFiniteDecimal(draft.weightText) ?? 0) > 0
@@ -193,7 +173,7 @@ export function selectWeightSuggestion({
     if (matchingPrior) {
       return {
         weightKg: parseFiniteDecimal(matchingPrior.weightText) as number,
-        label: /* TODO(i18n:missing) */ '建议 · 同上组',
+        label: t('student.progression.suggestionPrevious'),
       };
     }
     if (e1RMKg !== null) {
@@ -205,7 +185,7 @@ export function selectWeightSuggestion({
       if (weight !== null) {
         return {
           weightKg: weight,
-          label: /* TODO(i18n:missing) */ `建议 · 基于 e1RM ${formatWeight(e1RMKg)}`,
+          label: t('student.progression.suggestionE1RM', [formatWeight(e1RMKg)]),
         };
       }
     }
@@ -216,6 +196,6 @@ export function selectWeightSuggestion({
     recentCompleted(sameDayLogs, exercise.exercise_id) ??
     recentCompleted(historyLogs, exercise.exercise_id);
   return prior
-    ? { weightKg: Number(prior.weight_kg), label: /* TODO(i18n:missing) */ '建议 · 上次重量' }
+    ? { weightKg: Number(prior.weight_kg), label: t('student.progression.suggestionLast') }
     : null;
 }

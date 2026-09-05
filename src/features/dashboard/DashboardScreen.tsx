@@ -1,522 +1,652 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import {
-  ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
-
-import { t } from '@/i18n';
 import { useSessionStore } from '@/api/session';
-import { useShiftPlan, useUndoPlanShift, type FeedbackItem } from '@/api/domains';
+import { useMineBindRequest } from '@/api/domains/bind';
+import {
+  useDayCompletion,
+  type PlanDay,
+  type FeedbackItem,
+} from '@/api/domains';
 import { AnalyticsScreen, screen } from '@/analytics';
-import type { E1RMSample } from '@/domain/e1rm';
 import {
   AppButton,
   Card,
-  useColors, type Colors, font,
-  radius,
+  Eyebrow,
+  GoldProgressBar,
+  StatusBadge,
   Screen,
   Sparkline,
-  spacing,
-  typography,
+  useColors,
+  font,
 } from '@/design';
-import { useStudentTabsStore } from '@/features/student-tabs';
-
+import { getLocale, t } from '@/i18n';
+import { dayCode, recommendedDate } from '@/domain/plan/sequence';
 import {
-  addUtcDays,
-  chineseMonthDay,
-  chineseWeekday,
-  formatDeltaKg,
+  dayName,
+  daySummary,
+  recommendedDateText,
+} from '@/domain/plan/presentation';
+import { useStudentTabsStore } from '@/features/student-tabs';
+import { useExerciseMetadataResolver } from '@/features/training/exercise-metadata';
+import { completionError } from '@/features/training/completion-errors';
+import {
   formatKg,
+  formatDeltaKg,
   localCompetitionDays,
-  mondayOffset,
-  planShiftErrorCopy,
   relativeFeedbackTime,
-  utcDateText,
 } from './model';
-import type {
-  DashboardNotification,
-  DashboardWeekDay,
-  WorkoutDayStatus,
-} from './types';
+import type { DashboardWeekDay } from './types';
 import { useDashboardViewModel } from './use-dashboard';
+import { MeetPRMark } from './MeetPRMark';
 
-const statusColors = (colors: Colors): Record<WorkoutDayStatus, string> => ({
-  notStarted: colors.danger,
-  partial: colors.gold500,
-  complete: colors.success,
-  noPlan: colors.textTertiary,
-});
-
+export function DashboardSkeleton() {
+  const colors = useColors();
+  return (
+    <View
+      accessibilityLabel={t('student.dashboardTodayScreen.copy007')}
+      style={{ height: 92, borderRadius: 16, backgroundColor: colors.bgStack }}
+    />
+  );
+}
 export function DashboardAsyncSection({
   isError,
   onRetry,
   children,
+  message,
 }: {
   isError: boolean;
   onRetry: () => void;
   children: ReactNode;
+  message?: string;
 }) {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   if (!isError) return <>{children}</>;
   return (
-    <View style={styles.errorRow}>
-      <Text style={styles.errorText}>{t('student.growthCurveView.copy006')}</Text>
-      <Pressable
-        accessibilityRole="button"
+    <Card style={{ padding: 16, gap: 12 }}>
+      <Text style={{ color: colors.textSecondary, ...font.body(14) }}>
+        {message ?? t('student.dashboardTodayScreen.copy008')}
+      </Text>
+      <AppButton
+        variant="secondary"
+        label={t('student.dashboardTodayScreen.copy009')}
         onPress={onRetry}
-        style={({ pressed }) => pressed && styles.pressed}>
-        <Text style={styles.retryText}>{/* TODO(i18n:missing) */}点击重试</Text>
-      </Pressable>
-    </View>
+      />
+    </Card>
   );
 }
-
 export function DashboardScreen() {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const studentId = useSessionStore((state) => state.user?.id ?? '');
-  const router = useRouter();
+  const studentId = useSessionStore((s) => s.user?.id ?? '');
   const vm = useDashboardViewModel(studentId);
-  const shiftPlan = useShiftPlan();
-  const undoPlanShift = useUndoPlanShift();
-  const bumpTrainingJump = useStudentTabsStore((state) => state.bumpTrainingJump);
-  const bumpPlanRevision = useStudentTabsStore((state) => state.bumpPlanRevision);
-  const bumpFeedbackJump = useStudentTabsStore((state) => state.bumpFeedbackJump);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-
+  const binding = useMineBindRequest();
+  const coachName =
+    binding.data?.bind_request?.coach_display_name ??
+    t('student.dashboardView.copy003');
+  const router = useRouter();
+  const handoff = useStudentTabsStore((s) => s.handoffTraining);
+  const bumpCompletion = useStudentTabsStore((s) => s.bumpCompletionRevision);
+  const bumpFeedback = useStudentTabsStore((s) => s.bumpFeedbackJump);
+  const undo = useDayCompletion(vm.activePlan?.id ?? '', true);
+  const resolve = useExerciseMetadataResolver(studentId);
   useFocusEffect(
     useCallback(() => {
       void screen(AnalyticsScreen.Dashboard);
     }, []),
   );
-
-  const openTraining = () => {
-    if (!vm.cta.interactive) return;
-    bumpTrainingJump();
+  const openTraining = (day: PlanDay) => {
+    if (!vm.activePlan) return;
+    handoff({
+      plan: vm.activePlan,
+      dayID: day.id,
+      existingLogs: vm.week.status === 'loaded' ? vm.week.logs : [],
+    });
     router.navigate('/(student)/training');
   };
-
   const openFeedback = () => {
-    setNotificationsOpen(false);
-    bumpFeedbackJump();
+    bumpFeedback();
     router.navigate('/(student)/growth');
   };
-
-  const confirmShift = () => {
-    if (!vm.activePlan || !vm.todayDay?.day) return;
-    const plan = vm.activePlan;
-    const course = vm.todayDay.lift?.name ?? plan.name;
-    const shiftedEnd = chineseMonthDay(
-      addUtcDays(plan.end_date, plan.total_shift_days + 1),
-    );
-    Alert.alert(
-      /* TODO(i18n:drift) */ '把整份计划往后顺延一天?',
-      /* TODO(i18n:drift) */ `今天的${course}课改到明天,之后的课依次顺延,本周期结束日变为${shiftedEnd}`,
-      [
-        { text: t('student.accountSecuritySheets.copy013'), style: 'cancel' },
-        {
-          text: /* TODO(i18n:drift) */ '确认顺延',
-          onPress: () => {
-            void shiftPlan
-              .mutateAsync(plan.id)
-              .then((result) => {
-                bumpPlanRevision();
-                const advisory =
-                  result.total_offset_days >= 3
-                    ? /* TODO(i18n:drift) */ `已累计顺延 ${result.total_offset_days} 天,建议联系教练调整计划`
-                    : '';
-                Alert.alert(/* TODO(i18n:drift) */ '顺延成功', advisory, [{ text: t('student.dashboardView.copy002') }]);
-              })
-              .catch((error: unknown) => {
-                const copy = planShiftErrorCopy(error, 'shift');
-                Alert.alert(copy.title, copy.message, [{ text: t('student.dashboardView.copy002') }]);
-              });
-          },
-        },
-      ],
-    );
-  };
-
-  const confirmUndoShift = () => {
-    if (!vm.activePlan) return;
-    const planId = vm.activePlan.id;
-    Alert.alert(/* TODO(i18n:drift) */ '撤销顺延?', /* TODO(i18n:drift) */ `课程会回到${chineseMonthDay(utcDateText(vm.now))}。`, [
-      { text: /* TODO(i18n:drift) */ '保留顺延', style: 'cancel' },
-      {
-        text: /* TODO(i18n:drift) */ '撤销顺延',
-        style: 'destructive',
-        onPress: () => {
-          void undoPlanShift
-            .mutateAsync(planId)
-            .then(() => bumpPlanRevision())
-            .catch((error: unknown) => {
-              const copy = planShiftErrorCopy(error, 'undo');
-              Alert.alert(copy.title, copy.message, [{ text: t('student.dashboardView.copy002') }]);
-            });
-        },
-      },
-    ]);
-  };
-
+  const action = vm.today.action;
+  const selected = vm.today.cursor ?? vm.today.completedToday;
+  const profile = (
+    <ProfileMetrics
+      profile={vm.profile}
+      now={vm.now}
+      profileError={vm.profileError}
+      onRetry={() => void vm.retryProfile()}
+    />
+  );
   return (
     <Screen edges={['top', 'left', 'right']}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 24 }}
         refreshControl={
           <RefreshControl
-            onRefresh={() => void vm.reload()}
             refreshing={vm.isRefreshing}
-            tintColor={colors.gold500}
+            onRefresh={() => void vm.reload()}
           />
         }
-        showsVerticalScrollIndicator={false}>
-        <View style={styles.heroRow}>
-          <Text style={styles.hero}>{vm.title}</Text>
-          <Pressable
-            accessibilityLabel={t('student.notifications')}
-            accessibilityRole="button"
-            hitSlop={12}
-            onPress={() => setNotificationsOpen(true)}
-            style={({ pressed }) => [styles.bell, pressed && styles.pressed]}>
-            <MaterialCommunityIcons
-              color={colors.textPrimary}
-              name={vm.notifications.length > 0 ? 'bell-badge-outline' : 'bell-outline'}
-              size={27}
-            />
-            {vm.notifications.length > 0 ? <View style={styles.redDot} /> : null}
-          </Pressable>
-        </View>
-
-        {vm.plans.isError ? null : <ProgressSegments week={vm.week} />}
-
-        <DashboardAsyncSection
-          isError={vm.feedback.isError}
-          onRetry={() => void vm.feedback.reload()}>
-          {vm.feedback.latest ? (
-            <FeedbackCard
-              feedback={vm.feedback.latest}
-              now={vm.now}
+      >
+        <View style={{ gap: 12 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <MeetPRMark />
+            <Text
+              style={{
+                ...font.mono(12),
+                letterSpacing: 0.72,
+                color: colors.textMuted,
+              }}
+            >
+              {t('student.dashboardTodayPresentation.copy004', [
+                new Intl.DateTimeFormat(getLocale(), {
+                  month: 'short',
+                  day: 'numeric',
+                }).format(vm.now),
+                new Intl.DateTimeFormat(getLocale(), {
+                  weekday: 'short',
+                }).format(vm.now),
+              ])}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Text
+              style={{
+                ...font.display(54),
+                color: colors.textPrimary,
+                flex: 1,
+              }}
+            >
+              {vm.title}
+            </Text>
+            {action.kind === 'waiting' ? (
+              <StatusBadge label={t('student.dashboardTodayScreen.copy005')} />
+            ) : vm.today.cursor?.exercises.length === 0 ? (
+              <StatusBadge label={t('student.dashboardTodayScreen.copy006')} />
+            ) : action.kind === 'cycleCompleted' ? (
+              <StatusBadge
+                tone="success"
+                label={t('student.dashboardTodayScreen.copy002')}
+              />
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
               onPress={openFeedback}
-            />
-          ) : null}
-        </DashboardAsyncSection>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{t('student.trainingCalendarView.copy006')}</Text>
-          {vm.week.status === 'loading' ? (
-            <ActivityIndicator color={colors.textTertiary} size="small" />
-          ) : null}
+              style={{
+                minWidth: 44,
+                minHeight: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MaterialCommunityIcons
+                name="message-outline"
+                size={25}
+                color={colors.textPrimary}
+              />
+              {vm.feedback.unreadCount > 0 ? (
+                <StatusBadge
+                  tone="gold"
+                  label={String(vm.feedback.unreadCount)}
+                />
+              ) : null}
+            </Pressable>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 5 }}>
+            {vm.today.segments.map((segment) => (
+              <GoldProgressBar
+                key={segment.day.id}
+                progress={
+                  segment.state === 'done'
+                    ? 1
+                    : segment.state === 'current'
+                      ? 0.5
+                      : 0
+                }
+                style={{ flex: segment.state === 'current' ? 1.5 : 1 }}
+              />
+            ))}
+          </View>
         </View>
         <DashboardAsyncSection
           isError={vm.plans.isError}
-          onRetry={() => void vm.plans.retry()}>
-          <WeekGrid
-            days={vm.week.status === 'loaded' ? vm.week.days : []}
-            onSelect={vm.selectDate}
-            selectedDate={vm.selectedDate}
-          />
-
-          {!vm.plans.isLoading ? (
+          message={vm.plans.message}
+          onRetry={() => void vm.plans.retry()}
+        >
+          {vm.plans.isLoading ? (
+            <DashboardSkeleton />
+          ) : action.kind === 'waiting' ? (
+            <DashboardPlanWaitingState
+              coachName={coachName}
+              week={1}
+              onMessage={openFeedback}
+            />
+          ) : (
             <>
               <DashboardAsyncSection
-                isError={vm.e1rm.isError}
-                onRetry={() => void vm.e1rm.retry()}>
-                <LiftCard
-                  day={vm.selectedDay}
-                  delta={vm.e1rm.delta}
-                  loading={vm.e1rm.isLoading}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(student)/growth-curve',
-                      params: { lift: vm.selectedDay?.lift?.name ?? t('student.growthCurveView.copy001') },
-                    })
-                  }
-                  periodLabel={vm.e1rm.periodLabel}
-                  point={vm.e1rm.point}
-                  trajectory={vm.e1rm.trajectory}
+                isError={vm.feedback.isError}
+                onRetry={() => void vm.feedback.reload()}
+              >
+                <FeedbackCard
+                  coachName={coachName}
+                  items={vm.feedback.items}
+                  pending={vm.feedback.unreadCount}
+                  now={vm.now}
+                  onPress={openFeedback}
                 />
               </DashboardAsyncSection>
-
-              <TrainingCTA cta={vm.cta} onPress={openTraining} />
-
-              {vm.canShift ? (
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={shiftPlan.isPending}
-                  onPress={confirmShift}
-                  style={({ pressed }) => [styles.shiftButton, pressed && styles.pressed]}>
-                  <Text style={styles.shiftLabel}>
-                    {shiftPlan.isPending ? /* TODO(i18n:drift) */ '顺延中…' : /* TODO(i18n:drift) */ '今天有事'}
+              <View style={{ gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                  }}
+                >
+                  <Eyebrow
+                    label={`${t('student.dashboardWeekCalendar.copy012')} · ${vm.today.segments.filter((s) => s.state === 'done').length}/${vm.today.segments.length}`}
+                  />
+                  <Text style={{ ...font.mono(10), color: colors.textMuted }}>
+                    {t('student.dashboardWeekCalendar.copy014')}
                   </Text>
-                </Pressable>
-              ) : null}
-              {vm.canUndoShift ? (
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={undoPlanShift.isPending}
-                  onPress={confirmUndoShift}
-                  style={({ pressed }) => [styles.undoShiftButton, pressed && styles.pressed]}>
-                  <Text style={styles.undoShiftLabel}>
-                    {undoPlanShift.isPending ? /* TODO(i18n:drift) */ '撤销中…' : /* TODO(i18n:drift) */ '撤销顺延'}
+                </View>
+                <WeekGrid
+                  days={vm.week.status === 'loaded' ? vm.week.days : []}
+                  selectedDayID={vm.selectedDayID}
+                  onSelect={vm.selectDay}
+                />
+              </View>
+              {!vm.today.completedToday && selected && vm.activePlan ? (
+                <Card style={{ padding: 16, gap: 6 }}>
+                  <Text
+                    style={{
+                      ...font.body(16, 'bold'),
+                      color: colors.textPrimary,
+                    }}
+                  >
+                    {dayName(selected, resolve)}
                   </Text>
-                </Pressable>
+                  <Text style={{ ...font.mono(12), color: colors.textMuted }}>
+                    {daySummary(selected)}
+                  </Text>
+                  <Text style={{ ...font.body(12), color: colors.textDim }}>
+                    {t('student.dashboardPrimaryAction.copy009', [
+                      recommendedDateText(
+                        recommendedDate(vm.activePlan, selected),
+                      ),
+                    ])}
+                  </Text>
+                </Card>
               ) : null}
             </>
-          ) : null}
+          )}
         </DashboardAsyncSection>
-
-        <ProfileMetrics
-          now={vm.now}
-          onRetry={() => void vm.retryProfile()}
-          profile={vm.profile ?? null}
-          profileError={vm.profileError}
-        />
+        {vm.profileLoading ? <DashboardSkeleton /> : profile}
+        {!vm.plans.isError &&
+        !vm.plans.isLoading &&
+        action.kind !== 'waiting' ? (
+          <>
+            <Eyebrow label={t('student.dashboardTodayScreen.copy003')} />
+            <DashboardAsyncSection
+              isError={vm.e1rm.isError}
+              onRetry={() => void vm.e1rm.retry()}
+            >
+              {vm.e1rm.isLoading ? (
+                <DashboardSkeleton />
+              ) : (
+                vm.e1rm.rails.map((rail) => (
+                  <Card key={rail.family} style={{ padding: 16, gap: 10 }}>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(student)/growth-curve',
+                          params: { family: rail.family },
+                        })
+                      }
+                    >
+                      <Text
+                        style={{
+                          color: colors.textPrimary,
+                          ...font.body(16, 'bold'),
+                        }}
+                      >
+                        {rail.name}
+                      </Text>
+                      <Text
+                        style={{
+                          color: colors.textPrimary,
+                          ...font.display(34),
+                        }}
+                      >
+                        {rail.point
+                          ? `${formatKg(rail.point.valueKg)} kg`
+                          : '—'}
+                      </Text>
+                      <Text
+                        style={{ color: colors.textMuted, ...font.mono(12) }}
+                      >
+                        {rail.periodLabel} · {formatDeltaKg(rail.delta)}
+                      </Text>
+                      <Sparkline
+                        data={rail.trajectory.map((point) => ({
+                          x: point.date.getTime(),
+                          y: point.valueKg,
+                        }))}
+                      />
+                    </Pressable>
+                  </Card>
+                ))
+              )}
+            </DashboardAsyncSection>
+            {action.kind === 'cycleCompleted' ? (
+              <Card style={{ padding: 20, gap: 12, alignItems: 'center' }}>
+                <MaterialCommunityIcons
+                  name="trophy-outline"
+                  color={colors.gold500}
+                  size={34}
+                />
+                <Text
+                  style={{
+                    color: colors.textPrimary,
+                    ...font.body(18, 'bold'),
+                  }}
+                >
+                  {t('student.dashboardPrimaryAction.copy006', [
+                    vm.activePlan?.plan_weeks ?? 0,
+                  ])}
+                </Text>
+                <Text style={{ color: colors.textMuted, ...font.mono(12) }}>
+                  {t('student.dashboardPrimaryAction.copy007', [
+                    vm.activePlan?.plan_weeks ?? 0,
+                    vm.activePlan?.days.length ?? 0,
+                  ])}
+                </Text>
+                <Text style={{ color: colors.textSecondary, ...font.body(14) }}>
+                  {t('student.dashboardPrimaryAction.copy008')}
+                </Text>
+              </Card>
+            ) : action.kind === 'completed' ? (
+              <Card style={{ padding: 20, gap: 14, alignItems: 'stretch' }}>
+                <MaterialCommunityIcons
+                  name="check-circle-outline"
+                  color={colors.success}
+                  size={34}
+                />
+                <Text
+                  style={{
+                    color: colors.textPrimary,
+                    ...font.body(18, 'bold'),
+                  }}
+                >
+                  {t('student.dashboardPrimaryAction.copy002', [
+                    dayCode(action.day),
+                  ])}
+                </Text>
+                {action.canUndo ? (
+                  <AppButton
+                    variant="link"
+                    disabled={undo.isPending}
+                    label={t('student.dashboardPrimaryAction.copy003')}
+                    onPress={() => {
+                      void undo
+                        .mutateAsync(action.day.id)
+                        .then(bumpCompletion)
+                        .catch((error) =>
+                          Alert.alert(
+                            t('student.dashboardView.copy001'),
+                            completionError(error, true),
+                          ),
+                        );
+                    }}
+                  />
+                ) : null}
+                {action.nextDay ? (
+                  <>
+                    <View
+                      style={{
+                        padding: 14,
+                        gap: 8,
+                        borderRadius: 12,
+                        backgroundColor: colors.bgInset,
+                      }}
+                    >
+                      <Eyebrow
+                        label={t('student.dashboardPrimaryAction.copy004', [
+                          dayCode(action.nextDay),
+                        ])}
+                      />
+                      <Text style={{ color: colors.textPrimary }}>
+                        {dayName(action.nextDay, resolve)}
+                      </Text>
+                      <Text style={{ color: colors.textMuted }}>
+                        {daySummary(action.nextDay)}
+                      </Text>
+                    </View>
+                    <AppButton
+                      variant="secondary"
+                      label={t('student.dashboardPrimaryAction.copy005')}
+                      onPress={() => openTraining(action.nextDay!)}
+                    />
+                  </>
+                ) : null}
+              </Card>
+            ) : null}
+          </>
+        ) : null}
       </ScrollView>
-
-      <NotificationCenterSheet
-        notifications={vm.notifications}
-        onClose={() => setNotificationsOpen(false)}
-        onFeedback={openFeedback}
-        onPlan={() => {
-          vm.dismissPlanNotification();
-          setNotificationsOpen(false);
-        }}
-        visible={notificationsOpen}
-      />
+      {!vm.plans.isLoading && !vm.plans.isError && vm.today.stickyStartDay ? (
+        <View
+          style={{
+            backgroundColor: colors.bgBase,
+            borderTopWidth: 1,
+            borderTopColor: colors.borderSubtle,
+            paddingHorizontal: 20,
+            paddingTop: 10,
+            paddingBottom: 8,
+          }}
+        >
+          <AppButton
+            label={t('student.dashboardPrimaryAction.copy001')}
+            sub={dayName(vm.today.stickyStartDay, resolve)}
+            icon="play"
+            onPress={() => openTraining(vm.today.stickyStartDay!)}
+          />
+        </View>
+      ) : null}
     </Screen>
   );
 }
-
-function ProgressSegments({ week }: { week: ReturnType<typeof useDashboardViewModel>['week'] }) {
+export function WeekGrid({
+  days,
+  selectedDayID,
+  onSelect,
+}: {
+  days: DashboardWeekDay[];
+  selectedDayID: string | null;
+  onSelect: (id: string) => void;
+}) {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  if (week.status === 'idle' || week.status === 'error') return null;
-  if (week.status === 'loading') {
-    return <View style={styles.progressSkeleton} />;
-  }
-  const trainingDays = week.days.filter((day) => day.day !== null);
-  if (trainingDays.length === 0) return null;
   return (
-    <View accessibilityLabel={/* TODO(i18n:missing) */ "本周训练进度"} style={styles.progressRow}>
-      {trainingDays.map((day) => (
-        <View key={day.date} style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              {
-                backgroundColor: statusColors(colors)[day.status],
-                width: `${Math.round(day.completion * 100)}%`,
-              },
-            ]}
-          />
-        </View>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+      {days.map(({ day, status, date }) => (
+        <Pressable
+          key={day.id}
+          accessibilityRole="button"
+          accessibilityLabel={`${dayCode(day)} ${recommendedDateText(date)}`}
+          accessibilityState={{ selected: selectedDayID === day.id }}
+          onPress={() => onSelect(day.id)}
+          style={{
+            minWidth: 64,
+            flex: 1,
+            minHeight: 58,
+            borderRadius: 12,
+            alignItems: 'center',
+            padding: 6,
+            gap: 4,
+            backgroundColor:
+              status === 'current'
+                ? colors.goldSoft
+                : status === 'done'
+                  ? colors.surfaceCard
+                  : colors.bgInset,
+            borderWidth: status === 'current' ? 1.5 : 0,
+            borderColor: colors.gold500,
+          }}
+        >
+          <Text
+            style={{
+              color:
+                status === 'done'
+                  ? colors.success
+                  : status === 'current'
+                    ? colors.gold500
+                    : colors.textGhost,
+            }}
+          >
+            {status === 'done' ? '✓' : status === 'current' ? '●' : '○'}
+          </Text>
+          <Text style={{ color: colors.textPrimary, ...font.mono(10) }}>
+            D{day.day_of_week}
+          </Text>
+          <Text style={{ color: colors.textMuted, ...font.mono(10) }}>
+            {recommendedDateText(date)}
+          </Text>
+        </Pressable>
       ))}
     </View>
   );
 }
-
-function FeedbackCard({
-  feedback,
-  now,
-  onPress,
-}: {
-  feedback: FeedbackItem;
-  now: Date;
-  onPress: () => void;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const eyebrow = feedback.day_date
-    ? `${t('student.dashboardFeedbackCard.copy003')} · ${chineseWeekday(feedback.day_date)}`
-    : t('student.dashboardFeedbackCard.copy003');
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      {({ pressed }) => (
-        <Card style={[styles.feedbackCard, pressed && styles.pressed]}>
-          <View style={styles.feedbackTop}>
-            {feedback.read_at === null ? <View style={styles.inlineDot} /> : null}
-            <Text style={styles.eyebrow}>{eyebrow}</Text>
-          </View>
-          <Text numberOfLines={3} style={styles.feedbackBody}>
-            {feedback.text}
-          </Text>
-          <Text style={styles.feedbackFooter}>
-            {t('student.dashboardView.copy003')} · {relativeFeedbackTime(feedback.posted_at, now)} {/* TODO(i18n:missing) */}· 在「成长」查看全部反馈 →
-          </Text>
-        </Card>
-      )}
-    </Pressable>
-  );
-}
-
-export function WeekGrid({
-  days,
-  selectedDate,
-  onSelect,
-}: {
-  days: DashboardWeekDay[];
-  selectedDate: string | null;
-  onSelect: (date: string) => void;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const ordered = [...days].sort((left, right) => {
-    const leftWeekday = mondayOffset(
-      new Date(`${left.date}T00:00:00Z`).getUTCDay() + 1,
-    );
-    const rightWeekday = mondayOffset(
-      new Date(`${right.date}T00:00:00Z`).getUTCDay() + 1,
-    );
-    return leftWeekday - rightWeekday;
-  });
-  if (ordered.length === 0) {
-    return <View style={styles.weekGridSkeleton} />;
-  }
-  return (
-    <View style={styles.weekGrid}>
-      {ordered.map((day) => {
-        const selected = day.date === selectedDate;
-        return (
-          <Pressable
-            accessibilityLabel={`${chineseWeekday(day.date)} ${day.lift?.name ?? (day.day ? t('student.studentRootView.copy002') : t('coach.execution.rest'))}`}
-            accessibilityRole="button"
-            key={day.date}
-            onPress={() => onSelect(day.date)}
-            style={({ pressed }) => [
-              styles.weekCell,
-              selected && styles.weekCellSelected,
-              pressed && styles.pressed,
-            ]}>
-            {day.status === 'complete' ? <View style={styles.completeTriangle} /> : null}
-            <Text style={[styles.weekday, selected && styles.selectedText]}>
-              {chineseWeekday(day.date)}
-            </Text>
-            <Text
-              style={[
-                styles.liftInitial,
-                {
-                  color: day.day
-                    ? statusColors(colors)[day.status]
-                    : colors.textTertiary,
-                },
-              ]}>
-              {day.lift?.initial ?? '·'}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 export function TrainingCTA({
   cta,
   onPress,
 }: {
-  cta: ReturnType<typeof useDashboardViewModel>['cta'];
+  cta: { interactive: boolean; label: string };
   onPress: () => void;
 }) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   return cta.interactive ? (
     <AppButton label={cta.label} onPress={onPress} />
-  ) : (
-    <View style={styles.restCTA}>
-      <Text style={styles.restLabel}>{cta.label}</Text>
-    </View>
-  );
+  ) : null;
 }
-
-function LiftCard({
-  day,
-  point,
-  periodLabel,
-  delta,
-  loading,
+function FeedbackCard({
+  coachName,
+  items,
+  pending,
+  now,
   onPress,
-  trajectory,
 }: {
-  day: DashboardWeekDay | null;
-  point: E1RMSample | null;
-  periodLabel: string;
-  delta: number;
-  loading: boolean;
+  coachName: string;
+  items: FeedbackItem[];
+  pending: number;
+  now: Date;
   onPress: () => void;
-  trajectory: readonly E1RMSample[];
 }) {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const lift = day?.lift;
-  const deltaColor =
-    delta > 0 ? colors.success : delta < 0 ? colors.danger : colors.textSecondary;
+  const [expanded, setExpanded] = useState(false);
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      {({ pressed }) => (
-        <Card style={[styles.liftCard, pressed && styles.pressed]}>
-          {point && lift ? (
-            <>
-              <View style={styles.liftTitleRow}>
-                <Text style={styles.liftTitle}>
-                  {lift.name} E1RM · {periodLabel}
-                </Text>
-                <MaterialCommunityIcons
-                  color={colors.textTertiary}
-                  name="chevron-right"
-                  size={22}
-                />
-              </View>
-              <View style={styles.numberRow}>
-                <Text style={styles.bigNumber}>{formatKg(point.valueKg)}</Text>
-                <Text style={styles.bigUnit}>KG</Text>
-              </View>
-              <Text style={[styles.delta, { color: deltaColor }]}>90 {t('student.dashboardProfileMetricsView.copy004')} {formatDeltaKg(delta)}</Text>
-              <View style={styles.sparkline}>
-                <Sparkline
-                  data={trajectory.map((sample) => ({
-                    x: sample.date.getTime(),
-                    y: sample.valueKg,
-                  }))}
-                />
-              </View>
-              <Text style={styles.liftFooter}>
-                {/* TODO(i18n:missing) */}选中 {chineseWeekday(day.date)} · {chineseMonthDay(day.date)}
-              </Text>
-            </>
-          ) : (
-            <View style={styles.liftEmpty}>
-              <View style={styles.liftTitleRow}>
-                <Text style={styles.liftTitle}>{/* TODO(i18n:missing) */}成长曲线</Text>
-                {loading ? (
-                  <ActivityIndicator color={colors.textTertiary} size="small" />
-                ) : (
-                  <MaterialCommunityIcons
-                    color={colors.textTertiary}
-                    name="chevron-right"
-                    size={22}
-                  />
-                )}
-              </View>
-              <Text style={styles.liftEmptyText}>
-                {lift ? /* TODO(i18n:missing) */ '练几次就有趋势了' : /* TODO(i18n:missing) */ '选中训练日查看对应成长曲线'}
-              </Text>
-            </View>
-          )}
-        </Card>
+    <Card style={{ padding: 16, gap: 12 }}>
+      <Eyebrow label={t('student.dashboardFeedbackCard.copy003')} />
+      {pending > 0 ? (
+        <StatusBadge
+          tone="gold"
+          label={t('student.dashboardFeedbackCard.copy004', [pending])}
+        />
+      ) : null}
+      {!items.length ? (
+        <Text style={{ color: colors.textMuted }}>
+          {t('student.dashboardFeedbackCard.copy007')}
+        </Text>
+      ) : (
+        (expanded ? items : items.slice(0, 1)).map((item) => (
+          <Pressable key={item.id} onPress={onPress}>
+            <Text style={{ color: colors.textPrimary, ...font.body(15) }}>
+              {item.text}
+            </Text>
+            <Text
+              style={{
+                color: colors.textMuted,
+                ...font.mono(11),
+                marginTop: 6,
+              }}
+            >
+              {coachName} · {relativeFeedbackTime(item.posted_at, now)}
+            </Text>
+          </Pressable>
+        ))
       )}
-    </Pressable>
+      {items.length > 1 ? (
+        <AppButton
+          variant="link"
+          label={
+            expanded
+              ? t('student.dashboardFeedbackCard.copy005')
+              : t('student.dashboardFeedbackCard.copy001', [items.length])
+          }
+          onPress={() => setExpanded(!expanded)}
+        />
+      ) : null}
+    </Card>
   );
 }
-
+export function DashboardPlanWaitingState({
+  coachName,
+  week,
+  onMessage,
+}: {
+  coachName: string;
+  week: number;
+  onMessage: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <Card style={{ padding: 20, gap: 14 }}>
+      <Text style={{ color: colors.textPrimary, ...font.body(18, 'bold') }}>
+        {t('student.dashboardPlanWaitingState.copy001', [coachName, week])}
+      </Text>
+      <Text style={{ color: colors.textMuted, ...font.body(14) }}>
+        {t('student.dashboardPlanWaitingState.copy002')}
+        {t('student.dashboardPlanWaitingState.copy003')}
+        {t('student.dashboardPlanWaitingState.copy004')}
+      </Text>
+      <AppButton
+        variant="secondary"
+        label={t('student.dashboardPlanWaitingState.copy005')}
+        onPress={onMessage}
+      />
+      <Eyebrow label={t('student.dashboardPlanWaitingState.copy006', [week])} />
+      {(
+        [
+          'student.dashboardPlanWaitingState.copy007',
+          'student.dashboardPlanWaitingState.copy008',
+          'student.dashboardPlanWaitingState.copy009',
+        ] as const
+      ).map((key) => (
+        <View
+          key={key}
+          style={{ flexDirection: 'row', justifyContent: 'space-between' }}
+        >
+          <Text style={{ color: colors.textSecondary }}>{t(key)}</Text>
+          <Text style={{ color: colors.textMuted }}>—</Text>
+        </View>
+      ))}
+    </Card>
+  );
+}
 export function ProfileMetrics({
   profile,
   now,
@@ -529,292 +659,48 @@ export function ProfileMetrics({
   onRetry: () => void;
 }) {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  if (profileError) {
-    return (
-      <DashboardAsyncSection isError onRetry={onRetry}>
-        {null}
-      </DashboardAsyncSection>
-    );
-  }
   const competitionDays =
     profile?.is_competing && profile.competition_date
       ? localCompetitionDays(profile.competition_date, now)
       : null;
+  const bodyWeightText = profile?.weight_kg
+    ? `${formatKg(Number(profile.weight_kg))} KG`
+    : '—';
   return (
-    <View style={styles.metricsRow}>
-      <Card style={styles.metricCard}>
-        <Text style={styles.metricLabel}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
-        <Text style={styles.metricValue}>
-          {profile?.weight_kg ? `${formatKg(Number(profile.weight_kg))} KG` : '—'}
-        </Text>
-        <Text style={styles.metricFooter}>{/* TODO(i18n:missing) */}资料档案</Text>
-      </Card>
-      {competitionDays !== null && competitionDays >= 0 ? (
-        <Card style={styles.metricCard}>
-          <Text style={styles.metricLabel}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
-          <Text style={styles.metricValue}>{competitionDays} {t('student.dashboardProfileMetricsView.copy004')}</Text>
+    <DashboardAsyncSection isError={profileError} onRetry={onRetry}>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Card
+          accessible
+          accessibilityLabel={t('student.dashboardProfileMetricsView.copy002', [
+            bodyWeightText,
+          ])}
+          style={{ flex: 1, padding: 16, gap: 8 }}
+        >
+          <Text style={{ color: colors.textMuted }}>
+            {t('student.dashboardProfileMetricsView.copy001')}
+          </Text>
+          <Text style={{ color: colors.textPrimary, ...font.display(24) }}>
+            {bodyWeightText}
+          </Text>
         </Card>
-      ) : null}
-    </View>
-  );
-}
-
-function NotificationCenterSheet({
-  visible,
-  notifications,
-  onClose,
-  onFeedback,
-  onPlan,
-}: {
-  visible: boolean;
-  notifications: DashboardNotification[];
-  onClose: () => void;
-  onFeedback: () => void;
-  onPlan: () => void;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <Modal
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="overFullScreen"
-      transparent
-      visible={visible}>
-      <Pressable accessibilityRole="button" onPress={onClose} style={styles.scrim}>
-        <Pressable onPress={(event) => event.stopPropagation()} style={styles.sheet}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{t('student.notifications')}</Text>
-            <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}>
-              <Text style={styles.done}>{t('student.readinessCheckinSheet.copy018')}</Text>
-            </Pressable>
-          </View>
-          {notifications.length === 0 ? (
-            <View style={styles.notificationEmpty}>
-              <MaterialCommunityIcons
-                color={colors.textTertiary}
-                name="bell-outline"
-                size={38}
-              />
-              <Text style={styles.notificationEmptyTitle}>{/* TODO(i18n:missing) */}暂无新通知</Text>
-              <Text style={styles.notificationEmptyBody}>{/* TODO(i18n:missing) */}新的反馈和计划会在这里出现</Text>
-            </View>
-          ) : (
-            notifications.map((notification) => {
-              if (notification.type === 'plan') {
-                return (
-                  <NotificationRow
-                    icon="clipboard-text-outline"
-                    key={notification.id}
-                    onPress={onPlan}
-                    subtitle={/* TODO(i18n:missing) */ `第 ${notification.weekIndex} 周计划已可查看`}
-                    title={t('student.studentBlackGoldChatView.copy020')}
-                  />
-                );
-              }
-              if (notification.type === 'feedback') {
-                return (
-                  <NotificationRow
-                    icon="message-text-outline"
-                    key={notification.id}
-                    onPress={onFeedback}
-                    subtitle={/* TODO(i18n:missing) */ "查看教练最近的训练反馈"}
-                    title={/* TODO(i18n:missing) */ `${notification.count} 条未读反馈`}
-                  />
-                );
-              }
-              return (
-                <NotificationRow
-                  icon="check-decagram-outline"
-                  key={notification.id}
-                  onPress={onClose}
-                  subtitle={/* TODO(i18n:missing) */ "查看教练给你的评估结果"}
-                  title={/* TODO(i18n:missing) */ "评估已完成"}
-                />
-              );
-            })
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function NotificationRow({
-  icon,
-  title,
-  subtitle,
-  onPress,
-}: {
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.notificationRow, pressed && styles.pressed]}>
-      <View style={styles.notificationIcon}>
-        <MaterialCommunityIcons color={colors.gold500} name={icon} size={22} />
+        {competitionDays !== null && competitionDays >= 0 ? (
+          <Card
+            accessible
+            accessibilityLabel={t('student.dashboardProfileMetricsView.copy005', [
+              competitionDays,
+            ])}
+            style={{ flex: 1, padding: 16, gap: 8 }}
+          >
+            <Text style={{ color: colors.textMuted }}>
+              {t('student.dashboardProfileMetricsView.copy003')}
+            </Text>
+            <Text style={{ color: colors.textPrimary, ...font.display(24) }}>
+              {competitionDays}{' '}
+              {t('student.dashboardProfileMetricsView.copy004')}
+            </Text>
+          </Card>
+        ) : null}
       </View>
-      <View style={styles.notificationText}>
-        <Text style={styles.notificationTitle}>{title}</Text>
-        <Text style={styles.notificationSubtitle}>{subtitle}</Text>
-      </View>
-      <MaterialCommunityIcons color={colors.textTertiary} name="chevron-right" size={21} />
-    </Pressable>
+    </DashboardAsyncSection>
   );
 }
-
-const createStyles = (colors: Colors) => StyleSheet.create({
-  content: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xxl },
-  heroRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  hero: { color: colors.textPrimary, ...font.display(36, 'black'), lineHeight: 40 },
-  bell: { borderRadius: radius.pill, padding: spacing.sm },
-  redDot: {
-    backgroundColor: colors.dangerFill,
-    borderColor: colors.bgBase,
-    borderRadius: radius.pill,
-    borderWidth: 2,
-    height: 10,
-    position: 'absolute',
-    right: 5,
-    top: 5,
-    width: 10,
-  },
-  pressed: { opacity: 0.72 },
-  progressRow: { flexDirection: 'row', gap: spacing.xs },
-  progressTrack: {
-    backgroundColor: colors.bgStack,
-    borderRadius: radius.pill,
-    flex: 1,
-    height: 6,
-    overflow: 'hidden',
-  },
-  progressFill: { borderRadius: radius.pill, height: 6 },
-  progressSkeleton: { backgroundColor: colors.bgStack, borderRadius: radius.pill, height: 6 },
-  feedbackCard: { gap: spacing.md, padding: spacing.base },
-  feedbackTop: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  inlineDot: { backgroundColor: colors.dangerFill, borderRadius: radius.pill, height: 8, width: 8 },
-  eyebrow: { color: colors.textSecondary, ...typography.caption, letterSpacing: 0.8 },
-  feedbackBody: { color: colors.textPrimary, ...typography.body },
-  feedbackFooter: { color: colors.textSecondary, ...typography.footnote },
-  sectionHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  sectionTitle: { color: colors.textPrimary, ...typography.headline },
-  errorRow: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceCard,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 48,
-    paddingHorizontal: spacing.base,
-  },
-  errorText: { color: colors.textTertiary, ...typography.footnote },
-  retryText: { color: colors.gold500, ...typography.footnote },
-  weekGrid: { flexDirection: 'row', gap: spacing.xs },
-  weekCell: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceCard,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    flex: 1,
-    gap: spacing.xs,
-    minHeight: 62,
-    overflow: 'hidden',
-    paddingVertical: spacing.sm,
-  },
-  weekCellSelected: { backgroundColor: colors.goldSoft, borderColor: colors.gold500 },
-  completeTriangle: {
-    borderLeftColor: 'transparent',
-    borderLeftWidth: 9,
-    borderTopColor: colors.success,
-    borderTopWidth: 9,
-    height: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    width: 0,
-  },
-  weekday: { color: colors.textSecondary, ...typography.caption },
-  selectedText: { color: colors.textPrimary },
-  liftInitial: { ...font.display(18) },
-  weekGridSkeleton: { backgroundColor: colors.surfaceCard, borderRadius: radius.md, height: 62 },
-  liftCard: { minHeight: 150, padding: spacing.base },
-  liftTitleRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  liftTitle: { color: colors.textSecondary, ...typography.footnote },
-  numberRow: { alignItems: 'baseline', flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  bigNumber: { color: colors.textPrimary, ...typography.displayNumeral },
-  bigUnit: { color: colors.textPrimary, ...typography.displayUnit },
-  delta: { ...font.body(13, 'semibold') },
-  sparkline: { marginTop: spacing.md },
-  liftFooter: { color: colors.textTertiary, marginTop: spacing.md, ...typography.caption },
-  liftEmpty: { flex: 1, gap: spacing.md, justifyContent: 'space-between' },
-  liftEmptyText: { color: colors.textTertiary, ...typography.body },
-  restCTA: {
-    alignItems: 'center',
-    backgroundColor: colors.surfaceCard,
-    borderRadius: radius.md,
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  restLabel: { color: colors.textTertiary, ...typography.bodyEmphasis },
-  shiftButton: { alignItems: 'center', backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, borderRadius: radius.lg, borderWidth: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
-  shiftLabel: { color: colors.textSecondary, ...typography.bodyEmphasis },
-  undoShiftButton: { alignItems: 'center', backgroundColor: colors.goldSoft, borderRadius: radius.lg, justifyContent: 'center', minHeight: 44, paddingHorizontal: spacing.lg },
-  undoShiftLabel: { color: colors.gold500, ...typography.bodyEmphasis },
-  metricsRow: { flexDirection: 'row', gap: spacing.md },
-  metricCard: { flex: 1, minHeight: 96, padding: spacing.base },
-  metricLabel: { color: colors.textSecondary, ...typography.footnote },
-  metricValue: { color: colors.textPrimary, marginTop: spacing.sm, ...typography.headline },
-  metricFooter: { color: colors.textTertiary, marginTop: spacing.xs, ...typography.caption },
-  scrim: { backgroundColor: 'rgba(0,0,0,0.62)', flex: 1, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.surfaceCard,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    minHeight: 290,
-    paddingBottom: spacing.xl,
-    paddingHorizontal: spacing.base,
-  },
-  sheetHeader: {
-    alignItems: 'center',
-    borderBottomColor: colors.borderDefault,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.base,
-  },
-  sheetTitle: { color: colors.textPrimary, ...typography.headline },
-  done: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  notificationEmpty: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxl },
-  notificationEmptyTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  notificationEmptyBody: { color: colors.textTertiary, ...typography.footnote },
-  notificationRow: {
-    alignItems: 'center',
-    borderBottomColor: colors.borderDefault,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingVertical: spacing.base,
-  },
-  notificationIcon: {
-    alignItems: 'center',
-    backgroundColor: colors.goldSoft,
-    borderRadius: radius.pill,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  notificationText: { flex: 1, gap: spacing.xs },
-  notificationTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  notificationSubtitle: { color: colors.textSecondary, ...typography.footnote },
-});

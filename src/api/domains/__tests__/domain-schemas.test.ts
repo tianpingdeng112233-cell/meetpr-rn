@@ -13,7 +13,6 @@ import {
 import {
   PlanDetailSchema,
   PlansResponseSchema,
-  ShiftPlanResponseSchema,
 } from '../plans';
 import {
   ReadinessCheckinSchema,
@@ -61,7 +60,7 @@ const planSummary = {
 };
 
 describe('plans snake_case schemas', () => {
-  test('parses list, detail, shift response, and the documented empty state', () => {
+  test('parses list, detail, and the documented empty state', () => {
     expect(PlansResponseSchema.parse({ plans: [] })).toEqual({ plans: [] });
     expect(PlansResponseSchema.parse({ plans: [planSummary] }).plans[0].coach_id).toBe(
       COACH_ID,
@@ -113,13 +112,7 @@ describe('plans snake_case schemas', () => {
       coach_note: null,
     });
 
-    expect(
-      ShiftPlanResponseSchema.parse({
-        batch_id: ATTACHMENT_ID,
-        shifted_days: [{ day_id: DAY_ID, shifted_to_date: '2026-07-20' }],
-        total_offset_days: 1,
-      }).shifted_days[0].shifted_to_date,
-    ).toBe('2026-07-20');
+
   });
 });
 

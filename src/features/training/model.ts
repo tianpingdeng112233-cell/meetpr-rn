@@ -4,7 +4,7 @@ import type { SetLog } from '@/api/domains/sets';
 export type TrainingLoadState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'rest' }
+  | { kind: 'noPlan' }
   | { kind: 'error'; error: unknown }
   | { kind: 'loaded'; planDay: PlanDay; drafts: WorkoutSetDraft[] }
   | {
@@ -32,6 +32,7 @@ export type WorkoutSetDraft = {
 export type WeightSuggestion = {
   weightKg: number;
   label: string;
+  percentage?: import('@/domain/e1rm/pct-anchor').PctAnchorResolution;
 } | null;
 
 export type SessionReflection = {
@@ -45,6 +46,5 @@ export type SessionReview = {
   reflection: SessionReflection;
 };
 
-export type CalendarDayStatus = 'notStarted' | 'partial' | 'complete' | 'noPlan';
 
 export type ReadinessGateState = 'unknown' | 'needed' | 'done' | 'skippedToday';
