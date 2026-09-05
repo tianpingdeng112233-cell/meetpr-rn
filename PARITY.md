@@ -88,6 +88,9 @@
 | InviteCodes | ☐ | |
 | Planning / PlanningWorkspace | — | W2-a 按 coach-v2 §7 删除教练 planning tab/路由；v1 无 app 排计划入口 |
 | MyProfile | ☐ | |
+| InviteCodes | 🔨 | W2-d:永久码显式生成/重生成、单次/时限 7·30·自定义 1–365、五态/复制/左滑撤销、写后重拉;lint/tsc/46 suites·322 Jest 通过。expo-clipboard 待 Claude 安装并接 adapter;ADB socket 被拒,AVD 截图待补 |
+| Planning / PlanningWorkspace | ☐ | 范围=iOS 实际保留功能,开工前现场核实,不扩权 |
+| MyProfile | 🔨 | W2-d:姓名/邀请码卡三态、裸码复制+2 s toast、Help 四 FAQ/禁用联系、Privacy 三行日期、版本/登出确认与 session 接线;JS bundle 导出通过。剪贴板原生依赖与 AVD 验收待补 |
 | Evaluation | — | 同上封存 |
 
 ## 视频/图表/打磨(W3)
