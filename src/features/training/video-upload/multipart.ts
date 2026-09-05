@@ -1,5 +1,5 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import { fetch } from 'expo/fetch';
+import * as FileSystem from 'expo-file-system/legacy';
 import type { UploadCompleteRequest } from '@/api/domains/uploads';
 import {
   VIDEO_PART_SIZE_BYTES,
@@ -78,6 +78,7 @@ export async function uploadFileParts(
         );
         let timeout: ReturnType<typeof setTimeout> | undefined;
         let timedOut = false;
+        let cancelUpload: (() => void) | undefined;
         try {
           const handle = file.open();
           try {
@@ -86,19 +87,38 @@ export async function uploadFileParts(
           } finally {
             handle.close();
           }
-          timeout = setTimeout(() => {
-            timedOut = true;
-            controller.abort();
-          }, 60_000);
-          const response = await fetch(part.url, {
-            method: 'PUT',
-            body: temporary,
-            signal: controller.signal,
-            // No headers: the OSS presigned URL is signed without Content-Type (sending one yields
-            // SignatureDoesNotMatch), and expo/fetch on Android rejects a plain-object headers init.
+          const task = FileSystem.createUploadTask(part.url, temporary.uri, {
+            httpMethod: 'PUT',
+            uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+            // OSS signs without Content-Type. expo/fetch can infer a null header from File
+            // bodies that Android NativeRequest rejects, even when headers are omitted.
           });
-          if (!response.ok) throw new PartUploadError(response.status);
-          const etag = response.headers.get('etag');
+          const cancelled = new Promise<never>((_resolve, reject) => {
+            let cancellationRequested = false;
+            cancelUpload = () => {
+              if (cancellationRequested) return;
+              cancellationRequested = true;
+              // Do not depend on uploadAsync settling after native cancellation.
+              void task.cancelAsync().then(
+                () => reject(new UploadCancelledError()),
+                reject,
+              );
+            };
+            controller.signal.addEventListener('abort', cancelUpload, { once: true });
+            timeout = setTimeout(() => {
+              timedOut = true;
+              cancelUpload!();
+            }, 60_000);
+          });
+          const response = await Promise.race([task.uploadAsync(), cancelled]);
+          if (timedOut) throw new PartUploadError(408);
+          if (controller.signal.aborted) throw new UploadCancelledError();
+          if (!response) throw new Error('Part upload returned no response');
+          if (response.status < 200 || response.status >= 300)
+            throw new PartUploadError(response.status);
+          const etag = Object.entries(response.headers).find(
+            ([name]) => name.toLowerCase() === 'etag',
+          )?.[1];
           if (!etag) throw new Error('Part response omitted ETag');
           const completed = { part_number: part.part_number, etag };
           await options.onPart?.(completed);
@@ -108,6 +128,8 @@ export async function uploadFileParts(
           throw timedOut ? new PartUploadError(408) : error;
         } finally {
           clearTimeout(timeout);
+          if (cancelUpload)
+            controller.signal.removeEventListener('abort', cancelUpload);
           try {
             if (temporary.exists) temporary.delete();
           } catch (cause) {

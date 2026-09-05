@@ -43,7 +43,14 @@ jest.mock('react-native-compressor', () => ({
     },
   },
 }));
-jest.mock('expo/fetch', () => ({ fetch: jest.fn(async () => ({ ok: true, headers: { get: () => 'etag' } })) }));
+const mockUploadAsync = jest.fn(async () => ({ status: 200, headers: { ETag: 'etag' }, body: '' }));
+jest.mock('expo-file-system/legacy', () => ({
+  FileSystemUploadType: { BINARY_CONTENT: 0 },
+  createUploadTask: () => ({
+    uploadAsync: () => mockUploadAsync(),
+    cancelAsync: async () => {},
+  }),
+}));
 jest.mock('@/api/domains/uploads', () => ({ uploadsRepository: {
   initiate: jest.fn(async () => ({ attachment_id: 'attachment', upload_id: 'upload', part_urls: [{ part_number: 1, url: 'https://upload.test/1' }] })),
   complete: jest.fn(async () => ({ id: 'attachment' })),
@@ -88,6 +95,21 @@ jest.mock('expo-file-system', () => {
 
 const id = { studentId: 'student', stableSetId: 'set' };
 const source: SelectedVideo = { uri: 'file:///cache/ImagePicker/sample.mp4', width: 1280, height: 720, durationMs: 4000, mimeType: 'video/mp4', fileName: 'sample.mp4', codec: null, rotationDegrees: 0 };
+test.each([
+  new Error("fetch failed: Call to function 'NativeRequest.start' has been rejected. Cannot cast value for field 'headers'"),
+  new TypeError('Native upload arguments cannot be cast'),
+])('native upload rejection remains retryable and persists its message: $message', async (error) => {
+  mockUploadAsync.mockRejectedValueOnce(error);
+  await videoUploadManager.attach(id, source, async () => 'set-log');
+  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({
+    status: 'waiting', retry: { failure: 'network', failureCount: 1 }, errorMessage: error.message,
+  });
+  resetVideoUploadStoreForTests();
+  await useVideoUploadStore.getState().hydrate();
+  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({
+    status: 'waiting', retry: { failure: 'network', failureCount: 1 }, errorMessage: error.message,
+  });
+});
 afterEach(() => {
   jest.restoreAllMocks();
 });
@@ -242,6 +264,6 @@ test('a late startup hydration cannot roll the retained source back to a stale p
 test('an ensureSetLog transport failure still uses network backoff', async () => {
   await videoUploadManager.attach(id, source, async () => { throw new TypeError('Network request failed'); });
   expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({
-    status: 'waiting', retry: { failure: 'network' }, errorMessage: null,
+    status: 'waiting', retry: { failure: 'network' }, errorMessage: 'Network request failed',
   });
 });

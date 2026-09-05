@@ -544,3 +544,20 @@ Final exact requested commands (PATH includes /opt/homebrew/bin):
 6. **清理与验证**:移除全部 `[DEBUG-w1h-r2]` 临时探针,未留下 throwaway 脚本。`npm run lint` 0 errors/0 warnings;`npx tsc --noEmit` 无诊断;`npx jest` **44 suites / 299 tests 全通过**,原有 43 套保留。最终日志 `/private/tmp/w1h-r2-{lint,tsc,jest}.log`;`git diff --check` 干净。PARITY 更新 R2 交付记录,仍标设备验收待补。
 
 **原生验收限制**:`npx expo run:android --device meetpr --no-install` 实际运行,ADB start-server 因不能建立 smartsocket listener (`Operation not permitted`) exit 255,CLI 未能安装本轮代码(`/private/tmp/w1h-r2-android.log`)。本轮未取得 AVD 截图,也未声称真实 Global 上传成功。仍需在可用 ADB 环境重走用户 100 kg/空重量两条选片路径,核验 documents 副本存在、没有 unhandled copy rejection、上传/可读校验错误和 Retry 行为。
+
+### R3 — Android 分片 PUT 的 NativeRequest headers 转换拒绝 — 2026-09-05
+
+仅修改本 worktree 的 `multipart.ts`、`manager.ts`、对应两份测试与本日志。未 commit/push、安装依赖/skills、执行 code-review 或修改协议/DTO;按本卡范围未改 PARITY。
+
+- **现场根因与对照证据（用户提供，本轮未重放真实预签名 URL）**：AVD integration/w1 dev bundle 已能 initiate 并写出第一片 350912 B，随后 `expo/fetch` 的 File body 在 `NativeRequest.start` 入参转换阶段立即被拒：`headers` 的数组元素无法转换为 Kotlin `Pair<String,String>`，含 null 值；即使完全省略 headers 仍复现。null 疑似来自 File body 的 Content-Type 推导，不能把 R2 的“去掉显式 header”当作完整修复。宿主机同一预签名 URL，`curl -X PUT --data-binary @file` 不带 Content-Type 得到 **200 + ETag**，加 `content-type: application/octet-stream` 得到 **403 SignatureDoesNotMatch**；AVD Chrome 能打开同域名并收到 AccessDenied XML。证据指向请求进入网络之前的原生参数转换失败，不能解释为域名不可达。
+- **SDK 核对与替换原因**：已读 Expo v57.0.0 总览及 [FileSystem legacy 文档](https://docs.expo.dev/versions/v57.0.0/sdk/filesystem-legacy/)。本轮开始时本地版本为 expo **57.0.7**、expo-modules-core **57.0.6**、expo-file-system **57.0.6**。legacy Android `createRequestBody` 的 BINARY_CONTENT 分支使用 `file.asRequestBody(null)`，仅从 `options.headers` 添加显式头。因此改为 `createUploadTask(part.url, temporary.uri, { httpMethod: 'PUT', uploadType: FileSystemUploadType.BINARY_CONTENT })`，完全不传 headers，绕开 expo/fetch File body 的 NativeRequest 参数组装。
+- **响应与取消**：按 status 的 `[200,300)` 判断成功，其余抛 `PartUploadError(status)`；ETag 名称大小写不敏感，值原样保留，缺失仍抛错。60 s 到期调用 `cancelAsync()` 并归为 `PartUploadError(408)`；外部 signal 和同批 worker 失败通过内部 abort 取消在途任务。取消 Promise 与 uploadAsync 竞争，避免 native 取消已完成但 uploadAsync 不结算时挂住；取消 rejection 有处理，finally 移除监听/定时器并回收临时片。5 MiB 切片、并发 3、逐片 ETag 持久化、跳过已完成片与 403 重新 initiate 保持原流程。
+- **错误诊断落盘**：`classify()` 分类规则不变；manager 在分类后的 catch 中把非 HTTP、非超时/取消的 network 类 Error（包括 native 调用拒绝和 TypeError）写入 `record.errorMessage`，随后沿用 waiting dispatch 一并持久化。使用不可变 store 更新，不制造瞬时 failed 状态、不扩展 model/DTO；确定性失败原有用户文案保持。旧 ensureSetLog 网络 TypeError 测试仅将 errorMessage 的 null 预期改为实际消息，仍断言 waiting/network。
+- **先红后绿**：首个 PUT 用例让旧 expo/fetch 替身抛现场 NativeRequest headers 拒绝，实际红；切到 legacy 后绿。ETag 小写/混合大小写先因缺 ETag 红，再绿；60 s 与 abort 用例先因 cancelAsync 调用数为 0 红，再绿；manager 两类错误先因 errorMessage 为 null 红，再验证 waiting/network 和冷 hydration 后消息保留。另覆盖无 headers 的 PUT 参数、200 + ETag/etag/eTaG、199/300/403/500 错误状态、缺 ETag、成功/失败/取消后临时片回收。最后一次依赖可用时 `npx jest src/features/training/video-upload --runInBand`：**5 suites / 59 tests 全通过**，原有 47 项全部保留。
+
+验证结果与环境阻断：
+- `npm run lint`：exit 0，无诊断。
+- `npx jest`：**43 suites 通过 / 1 suite 加载失败，310 tests 通过**；失败为未修改的 `src/analytics/__tests__/root-layout.test.tsx` 无法解析 `@expo-google-fonts/archivo/800ExtraBold`。日志 `/private/tmp/w1h-r3-jest.log`。
+- `npx tsc --noEmit`：exit 2，仅报未修改的 `src/app/_layout.tsx:4–5` 无法解析 Archivo `800ExtraBold` / `900Black`。日志 `/private/tmp/w1h-r3-tsc.log`。
+- 本 worktree `node_modules -> ../meetpr-rn/node_modules`。验证期间共享依赖发生外部变化：Archivo 于本机 05:52 变成目标含多个包参数的失效 symlink；随后定向 Jest 重跑又无法解析 expo-notifications / expo-localization（2 suites 无法加载、其余 3 suites / 26 tests 通过）。本轮没有执行任何安装或修改共享 node_modules；不能宣称最终全仓 Jest / tsc 绿，需共享依赖恢复后重新运行上述检查。
+- 使用指定 PATH/JAVA_HOME/ANDROID_HOME 运行 `EXPO_OFFLINE=1 CI=1 npx expo run:android --device meetpr --no-install --no-bundler`，ADB start-server 因 `could not install *smartsocket* listener: Operation not permitted` exit 255，未能安装/取得截图。日志 `/private/tmp/w1h-r3-android.log`。真实 Global 分片 PUT + ETag + complete 仍待 AVD 现场复验。

@@ -8,7 +8,7 @@ import {
 } from '../store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { runPreparedVideoUpload } from '../upload-runner';
-import { PartUploadError, uploadFileParts } from '../multipart';
+import { PartUploadError, UploadCancelledError, uploadFileParts } from '../multipart';
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual(
     '@react-native-async-storage/async-storage/jest/async-storage-mock',
@@ -134,13 +134,41 @@ const mockFetch = jest.fn<(...args: unknown[]) => Promise<unknown>>();
 jest.mock('expo/fetch', () => ({
   fetch: (...args: unknown[]) => mockFetch(...args),
 }));
+const mockUploadAsync = jest.fn<() => Promise<unknown>>();
+const mockCancelAsync = jest.fn(async () => {});
+const mockCreateUploadTask = jest.fn((..._args: unknown[]) => ({
+  uploadAsync: mockUploadAsync,
+  cancelAsync: mockCancelAsync,
+}));
+jest.mock('expo-file-system/legacy', () => ({
+  FileSystemUploadType: { BINARY_CONTENT: 0 },
+  createUploadTask: (...args: unknown[]) => mockCreateUploadTask(...args),
+}));
+test.each(['ETag', 'etag', 'eTaG'])('PUT uploads the temporary URI without headers and returns %s', async (header) => {
+  mockFiles.clear();
+  mockFiles.set('file:///source', 350912);
+  mockCreateUploadTask.mockClear();
+  mockUploadAsync.mockReset().mockResolvedValue({
+    status: 200, headers: { [header]: '"part-etag"' }, body: '',
+  });
+  mockFetch.mockRejectedValue(new Error("fetch failed: Call to function 'NativeRequest.start' has been rejected. Cannot cast value for field 'headers'"));
+  await expect(uploadFileParts('file:///source', session.part_urls, {
+    signal: new AbortController().signal,
+    onProgress: () => {},
+  })).resolves.toEqual([{ part_number: 1, etag: '"part-etag"' }]);
+  expect(mockCreateUploadTask).toHaveBeenCalledWith(
+    'https://part/1', expect.stringMatching(/^file:\/\/\/cache\/video-parts\/.+-1\.part$/),
+    { httpMethod: 'PUT', uploadType: 0 },
+  );
+  expect([...mockFiles.keys()]).toEqual(['file:///source']);
+});
 test.each(['success', 'delete', 'terminal'])(
   'temporary parts are reclaimed on %s and original survives',
   async (path) => {
     mockFiles.clear();
     mockFiles.set('file:///source', 100);
     const controller = new AbortController();
-    mockFetch.mockReset().mockImplementation(async () => {
+    mockUploadAsync.mockReset().mockImplementation(async () => {
       expect(
         [...mockFiles.keys()].some((uri) => uri.includes('video-parts')),
       ).toBe(true);
@@ -151,7 +179,7 @@ test.each(['success', 'delete', 'terminal'])(
       return {
         ok: path === 'success',
         status: path === 'success' ? 200 : 400,
-        headers: { get: () => 'etag' },
+        headers: { ETag: 'etag' }, body: '',
       };
     });
     const result = uploadFileParts('file:///source', session.part_urls, {
@@ -161,10 +189,74 @@ test.each(['success', 'delete', 'terminal'])(
     if (path === 'success')
       await expect(result).resolves.toEqual([{ part_number: 1, etag: 'etag' }]);
     else await expect(result).rejects.toBeDefined();
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockUploadAsync).toHaveBeenCalledTimes(1);
     expect([...mockFiles.keys()]).toEqual(['file:///source']);
   },
 );
+test('a part timeout cancels the native task and rejects with HTTP 408', async () => {
+  jest.useFakeTimers();
+  try {
+    mockFiles.clear();
+    mockFiles.set('file:///source', 100);
+    // Native cancellation can settle independently of uploadAsync.
+    mockUploadAsync.mockReset().mockImplementation(() => new Promise(() => {}));
+    mockCancelAsync.mockClear();
+    const pending = uploadFileParts('file:///source', session.part_urls, {
+      signal: new AbortController().signal,
+      onProgress: () => {},
+    });
+    const outcome = pending.catch((error: unknown) => error);
+    await jest.advanceTimersByTimeAsync(59_999);
+    expect(mockCancelAsync).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1);
+    expect(mockCancelAsync).toHaveBeenCalledTimes(1);
+    const error = await outcome;
+    expect(error).toBeInstanceOf(PartUploadError);
+    expect(error).toMatchObject({ status: 408 });
+    expect([...mockFiles.keys()]).toEqual(['file:///source']);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+test('external abort cancels the native task and reclaims the temporary part', async () => {
+  mockFiles.clear();
+  mockFiles.set('file:///source', 100);
+  mockUploadAsync.mockReset().mockImplementation(() => new Promise(() => {}));
+  mockCancelAsync.mockClear();
+  const controller = new AbortController();
+  const pending = uploadFileParts('file:///source', session.part_urls, {
+    signal: controller.signal,
+    onProgress: () => {},
+  });
+  const outcome = pending.catch((error: unknown) => error);
+  controller.abort();
+  expect(mockCancelAsync).toHaveBeenCalledTimes(1);
+  expect(await outcome).toBeInstanceOf(UploadCancelledError);
+  expect([...mockFiles.keys()]).toEqual(['file:///source']);
+});
+test.each([199, 300, 403, 500])('HTTP %s rejects with PartUploadError and reclaims the part', async (status) => {
+  mockFiles.clear();
+  mockFiles.set('file:///source', 100);
+  mockUploadAsync.mockReset().mockResolvedValue({ status, headers: {}, body: '' });
+  const error = await uploadFileParts('file:///source', session.part_urls, {
+    signal: new AbortController().signal,
+    onProgress: () => {},
+  }).catch((error: unknown) => error);
+  expect(error).toBeInstanceOf(PartUploadError);
+  expect(error).toMatchObject({ status });
+  expect([...mockFiles.keys()]).toEqual(['file:///source']);
+});
+test('a successful HTTP response without ETag still rejects and reclaims the part', async () => {
+  mockFiles.clear();
+  mockFiles.set('file:///source', 100);
+  mockUploadAsync.mockReset().mockResolvedValue({ status: 200, headers: {}, body: '' });
+  await expect(uploadFileParts('file:///source', session.part_urls, {
+    signal: new AbortController().signal,
+    onProgress: () => {},
+  })).rejects.toThrow('Part response omitted ETag');
+  expect([...mockFiles.keys()]).toEqual(['file:///source']);
+});
 test('cold resume sends only missing parts and persists retry window unchanged', async () => {
   const dispatch = useVideoUploadStore.getState().dispatch;
   const retry = {
@@ -182,10 +274,11 @@ test('cold resume sends only missing parts and persists retry window unchanged',
   );
   mockFiles.clear();
   mockFiles.set('file:///source', 5 * 1024 * 1024 + 100);
-  mockFetch.mockReset().mockResolvedValue({
+  mockCreateUploadTask.mockClear();
+  mockUploadAsync.mockReset().mockResolvedValue({
     ok: true,
     status: 200,
-    headers: { get: () => 'etag-2' },
+    headers: { ETag: 'etag-2' }, body: '',
   });
   const result = await uploadFileParts(
     'file:///source',
@@ -203,7 +296,7 @@ test('cold resume sends only missing parts and persists retry window unchanged',
     { part_number: 1, etag: 'etag-1' },
     { part_number: 2, etag: 'etag-2' },
   ]);
-  expect(mockFetch.mock.calls.map((call) => call[0])).toEqual([
+  expect(mockCreateUploadTask.mock.calls.map((call) => call[0])).toEqual([
     'https://part/2',
   ]);
 });
@@ -273,11 +366,11 @@ test('5 MiB chunks use at most three PUTs concurrently', async () => {
   mockFiles.clear();
   mockFiles.set('file:///source', 3 * 5 * 1024 * 1024 + 100);
   const releases: (() => void)[] = [];
-  mockFetch.mockReset().mockImplementation(
+  mockUploadAsync.mockReset().mockImplementation(
     () =>
       new Promise((resolve) => {
         releases.push(() =>
-          resolve({ ok: true, status: 200, headers: { get: () => 'etag' } }),
+          resolve({ ok: true, status: 200, headers: { ETag: 'etag' }, body: '' }),
         );
       }),
   );
