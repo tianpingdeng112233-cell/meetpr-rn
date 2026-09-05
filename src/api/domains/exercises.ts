@@ -21,7 +21,9 @@ export const ExerciseSchema = z.object({
   competition_stance: z.string().nullable(),
   muscle_groups: z.array(z.string()).nullable(),
   equipment: z.array(z.string()).nullable(),
-  movement_pattern: z.string().nullable(),
+  // Backend now serialises movement_pattern as an array (staging 2026-08); accept the
+  // legacy single string too so an older backend never breaks the whole catalog.
+  movement_pattern: z.union([z.array(z.string()), z.string()]).nullable(),
   created_by_coach_id: UuidSchema.nullable(),
   created_at: TimestampSchema,
 });
