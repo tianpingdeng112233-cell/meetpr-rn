@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { AppButton, Card, font, useColors } from '@/design';
-import { getLocale, t } from '@/i18n';
+import { t } from '@/i18n';
 
-import { E1RMChart } from './E1RMChart';
+import { GrowthE1RMChart } from './GrowthE1RMChart';
+import { GrowthFormingTrendChart } from './GrowthFormingTrendChart';
+import { GrowthZeroGhostChart } from './GrowthZeroGhostChart';
 import { growthRangeLabel, growthSnapshot, LIFT_PRESENTATION, TREND_UNLOCK_THRESHOLD, type GrowthTimeRange } from './model';
 import type { GrowthCurve } from './types';
 
@@ -29,16 +31,21 @@ export function GrowthE1RMCard({ curve, isZeroTraining, onToday }: { curve: Grow
       <View style={{ flex: 1 }} />
       {snapshot.state === 'formingProgress' ? <Text style={{ ...font.body(12), color: colors.textMuted }}>{t('student.growthE1Rmcard.copy003')}</Text> : snapshot.state === 'chart' && delta !== null ? <Text style={{ ...font.mono(13, 'bold'), color: delta < 0 ? colors.danger : colors.success }}>{delta < 0 ? '−' : '+'}{Math.abs(delta).toFixed(1)}</Text> : null}
     </View>
-    {snapshot.state === 'chart' ? <E1RMChart samples={snapshot.samples} rawEligiblePoints={snapshot.rawEligiblePoints} /> : snapshot.state === 'formingWindowSparse' ? <Text style={{ ...font.body(13), color: colors.textMuted, paddingVertical: 28 }}>{t('student.growthScreenPresentation.copy004').replace('{window}', rangeLabel)}</Text> : <>
-      <E1RMChart samples={[]} rawEligiblePoints={[]} placeholder={snapshot.state} />
-      {snapshot.state === 'zero' ? <>
-        <Text style={{ ...font.body(14, 'semibold'), color: colors.textSecondary }}>{t('student.growthEmptyStates.copy006')}</Text>
-        <Text style={{ ...font.body(12), color: colors.textMuted }}>{t('student.growthEmptyStates.copy008')}</Text>
-        {curve.family === 'squat' && isZeroTraining ? <AppButton label={t('student.growthEmptyStates.copy009')} onPress={onToday} /> : null}
-      </> : <>
-        <Text style={{ ...font.body(13), color: colors.textSecondary }}>{t('student.growthEmptyStates.copy003')}<Text style={{ color: colors.goldText }}>{snapshot.eligibleDataPointCount}</Text>{t('student.growthEmptyStates.copy004')}<Text style={{ color: colors.goldText }}>{remaining}</Text>{t(remaining === 1 ? 'student.growthEmptyStates.copy005.one' : 'student.growthEmptyStates.copy005', [name])}</Text>
-        {snapshot.latestRecordDate ? <Text style={{ ...font.mono(11), color: colors.textMuted }}>{new Intl.DateTimeFormat(getLocale(), { month: 'short', day: 'numeric' }).format(snapshot.latestRecordDate)}</Text> : null}
-      </>}
-    </>}
+    {snapshot.state === 'chart' ? <GrowthE1RMChart samples={snapshot.samples} rawEligiblePoints={snapshot.rawEligiblePoints} /> : snapshot.state === 'formingWindowSparse' ? <View style={{ height: 126, justifyContent: 'center' }}>
+      <Text style={{ ...font.body(13), color: colors.textMuted, textAlign: 'center' }}>{t('student.growthScreenPresentation.copy004').replace('{window}', rangeLabel)}</Text>
+    </View> : snapshot.state === 'zero' ? <View style={{ height: 228, gap: 10, alignItems: 'center', justifyContent: 'center' }}>
+      <GrowthZeroGhostChart />
+      <Text style={{ ...font.body(14, 'semibold'), color: colors.textSecondary, textAlign: 'center' }}>{t('student.growthEmptyStates.copy006')}</Text>
+      <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{t('student.growthEmptyStates.copy008')}</Text>
+      {curve.family === 'squat' && isZeroTraining ? <AppButton label={t('student.growthEmptyStates.copy009')} onPress={onToday} /> : null}
+    </View> : <View style={{ height: 126, paddingTop: 8, gap: 10 }}>
+      <GrowthFormingTrendChart recordedCount={snapshot.eligibleDataPointCount} threshold={TREND_UNLOCK_THRESHOLD} currentKg={snapshot.currentKg} latestRecordDate={snapshot.latestRecordDate} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.bgInset, borderRadius: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 4 }}>
+          {Array.from({ length: TREND_UNLOCK_THRESHOLD }, (_, index) => <View key={index} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: index < snapshot.eligibleDataPointCount ? colors.gold500 : 'transparent', borderWidth: index < snapshot.eligibleDataPointCount ? 0 : 1, borderColor: colors.borderStrong }} />)}
+        </View>
+        <Text numberOfLines={2} style={{ ...font.body(12), color: colors.textTertiary, flex: 1 }}>{t('student.growthEmptyStates.copy003')}<Text style={{ ...font.mono(12), color: colors.textPrimary }}>{snapshot.eligibleDataPointCount}/{TREND_UNLOCK_THRESHOLD}</Text>{t('student.growthEmptyStates.copy004')}<Text style={{ ...font.mono(12), color: colors.textPrimary }}>{remaining}</Text>{t(remaining === 1 ? 'student.growthEmptyStates.copy005.one' : 'student.growthEmptyStates.copy005', [name])}</Text>
+      </View>
+    </View>}
   </Card>;
 }
