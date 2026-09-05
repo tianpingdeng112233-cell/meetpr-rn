@@ -249,7 +249,7 @@ export function DashboardScreen() {
                 onSelect={vm.selectDay}
               />
               {!vm.today.completedToday && selected && vm.activePlan ? (
-                <Card style={{ padding: 16, gap: 6 }}>
+                <View style={{ gap: 5 }}>
                   <Text
                     style={{
                       ...font.body(16, 'bold'),
@@ -268,7 +268,7 @@ export function DashboardScreen() {
                       ),
                     ])}
                   </Text>
-                </Card>
+                </View>
               ) : null}
             </>
           )}
