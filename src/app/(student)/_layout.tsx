@@ -10,7 +10,7 @@ function StudentTabs() {
   const bumpTodayReload = useStudentTabsStore((state) => state.bumpTodayReload);
   return (
     <Tabs
-      tabBar={(props) => <TabBar {...props} icons={{ today: 'today', training: 'training', growth: 'growth', profile: 'profile' }} />}
+      tabBar={(props) => props.state.routes[props.state.index]?.name === 'chat' ? null : <TabBar {...props} icons={{ today: 'today', training: 'training', growth: 'growth', profile: 'profile' }} />}
       screenOptions={{ headerShown: false }}>
       <Tabs.Screen
         name="today"
@@ -37,6 +37,7 @@ function StudentTabs() {
           title: t('student.studentRootView.copy004'),
         }}
       />
+      <Tabs.Screen name="chat" options={{ href: null }} />
       <Tabs.Screen name="feedback" options={{ href: null }} />
     </Tabs>
   );

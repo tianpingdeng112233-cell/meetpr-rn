@@ -1426,3 +1426,41 @@ Final checks after all source/test edits:
 - Standards: checked scope, semantic token/font use, shared auth-only components, no dependency or forbidden-file changes. No remaining local findings.
 - Spec: checked all ten visual requirements, retained requests/validation, inline error placement, reset notice consumption, existing Android headers and SiwA omission. No remaining source-level findings; Android visual parity still needs screenshots.
 - Formal `code-review` skill workflow could not run because `docs/agents/issue-tracker.md` is missing. Its SKILL.md requires “If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.” This was reported; no tracker scaffolding or formal parallel review was performed. The two axes above are a local review, not that formal workflow.
+
+## W3-s — 学员端教练聊天（2026-09-05）
+
+### 范围与改动清单
+
+- Worktree `feat/w3s-student-chat`，开工 HEAD `1d35c8bbef93ca3e5a850ac97621926b49f023c7`，开工 clean；无 commit/push、不加依赖、不动 node_modules symlink。已读 AGENTS、PLAN、W2-c 与最近两段日志、指定 RN/iOS 文件；iOS 只读 HEAD 核实为 `202e95dbbf88baf5778f2329f206f34e117a4dd0`。已读取 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。
+- 新增 `chat/StudentConversationScreen.tsx`、`student-timeline.ts`、`open-coach-chat.ts` 与 `(student)/chat.tsx`；`(student)/_layout.tsx` 注册隐藏路由，选中 chat 时不绘制底栏。使用普通全屏路由，播放器仍是一个顶层 Modal，聊天本身不加 Modal。
+- **入口按用户追加裁决收窄为 Dashboard/Training 两处页头**：只替换 onPress、禁用状态与角标来源，其他视觉、反馈卡/收件箱入口不变。当前 Growth/Profile 仍为占位屏，用户明确要求不动；**Growth/Profile 入口待其他分支合流后另卡接线**。
+- `useOpenCoachChat` 取 accepted bind 的 coach_id，open 后带 conversationId/coachName navigate；同步 ref 锁防重复打开。独立 student-chat Query cache，30s 轮询、后台停用、回前台失效；仅当前绑定教练会话计数。未读合计 = 未看计划 1 + 反馈未读 + 聊天未读，保持 `useFeedbackInboxViewModel` 语义。计划复用 Dashboard 的 published selector、当前周算法、AsyncStorage 签名和 markDashboardPlanSeen。
+- 屏内按时间与字符串 ID 合并消息/未看计划/反馈；黑金主题 header、空态、初次加载失败/重试、日期、文字/image 占位气泡、训练分享卡、计划卡、反馈/视频封面、pending/失败重试与纯文字 composer（4000 上限、1–5 行、无加号）。分享卡支持本卡明确要求的 `kind=set_ref`，兼容 iOS 解码后的 `text + set_ref`；显示动作/重量次数/RPE/组号/备注/视频和送达状态。
+- `api/domains/chat.ts` 只补 SetRefV1 zod 结构和校验；decimal 保持 string，日期/版本/来源 ID/组号/次数范围/未知字段不合法时降级为 null，不让整页解析失败。未改 wire key 与其他 DTO，也未改教练端屏。
+- 同步复用 `createConversationSync`：进入强刷、30s 轮询、回前台强刷、离屏 stop；since_seq 连续取完增量页，before_seq 历史分页，发送不推进抓取游标。read 回包取消旧列表查询后更新同一份页头 cache；other_last_read 按 seq 更新已读。pending 重试复用 client_id、轮询确认后消除相同 client_id 的 pending，发送成功触发同步。
+- 行 onLayout + ScrollView viewport 计算反馈自高可见比例，≥55% 才发 read；同屏会话内同 ID 请求复用，视频点击与可见性共用去重。首个未读反馈底部定位；无未读到末项；近底跟随；历史加载锁定首个可见 ID 及相对偏移后恢复。首次原生 onScroll 不冒充用户拖动，避免覆盖初始未读锚点；离屏历史页/分享视频迟到结果按 focus generation 拒收。
+- 视频复用 W3-a `FeedbackVideoPlayer` / `FeedbackPlaybackSession` / markers 读取与失败处理，分享视频通过消息页刷新签名 URL。当前 W3-b 未实装，按卡面不传 badge。
+- 新增测试 `chat/__tests__/student-timeline.test.ts`、`student-conversation-screen.test.tsx`、`student-set-ref.test.ts`；Dashboard `visual-parity.test.tsx` 加两处真实页头开聊集成测试。更新本日志与 PARITY StudentChat 行。
+
+### 与 iOS 的已知偏差 / 待收口
+
+- **已收口：后端绑定失效三态映射。** iOS `NetworkChatRepository.swift:254` 的线值是 HTTP 403 / `CHAT_BIND_REQUIRED`。用户追加明确授权应用 `/private/tmp/w3s-chat-bind-required.patch`：在 `src/api/client.ts` 的已知错误码列表仅增加 `CHAT_BIND_REQUIRED`，在 `src/api/__tests__/api-auth-session.test.ts` 仅增加一条 HTTP contract test。这是**超出原文件白名单、经用户授权的最小 additive 变更**；未扩大其他 403 的映射。先只加测试跑红（原行为为 network / code undefined），再补错误码跑绿，证据 `/private/tmp/w3s-bind-code-{red,green}.log`。HTTP 响应中的错误码现在可到达现有 copy003/004 分支；未进行生产网络请求。
+- 本卡按用户指定用**计划发布时间**（published_at，缺省 created_at）排序，iOS 当前 coordinator 的 occurredAt 是 plan.startDate；已看计划不出现。
+- RN StudentVideo DTO 没有 durationSeconds/duration_seconds，且本卡禁止改视频 DTO；封面显示规定的 `—:—`，不虚构时长。formatter 已覆盖 `0:08` / `1:05` / 未知；动作/组号使用服务端已有可选扩展字段，缺失按 copy001 回退。
+- iOS SF Symbols 改为已有 MaterialCommunityIcons，使用 useColors 语义色与 font.body/mono；播放器沿用 W3-a 原生实现。没有 Android 画面证据，不声明像素验收完成。
+
+### 红绿与验证
+
+- 使用 tdd 技能；本卡已明确公开 seam，不重复请求确认。按合并 → 可见比例 → 标签时长 → 未读合计 → 空会话 → 消息已读 → 反馈 → 计划 → 发送/重试 → 失败 → cache → 开聊 → 历史 → set-ref → 可见已读逐片红绿，日志 `/private/tmp/w3s-*-{red,green}.log`。补测首次原生滚动抢锚点先红再绿：`w3s-initial-native-scroll-{red,green}.log`。
+- 全量 `npx jest --runInBand`：**74 suites / 466 tests 通过**，包含 dashboard / training / feedback / chat、两条 i18n 守卫和 tokens 守卫；追加错误码补丁后已重跑全量 lint / tsc / jest；日志 `/private/tmp/w3s-final-jest.log`。屏测试另覆盖三态 Alert（API 边界 mock；另有 HTTP 错误码保留 contract test）、开聊防重入、未读只计当前教练、分页恢复、回前台排空增量页、视频播放器/markers。
+- `npm run lint` 无 errors / warnings（`/private/tmp/w3s-final-lint.log`）；`npx tsc --noEmit` 通过（`/private/tmp/w3s-final-tsc.log`，本轮无 hovered 诊断）；`git diff --check` 通过。
+- 本地 Standards 核对：限定文件（加上本卡对应测试/台账及用户授权的 client.ts 最小 additive 变更）、tokens/font/翻译键、无新增依赖、无 coach 屏或其他域 DTO 变更、无 commit/push。Spec 核对：绑定错误码已按追加授权收口，Growth/Profile 按用户追补另卡，其余已实现；视频时长/原生视觉限制单列。
+- 正式 code-review 技能要求 `docs/agents/issue-tracker.md`，本仓缺失；已告知需用户调用 `$setup-matt-pocock-skills`。未静默生成配置、未运行正式双 agent 审查；上段仅为本地核对。
+- 用户明确本卡沙箱无 ADB；未运行 `expo run:android`、未取得 AVD `meetpr` 截图、未做原生视觉验收。PARITY 保持 🔨。
+
+### Out of Scope（原卡原文，另卡）
+
+- 组分享(set-ref sharing):hero 的「Ask coach」按钮、输入框左侧「＋」、`SetRefSharePicker`、staged set-ref 条与长度计数——本卡**不渲染「＋」**,composer 只有输入框 + 发送圆钮。
+- 图片发送(iOS `sendImage` 学员端也没有入口)。
+- 实时 WebSocket(iOS `ChatRealtimeRouter`);沿用 30 s 轮询 + 回前台刷新(与教练端 `createConversationSync` 一致)。
+- 推送深链。

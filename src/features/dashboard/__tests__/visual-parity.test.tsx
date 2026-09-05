@@ -49,6 +49,7 @@ let servedPlan: PlanDetail;
 let feedbackItems: import('@/api/domains').FeedbackItem[];
 
 beforeEach(() => {
+  mockNavigate.mockClear();
   setLocaleOverride('en');
   servedPlan = plan;
   feedbackItems = [];
@@ -56,7 +57,7 @@ beforeEach(() => {
   mockNavigate.mockClear();
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
-  jest.mocked(authenticatedRequest).mockImplementation(async (path) => {
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
     if (path.endsWith('/plans')) return { plans: [servedPlan] } as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: [] } as never;
@@ -64,7 +65,8 @@ beforeEach(() => {
     if (path.endsWith('/feedback')) return { items: feedbackItems } as never;
     if (path.endsWith('/videos')) return { videos: [{ id: 'video', exercise_name: 'Competition squat', set_index: 1 }] } as never;
     if (path.includes('/sets')) return { logs: [] } as never;
-    if (path === '/bind-requests/mine') return { bind_request: null } as never;
+    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: '20000000-0000-4000-8000-000000000000', coach_display_name: 'Alex' } } as never;
+    if (path === '/conversations') return (options?.method === 'POST' ? { conversation: { id: '80000000-0000-4000-8000-000000000000', other_party: { id: '20000000-0000-4000-8000-000000000000', display_name: 'Alex' }, unread_count: 0 } } : { conversations: [] }) as never;
     if (path.includes('/readiness')) return { checkin: null } as never;
     throw new Error(`Unexpected request: ${path}`);
   });
@@ -138,6 +140,12 @@ test('Dashboard joins the existing video read and opens the selected feedback de
   while (typeof row.props.onPress !== 'function') row = row.parent!;
   await act(async () => row.props.onPress());
   expect(mockPush).toHaveBeenCalledWith(`/(student)/feedback/${item.id}`);
-  await act(async () => button(t('student.dashboardHeader.copy001')).props.onPress());
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/feedback');
+});
+
+test.each([{ name: 'Dashboard', Component: DashboardScreen }, { name: 'Training', Component: TodayWorkoutView }])('$name header opens the bound coach chat', async ({ Component }) => {
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><Component /></QueryClientProvider>); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy007') })[0].props.onPress(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
 });
