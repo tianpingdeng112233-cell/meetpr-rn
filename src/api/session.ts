@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { clearTrainingReminders } from '@/features/settings/training-reminder';
+
 import {
   loginRequest,
   refreshRequest,
@@ -285,7 +287,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     ++generation;
     cancelRefresh();
     set({ status: 'anonymous', user: null, authenticationError: null });
-    await queueCredentialMutation(tokenStore.clearSession);
+    await Promise.all([
+      queueCredentialMutation(tokenStore.clearSession),
+      clearTrainingReminders().catch(() => undefined),
+    ]);
   },
 }));
 

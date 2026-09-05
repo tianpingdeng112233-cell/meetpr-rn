@@ -32,6 +32,8 @@ import {
   scheduledDate,
   selectWeightSuggestion,
 } from './policy';
+import { readRestPreference } from '@/features/settings/storage';
+import { restSecondsForRPE } from '@/features/settings/rest-timer';
 import { ReadinessSheet } from './ReadinessSheet';
 import { RestTimer } from './RestTimer';
 import { GYM_DAY_SAVE_ERROR, saveErrorCopy } from './save-errors';
@@ -39,7 +41,6 @@ import { SerialTaskQueue } from './serial-task-queue';
 import { SetEntrySheet } from './SetEntrySheet';
 import {
   readBoolean,
-  readNumber,
   readReview,
   trainingE1RMRepository,
   writeBoolean,
@@ -424,7 +425,7 @@ export function TodayWorkoutView() {
           }
           if (e1rm.pr) setPREvent(e1rm.pr);
           if (draft.status !== 'complete' && nextDrafts.some((candidate) => !isDraftTerminal(candidate))) {
-            const preference = await readNumber(STORAGE_KEYS.restPreference(studentId));
+            const preference = restSecondsForRPE(await readRestPreference(studentId).catch(() => ({ mode: 'automatic' } as const)), rpe);
             setRestSeconds(resolveRestSeconds({ prescribed: draft.planSet.rest_seconds, preference, rpe }));
           }
         }
