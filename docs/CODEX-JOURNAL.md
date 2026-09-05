@@ -597,3 +597,32 @@ Final exact requested commands (PATH includes /opt/homebrew/bin):
 - 常驻行为已核对当前安装的 Expo Router `BottomTabView`：`lazy:false` 首次渲染所有路由，以稳定 route.key 保留组件；`detachInactiveScreens:false` + `freezeOnBlur:false` 下，react-native-screens 的回退 View 按 activityState 改 display，未卸载子树。仍需模拟器实际确认滚动位/搜索及全屏返回。
 - Android 静态 export 成功。共享 `node_modules -> ../meetpr-rn/node_modules` 的 Metro 转换缓存曾两次错误引用 W2-d 路由；**隔离 TMPDIR 后不再复现**，无仓库构建配置改动、无其他 worktree 改动。复现/验证命令：`mkdir -p /tmp/meetpr-w2a-metro` 后 `TMPDIR=/tmp/meetpr-w2a-metro npx expo export --platform android --output-dir /tmp/meetpr-w2a-export`。此构建问题以真实 CLI 打包作为回归检查，没有追加无法模拟跨进程缓存的单元测试。
 - 已运行 `npx expo run:android --no-install`（设置 JAVA_HOME/ANDROID_HOME）；Expo prebuild 完成，但 ADB 启动报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱禁止监听，不能连接/启动 AVD `meetpr`。**未取得模拟器截图，不宣称 Android 视觉/端到端验收**。生成的 android 目录为 gitignored 构建产物。
+## W2-b — Coach StudentDetail — 2026-09-05
+
+范围:仅 `feat/w2b-student-detail` / `meetpr-rn-wt-w2b-student-detail`。已读 AGENTS、PLAN/PARITY、`coach-v2.md` §3/8/9/10/11/12、CoachKit catalog、现有 API/design/VideoPlayback,并读 Expo **v57.0.0** 文档。日期投影、周窗、问卷、训练日序号/日志计数对照 iOS `release/1.0 @ 202e95db` 原文件。按用户指示未 commit/push,未跑 code-review、skills 安装或 tracker 流程;未加依赖,未修改 `(student)` / training / video-upload 内部。
+
+### 改动清单
+
+- 新路由 `(coach)/student/[studentId]` → `StudentDetailScreen`:隐藏整个 tab rail,保留来路 history;自定义返回、姓名/状态胶囊、计划四态、设备自然周号、禁用 Remind/Week Summary;五段 chip、主体三态、下拉刷新。训练日与视频共用一层 Modal,不重建 W1-h 已踩坑的嵌套 Modal。
+- `detail-week`:本地自然日(无 04:00 gym-day)、显式 `now`、周期前/中/后周窗、末周由最后实际计划日裁决(含 shifted date)、无计划今天前六天、7 天执行日、日志排序、完成统计(一组即可)、最近反馈/活动。
+- Overview:训练行只展示有动作日,标题沿 iOS 的当前计划游标周 + 可见训练日序号;Adjusted/总顺延胶囊只读;readiness loaded/notFiled/unavailable 分开;最近反馈有值切 Feedback,空值切 Videos。DayDetail 按动作列只读组,logged fraction 计所有日志,保留 free-log/rest 分支。
+- Videos:复用已有 `/students/:id/videos`,本地日倒序分组/行倒序,反馈状态兼容 video_id 与 legacy exercise 反馈。打开前短链校验失败有 wall banner;`CoachVideoPlayer` 包装 W1-h `VideoPlayback`,带动作/重量/次数/RPE/组序/教练名角标。缺少周窗外组信息时按视频日期附近补读日志,失败只让角标缺项显 `—`。短链不进缓存;播放 Retry 由原组件重新请求短链,无编辑/标记/导出入口。
+- Growth:新增 coach exercise-stats DTO/read,仅渲染后端 family 当前值、points 与 trend;合计/进度/0–1 位格式位于独立 `coach-e1rm`,不 import 学员 e1RM 引擎。总卡 + 三主项卡,现有 Sparkline 高 90;new/unknown 无箭头;失败可 Retry。
+- Feedback:只读归档与主题胶囊,`feedback.ts` 增加可空 video_id;无 composer、无 mark-read 写调用。Profile:1RM 禁用 Edit(含 hint),十行问卷,diet 恒 `—`,词汇映射来自正典,缺值明确留空占位。
+- `coach.ts` 本 worktree 原不存在:新增本卡所需 students 兼容读模型与 exercise-stats;videos/readiness/onboarding 沿用已有读口,onboarding 任意 404 → null/unavailable。auth UserSchema 仅补可选 name,让登录响应中的教练名不被 Zod 丢弃;无姓名时使用既有 Coach fallback。
+- 路由边界暂时拥有唯一时钟(首次/每分钟/本地午夜/AppState active 更新),所有详情函数/组件接必填 now;日切或时区 offset 改变重拉窗口与辅助资料。W2-a 共享 CoachNowProvider 合入时应将这一边界替换为共享时钟,不要保留两份来源。
+
+### 文案、已知口径与合并注意
+
+- 未命中 key: **0**(新增引用均通过 TranslationKey 类型检查)。规范化本卡既有 catalog 的 `coach.detail.feedbackMeta`、`coach.detail.weekProgress %lld %lld`、`coach.execution.loggedSetsFraction %lld %lld`、`coach.profile.age`、`coach.shared.readiness.fatigue`,将 Swift 命名/复数占位转为本仓 t(key, params) 支持的 `{0}/{1}`;未新增翻译 key。kg/S/B/D/W/D 为单位/记号。
+- 日期展示走设备 languageTag,DATE 字符串按本地日解读,不复制 zh_Hans_CN 的视频/归档/注册日期硬编码。自然周优先 Intl.Locale weekInfo;Hermes 不提供时使用 expo-localization 的设备 firstWeekday 与地区的 minimum-days 规则(含 GB 跨年四日周)。未新增日期库。
+- 未接聊天,右上聊天口不渲染,训练/readiness 提醒禁用;Week Summary 与 Edit 继续禁用并有 a11y hint。无计划旧文案按正典保留,没有发明 plan-web 入口。评估仅显示服务端已有状态胶囊,不请求评估、画横幅或开放适应周/顺延写口。
+- W2-a 尚不在此 worktree:本卡只为现有 Tabs 增加隐藏详情目的地和 history 返回,没有改它负责的四 tab 外壳/花名册/待办。合并 coach.ts **取字段/函数并集**,保留详情路由路径;W2-a 新壳应继续在本详情目的地隐藏整条 rail。
+- 设备 UI 与真实 Global 数据尚未验收。读取失败/空态由查询状态明确驱动;目前短链过期后走原播放器 Retry 重新取链,未修改 W1-h 播放器内部以自动续链。教练姓名是否由生产登录响应提供尚需现场核,不存在时明确显示既有 Coach fallback。
+
+### 验证
+
+- 指定三个 seam 先红后绿:周窗缺模块→绿,7 日/排序/完成统计缺函数→绿;合计缺模块→绿,进度超上限先得 2→clamp 后为 1,趋势/格式缺函数→绿;计划四态/readiness 缺模块或函数→绿。新增 **10 tests**。
+- `npm run lint`:exit 0,0 errors/0 warnings;`npx tsc --noEmit`:exit 0;`npx jest`:**47 suites / 309 tests 全通过**。日志 `/private/tmp/w2b-{lint,tsc,jest}.log`。`git diff --check` 干净。
+- `EXPO_PUBLIC_API_BASE_URL=https://api.meetpr.app npx expo export --platform android --output-dir /private/tmp/w2b-export`:Android Hermes bundle 成功,未新增依赖。日志 `/private/tmp/w2b-export.log`。
+- 已实际运行 `EXPO_PUBLIC_API_BASE_URL=https://api.meetpr.app npx expo run:android --device meetpr --no-install`;ADB start-server 无法安装 smartsocket listener(`Operation not permitted`,exit 255),CLI 未能安装到 AVD。日志 `/private/tmp/w2b-android.log`。**没有本卡 AVD 截图,不声称已亲眼验收**。待可用 ADB 环境补五段/训练日/纯回放角标、短链 Retry、返回隐藏底栏与错误/空态截图;PARITY StudentDetail 按本卡要求标 🔨。

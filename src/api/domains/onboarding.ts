@@ -95,7 +95,7 @@ async function get(studentId: string): Promise<OnboardingProfile | null> {
       schema: OnboardingProfileSchema,
     });
   } catch (error) {
-    if (error instanceof ApiError && error.code === 'ONBOARDING_NOT_FOUND') {
+    if (error instanceof ApiError && (error.status === 404 || error.code === 'ONBOARDING_NOT_FOUND')) {
       return null;
     }
     throw error;

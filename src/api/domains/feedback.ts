@@ -11,6 +11,7 @@ export const FeedbackItemSchema = z.object({
   /** Nullable DATE-text column. */
   day_date: DateTextSchema.nullable(),
   plan_exercise_id: UuidSchema.nullable(),
+  video_id: UuidSchema.nullish(),
   text: z.string(),
   posted_at: TimestampSchema,
   read_at: TimestampSchema.nullable(),
