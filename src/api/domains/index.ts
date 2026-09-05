@@ -2,6 +2,7 @@ export * from './account';
 export * from './bind';
 export * from './exercises';
 export * from './feedback';
+export * from './invite-codes';
 export * from './onboarding';
 export * from './plans';
 export * from './readiness';

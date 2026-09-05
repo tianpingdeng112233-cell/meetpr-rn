@@ -8,5 +8,6 @@ export default function CoachLayout() {
     <Stack.Screen name="(tabs)" />
     <Stack.Screen name="student/[studentId]" />
     <Stack.Screen name="application/[requestId]" />
+    <Stack.Screen name="invite-codes" />
   </Stack></CoachDataProvider></CoachNowProvider>;
 }
