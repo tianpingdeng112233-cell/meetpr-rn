@@ -15,10 +15,6 @@
 "en": "Only the latest completed day can be undone",
 "zh": "只能撤销最近完成的一天"
 },
-"student.progression.perSide": {
-"en": "{0}kg / side",
-"zh": "{0}kg / 侧"
-},
 "student.progression.prFirst": {
 "en": "First record",
 "zh": "第一个纪录点"
@@ -34,10 +30,6 @@
 "student.progression.privateNote": {
 "en": "Private training notes, saved on this device",
 "zh": "仅自己可见的训练笔记,保存在本机"
-},
-"student.progression.releaseToConfirm": {
-"en": "Release to confirm",
-"zh": "松开确认"
 },
 "student.progression.saving": {
 "en": "Saving…",

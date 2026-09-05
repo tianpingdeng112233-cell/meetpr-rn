@@ -1,11 +1,12 @@
 import { beforeEach, afterEach, describe, expect, test } from '@jest/globals';
 
-import { setLocaleOverride } from '@/i18n';
+import { setLocaleOverride, t } from '@/i18n';
 import type { PlanDay, PlanExercise, PlanSet } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 
 import { synthesizeDrafts } from '../drafts';
 import {
+  plateLoadout,
   gymDayText,
   historyRangeStart,
   resolveRestSeconds,
@@ -210,4 +211,18 @@ test('cycle-wide draft synthesis chooses the newest real log for a stable set', 
     log({ logged_at: '2026-07-21T08:00:00Z', weight_kg: '200', assumed: true }),
   ]);
   expect(drafts[0].weightText).toBe('105');
+});
+
+
+test('plate loadout uses aggregated copy and canonical empty branches', () => {
+  setLocaleOverride('en');
+  expect(plateLoadout(100, false)).toEqual({ perSideKg: 40, detail: '25kg × 1 · 15kg × 1' });
+  expect(plateLoadout(105, true)).toEqual({ perSideKg: 40, detail: '25kg × 1 · 15kg × 1 + 2.5 kg competition collars' });
+  expect(plateLoadout(20, false).detail).toBe('Empty 20 kg bar');
+  expect(plateLoadout(22.5, true).detail).toBe('2.5 kg competition collars only');
+  expect(plateLoadout(21, false).detail).toBe('Empty 20 kg bar');
+  expect(plateLoadout(600, false).perSideKg).toBe(240);
+  expect(t('designSystem.numberPad.enterWeight')).toBe('Enter weight');
+  expect(t('designSystem.action.confirm')).toBe('Confirm');
+  expect(t('designSystem.plate.emptyBar')).toBe('Empty 20 kg bar');
 });
