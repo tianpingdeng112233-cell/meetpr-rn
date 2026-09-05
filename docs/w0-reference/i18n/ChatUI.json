@@ -1,0 +1,422 @@
+{
+"chat.addAttachment": {
+"en": "Add attachment",
+"zh": "添加附件"
+},
+"chat.addVideoMarker": {
+"en": "＋ Add marker",
+"zh": "＋ 打点"
+},
+"chat.back": {
+"en": "Back",
+"zh": "返回"
+},
+"chat.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"chat.choosePhoto": {
+"en": "Choose photo",
+"zh": "选择图片"
+},
+"chat.close": {
+"en": "Close",
+"zh": "关闭"
+},
+"chat.closeAnnotation": {
+"en": "Close annotation",
+"zh": "关闭标注"
+},
+"chat.closePlayback": {
+"en": "Close playback",
+"zh": "关闭播放"
+},
+"chat.completedSection": {
+"en": "Completed",
+"zh": "已完成"
+},
+"chat.composerPlaceholder": {
+"en": "Message",
+"zh": "输入消息"
+},
+"chat.continueSelection": {
+"en": "Continue",
+"zh": "继续"
+},
+"chat.continueToChat": {
+"en": "Continue to chat and add a message",
+"zh": "去聊天补充一句话"
+},
+"chat.delivered": {
+"en": "Delivered",
+"zh": "已送达"
+},
+"chat.demo.coach": {
+"en": "Coach Zhou",
+"zh": "周教练"
+},
+"chat.demo.coachMessage": {
+"en": "Take tomorrow's squat to 140.",
+"zh": "明天深蹲加到 140。"
+},
+"chat.demo.firstStudent": {
+"en": "Chenxi Wang",
+"zh": "王晨曦"
+},
+"chat.demo.secondStudent": {
+"en": "Jianing Li",
+"zh": "李嘉宁"
+},
+"chat.demo.studentMessage": {
+"en": "Coach, I finished today's last set.",
+"zh": "教练，今天最后一组完成了。"
+},
+"chat.demo.studentReply": {
+"en": "Got it.",
+"zh": "收到。"
+},
+"chat.image": {
+"en": "[Image]",
+"zh": "[图片]"
+},
+"chat.imagePreparationFailed": {
+"en": "Could not process image",
+"zh": "图片处理失败"
+},
+"chat.imageUnavailable": {
+"en": "Image unavailable",
+"zh": "图片暂不可用"
+},
+"chat.includeVideo": {
+"en": "Include this set's video",
+"zh": "一并发送这组视频"
+},
+"chat.invalidSetRecord": {
+"en": "This set cannot be shared right now",
+"zh": "这组记录暂时无法分享"
+},
+"chat.load": {
+"en": "Weight × reps",
+"zh": "重量 × 次数"
+},
+"chat.loadMessagesFailed": {
+"en": "Could not load messages",
+"zh": "消息加载失败"
+},
+"chat.loadOlder": {
+"en": "Load earlier messages",
+"zh": "加载更早消息"
+},
+"chat.loadingMessages": {
+"en": "Loading messages…",
+"zh": "正在加载消息…"
+},
+"chat.loggedSetCardLabel": {
+"en": "A set I logged",
+"zh": "我记录的一组"
+},
+"chat.messageTooLong": {
+"en": "The training record and note cannot exceed 4,000 characters. Shorten the note.",
+"zh": "训练记录和备注合计不能超过 4000 个字符，请缩短备注"
+},
+"chat.messages": {
+"en": "Messages",
+"zh": "消息"
+},
+"chat.noConversations": {
+"en": "No conversations yet",
+"zh": "暂无会话"
+},
+"chat.noMessages": {
+"en": "No messages yet",
+"zh": "还没有消息"
+},
+"chat.noMessagesDescription": {
+"en": "Start the conversation",
+"zh": "开始对话吧"
+},
+"chat.noShareableSets": {
+"en": "No training sets to share today",
+"zh": "今天没有可分享的训练组"
+},
+"chat.noShareableSetsDescription": {
+"en": "Today's planned or logged sets will appear here",
+"zh": "今天的计划组或已记录组会显示在这里"
+},
+"chat.pausePlayback": {
+"en": "Pause",
+"zh": "暂停"
+},
+"chat.plannedSetCardLabel": {
+"en": "My plan for today",
+"zh": "我今天的计划"
+},
+"chat.playPlayback": {
+"en": "Play",
+"zh": "播放"
+},
+"chat.playVideo": {
+"en": "Play video",
+"zh": "播放视频"
+},
+"chat.playbackFailed": {
+"en": "Playback failed. The link may have expired.",
+"zh": "播放失败，链接可能已过期"
+},
+"chat.playbackProgress": {
+"en": "Playback progress",
+"zh": "播放进度"
+},
+"chat.playbackSpeed": {
+"en": "Playback speed",
+"zh": "播放速度"
+},
+"chat.preparingImage": {
+"en": "Processing image",
+"zh": "正在处理图片"
+},
+"chat.read": {
+"en": "Read",
+"zh": "已读"
+},
+"chat.refreshing": {
+"en": "Refreshing…",
+"zh": "刷新中…"
+},
+"chat.relative.dayAgo": {
+"en": "1 day ago",
+"zh": "1 天前"
+},
+"chat.relative.daysAgo %@": {
+"en": "%@ days ago",
+"zh": "%@ 天前"
+},
+"chat.relative.hourAgo": {
+"en": "1 hour ago",
+"zh": "1 小时前"
+},
+"chat.relative.hoursAgo %@": {
+"en": "%@ hours ago",
+"zh": "%@ 小时前"
+},
+"chat.relative.justNow": {
+"en": "Just now",
+"zh": "刚刚"
+},
+"chat.relative.minuteAgo": {
+"en": "1 minute ago",
+"zh": "1 分钟前"
+},
+"chat.relative.minutesAgo %@": {
+"en": "%@ minutes ago",
+"zh": "%@ 分钟前"
+},
+"chat.relative.monthAgo": {
+"en": "1 month ago",
+"zh": "1 个月前"
+},
+"chat.relative.monthsAgo %@": {
+"en": "%@ months ago",
+"zh": "%@ 个月前"
+},
+"chat.relative.yearAgo": {
+"en": "1 year ago",
+"zh": "1 年前"
+},
+"chat.relative.yearsAgo %@": {
+"en": "%@ years ago",
+"zh": "%@ 年前"
+},
+"chat.removeTrainingShare": {
+"en": "Remove training share",
+"zh": "移除训练分享"
+},
+"chat.retry": {
+"en": "Retry",
+"zh": "重试"
+},
+"chat.rpeMetric": {
+"en": "RPE",
+"zh": "RPE"
+},
+"chat.seekToVideoMarker": {
+"en": "Jump to {time}",
+"zh": "跳转到 {time}"
+},
+"chat.selected": {
+"en": "Selected",
+"zh": "已选择"
+},
+"chat.send": {
+"en": "Send",
+"zh": "发送"
+},
+"chat.sendCurrentSetPlan": {
+"en": "Send the current plan for this set",
+"zh": "发送这组当前的计划"
+},
+"chat.sendCurrentSetRecord": {
+"en": "Send the current log for this set",
+"zh": "发送这组当前的记录"
+},
+"chat.sendFailed": {
+"en": "Failed to send",
+"zh": "发送失败"
+},
+"chat.sending": {
+"en": "Sending",
+"zh": "发送中"
+},
+"chat.setCardDelivered": {
+"en": "✓ Delivered · Waiting for coach",
+"zh": "✓ 已送达 · 等教练看"
+},
+"chat.setCardRead": {
+"en": "✓ Read by coach",
+"zh": "✓ 教练已读"
+},
+"chat.setNumber": {
+"en": "Set",
+"zh": "组次"
+},
+"chat.setPosition %@": {
+"en": "Set %@",
+"zh": "第%@组"
+},
+"chat.setPosition %@ of %@": {
+"en": "Set %@ of %@",
+"zh": "第%@组/%@"
+},
+"chat.setRefNotePlaceholder": {
+"en": "Add a message (optional)",
+"zh": "补一句话（可选）"
+},
+"chat.setReference.loggedTag": {
+"en": "[Training share]",
+"zh": "[训练分享]"
+},
+"chat.setReference.plannedMarker": {
+"en": " planned",
+"zh": " 计划"
+},
+"chat.setReference.plannedTag": {
+"en": "[Training plan]",
+"zh": "[训练计划]"
+},
+"chat.shareTodayTraining": {
+"en": "Share today's training",
+"zh": "分享今日训练"
+},
+"chat.todayPlanSection": {
+"en": "Today's plan",
+"zh": "今日计划"
+},
+"chat.trainingLoadFailed": {
+"en": "Could not load today's training. Try again.",
+"zh": "今日训练记录加载失败，请重试"
+},
+"chat.trainingShare": {
+"en": "Training share",
+"zh": "训练分享"
+},
+"chat.trainingShareFailed": {
+"en": "This set cannot be sent right now",
+"zh": "这组记录暂时无法发送"
+},
+"chat.unread": {
+"en": "unread",
+"zh": "条未读"
+},
+"chat.videoBadge.coach %@": {
+"en": "Coach: %@",
+"zh": "教练：%@"
+},
+"chat.videoBadge.collapse": {
+"en": "Collapse training badge",
+"zh": "收起训练角标"
+},
+"chat.videoBadge.expand": {
+"en": "Expand training badge",
+"zh": "展开训练角标"
+},
+"chat.videoBadge.setPrefix": {
+"en": "Set",
+"zh": "第"
+},
+"chat.videoBadge.setSuffix": {
+"en": "",
+"zh": "组"
+},
+"chat.videoExport.action": {
+"en": "Export",
+"zh": "导出"
+},
+"chat.videoExport.coachConfirmation.action": {
+"en": "Confirm and export",
+"zh": "确认并导出"
+},
+"chat.videoExport.coachConfirmation.message": {
+"en": "Before publishing externally, confirm that you have the student's consent.",
+"zh": "对外发布前请确认已获学员同意"
+},
+"chat.videoExport.coachConfirmation.title": {
+"en": "Export student video",
+"zh": "导出学员视频"
+},
+"chat.videoExport.exporting": {
+"en": "Exporting video",
+"zh": "正在导出视频"
+},
+"chat.videoExport.failed": {
+"en": "Export failed",
+"zh": "导出失败"
+},
+"chat.videoExport.failureMessage": {
+"en": "MeetPR could not create this badged video. Please try again.",
+"zh": "未能生成带角标的视频，请重试"
+},
+"chat.videoExport.photoPermissionDenied": {
+"en": "Allow MeetPR to add videos to Photos, then try again.",
+"zh": "请允许 MeetPR 向相册添加视频后重试"
+},
+"chat.videoExport.saved": {
+"en": "Saved to Photos",
+"zh": "已存入相册"
+},
+"chat.videoFailed": {
+"en": "Video upload failed. Retry from the training screen first.",
+"zh": "视频上传失败，请先在训练页重试"
+},
+"chat.videoMarker": {
+"en": "Video marker",
+"zh": "视频打点"
+},
+"chat.videoMarkers": {
+"en": "Markers · {count}",
+"zh": "打点 · {count}"
+},
+"chat.videoMarkersFailed": {
+"en": "Could not load markers",
+"zh": "打点加载失败"
+},
+"chat.videoPlayback": {
+"en": "VIDEO PLAYBACK //",
+"zh": "视频回放 //"
+},
+"chat.videoReady": {
+"en": "Video ready",
+"zh": "视频已就绪"
+},
+"chat.videoUnavailable": {
+"en": "This video is no longer available. Deselect it to continue.",
+"zh": "这段视频已不可用，请取消勾选后继续"
+},
+"chat.videoUploading": {
+"en": "Video is uploading. You can still send the message.",
+"zh": "视频上传中，仍可继续发送"
+},
+"chat.weightRepsMetric": {
+"en": "WEIGHT × REPS",
+"zh": "WEIGHT × REPS"
+}
+}

@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { AnalyticsEvent, track } from '@/analytics';
 import { usePlan, usePlans, type PlanDay, type PlanDetail } from '@/api/domains/plans';
 import { readinessKeys, useReadiness } from '@/api/domains/readiness';
@@ -78,12 +79,12 @@ function PRBanner({
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Card style={styles.prBanner}>
-      <Text style={styles.prTitle}>🎉 今天你的{exerciseName} e1RM 突破!</Text>
+      <Text style={styles.prTitle}>{/* TODO(i18n:missing) */}🎉 今天你的{exerciseName} {/* TODO(i18n:missing) */}e1RM 突破!</Text>
       <Text style={styles.prValue}>
         {formatWeight(event.breakthroughE1RMKg)} kg
         {event.previousMaxE1RMKg > 0
-          ? ` (此前 ${formatWeight(event.previousMaxE1RMKg)} kg)`
-          : ',第一个纪录点'}
+          ? /* TODO(i18n:missing) */ ` (此前 ${formatWeight(event.previousMaxE1RMKg)} kg)`
+          : /* TODO(i18n:missing) */ ',第一个纪录点'}
       </Text>
     </Card>
   );
@@ -338,7 +339,7 @@ export function TodayWorkoutView() {
       const draft = liveDrafts.find((candidate) => candidate.stableSetId === input.stableSetId);
       if (!draft) return;
       if (!isGymDayEditable(selectedDate, new Date())) {
-        Alert.alert('保存失败', GYM_DAY_SAVE_ERROR, [{ text: '知道了' }]);
+        Alert.alert(t('student.setEntrySheet.copy010'), GYM_DAY_SAVE_ERROR, [{ text: t('student.restTimerExplanationView.copy005') }]);
         throw new Error('Gym day changed before save');
       }
       const completed = input.completed ?? true;
@@ -346,7 +347,7 @@ export function TodayWorkoutView() {
       const reps = Number(input.repsText);
       const rpe = input.rpeText ? parseFiniteDecimal(input.rpeText) : null;
       if (weight === null || weight < 0 || !Number.isInteger(reps) || reps < 0 || reps > 99 || (rpe !== null && (rpe < 0 || rpe > 10))) {
-        Alert.alert('保存失败', '记录没有保存,请重试。你的输入仍保留在本页。', [{ text: '知道了' }]);
+        Alert.alert(t('student.setEntrySheet.copy010'), t('student.todayWorkoutViewModelRecordingError.copy004'), [{ text: t('student.restTimerExplanationView.copy005') }]);
         throw new Error('Invalid set input');
       }
       try {
@@ -428,7 +429,7 @@ export function TodayWorkoutView() {
           }
         }
       } catch (error) {
-        Alert.alert('保存失败', saveErrorCopy(error), [{ text: '知道了' }]);
+        Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error), [{ text: t('student.restTimerExplanationView.copy005') }]);
         throw error;
       }
     };
@@ -447,31 +448,31 @@ export function TodayWorkoutView() {
         ? 'skippedToday'
         : 'needed';
   const readinessLabel = readinessGate === 'done'
-    ? '今日状态已填写'
+    ? /* TODO(i18n:drift) */ '今日状态已填写'
     : readinessGate === 'skippedToday'
-      ? '今日状态已跳过'
-      : '今日状态';
+      ? /* TODO(i18n:drift) */ '今日状态已跳过'
+      : t('coach.detail.todayStatus');
 
   return (
     <Screen style={styles.screen}>
       <View style={styles.nav}>
-        <View><Text style={styles.navTitle}>{planDay ? `W${planDay.week_number}D${planDay.day_of_week} · ${exerciseTitle(resolveExerciseMetadata((planDay.exercises.find((exercise) => exercise.is_main_lift) ?? planDay.exercises[0])?.exercise_id ?? ''))}` : '锻炼'}</Text><Text style={styles.navDate}>{selectedDate}</Text></View>
+        <View><Text style={styles.navTitle}>{planDay ? `W${planDay.week_number}D${planDay.day_of_week} · ${exerciseTitle(resolveExerciseMetadata((planDay.exercises.find((exercise) => exercise.is_main_lift) ?? planDay.exercises[0])?.exercise_id ?? ''))}` : t('student.todayWorkoutView.copy011')}</Text><Text style={styles.navDate}>{selectedDate}</Text></View>
         <View style={styles.navActions}>
           <Pressable accessibilityLabel={readinessLabel} onPress={() => setReadinessVisible(true)}>
             <MaterialCommunityIcons color={readinessDone ? colors.success : colors.textSecondary} name={readinessDone ? 'heart' : 'heart-outline'} size={25} />
           </Pressable>
-          <Pressable accessibilityLabel="刷新训练" onPress={() => void refresh()}><MaterialCommunityIcons color={colors.textSecondary} name="refresh" size={25} /></Pressable>
+          <Pressable accessibilityLabel={/* TODO(i18n:missing) */ "刷新训练"} onPress={() => void refresh()}><MaterialCommunityIcons color={colors.textSecondary} name="refresh" size={25} /></Pressable>
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <TrainingCalendarView selectedDate={selectedDate} statusForDate={(date) => stateForDay(plan, logs, date)} today={today} onSelectDate={selectDate} />
         {prEvent ? <PRBanner event={prEvent} exerciseName={exerciseTitle(resolveExerciseMetadata(prEvent.exerciseId))} /> : null}
         {state.kind === 'loading' ? <ActivityIndicator color={colors.gold500} size="large" style={styles.center} /> : null}
-        {state.kind === 'error' ? <Card style={styles.empty}><Text style={styles.emptyTitle}>加载失败</Text><Pressable onPress={() => void refresh()}><Text style={styles.retry}>重试</Text></Pressable></Card> : null}
-        {state.kind === 'rest' ? <Card style={styles.empty}><Text style={styles.emptyTitle}>{selectedDate === today ? '今日休息' : '这天休息'}</Text><Text style={styles.emptySub}>看本周计划</Text></Card> : null}
+        {state.kind === 'error' ? <Card style={styles.empty}><Text style={styles.emptyTitle}>{t('student.todayWorkoutScreen.copy001')}</Text><Pressable onPress={() => void refresh()}><Text style={styles.retry}>{t('student.bindGateView.copy003')}</Text></Pressable></Card> : null}
+        {state.kind === 'rest' ? <Card style={styles.empty}><Text style={styles.emptyTitle}>{selectedDate === today ? /* TODO(i18n:drift) */ '今日休息' : /* TODO(i18n:drift) */ '这天休息'}</Text><Text style={styles.emptySub}>{/* TODO(i18n:drift) */}看本周计划</Text></Card> : null}
         {(state.kind === 'loaded' || state.kind === 'recording') ? (
           <>
-            {!editable ? <View style={styles.readOnly}><Text style={styles.readOnlyText}>{historical ? '历史记录 · 不可修改' : '未到训练日 · 仅预览'}</Text></View> : null}
+            {!editable ? <View style={styles.readOnly}><Text style={styles.readOnlyText}>{historical ? /* TODO(i18n:drift) */ '历史记录 · 不可修改' : /* TODO(i18n:drift) */ '未到训练日 · 仅预览'}</Text></View> : null}
             <WorkoutBody
               drafts={state.drafts}
               editable={editable}

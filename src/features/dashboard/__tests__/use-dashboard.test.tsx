@@ -1,7 +1,8 @@
-import { afterEach, expect, jest, test } from '@jest/globals';
+import { beforeEach, afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
 
+import { setLocaleOverride } from '@/i18n';
 import {
   useExerciseCatalog,
   useOnboardingProfile,
@@ -284,3 +285,7 @@ test('a catalog failure does not hide the week grid or disable its CTA', () => {
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+// Existing copy assertions pin the original Chinese presentation.
+beforeEach(() => setLocaleOverride('zh'));
+afterEach(() => setLocaleOverride(null));

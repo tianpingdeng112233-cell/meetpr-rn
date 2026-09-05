@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { t } from '@/i18n';
 import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
 
 import { TRAINING_LIMITS } from './constants';
@@ -36,7 +37,7 @@ export function SlideToCompleteButton({ onComplete }: { onComplete: () => void }
       {...pan.panHandlers}
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       style={styles.slider}>
-      <Text style={styles.sliderLabel}>滑动完成今日训练</Text>
+      <Text style={styles.sliderLabel}>{/* TODO(i18n:drift) */}滑动完成今日训练</Text>
       <View style={[styles.sliderThumb, { left: progress * Math.max(0, width - 56) }]}>
         <MaterialCommunityIcons color={colors.success} name="chevron-double-right" size={24} />
       </View>
@@ -51,9 +52,9 @@ export function DayCompletionBanner({ count, onPress }: { count: number; onPress
     <Card style={styles.banner}>
       <View style={styles.bannerCopy}>
         <MaterialCommunityIcons color={colors.success} name="check-decagram" size={22} />
-        <Text style={styles.bannerTitle}>今日训练完成 · {count} 组</Text>
+        <Text style={styles.bannerTitle}>{t(count === 1 ? 'student.dayCompletionBanner.copy001.one' : 'student.dayCompletionBanner.copy001', [count])}</Text>
       </View>
-      <Pressable onPress={onPress}><Text style={styles.reviewLink}>查看回顾</Text></Pressable>
+      <Pressable onPress={onPress}><Text style={styles.reviewLink}>{t('student.dayCompletionBanner.copy002')}</Text></Pressable>
     </Card>
   );
 }
@@ -83,27 +84,27 @@ export function SessionSummaryView({
   return (
     <Modal animationType="slide" onRequestClose={onClose} visible>
       <SafeAreaView style={styles.summaryRoot}>
-        <View style={styles.summaryNav}><Text style={styles.summaryNavTitle}>训练回顾</Text><Pressable onPress={onClose}><Text style={styles.done}>完成</Text></Pressable></View>
+        <View style={styles.summaryNav}><Text style={styles.summaryNavTitle}>{t('student.sessionSummaryView.copy003')}</Text><Pressable onPress={onClose}><Text style={styles.done}>{t('student.readinessCheckinSheet.copy018')}</Text></Pressable></View>
         <ScrollView contentContainerStyle={styles.summaryContent} keyboardShouldPersistTaps="handled">
-          <Text style={styles.summaryHero}>今日训练完成</Text>
+          <Text style={styles.summaryHero}>{t('student.workoutCompletionFlowView.copy001')}</Text>
           <Card style={styles.overview}>
-            {[['完成组数', String(completed.length)], ['总次数', String(totalReps)], ['总容量', `${Math.round(totalVolume)} kg`], ['平均 RPE', averageRPE === null ? '—' : averageRPE.toFixed(1)]].map(([label, value]) => (
+            {[[/* TODO(i18n:missing) */ '完成组数', String(completed.length)], [t('student.sessionSummaryView.copy008'), String(totalReps)], [t('student.sessionSummaryView.copy005'), `${Math.round(totalVolume)} kg`], [t('student.sessionSummaryView.copy009'), averageRPE === null ? '—' : averageRPE.toFixed(1)]].map(([label, value]) => (
               <View key={label} style={styles.metric}><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>
             ))}
           </Card>
-          <Text style={styles.sectionTitle}>动作表现</Text>
-          <Card style={styles.performance}><Text style={styles.performanceLabel}>最重组</Text><Text style={styles.performanceValue}>{heaviest ? `${heaviest.weightText}kg × ${heaviest.repsText}` : '—'}</Text></Card>
-          <View><Text style={styles.sectionTitle}>训练反思</Text><Text style={styles.privateNote}>🔒 仅自己可见的训练笔记,保存在本机</Text></View>
+          <Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy001')}</Text>
+          <Card style={styles.performance}><Text style={styles.performanceLabel}>{t('student.sessionSummaryView.copy010', ['']).trimEnd()}</Text><Text style={styles.performanceValue}>{heaviest ? `${heaviest.weightText}kg × ${heaviest.repsText}` : '—'}</Text></Card>
+          <View><Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy011')}</Text><Text style={styles.privateNote}>{/* TODO(i18n:missing) */}🔒 仅自己可见的训练笔记,保存在本机</Text></View>
           {([
-            ['goal', '本次目标', '这次训练你想达成什么?'],
-            ['achieved', '做到了什么', '这次训练有哪些收获?'],
-            ['improve', '可以更好', '哪里还能做得更好?'],
+            ['goal', t('student.sessionSummaryView.copy013'), t('student.sessionSummaryView.copy014')],
+            ['achieved', t('student.sessionSummaryView.copy015'), t('student.sessionSummaryView.copy016')],
+            ['improve', t('student.sessionSummaryView.copy017'), t('student.sessionSummaryView.copy018')],
           ] as const).map(([key, label, placeholder]) => (
             <Card key={key} style={styles.reflectionCard}><Text style={styles.performanceLabel}>{label}</Text><TextInput multiline onChangeText={(value) => setReflection((current) => ({ ...current, [key]: value }))} placeholder={placeholder} placeholderTextColor={colors.textTertiary} style={styles.reflectionInput} value={reflection[key]} /></Card>
           ))}
           <AppButton
             disabled={saving}
-            label={saving ? '保存中…' : '完成'}
+            label={saving ? /* TODO(i18n:missing) */ '保存中…' : t('student.readinessCheckinSheet.copy018')}
             onPress={() => {
               setSaving(true);
               void onComplete(reflection).finally(() => setSaving(false));

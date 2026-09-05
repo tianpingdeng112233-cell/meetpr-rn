@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 
+import { exerciseDisplayName, t } from '@/i18n';
 import {
   buildExerciseIndex,
   useExerciseCatalog,
@@ -28,10 +29,8 @@ export type ExerciseMetadataResolver = (
   exerciseId: string,
 ) => ExerciseMetadata | null;
 
-export const UNRESOLVED_EXERCISE_TITLE = '锻炼';
-
 export function exerciseTitle(metadata: ExerciseMetadata | null): string {
-  return metadata?.name ?? UNRESOLVED_EXERCISE_TITLE;
+  return metadata?.name ?? t('student.todayWorkoutView.copy011');
 }
 
 function squatStance(value: string | null): SquatStance | null {
@@ -68,7 +67,7 @@ export function createExerciseMetadataResolver(
     const exercise = index.get(exerciseId);
     if (!exercise) return null;
     return {
-      name: exercise.name,
+      name: exerciseDisplayName(exercise),
       rawFamily: exercise.main_lift_family,
       competitionFamily: resolveCompetitionLiftFamily(
         {

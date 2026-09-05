@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { getLocale, t } from '@/i18n';
 import { Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
 import type { CalendarDayStatus } from './model';
@@ -13,8 +14,6 @@ type Props = {
   statusForDate: (date: string) => CalendarDayStatus;
   onSelectDate: (date: string) => void;
 };
-
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'] as const;
 
 function mondayFor(dateText: string): string {
   const date = parseLocalDate(dateText);
@@ -66,7 +65,10 @@ export function TrainingCalendarView({
     [anchorDate, mode],
   );
   const anchor = parseLocalDate(anchorDate);
-  const title = `${anchor.getFullYear()}年 ${anchor.getMonth() + 1}月`;
+  const title = new Intl.DateTimeFormat(getLocale(), { year: 'numeric', month: 'long' }).format(anchor);
+  const weekdays = Array.from({ length: 7 }, (_, index) =>
+    new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(new Date(2026, 0, 5 + index)),
+  );
 
   const move = (amount: number) => {
     const next = parseLocalDate(anchorDate);
@@ -78,11 +80,11 @@ export function TrainingCalendarView({
   return (
     <Card style={styles.card}>
       <View style={styles.topRow}>
-        <Pressable accessibilityLabel="上一段日期" onPress={() => move(-1)}>
+        <Pressable accessibilityLabel={/* TODO(i18n:drift) */ "上一段日期"} onPress={() => move(-1)}>
           <MaterialCommunityIcons color={colors.textSecondary} name="chevron-left" size={26} />
         </Pressable>
         <Text style={styles.month}>{title}</Text>
-        <Pressable accessibilityLabel="下一段日期" onPress={() => move(1)}>
+        <Pressable accessibilityLabel={/* TODO(i18n:drift) */ "下一段日期"} onPress={() => move(1)}>
           <MaterialCommunityIcons color={colors.textSecondary} name="chevron-right" size={26} />
         </Pressable>
         <View style={styles.segment}>
@@ -92,14 +94,14 @@ export function TrainingCalendarView({
               onPress={() => setMode(value)}
               style={[styles.segmentButton, mode === value && styles.segmentSelected]}>
               <Text style={[styles.segmentText, mode === value && styles.segmentTextSelected]}>
-                {value === 'week' ? '周' : '月'}
+                {value === 'week' ? t('student.onboardingSummaryFormatter.copy004') : /* TODO(i18n:drift) */ '月'}
               </Text>
             </Pressable>
           ))}
         </View>
       </View>
       <View style={styles.weekdayRow}>
-        {WEEKDAYS.map((day) => (
+        {weekdays.map((day) => (
           <Text key={day} style={styles.weekday}>{day}</Text>
         ))}
       </View>

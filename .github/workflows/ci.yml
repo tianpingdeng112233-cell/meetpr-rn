@@ -12,8 +12,27 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: scope
+        name: Detect docs-only change
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}" 2>/dev/null || true)
+          echo "$CHANGED"
+          if [ -n "$CHANGED" ] && ! echo "$CHANGED" | grep -vqE '^(docs/|.*\.md$)'; then
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -26,6 +45,7 @@ jobs:
   android-build:
     runs-on: ubuntu-latest
     needs: check
+    if: needs.check.outputs.docs_only != 'true'
     steps:
       # The RN android build (incl. react-native-svg native compile) exhausts
       # the ~14GB free disk on hosted runners and kills the runner mid-gradle.

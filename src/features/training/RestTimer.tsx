@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
 import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
@@ -69,13 +70,13 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
         <View style={styles.timerCopy}>
           <MaterialCommunityIcons color={colors.success} name="timer-outline" size={22} />
           <View>
-            <Text style={styles.label}>{remaining === 0 ? '休息结束 💪' : '组间休息'}</Text>
+            <Text style={styles.label}>{remaining === 0 ? `${t('student.restTimerOverlay.copy003')} 💪` : t('student.restTimerPreferenceRow.copy001')}</Text>
             {remaining > 0 ? <Text style={styles.clock}>{formatClock(remaining)}</Text> : null}
           </View>
         </View>
         <View style={styles.actions}>
           <Pressable onPress={() => adjust(-30)} style={styles.action}><Text style={styles.actionText}>-30s</Text></Pressable>
-          <Pressable onPress={() => adjust(-remaining)} style={styles.action}><Text style={styles.actionText}>跳过</Text></Pressable>
+          <Pressable onPress={() => adjust(-remaining)} style={styles.action}><Text style={styles.actionText}>{t('student.readinessCheckinSheet.copy002')}</Text></Pressable>
           <Pressable onPress={() => adjust(30)} style={styles.action}><Text style={styles.actionText}>+30s</Text></Pressable>
         </View>
       </Card>
@@ -86,12 +87,12 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
         visible={showExplanation}>
         <View style={styles.modalBackdrop}>
           <Card style={styles.explanation}>
-            <Text style={styles.explanationTitle}>休息时间会自动匹配</Text>
-            <Text style={styles.explanationText}>按你记录的 RPE 自动匹配:RPE 低于 7 为 2 分钟,7 至 9 以下为 3 分钟,9 及以上为 4 分钟。</Text>
-            <Text style={styles.explanationText}>教练指定过休息时长的组,会按教练设定。</Text>
-            <Text style={styles.explanationText}>可在「我的 → 组间休息」修改默认行为。</Text>
+            <Text style={styles.explanationTitle}>{t('student.restTimerExplanationView.copy001')}</Text>
+            <Text style={styles.explanationText}>{t('student.restTimerExplanationView.copy002')}</Text>
+            <Text style={styles.explanationText}>{t('student.restTimerExplanationView.copy003')}</Text>
+            <Text style={styles.explanationText}>{t('student.restTimerExplanationView.copy004')}</Text>
             <AppButton
-              label="知道了"
+              label={t('student.restTimerExplanationView.copy005')}
               onPress={() => {
                 setShowExplanation(false);
                 void writeBoolean(STORAGE_KEYS.restExplanation(studentId), true);

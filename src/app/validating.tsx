@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { Screen, useColors, type Colors, spacing, typography } from '@/design';
 
 export default function ValidatingScreen() {
@@ -10,7 +11,7 @@ export default function ValidatingScreen() {
     <Screen>
       <View style={styles.content}>
         <ActivityIndicator color={colors.gold500} size="large" />
-        <Text style={styles.message}>正在验证会话…</Text>
+        <Text style={styles.message}>{t('appShell.root.validatingSession')}</Text>
       </View>
     </Screen>
   );

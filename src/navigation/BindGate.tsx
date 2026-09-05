@@ -2,6 +2,7 @@ import type { PropsWithChildren } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { t } from '@/i18n';
 import {
   AppButton,
   Card,
@@ -39,7 +40,7 @@ export const stubBindRepository: BindRepository = {
 // 2026-07-13 硬封存：accepted 直接进入 tabs。defer ≠ delete。
 export const evaluationSealed = true;
 
-export const NEUTRAL_BIND_NOTICE = '绑定申请尚未完成，请重新输入邀请码。';
+export const NEUTRAL_BIND_NOTICE = /* TODO(i18n:missing) */ '绑定申请尚未完成，请重新输入邀请码。';
 
 type BindGateProps = PropsWithChildren<{
   repository?: BindRepository;
@@ -102,7 +103,7 @@ export function BindGate({ children, repository = stubBindRepository }: BindGate
 
   if (state === 'loading') {
     return (
-      <GateFrame title="正在检查绑定状态">
+      <GateFrame title={t('student.bindGateView.copy001')}>
         <ActivityIndicator color={colors.gold500} size="large" />
       </GateFrame>
     );
@@ -110,41 +111,41 @@ export function BindGate({ children, repository = stubBindRepository }: BindGate
 
   if (state === 'needsCode') {
     return (
-      <GateFrame title="绑定教练">
+      <GateFrame title={/* TODO(i18n:missing) */ "绑定教练"}>
         {notice ? <Text style={styles.detail}>{notice}</Text> : null}
         <TextInput
           autoCapitalize="characters"
           onChangeText={setInviteCode}
-          placeholder="请输入邀请码"
+          placeholder={/* TODO(i18n:missing) */ "请输入邀请码"}
           placeholderTextColor={colors.textTertiary}
           style={styles.input}
           value={inviteCode}
         />
-        <AppButton disabled label="提交邀请码" />
-        <Text style={styles.wireNotice}>W1 接线</Text>
+        <AppButton disabled label={/* TODO(i18n:missing) */ "提交邀请码"} />
+        <Text style={styles.wireNotice}>{/* TODO(i18n:missing) */}W1 接线</Text>
       </GateFrame>
     );
   }
 
   if (state === 'needsOnboarding') {
     return (
-      <GateFrame title="完成训练信息">
-        <Text style={styles.detail}>W1 接入学员 Onboarding。</Text>
+      <GateFrame title={/* TODO(i18n:missing) */ "完成训练信息"}>
+        <Text style={styles.detail}>{/* TODO(i18n:missing) */}W1 接入学员 Onboarding。</Text>
       </GateFrame>
     );
   }
 
   if (state === 'pendingAcceptance') {
     return (
-      <GateFrame title="等待教练确认">
-        <Text style={styles.detail}>绑定申请处理中，请稍后查看。</Text>
+      <GateFrame title={/* TODO(i18n:missing) */ "等待教练确认"}>
+        <Text style={styles.detail}>{/* TODO(i18n:missing) */}绑定申请处理中，请稍后查看。</Text>
       </GateFrame>
     );
   }
 
   return (
-    <GateFrame title="暂时无法检查绑定状态">
-      <Text style={styles.detail}>请稍后再试。</Text>
+    <GateFrame title={/* TODO(i18n:missing) */ "暂时无法检查绑定状态"}>
+      <Text style={styles.detail}>{/* TODO(i18n:missing) */}请稍后再试。</Text>
     </GateFrame>
   );
 }

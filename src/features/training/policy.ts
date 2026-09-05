@@ -1,8 +1,9 @@
+import { t } from '@/i18n';
 import type { PlanDay, PlanExercise, PlanSet } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 import { suggestedWeightKg } from '@/domain/e1rm';
 
-import { REST_DEFAULTS, RIR_COPY, TRAINING_LIMITS } from './constants';
+import { REST_DEFAULTS, RIR_KEYS, TRAINING_LIMITS } from './constants';
 import type { WeightSuggestion, WorkoutSetDraft } from './model';
 
 const DAY_MS = 86_400_000;
@@ -79,7 +80,8 @@ export function resolveRestSeconds({
 
 export function rirCopy(rpe: number): string {
   const snapped = Math.max(5, Math.min(10, Math.round(rpe * 2) / 2));
-  return RIR_COPY[snapped as keyof typeof RIR_COPY];
+  if (snapped === 10) return t('student.setEntryRpe.copy011');
+  return t(RIR_KEYS[snapped as keyof typeof RIR_KEYS]);
 }
 
 export function normalizeDecimalInput(value: string): string {
@@ -105,10 +107,10 @@ export function plateLoadout(totalWeightKg: number, collarOn: boolean): {
     (totalWeightKg - TRAINING_LIMITS.barWeightKg) / 2 - collar,
   );
   if (perSideKg === 0 && !collarOn) {
-    return { perSideKg, detail: '空杠 20kg' };
+    return { perSideKg, detail: t('student.setEntryPlateLoadout.copy003') };
   }
   if (perSideKg === 0) {
-    return { perSideKg, detail: '仅 2.5kg 赛扣' };
+    return { perSideKg, detail: t('student.setEntryPlateLoadout.copy001') };
   }
   const plates: string[] = [];
   let remainder = perSideKg;
@@ -119,10 +121,10 @@ export function plateLoadout(totalWeightKg: number, collarOn: boolean): {
       remainder -= count * size;
     }
   }
-  const plateCopy = plates.join(' + ') || `${formatWeight(perSideKg)}kg 片`;
+  const plateCopy = plates.join(' + ') || /* TODO(i18n:missing) */ `${formatWeight(perSideKg)}kg 片`;
   return {
     perSideKg,
-    detail: collarOn ? `${plateCopy} + 2.5kg 赛扣` : plateCopy,
+    detail: collarOn ? `${plateCopy}${t('student.setEntryPlateLoadout.copy002')}` : plateCopy,
   };
 }
 
@@ -191,7 +193,7 @@ export function selectWeightSuggestion({
     if (matchingPrior) {
       return {
         weightKg: parseFiniteDecimal(matchingPrior.weightText) as number,
-        label: '建议 · 同上组',
+        label: /* TODO(i18n:missing) */ '建议 · 同上组',
       };
     }
     if (e1RMKg !== null) {
@@ -203,7 +205,7 @@ export function selectWeightSuggestion({
       if (weight !== null) {
         return {
           weightKg: weight,
-          label: `建议 · 基于 e1RM ${formatWeight(e1RMKg)}`,
+          label: /* TODO(i18n:missing) */ `建议 · 基于 e1RM ${formatWeight(e1RMKg)}`,
         };
       }
     }
@@ -214,6 +216,6 @@ export function selectWeightSuggestion({
     recentCompleted(sameDayLogs, exercise.exercise_id) ??
     recentCompleted(historyLogs, exercise.exercise_id);
   return prior
-    ? { weightKg: Number(prior.weight_kg), label: '建议 · 上次重量' }
+    ? { weightKg: Number(prior.weight_kg), label: /* TODO(i18n:missing) */ '建议 · 上次重量' }
     : null;
 }

@@ -1,0 +1,3572 @@
+{
+"coach.applicationProfile.accept": {
+"en": "Accept",
+"zh": "接收"
+},
+"coach.applicationProfile.age": {
+"en": "Age {age}",
+"zh": "{age} 岁"
+},
+"coach.applicationProfile.back": {
+"en": "Back",
+"zh": "返回"
+},
+"coach.applicationProfile.basicInfo": {
+"en": "Basic Info",
+"zh": "基础信息"
+},
+"coach.applicationProfile.focus": {
+"en": "Focus Areas",
+"zh": "想增强"
+},
+"coach.applicationProfile.heSaid": {
+"en": "He Said",
+"zh": "他说"
+},
+"coach.applicationProfile.ignore": {
+"en": "Ignore",
+"zh": "忽略"
+},
+"coach.applicationProfile.injuryHistory": {
+"en": "Injury History",
+"zh": "伤病史"
+},
+"coach.applicationProfile.notProvided": {
+"en": "—",
+"zh": "—"
+},
+"coach.applicationProfile.selfReportedOneRM": {
+"en": "Self-reported 1RM",
+"zh": "自报 1RM"
+},
+"coach.applicationProfile.sheSaid": {
+"en": "She Said",
+"zh": "她说"
+},
+"coach.applicationProfile.targetMeet": {
+"en": "Target Meet",
+"zh": "目标比赛"
+},
+"coach.applicationProfile.theySaid": {
+"en": "Student Said",
+"zh": "他/她说"
+},
+"coach.applicationProfile.title": {
+"en": "{name} · Application Profile",
+"zh": "{name} · 申请资料"
+},
+"coach.applicationProfile.trainingEnvironment": {
+"en": "Training Environment",
+"zh": "训练环境"
+},
+"coach.applicationProfile.trainingHistory": {
+"en": "Training History / Frequency",
+"zh": "训练年限 / 频率"
+},
+"coach.applicationProfile.unavailable": {
+"en": "Unavailable",
+"zh": "学员尚未填写资料"
+},
+"coach.applicationProfile.unavailableSubtitle": {
+"en": "You can accept or ignore this request. The list refreshes after expiry.",
+"zh": "可以直接接收或忽略；请求过期时返回学员页会自动刷新"
+},
+"coach.applicationProfile.weeklyFrequency %lld": {
+"en": {
+"one": "%lld session/week",
+"other": "%lld sessions/week"
+},
+"zh": "每周 %lld 次"
+},
+"coach.bind.accept.confirm": {
+"en": "Confirm",
+"zh": "确认接收"
+},
+"coach.bind.accept.confirmQuestion": {
+"en": "Accept {student} as your student?",
+"zh": "确认接收 {student} 为学员?"
+},
+"coach.bind.accept.explanation": {
+"en": "Once accepted, you can view their profile and create training plans.",
+"zh": "接收后即可为其查看资料、编排训练计划。"
+},
+"coach.bind.accept.title": {
+"en": "Accept New Student",
+"zh": "接收新学员"
+},
+"coach.bind.accepted": {
+"en": "Accepted",
+"zh": "已接收"
+},
+"coach.bind.acceptedEvaluation": {
+"en": "Accepted, 7-day evaluation started",
+"zh": "已接收,评估期 7 天开始"
+},
+"coach.bind.bench.narrow": {
+"en": "Narrow",
+"zh": "窄握"
+},
+"coach.bind.bench.standard": {
+"en": "Standard",
+"zh": "标准"
+},
+"coach.bind.bench.wide": {
+"en": "Wide",
+"zh": "宽握"
+},
+"coach.bind.card.accept": {
+"en": "Accept",
+"zh": "接收"
+},
+"coach.bind.card.accessibility": {
+"en": "New student request from {student}",
+"zh": "新学员请求 {student}"
+},
+"coach.bind.card.age %lld": {
+"en": {
+"one": "%lld year old",
+"other": "%lld years old"
+},
+"zh": "%lld 岁"
+},
+"coach.bind.card.competition": {
+"en": "Meet: {date}",
+"zh": "备赛: {date}"
+},
+"coach.bind.card.expiring": {
+"en": "Expiring Soon",
+"zh": "即将过期"
+},
+"coach.bind.card.noUploads": {
+"en": "No uploaded files",
+"zh": "无上传资料"
+},
+"coach.bind.card.note": {
+"en": "Note: {note}",
+"zh": "备注: {note}"
+},
+"coach.bind.card.profileIncomplete": {
+"en": "Profile incomplete",
+"zh": "资料未填写完成"
+},
+"coach.bind.card.reject": {
+"en": "Reject",
+"zh": "拒绝"
+},
+"coach.bind.card.strengthen": {
+"en": "Focus: {groups}",
+"zh": "想增强: {groups}"
+},
+"coach.bind.card.uploadCount %lld": {
+"en": {
+"one": "%lld file",
+"other": "%lld files"
+},
+"zh": "资料 %lld 份"
+},
+"coach.bind.card.viewProfile": {
+"en": "View Full Profile",
+"zh": "查看完整资料"
+},
+"coach.bind.deadlift.both": {
+"en": "Both",
+"zh": "两种都练"
+},
+"coach.bind.deadlift.conventional": {
+"en": "Conventional",
+"zh": "传统"
+},
+"coach.bind.deadlift.sumo": {
+"en": "Sumo",
+"zh": "相扑"
+},
+"coach.bind.equipment.barbellDumbbell": {
+"en": "Barbell + Dumbbell",
+"zh": "杠铃 + 哑铃"
+},
+"coach.bind.equipment.beltSquat": {
+"en": "Belt Squat",
+"zh": "腰带深蹲机"
+},
+"coach.bind.equipment.blocksChainsBands": {
+"en": "Blocks / Chains / Bands",
+"zh": "块铃 / 链子 / 弹力带"
+},
+"coach.bind.equipment.cableCrossover": {
+"en": "Cable Crossover",
+"zh": "龙门架(大飞鸟)"
+},
+"coach.bind.equipment.cableLatPulldown": {
+"en": "Cable / Lat Pulldown",
+"zh": "拉力机 / 高位下拉"
+},
+"coach.bind.equipment.chainsBands": {
+"en": "Chains / Bands",
+"zh": "链条 / 弹力带(变阻)"
+},
+"coach.bind.equipment.dbMax20": {
+"en": "Dumbbells ≤20kg",
+"zh": "哑铃 ≤20kg"
+},
+"coach.bind.equipment.dbMax40": {
+"en": "Dumbbells ≤40kg",
+"zh": "哑铃 ≤40kg"
+},
+"coach.bind.equipment.dbMax40Plus": {
+"en": "Dumbbells >40kg",
+"zh": "哑铃 >40kg"
+},
+"coach.bind.equipment.deadliftBar": {
+"en": "Deadlift Bar",
+"zh": "硬拉专项杆(软杆)"
+},
+"coach.bind.equipment.fractionalPlates": {
+"en": "Fractional Plates (from 0.25kg)",
+"zh": "微增片(0.25kg 起)"
+},
+"coach.bind.equipment.ghr": {
+"en": "GHR",
+"zh": "GHR(臀腿举)"
+},
+"coach.bind.equipment.hackSquat": {
+"en": "Hack Squat",
+"zh": "哈克深蹲机"
+},
+"coach.bind.equipment.heavyDumbbells": {
+"en": "Heavy Dumbbells (>30kg)",
+"zh": "哑铃区(>30kg)"
+},
+"coach.bind.equipment.landmine": {
+"en": "Landmine (incl. T-bar row)",
+"zh": "地雷架(含 T 杆划船)"
+},
+"coach.bind.equipment.latPulldown": {
+"en": "Lat Pulldown",
+"zh": "高位下拉"
+},
+"coach.bind.equipment.legCurlExtension": {
+"en": "Leg Curl / Extension",
+"zh": "腿弯举 / 腿屈伸"
+},
+"coach.bind.equipment.legPress": {
+"en": "Leg Press",
+"zh": "倒蹬机 / 腿举机"
+},
+"coach.bind.equipment.liftingPlatform": {
+"en": "Lifting / Deadlift Platform",
+"zh": "举重台 / 硬拉台"
+},
+"coach.bind.equipment.powerBar": {
+"en": "Power Bar",
+"zh": "力量举专项杆(硬杆)"
+},
+"coach.bind.equipment.pullupBar": {
+"en": "Pull-up Bar",
+"zh": "引体向上杆"
+},
+"coach.bind.equipment.rackPinsBlocks": {
+"en": "Rack Pins / Blocks",
+"zh": "架上销 / 垫块"
+},
+"coach.bind.equipment.reverseHyper": {
+"en": "Reverse Hyper",
+"zh": "反向过伸机"
+},
+"coach.bind.equipment.safetyBar": {
+"en": "Specialty Bar (SSB / trap, etc.)",
+"zh": "特种杠(SSB / 六角等)"
+},
+"coach.bind.equipment.sealRow": {
+"en": "Seal Row Bench",
+"zh": "海豹划船凳"
+},
+"coach.bind.equipment.seatedRow": {
+"en": "Seated Row",
+"zh": "坐姿划船"
+},
+"coach.bind.equipment.smithMachine": {
+"en": "Smith Machine",
+"zh": "史密斯架"
+},
+"coach.bind.equipment.squatBenchRack": {
+"en": "Squat Rack + Bench",
+"zh": "深蹲架 + 卧推架"
+},
+"coach.bind.error.alreadyBound": {
+"en": "This student is already linked to you",
+"zh": "你们已是绑定关系"
+},
+"coach.bind.error.expired": {
+"en": "This request has expired",
+"zh": "该请求已过期"
+},
+"coach.bind.error.network": {
+"en": "Network error. Try again later.",
+"zh": "网络异常,请稍后重试"
+},
+"coach.bind.error.processed": {
+"en": "This request has already been processed",
+"zh": "该请求已被处理"
+},
+"coach.bind.gender.female": {
+"en": "Female",
+"zh": "女"
+},
+"coach.bind.gender.male": {
+"en": "Male",
+"zh": "男"
+},
+"coach.bind.gender.other": {
+"en": "Other",
+"zh": "其他"
+},
+"coach.bind.gym.commercial": {
+"en": "Commercial Gym",
+"zh": "商业健身房"
+},
+"coach.bind.gym.homeWithRack": {
+"en": "Home Gym (with rack)",
+"zh": "家庭(含深蹲架)"
+},
+"coach.bind.gym.professional": {
+"en": "Powerlifting Gym",
+"zh": "专业力量房"
+},
+"coach.bind.injury.ankle": {
+"en": "Ankle",
+"zh": "踝"
+},
+"coach.bind.injury.elbow": {
+"en": "Elbow",
+"zh": "肘"
+},
+"coach.bind.injury.hip": {
+"en": "Hip",
+"zh": "髋"
+},
+"coach.bind.injury.knee": {
+"en": "Knee",
+"zh": "膝"
+},
+"coach.bind.injury.lowerBack": {
+"en": "Lower Back",
+"zh": "下背"
+},
+"coach.bind.injury.other": {
+"en": "Other",
+"zh": "其他"
+},
+"coach.bind.injury.shoulder": {
+"en": "Shoulder",
+"zh": "肩"
+},
+"coach.bind.injury.wrist": {
+"en": "Wrist",
+"zh": "腕"
+},
+"coach.bind.scale.daily.1": {
+"en": "Very Low",
+"zh": "很低"
+},
+"coach.bind.scale.daily.2": {
+"en": "Low",
+"zh": "较低"
+},
+"coach.bind.scale.daily.3": {
+"en": "Moderate",
+"zh": "中等"
+},
+"coach.bind.scale.daily.4": {
+"en": "High",
+"zh": "较高"
+},
+"coach.bind.scale.daily.5": {
+"en": "Very High",
+"zh": "极高"
+},
+"coach.bind.scale.recovery.1": {
+"en": "3+ days",
+"zh": "3天以上"
+},
+"coach.bind.scale.recovery.2": {
+"en": "About 3 days",
+"zh": "约3天"
+},
+"coach.bind.scale.recovery.3": {
+"en": "About 2 days",
+"zh": "约2天"
+},
+"coach.bind.scale.recovery.4": {
+"en": "About 1 day",
+"zh": "约1天"
+},
+"coach.bind.scale.recovery.5": {
+"en": "Within half a day",
+"zh": "半天内"
+},
+"coach.bind.scale.sleep.1": {
+"en": "≤5h",
+"zh": "≤5h"
+},
+"coach.bind.scale.sleep.2": {
+"en": "6h",
+"zh": "6h"
+},
+"coach.bind.scale.sleep.3": {
+"en": "7h",
+"zh": "7h"
+},
+"coach.bind.scale.sleep.4": {
+"en": "8h",
+"zh": "8h"
+},
+"coach.bind.scale.sleep.5": {
+"en": "9h+",
+"zh": "9h+"
+},
+"coach.bind.scale.stress.1": {
+"en": "Almost None",
+"zh": "几乎无"
+},
+"coach.bind.scale.stress.2": {
+"en": "Low",
+"zh": "较低"
+},
+"coach.bind.scale.stress.3": {
+"en": "Moderate",
+"zh": "中等"
+},
+"coach.bind.scale.stress.4": {
+"en": "High",
+"zh": "较高"
+},
+"coach.bind.scale.stress.5": {
+"en": "Very High",
+"zh": "极高"
+},
+"coach.bind.squat.highBar": {
+"en": "High Bar",
+"zh": "高杠"
+},
+"coach.bind.squat.lowBar": {
+"en": "Low Bar",
+"zh": "低杠"
+},
+"coach.bind.training.lessThanOne": {
+"en": "Training <1 year",
+"zh": "训练 <1 年"
+},
+"coach.bind.training.tenPlus": {
+"en": "Training 10+ years",
+"zh": "训练 10+ 年"
+},
+"coach.bind.training.years %lld": {
+"en": {
+"one": "Training %lld year",
+"other": "Training %lld years"
+},
+"zh": "训练 %lld 年"
+},
+"coach.bind.waiting.days %lld": {
+"en": {
+"one": "Waiting %lld day",
+"other": "Waiting %lld days"
+},
+"zh": "已等待 %lld 天"
+},
+"coach.bind.waiting.hours %lld": {
+"en": {
+"one": "Waiting %lld hour",
+"other": "Waiting %lld hours"
+},
+"zh": "已等待 %lld 小时"
+},
+"coach.bind.waiting.hoursMinutes %lld %lld": {
+"en": "Waiting %lld hr %lld min",
+"zh": "已等待 %lld 小时 %lld 分"
+},
+"coach.bind.waiting.minutes %lld": {
+"en": {
+"one": "Waiting %lld minute",
+"other": "Waiting %lld minutes"
+},
+"zh": "已等待 %lld 分钟"
+},
+"coach.bind.weekday.fri": {
+"en": "Fri",
+"zh": "周五"
+},
+"coach.bind.weekday.mon": {
+"en": "Mon",
+"zh": "周一"
+},
+"coach.bind.weekday.sat": {
+"en": "Sat",
+"zh": "周六"
+},
+"coach.bind.weekday.sun": {
+"en": "Sun",
+"zh": "周日"
+},
+"coach.bind.weekday.thu": {
+"en": "Thu",
+"zh": "周四"
+},
+"coach.bind.weekday.tue": {
+"en": "Tue",
+"zh": "周二"
+},
+"coach.bind.weekday.wed": {
+"en": "Wed",
+"zh": "周三"
+},
+"coach.chat.activeStudentSubtitle": {
+"en": "● Student · Active",
+"zh": "● 学员 · 活跃"
+},
+"coach.chat.attentionStudentSubtitle": {
+"en": "● Student · Needs Attention",
+"zh": "● 学员 · 待关注"
+},
+"coach.chat.messages": {
+"en": "Messages",
+"zh": "消息"
+},
+"coach.chat.ok": {
+"en": "OK",
+"zh": "好"
+},
+"coach.chat.sendMessage": {
+"en": "Message",
+"zh": "发消息"
+},
+"coach.chat.unableToOpenConversation": {
+"en": "Could not open conversation. Try again.",
+"zh": "无法打开会话，请重试"
+},
+"coach.common.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"coach.common.loadFailed": {
+"en": "Load Failed",
+"zh": "加载失败"
+},
+"coach.common.notSelected": {
+"en": "Not selected",
+"zh": "未选中"
+},
+"coach.common.retry": {
+"en": "Retry",
+"zh": "重试"
+},
+"coach.common.save": {
+"en": "Save",
+"zh": "保存"
+},
+"coach.common.selected": {
+"en": "Selected",
+"zh": "已选中"
+},
+"coach.detail.active": {
+"en": "Active",
+"zh": "活跃"
+},
+"coach.detail.adjusted": {
+"en": "Adjusted",
+"zh": "已调整"
+},
+"coach.detail.back": {
+"en": "Back",
+"zh": "返回"
+},
+"coach.detail.backToStudents": {
+"en": "Students",
+"zh": "学员"
+},
+"coach.detail.chat": {
+"en": "Chat",
+"zh": "消息"
+},
+"coach.detail.completed": {
+"en": "Completed",
+"zh": "已完成"
+},
+"coach.detail.evaluationDays %lld": {
+"en": {
+"one": "Evaluation · %lld day",
+"other": "Evaluation · %lld days"
+},
+"zh": "评估期 %lld 天"
+},
+"coach.detail.evaluationHours %lld": {
+"en": {
+"one": "Evaluation · %lld hour",
+"other": "Evaluation · %lld hours"
+},
+"zh": "评估期 %lld 小时"
+},
+"coach.detail.evaluationLoadFailed": {
+"en": "Evaluation Load Failed",
+"zh": "评估状态加载失败"
+},
+"coach.detail.feedbackMeta": {
+"en": "{relativeTime} · View all →",
+"zh": "{relativeTime} · 看全部 →"
+},
+"coach.detail.loadFailed": {
+"en": "Load Failed",
+"zh": "加载失败"
+},
+"coach.detail.loading": {
+"en": "Loading",
+"zh": "加载学员详情…"
+},
+"coach.detail.needsAttention": {
+"en": "Needs Attention",
+"zh": "待关注"
+},
+"coach.detail.noFeedback": {
+"en": "No feedback yet",
+"zh": "还没有反馈"
+},
+"coach.detail.noPlan": {
+"en": "No plan yet",
+"zh": "还没有计划"
+},
+"coach.detail.noPlanSubtitle": {
+"en": "Create a plan for this student from planning",
+"zh": "去计划页为这位学员排一份"
+},
+"coach.detail.noTrainingThisWeek": {
+"en": "No Training Days This Week",
+"zh": "本周还没有训练安排"
+},
+"coach.detail.notStarted": {
+"en": "Not Started",
+"zh": "未开始"
+},
+"coach.detail.planLoadFailed": {
+"en": "Could not load the plan",
+"zh": "计划加载失败"
+},
+"coach.detail.profileUnavailable": {
+"en": "Registration profile unavailable",
+"zh": "注册资料暂时无法获取"
+},
+"coach.detail.pullToRetry": {
+"en": "Pull To Retry",
+"zh": "下拉刷新重试"
+},
+"coach.detail.readinessReminderDraft": {
+"en": "Remember to log today’s readiness.",
+"zh": "提醒填写今日状态"
+},
+"coach.detail.recentFeedback": {
+"en": "Recent Feedback",
+"zh": "最近反馈"
+},
+"coach.detail.remindToFile": {
+"en": "Send reminder",
+"zh": "提醒填写"
+},
+"coach.detail.remindTraining": {
+"en": "Remind to train",
+"zh": "提醒训练"
+},
+"coach.detail.retry": {
+"en": "Retry",
+"zh": "重试"
+},
+"coach.detail.section.feedback": {
+"en": "Feedback",
+"zh": "反馈"
+},
+"coach.detail.section.growth": {
+"en": "Progress",
+"zh": "成长"
+},
+"coach.detail.section.overview": {
+"en": "Overview",
+"zh": "概览"
+},
+"coach.detail.section.profile": {
+"en": "Profile",
+"zh": "资料"
+},
+"coach.detail.section.videos": {
+"en": "Videos",
+"zh": "视频"
+},
+"coach.detail.statusUnavailable": {
+"en": "Status Unavailable",
+"zh": "暂时无法获取"
+},
+"coach.detail.tapDayForDetails": {
+"en": "Tap Day For Details",
+"zh": "点某天查看详情"
+},
+"coach.detail.today": {
+"en": "Today",
+"zh": "今天"
+},
+"coach.detail.todayNotFiled": {
+"en": "Today Not Filed",
+"zh": "今日未填"
+},
+"coach.detail.todayStatus": {
+"en": "Today's Readiness",
+"zh": "今日状态"
+},
+"coach.detail.training": {
+"en": "Training",
+"zh": "训练"
+},
+"coach.detail.trainingReminderDraft": {
+"en": "Remember to train today.",
+"zh": "提醒训练"
+},
+"coach.detail.weekProgress %lld %lld": {
+"en": "This week %1$lld/%#@total@",
+"zh": "本周 %lld/%lld 训练日"
+},
+"coach.detail.weekRunningTitle %lld": {
+"en": "W%lld in progress",
+"zh": "W%lld 在跑"
+},
+"coach.detail.weekSummary": {
+"en": "Week Summary",
+"zh": "本周总结"
+},
+"coach.detail.weekSummaryUnavailable": {
+"en": "Weekly summary is not available here",
+"zh": "本卡不提供本周总结"
+},
+"coach.detail.weekTraining": {
+"en": "Week Training",
+"zh": "本周训练"
+},
+"coach.detail.weekday.fri": {
+"en": "Fri",
+"zh": "周五"
+},
+"coach.detail.weekday.mon": {
+"en": "Mon",
+"zh": "周一"
+},
+"coach.detail.weekday.sat": {
+"en": "Sat",
+"zh": "周六"
+},
+"coach.detail.weekday.sun": {
+"en": "Sun",
+"zh": "周日"
+},
+"coach.detail.weekday.thu": {
+"en": "Thu",
+"zh": "周四"
+},
+"coach.detail.weekday.tue": {
+"en": "Tue",
+"zh": "周二"
+},
+"coach.detail.weekday.wed": {
+"en": "Wed",
+"zh": "周三"
+},
+"coach.detail.writeFirstFeedback": {
+"en": "Write the first feedback from Videos →",
+"zh": "去视频页写第一条 →"
+},
+"coach.evaluation.complete": {
+"en": "Complete Evaluation",
+"zh": "完成评估"
+},
+"coach.evaluation.complete.anyway": {
+"en": "Complete Anyway",
+"zh": "仍然完成"
+},
+"coach.evaluation.complete.confirmation": {
+"en": "Completing this unlocks regular 4-week plans. If you have not written the summary, write it first.",
+"zh": "完成后即可发布正式 4 周计划。还没写评估总结的话,建议先写总结再完成。"
+},
+"coach.evaluation.complete.writeSummary": {
+"en": "Write Summary First",
+"zh": "先写总结"
+},
+"coach.evaluation.duration.days %lld": {
+"en": {
+"one": "%lld day",
+"other": "%lld days"
+},
+"zh": "%lld 天"
+},
+"coach.evaluation.duration.hours %lld": {
+"en": {
+"one": "%lld hour",
+"other": "%lld hours"
+},
+"zh": "%lld 小时"
+},
+"coach.evaluation.error.complete": {
+"en": "Could not complete evaluation. Try again later.",
+"zh": "完成评估失败,请稍后重试"
+},
+"coach.evaluation.overdue": {
+"en": "Overdue by {duration}. Please deliver the summary soon.",
+"zh": "已超期 {duration},请尽快交付总结"
+},
+"coach.evaluation.remaining %lld %lld": {
+"en": "Evaluation · %#@days@ %#@hours@ remaining",
+"zh": "评估期 · 还剩 %lld 天 %lld 小时"
+},
+"coach.evaluation.sendAdaptation": {
+"en": "Send Adaptation Week",
+"zh": "发适应周"
+},
+"coach.evaluation.summary": {
+"en": "Evaluation Summary",
+"zh": "评估总结"
+},
+"coach.evaluation.summary.completeFailed": {
+"en": "Summary saved, but evaluation completion failed. Retry from student details.",
+"zh": "总结已保存,但完成评估失败,请在学员详情页重试"
+},
+"coach.evaluation.summary.completeNotify": {
+"en": "Complete & Notify Student",
+"zh": "完成并通知学员"
+},
+"coach.evaluation.summary.completedAlert": {
+"en": "Evaluation complete. {student} has been notified.",
+"zh": "评估完成,{student} 已收到通知。"
+},
+"coach.evaluation.summary.later": {
+"en": "Later",
+"zh": "稍后"
+},
+"coach.evaluation.summary.loadFailed": {
+"en": "Could not load the evaluation summary. Go back and retry.",
+"zh": "评估总结加载失败,请返回重试"
+},
+"coach.evaluation.summary.navigationTitle": {
+"en": "Evaluation Summary · {student}",
+"zh": "评估总结 · {student}"
+},
+"coach.evaluation.summary.notifyStudent": {
+"en": "Notify Student Too",
+"zh": "同时通知学员"
+},
+"coach.evaluation.summary.overall": {
+"en": "Overall Assessment · Required",
+"zh": "整体评估 · 必填"
+},
+"coach.evaluation.summary.planNow": {
+"en": "Plan Now",
+"zh": "立即排"
+},
+"coach.evaluation.summary.planPrompt": {
+"en": "Create their first regular plan now?",
+"zh": "要不要立即为他排第一份正式计划?"
+},
+"coach.evaluation.summary.profileMissing": {
+"en": "Student profile unavailable. Fill it in manually.",
+"zh": "学员资料未读到,手动填写"
+},
+"coach.evaluation.summary.saveDraft": {
+"en": "Save Draft",
+"zh": "保存草稿"
+},
+"coach.evaluation.summary.saveFailed": {
+"en": "Save failed. Try again.",
+"zh": "保存失败,请重试"
+},
+"coach.evaluation.summary.saved": {
+"en": "Saved {time}",
+"zh": "已保存 {time}"
+},
+"coach.evaluation.summary.trainingPlan": {
+"en": "Training Plan · Required",
+"zh": "训练规划 · 必填"
+},
+"coach.evaluation.summary.words": {
+"en": "Message to Student · Optional",
+"zh": "给学员的话 · 选填"
+},
+"coach.evaluation.title": {
+"en": "Evaluation Period",
+"zh": "评估期"
+},
+"coach.evaluation.viewAdaptation": {
+"en": "View Adaptation Week",
+"zh": "查看适应周"
+},
+"coach.execution.empty": {
+"en": "No Training Records",
+"zh": "暂无执行记录"
+},
+"coach.execution.freeLog": {
+"en": "Free Log",
+"zh": "自由记录"
+},
+"coach.execution.loggedSets %lld": {
+"en": {
+"one": "%lld set logged",
+"other": "%lld sets logged"
+},
+"zh": "%lld 组已记录"
+},
+"coach.execution.loggedSetsFraction %lld %lld": {
+"en": "%1$lld/%#@total@ logged",
+"zh": "%lld/%lld 组已记录"
+},
+"coach.execution.noLoggedSets": {
+"en": "No logged sets",
+"zh": "暂无已记录组"
+},
+"coach.execution.rest": {
+"en": "Rest",
+"zh": "休息"
+},
+"coach.execution.restDay": {
+"en": "Rest Day",
+"zh": "休息日"
+},
+"coach.execution.setFraction %lld %lld": {
+"en": "%1$lld/%#@total@",
+"zh": "%lld/%lld 组"
+},
+"coach.feedback.content": {
+"en": "Feedback",
+"zh": "反馈内容"
+},
+"coach.feedback.date": {
+"en": "Date",
+"zh": "日期"
+},
+"coach.feedback.empty": {
+"en": "No feedback yet",
+"zh": "还没有反馈"
+},
+"coach.feedback.error.empty": {
+"en": "Feedback cannot be empty",
+"zh": "反馈不能为空"
+},
+"coach.feedback.error.send": {
+"en": "Send failed. Try again later.",
+"zh": "发送失败，请稍后重试"
+},
+"coach.feedback.exercise": {
+"en": "Exercise",
+"zh": "动作"
+},
+"coach.feedback.eyebrow": {
+"en": "TEXT FEEDBACK //",
+"zh": "文本反馈 //"
+},
+"coach.feedback.link": {
+"en": "Link",
+"zh": "关联"
+},
+"coach.feedback.notLinked": {
+"en": "Not linked",
+"zh": "不关联"
+},
+"coach.feedback.placeholder": {
+"en": "Write feedback for {student}...",
+"zh": "给 {student} 写反馈..."
+},
+"coach.feedback.recordCount %lld": {
+"en": {
+"one": "Feedback · %lld",
+"other": "Feedback · %lld"
+},
+"zh": "反馈记录 · %lld"
+},
+"coach.feedback.send": {
+"en": "Send",
+"zh": "发送"
+},
+"coach.feedback.title": {
+"en": "Feedback for {student}",
+"zh": "给 {student} 写反馈"
+},
+"coach.feedback.videoFeedback": {
+"en": "Training Video",
+"zh": "训练视频"
+},
+"coach.feedback.writeFromVideo": {
+"en": "Write feedback from a video",
+"zh": "从视频页写反馈"
+},
+"coach.growth.empty": {
+"en": "No progress data yet",
+"zh": "还没有成长数据"
+},
+"coach.growth.error.load": {
+"en": "Could not load progress. Try again later.",
+"zh": "成长曲线加载失败，请稍后重试"
+},
+"coach.growth.family.bench": {
+"en": "Bench press e1RM",
+"zh": "卧推 E1RM"
+},
+"coach.growth.family.deadlift": {
+"en": "Deadlift e1RM",
+"zh": "硬拉 E1RM"
+},
+"coach.growth.family.squat": {
+"en": "Squat e1RM",
+"zh": "深蹲 E1RM"
+},
+"coach.growth.noFamilyData": {
+"en": "No data yet",
+"zh": "还没有数据"
+},
+"coach.growth.oneRMTotal %@": {
+"en": "1RM total %@ kg",
+"zh": "1RM 合计 %@ kg"
+},
+"coach.growth.totalE1RM": {
+"en": "SBD total e1RM",
+"zh": "三项总和 E1RM"
+},
+"coach.growth.totalProgress %@": {
+"en": "%@ of 1RM total",
+"zh": "占 1RM 总和 %@"
+},
+"coach.growth.trend.down": {
+"en": "e1RM trend down",
+"zh": "e1RM 趋势下降"
+},
+"coach.growth.trend.flat": {
+"en": "e1RM trend steady",
+"zh": "e1RM 趋势持平"
+},
+"coach.growth.trend.up": {
+"en": "e1RM trend up",
+"zh": "e1RM 趋势上升"
+},
+"coach.growth.window.all": {
+"en": "All",
+"zh": "全部"
+},
+"coach.growth.window.fourWeeks": {
+"en": "Last 4 Weeks",
+"zh": "近 4 周"
+},
+"coach.growth.window.threeMonths": {
+"en": "Last 3 Months",
+"zh": "近 3 月"
+},
+"coach.import.boundTo": {
+"en": "Bound: {exercise}",
+"zh": "已绑定：{exercise}"
+},
+"coach.import.catalogLoadFailed": {
+"en": "Could not load exercise library: {message}",
+"zh": "动作库加载失败：{message}"
+},
+"coach.import.chooseAnotherFile": {
+"en": "Choose Another File",
+"zh": "重新选择文件"
+},
+"coach.import.coachNote": {
+"en": "Coach Note",
+"zh": "教练备注"
+},
+"coach.import.day": {
+"en": "Day {day}",
+"zh": "第 {day} 天"
+},
+"coach.import.defaultPlanName": {
+"en": "{student}'s Imported Plan",
+"zh": "{student} 导入计划"
+},
+"coach.import.incompleteHint": {
+"en": "Resolve the items marked “Needs Input” before publishing.",
+"zh": "还有「待你定」的项——补齐重量/RPE、绑定动作后才能发布。"
+},
+"coach.import.needsBinding": {
+"en": "Needs Binding",
+"zh": "待绑定"
+},
+"coach.import.needsValues": {
+"en": "Needs Values",
+"zh": "待补值"
+},
+"coach.import.needsYourInput": {
+"en": "Needs Input",
+"zh": "待你定"
+},
+"coach.import.noSimilarExercise": {
+"en": "No similar exercise exists in the library.",
+"zh": "库里没有相近动作——本组导入需要先在库里有它。"
+},
+"coach.import.noTrainingWeeks": {
+"en": "No training weeks were found. Make sure you selected a plan sheet.",
+"zh": "没能在表里识别出训练周——请确认选择的是计划页。"
+},
+"coach.import.parseFailed": {
+"en": "Parse failed: {message}",
+"zh": "解析失败：{message}"
+},
+"coach.import.pickFileDescription": {
+"en": "AirDrop an .xlsx plan to your phone and select it here. Parsing stays on device.",
+"zh": "把电脑上的 .xlsx 计划表 AirDrop 到手机，选它导入。解析在本机完成，文件不上传。"
+},
+"coach.import.planName": {
+"en": "Plan Name",
+"zh": "计划名"
+},
+"coach.import.publishFailed": {
+"en": "Publish failed: {message}",
+"zh": "发布失败：{message}"
+},
+"coach.import.publishToStudent": {
+"en": "Publish to Student",
+"zh": "发布给学员"
+},
+"coach.import.publishable": {
+"en": "Ready to Publish",
+"zh": "可发布"
+},
+"coach.import.publishedTo": {
+"en": "Published to {student}",
+"zh": "已发布给 {student}"
+},
+"coach.import.review": {
+"en": "Import Review",
+"zh": "导入审阅"
+},
+"coach.import.selectStudent": {
+"en": "Select a student",
+"zh": "请选择学员"
+},
+"coach.import.selectXLSXFile": {
+"en": "Select .xlsx File",
+"zh": "选择 .xlsx 文件"
+},
+"coach.import.setNumber %lld": {
+"en": "Set %lld",
+"zh": "第 %lld 组"
+},
+"coach.import.sourceWeek %lld": {
+"en": "Source Week %lld",
+"zh": "原表第 %lld 周"
+},
+"coach.import.startDate": {
+"en": "Start Date (defaults to next Monday)",
+"zh": "开始日（默认下周一）"
+},
+"coach.import.studentLoadFailed": {
+"en": "Could not load students: {message}",
+"zh": "学员加载失败：{message}"
+},
+"coach.import.summary.weekSelectedWeek": {
+"en": "Parsed {parsed} week · {selected} week selected",
+"zh": "共解析出 {parsed} 周 · 选中 {selected} 周"
+},
+"coach.import.summary.weekSelectedWeeks": {
+"en": "Parsed {parsed} week · {selected} weeks selected",
+"zh": "共解析出 {parsed} 周 · 选中 {selected} 周"
+},
+"coach.import.summary.weeksSelectedWeek": {
+"en": "Parsed {parsed} weeks · {selected} week selected",
+"zh": "共解析出 {parsed} 周 · 选中 {selected} 周"
+},
+"coach.import.summary.weeksSelectedWeeks": {
+"en": "Parsed {parsed} weeks · {selected} weeks selected",
+"zh": "共解析出 {parsed} 周 · 选中 {selected} 周"
+},
+"coach.import.title": {
+"en": "Import Plan",
+"zh": "导入计划"
+},
+"coach.import.weightKilograms": {
+"en": "Weight kg",
+"zh": "重量kg"
+},
+"coach.inbox.emptySubtitle": {
+"en": "New messages and videos awaiting feedback will appear here",
+"zh": "学员发来消息或上传待反馈视频时会出现在这里"
+},
+"coach.inbox.emptyTitle": {
+"en": "All caught up",
+"zh": "消息都处理完了"
+},
+"coach.inbox.eyebrow %lld": {
+"en": {
+"one": "Messages & Videos · %lld",
+"other": "Messages & Videos · %lld"
+},
+"zh": "消息与视频 · %lld"
+},
+"coach.inbox.hint": {
+"en": "Tap a name to chat · Tap the black count to review videos",
+"zh": "点姓名进聊天 · 点黑色数字直接看待反馈的视频"
+},
+"coach.inbox.loadFailed": {
+"en": "Could not load messages",
+"zh": "消息加载失败"
+},
+"coach.inbox.loading": {
+"en": "Loading messages…",
+"zh": "正在加载消息…"
+},
+"coach.inbox.noMessages": {
+"en": "No Messages",
+"zh": "暂无消息"
+},
+"coach.inbox.pendingVideoPreview %lld %@": {
+"en": {
+"one": "%lld video awaiting feedback · %@",
+"other": "%lld videos awaiting feedback · %@"
+},
+"zh": "%lld 段视频待反馈 · %@"
+},
+"coach.inbox.pendingVideosAccessibility %@ %lld": {
+"en": {
+"one": "%@, %lld video awaiting feedback",
+"other": "%@, %lld videos awaiting feedback"
+},
+"zh": "%@，%lld 段视频待反馈"
+},
+"coach.inbox.playPendingVideos": {
+"en": "Play Pending Videos",
+"zh": "查看待反馈视频"
+},
+"coach.inbox.title": {
+"en": "Messages",
+"zh": "消息"
+},
+"coach.inbox.unreadAccessibility %lld": {
+"en": {
+"one": "%lld unread message",
+"other": "%lld unread messages"
+},
+"zh": "%lld 条未读消息"
+},
+"coach.invites.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"coach.invites.copied": {
+"en": "Copied",
+"zh": "已复制"
+},
+"coach.invites.copy": {
+"en": "Copy",
+"zh": "复制"
+},
+"coach.invites.createSingleUse": {
+"en": "Create Single Use",
+"zh": "生成一次性码"
+},
+"coach.invites.createTimeLimited": {
+"en": "Create Time Limited",
+"zh": "生成限时码"
+},
+"coach.invites.custom": {
+"en": "Custom",
+"zh": "自定义"
+},
+"coach.invites.days %lld": {
+"en": {
+"one": "%lld day",
+"other": "%lld days"
+},
+"zh": "%lld 天"
+},
+"coach.invites.defunctSection": {
+"en": "Inactive",
+"zh": "已失效"
+},
+"coach.invites.generate": {
+"en": "Generate",
+"zh": "生成"
+},
+"coach.invites.generatePermanentCode": {
+"en": "Generate Permanent Code",
+"zh": "生成我的永久码"
+},
+"coach.invites.labelPlaceholder": {
+"en": "For Alex",
+"zh": "给小明"
+},
+"coach.invites.navigationTitle": {
+"en": "My Invite Codes",
+"zh": "我的邀请码"
+},
+"coach.invites.noPermanentCode": {
+"en": "No permanent code yet — generate one to share with new students.",
+"zh": "还没有永久码 — 生成一张,随时分发给新学员。"
+},
+"coach.invites.operationFailed": {
+"en": "Operation failed. Try again.",
+"zh": "操作失败,请重试"
+},
+"coach.invites.optionalLabel": {
+"en": "Note (optional, e.g. student name)",
+"zh": "备注(选填,如学员姓名)"
+},
+"coach.invites.personalSection": {
+"en": "Personal Permanent Code",
+"zh": "Personal 永久码"
+},
+"coach.invites.regenerate": {
+"en": "Regenerate",
+"zh": "重新生成"
+},
+"coach.invites.regenerateMessage": {
+"en": "The old code will stop working immediately, including copies already shared.",
+"zh": "重新生成后旧码立即失效,已分发的旧码将无法使用。"
+},
+"coach.invites.regenerateTitle": {
+"en": "Regenerate permanent code?",
+"zh": "重新生成永久码?"
+},
+"coach.invites.revoke": {
+"en": "Revoke",
+"zh": "撤销"
+},
+"coach.invites.revokeMessage": {
+"en": "This code will stop working immediately.",
+"zh": "撤销后该码立即失效。"
+},
+"coach.invites.revokeTitle": {
+"en": "Revoke this invite code?",
+"zh": "撤销这个邀请码?"
+},
+"coach.invites.secondarySection": {
+"en": "Single-use / Time-limited Codes",
+"zh": "一次性码 / 限时码"
+},
+"coach.invites.sevenDays": {
+"en": "Seven Days",
+"zh": "7 天"
+},
+"coach.invites.singleUse": {
+"en": "Single-use",
+"zh": "一次性"
+},
+"coach.invites.singleUseCode": {
+"en": "Single Use Code",
+"zh": "+ 一次性码"
+},
+"coach.invites.status.active": {
+"en": "Active",
+"zh": "待用"
+},
+"coach.invites.status.expired": {
+"en": "Expired",
+"zh": "已过期"
+},
+"coach.invites.status.expiresIn %lld": {
+"en": {
+"one": "Expires in %lld day",
+"other": "Expires in %lld days"
+},
+"zh": "%lld 天后过期"
+},
+"coach.invites.status.expiring %lld": {
+"en": {
+"one": "Expires in %lld day",
+"other": "Expires in %lld days"
+},
+"zh": "%lld 天后过期"
+},
+"coach.invites.status.revoked": {
+"en": "Revoked",
+"zh": "已撤销"
+},
+"coach.invites.status.used": {
+"en": "Used",
+"zh": "已使用"
+},
+"coach.invites.thirtyDays": {
+"en": "Thirty Days",
+"zh": "30 天"
+},
+"coach.invites.timeLimited": {
+"en": "Time-limited",
+"zh": "限时"
+},
+"coach.invites.timeLimitedCode": {
+"en": "Time Limited Code",
+"zh": "+ 限时码"
+},
+"coach.invites.usedCount %lld": {
+"en": {
+"one": "Used %lld time",
+"other": "Used %lld times"
+},
+"zh": "已使用 %lld 次"
+},
+"coach.invites.validity": {
+"en": "Validity",
+"zh": "有效期"
+},
+"coach.planning.abnormal.dayNotTrained %lld": {
+"en": "No training for %lld day",
+"zh": "%lld 天未训练"
+},
+"coach.planning.abnormal.daysNotTrained %lld": {
+"en": {
+"one": "No training for %lld day",
+"other": "No training for %lld days"
+},
+"zh": "%lld 天未训练"
+},
+"coach.planning.abnormal.stuckOnWeek %lld": {
+"en": "Stuck on W%lld",
+"zh": "卡 W%lld 未完成"
+},
+"coach.planning.common.add": {
+"en": "Add",
+"zh": "添加"
+},
+"coach.planning.common.all": {
+"en": "All",
+"zh": "全部"
+},
+"coach.planning.common.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"coach.planning.common.close": {
+"en": "Close",
+"zh": "关闭"
+},
+"coach.planning.common.decrease": {
+"en": "Decrease",
+"zh": "减少"
+},
+"coach.planning.common.delete": {
+"en": "Delete",
+"zh": "删除"
+},
+"coach.planning.common.done": {
+"en": "Done",
+"zh": "完成"
+},
+"coach.planning.common.edit": {
+"en": "Edit",
+"zh": "编辑"
+},
+"coach.planning.common.increase": {
+"en": "Increase",
+"zh": "增加"
+},
+"coach.planning.common.listSeparator": {
+"en": ", ",
+"zh": "、"
+},
+"coach.planning.common.mainLift": {
+"en": "Main Lift",
+"zh": "主项"
+},
+"coach.planning.common.next": {
+"en": "Next",
+"zh": "下一步"
+},
+"coach.planning.common.other": {
+"en": "Other",
+"zh": "其他"
+},
+"coach.planning.common.reps": {
+"en": "Reps",
+"zh": "次数"
+},
+"coach.planning.common.retry": {
+"en": "Retry",
+"zh": "重试"
+},
+"coach.planning.common.save": {
+"en": "Save",
+"zh": "保存"
+},
+"coach.planning.common.search": {
+"en": "Search",
+"zh": "搜索 / Search"
+},
+"coach.planning.common.selected": {
+"en": "Selected",
+"zh": "已选择"
+},
+"coach.planning.common.sets": {
+"en": "Sets",
+"zh": "组数"
+},
+"coach.planning.common.unknownExercise": {
+"en": "Unknown Exercise",
+"zh": "未知动作"
+},
+"coach.planning.common.weight": {
+"en": "Weight",
+"zh": "重量"
+},
+"coach.planning.completion.missingIntensity": {
+"en": "{day} · {exercise}: weight/intensity missing",
+"zh": "{day} · {exercise}:未设重量/强度"
+},
+"coach.planning.completion.missingMainLift": {
+"en": "{day}: main lift not selected",
+"zh": "{day}:未选主项"
+},
+"coach.planning.coordinator.newPlan": {
+"en": "New Plan",
+"zh": "新计划"
+},
+"coach.planning.count.item %lld": {
+"en": {
+"one": "%lld item",
+"other": "%lld item"
+},
+"zh": "%lld 项"
+},
+"coach.planning.count.items %lld": {
+"en": {
+"one": "%lld item",
+"other": "%lld items"
+},
+"zh": "%lld 项"
+},
+"coach.planning.count.rep %lld": {
+"en": {
+"one": "%lld rep",
+"other": "%lld rep"
+},
+"zh": "%lld 次"
+},
+"coach.planning.count.repPlural %lld": {
+"en": {
+"one": "%lld rep",
+"other": "%lld reps"
+},
+"zh": "%lld 次"
+},
+"coach.planning.count.set %lld": {
+"en": {
+"one": "%lld set",
+"other": "%lld set"
+},
+"zh": "%lld 组"
+},
+"coach.planning.count.setPlural %lld": {
+"en": {
+"one": "%lld set",
+"other": "%lld sets"
+},
+"zh": "%lld 组"
+},
+"coach.planning.count.setsAndReps %lld %@ %lld": {
+"en": "%#@sets@ %2$@ %#@reps@",
+"zh": "%lld 组 %@ %lld 次"
+},
+"coach.planning.count.week %lld": {
+"en": {
+"one": "%lld week",
+"other": "%lld week"
+},
+"zh": "%lld 周"
+},
+"coach.planning.count.weeks %lld": {
+"en": {
+"one": "%lld week",
+"other": "%lld weeks"
+},
+"zh": "%lld 周"
+},
+"coach.planning.editor.addRepMaximum": {
+"en": "Add Rep Maximum",
+"zh": "添加次数上限"
+},
+"coach.planning.editor.deleteExercise": {
+"en": "Delete {exercise}",
+"zh": "删除 {exercise}"
+},
+"coach.planning.editor.filled": {
+"en": "Complete",
+"zh": "已填"
+},
+"coach.planning.editor.intensityMode": {
+"en": "Intensity Mode",
+"zh": "强度模式"
+},
+"coach.planning.editor.notes": {
+"en": "Notes",
+"zh": "备注"
+},
+"coach.planning.editor.notesPlaceholder": {
+"en": "Optional · e.g. 3-sec pause / 3-0-1 tempo / wide grip",
+"zh": "可选 · 比如暂停 3 秒 / 节奏 3-0-1 / 卧距宽"
+},
+"coach.planning.editor.removeRepMaximum": {
+"en": "Remove Rep Maximum",
+"zh": "删除次数上限"
+},
+"coach.planning.editor.repMaximum": {
+"en": "Rep Maximum",
+"zh": "次数上限"
+},
+"coach.planning.editor.rest": {
+"en": "Rest",
+"zh": "休息"
+},
+"coach.planning.editor.restBetweenSets": {
+"en": "Rest Between Sets",
+"zh": "组间休息"
+},
+"coach.planning.editor.setNumber %lld": {
+"en": "Set %lld",
+"zh": "第 %lld 组"
+},
+"coach.planning.editor.setRestIndividually": {
+"en": "Set Individually",
+"zh": "逐组单独设"
+},
+"coach.planning.equipment.band": {
+"en": "Resistance Band",
+"zh": "弹力带"
+},
+"coach.planning.equipment.barbell": {
+"en": "Barbell",
+"zh": "杠铃"
+},
+"coach.planning.equipment.bodyweight": {
+"en": "Bodyweight",
+"zh": "自重"
+},
+"coach.planning.equipment.cable": {
+"en": "Cable",
+"zh": "绳索"
+},
+"coach.planning.equipment.dumbbell": {
+"en": "Dumbbell",
+"zh": "哑铃"
+},
+"coach.planning.equipment.kettlebell": {
+"en": "Kettlebell",
+"zh": "壶铃"
+},
+"coach.planning.equipment.machine": {
+"en": "Machine",
+"zh": "器械"
+},
+"coach.planning.equipment.specialtyBar": {
+"en": "Specialty Bar",
+"zh": "特殊杆"
+},
+"coach.planning.library.addExercise": {
+"en": "Add {exercise}",
+"zh": "添加 {exercise}"
+},
+"coach.planning.library.clearSearch": {
+"en": "Clear Search",
+"zh": "清空搜索"
+},
+"coach.planning.library.equipment": {
+"en": "Equipment",
+"zh": "器械"
+},
+"coach.planning.library.filter": {
+"en": "Filter",
+"zh": "筛选"
+},
+"coach.planning.library.loadingExercises": {
+"en": "Loading Exercises",
+"zh": "加载动作中"
+},
+"coach.planning.library.matchingExercise %lld": {
+"en": {
+"one": "%lld match",
+"other": "%lld match"
+},
+"zh": "匹配 %lld 个"
+},
+"coach.planning.library.matchingExercises %lld": {
+"en": {
+"one": "%lld match",
+"other": "%lld matches"
+},
+"zh": "匹配 %lld 个"
+},
+"coach.planning.library.movementPattern": {
+"en": "Movement Pattern",
+"zh": "模式"
+},
+"coach.planning.library.muscleGroup": {
+"en": "Muscle Group",
+"zh": "肌群"
+},
+"coach.planning.library.noMatchingExercises": {
+"en": "No Matching Exercises",
+"zh": "没有匹配动作"
+},
+"coach.planning.library.noSearchResults": {
+"en": "No Search Results",
+"zh": "没有符合搜索的动作"
+},
+"coach.planning.library.removeExercise": {
+"en": "Remove {exercise}",
+"zh": "移除 {exercise}"
+},
+"coach.planning.library.title": {
+"en": "Exercise Library",
+"zh": "动作库"
+},
+"coach.planning.lift.benchPress": {
+"en": "Bench Press",
+"zh": "卧推"
+},
+"coach.planning.lift.deadlift": {
+"en": "Deadlift",
+"zh": "硬拉"
+},
+"coach.planning.lift.squat": {
+"en": "Squat",
+"zh": "深蹲"
+},
+"coach.planning.muscle.adductors": {
+"en": "Adductors",
+"zh": "内收"
+},
+"coach.planning.muscle.back": {
+"en": "Back",
+"zh": "背"
+},
+"coach.planning.muscle.biceps": {
+"en": "Biceps",
+"zh": "二头"
+},
+"coach.planning.muscle.calves": {
+"en": "Calves",
+"zh": "小腿"
+},
+"coach.planning.muscle.chest": {
+"en": "Chest",
+"zh": "胸"
+},
+"coach.planning.muscle.core": {
+"en": "Core",
+"zh": "核心"
+},
+"coach.planning.muscle.forearm": {
+"en": "Forearms",
+"zh": "小臂"
+},
+"coach.planning.muscle.glutes": {
+"en": "Glutes",
+"zh": "臀"
+},
+"coach.planning.muscle.hamstrings": {
+"en": "Hamstrings",
+"zh": "腘绳"
+},
+"coach.planning.muscle.hip": {
+"en": "Hips",
+"zh": "髋"
+},
+"coach.planning.muscle.quadriceps": {
+"en": "Quads",
+"zh": "股四"
+},
+"coach.planning.muscle.shoulder": {
+"en": "Shoulders",
+"zh": "肩"
+},
+"coach.planning.muscle.triceps": {
+"en": "Triceps",
+"zh": "三头"
+},
+"coach.planning.pattern.hipHinge": {
+"en": "Hip Hinge",
+"zh": "髋铰链"
+},
+"coach.planning.pattern.horizontalPull": {
+"en": "Horizontal Pull",
+"zh": "水平拉"
+},
+"coach.planning.pattern.horizontalPush": {
+"en": "Horizontal Push",
+"zh": "水平推"
+},
+"coach.planning.pattern.squat": {
+"en": "Squat",
+"zh": "蹲"
+},
+"coach.planning.pattern.verticalPull": {
+"en": "Vertical Pull",
+"zh": "垂直拉"
+},
+"coach.planning.pattern.verticalPush": {
+"en": "Vertical Push",
+"zh": "垂直推"
+},
+"coach.planning.pattern.warmUp": {
+"en": "Warm-up",
+"zh": "热身"
+},
+"coach.planning.profile.commercialGym": {
+"en": "Commercial Gym",
+"zh": "商业健身房"
+},
+"coach.planning.profile.competitionPlanned": {
+"en": "Meet Planned",
+"zh": "有比赛计划"
+},
+"coach.planning.profile.extraEquipmentItem %lld": {
+"en": {
+"one": "%lld extra equipment item",
+"other": "%lld extra equipment item"
+},
+"zh": "额外器械 %lld 项"
+},
+"coach.planning.profile.extraEquipmentItems %lld": {
+"en": {
+"one": "%lld extra equipment item",
+"other": "%lld extra equipment items"
+},
+"zh": "额外器械 %lld 项"
+},
+"coach.planning.profile.female": {
+"en": "Female",
+"zh": "女"
+},
+"coach.planning.profile.homeGymWithRack": {
+"en": "Home Gym (with rack)",
+"zh": "家庭(带架)"
+},
+"coach.planning.profile.injury.ankle": {
+"en": "Ankle",
+"zh": "踝"
+},
+"coach.planning.profile.injury.elbow": {
+"en": "Elbow",
+"zh": "肘"
+},
+"coach.planning.profile.injury.hip": {
+"en": "Hip",
+"zh": "髋"
+},
+"coach.planning.profile.injury.knee": {
+"en": "Knee",
+"zh": "膝"
+},
+"coach.planning.profile.injury.lowerBack": {
+"en": "Lower Back",
+"zh": "下背"
+},
+"coach.planning.profile.injury.shoulder": {
+"en": "Shoulder",
+"zh": "肩"
+},
+"coach.planning.profile.injury.wrist": {
+"en": "Wrist",
+"zh": "腕"
+},
+"coach.planning.profile.male": {
+"en": "Male",
+"zh": "男"
+},
+"coach.planning.profile.oneRMBench": {
+"en": "Bench {value}",
+"zh": "推 {value}"
+},
+"coach.planning.profile.oneRMDeadlift": {
+"en": "Deadlift {value}",
+"zh": "拉 {value}"
+},
+"coach.planning.profile.oneRMSquat": {
+"en": "Squat {value}",
+"zh": "蹲 {value}"
+},
+"coach.planning.profile.powerliftingGym": {
+"en": "Powerlifting Gym",
+"zh": "专业力量举馆"
+},
+"coach.planning.profile.weekday.fri": {
+"en": "Fri",
+"zh": "周五"
+},
+"coach.planning.profile.weekday.mon": {
+"en": "Mon",
+"zh": "周一"
+},
+"coach.planning.profile.weekday.sat": {
+"en": "Sat",
+"zh": "周六"
+},
+"coach.planning.profile.weekday.sun": {
+"en": "Sun",
+"zh": "周日"
+},
+"coach.planning.profile.weekday.thu": {
+"en": "Thu",
+"zh": "周四"
+},
+"coach.planning.profile.weekday.tue": {
+"en": "Tue",
+"zh": "周二"
+},
+"coach.planning.profile.weekday.wed": {
+"en": "Wed",
+"zh": "周三"
+},
+"coach.planning.profile.weeklyTrainingDay %lld %@": {
+"en": {
+"one": "%lld day/week (%@)",
+"other": "%lld day/week (%@)"
+},
+"zh": "每周 %lld 天 (%@)"
+},
+"coach.planning.profile.weeklyTrainingDays %lld %@": {
+"en": {
+"one": "%lld day/week (%@)",
+"other": "%lld days/week (%@)"
+},
+"zh": "每周 %lld 天 (%@)"
+},
+"coach.planning.progression.custom": {
+"en": "Custom",
+"zh": "自定义"
+},
+"coach.planning.progression.repDecrease": {
+"en": "Decrease Reps",
+"zh": "次数递减"
+},
+"coach.planning.progression.repIncrease": {
+"en": "Increase Reps",
+"zh": "次数递增"
+},
+"coach.planning.progression.rpeDecrease": {
+"en": "Decrease RPE",
+"zh": "RPE 递减"
+},
+"coach.planning.progression.rpeIncrease": {
+"en": "Increase RPE",
+"zh": "RPE 递增"
+},
+"coach.planning.progression.setDecrease": {
+"en": "Decrease Sets",
+"zh": "组数递减"
+},
+"coach.planning.progression.setIncrease": {
+"en": "Increase Sets",
+"zh": "组数递增"
+},
+"coach.planning.progression.weightDecrease": {
+"en": "Decrease Weight",
+"zh": "重量递减"
+},
+"coach.planning.progression.weightIncrease": {
+"en": "Increase Weight",
+"zh": "重量递增"
+},
+"coach.planning.publish.daysExceedWeeks": {
+"en": "Some training days fall outside the plan duration.",
+"zh": "计划里有超出周数范围的训练日,请检查后重试。"
+},
+"coach.planning.publish.evaluationBlocked": {
+"en": "During evaluation, only a 1-week adaptation plan can be published.",
+"zh": "评估期内只能发布 1 周适应周计划。先完成评估,或改发适应周。"
+},
+"coach.planning.publish.genericFailure": {
+"en": "Publish failed. Try again later.",
+"zh": "发布失败,请稍后重试"
+},
+"coach.planning.publish.missingInformation": {
+"en": "Missing plan or student information",
+"zh": "缺少计划或学员信息,无法发布"
+},
+"coach.planning.rule.applyAccessories": {
+"en": "Apply to Accessories",
+"zh": "应用动作 — 辅助项"
+},
+"coach.planning.rule.applyMainLiftVariations": {
+"en": "Apply to Main Lifts & Variations",
+"zh": "应用动作 — 主项及变式"
+},
+"coach.planning.rule.applyWeeks": {
+"en": "Apply Weeks",
+"zh": "应用周"
+},
+"coach.planning.rule.changeAmount": {
+"en": "Change Amount",
+"zh": "增减量"
+},
+"coach.planning.rule.customDimension": {
+"en": "Custom Dimension",
+"zh": "自定义维度"
+},
+"coach.planning.rule.number %lld": {
+"en": "Rule %lld",
+"zh": "规则 %lld"
+},
+"coach.planning.rule.overridden": {
+"en": "Overridden",
+"zh": "被覆盖"
+},
+"coach.planning.rule.resetToWeekOne": {
+"en": "Reset to W1",
+"zh": "按 W1 重置"
+},
+"coach.planning.rule.selectExercise": {
+"en": "Select an exercise before configuring its progression.",
+"zh": "先选择一个应用动作，再设置该动作的递进规则。"
+},
+"coach.planning.rule.type": {
+"en": "Rule Type",
+"zh": "规则类型"
+},
+"coach.planning.rule.weekValue %lld": {
+"en": "W%lld Value",
+"zh": "W%lld 值"
+},
+"coach.planning.rule.weeklyChange": {
+"en": "Weekly Change",
+"zh": "每周增减量"
+},
+"coach.planning.step0.abnormal": {
+"en": "Needs Attention",
+"zh": "异常"
+},
+"coach.planning.step0.active": {
+"en": "Active",
+"zh": "活跃"
+},
+"coach.planning.step0.evaluationRemaining %lld %lld": {
+"en": "Evaluation · %lldd %lldh remaining",
+"zh": "评估期 %lld 天 %lld 时剩"
+},
+"coach.planning.step0.inEvaluation": {
+"en": "In Evaluation",
+"zh": "评估中"
+},
+"coach.planning.step0.prompt": {
+"en": "Who is this plan for?",
+"zh": "为谁创建计划？"
+},
+"coach.planning.step0.readyForPlan": {
+"en": "Ready for a Plan",
+"zh": "可创建计划"
+},
+"coach.planning.step0.startPlanning": {
+"en": "Start Planning",
+"zh": "开始编排"
+},
+"coach.planning.step1.adaptationWeek": {
+"en": "Adaptation Week",
+"zh": "适应周"
+},
+"coach.planning.step1.fullTrainingCycle": {
+"en": "Full Training Cycle",
+"zh": "完整训练周期"
+},
+"coach.planning.step1.navigationTitle": {
+"en": "Select Plan Length",
+"zh": "选计划长度"
+},
+"coach.planning.step1.prompt": {
+"en": "How many weeks?",
+"zh": "这次写几周？"
+},
+"coach.planning.step2.assignToDays": {
+"en": "Assign to Training Days",
+"zh": "分配到训练日"
+},
+"coach.planning.step2.copyLastWeek": {
+"en": "Copy Last Week",
+"zh": "复制上周"
+},
+"coach.planning.step2.frequencyPrompt": {
+"en": "How often each week?",
+"zh": "三大项每周各练几次？"
+},
+"coach.planning.step2.navigationTitle": {
+"en": "Frequency Assignment",
+"zh": "频率分配"
+},
+"coach.planning.step2.sessionPerWeek %lld": {
+"en": {
+"one": "%lld session/week",
+"other": "%lld session/week"
+},
+"zh": "%lld 次/周"
+},
+"coach.planning.step2.sessionsPerWeek %lld": {
+"en": {
+"one": "%lld session/week",
+"other": "%lld sessions/week"
+},
+"zh": "%lld 次/周"
+},
+"coach.planning.step2.startFromScratch": {
+"en": "Or Start from Scratch",
+"zh": "或从零开始"
+},
+"coach.planning.step2.title": {
+"en": "Set SBD Frequency",
+"zh": "定 SBD 频率"
+},
+"coach.planning.step2.trainingDayCount %lld": {
+"en": {
+"one": "%lld training day/week",
+"other": "%lld training day/week"
+},
+"zh": "每周 %lld 个训练日"
+},
+"coach.planning.step2.trainingDayFromProfile %lld": {
+"en": {
+"one": "%lld training day/week · From profile",
+"other": "%lld training day/week · From profile"
+},
+"zh": "每周 %lld 个训练日 · 来自学员资料"
+},
+"coach.planning.step2.trainingDays": {
+"en": "Training Days",
+"zh": "训练日"
+},
+"coach.planning.step2.trainingDaysCount %lld": {
+"en": {
+"one": "%lld training day/week",
+"other": "%lld training days/week"
+},
+"zh": "每周 %lld 个训练日"
+},
+"coach.planning.step2.trainingDaysFromProfile %lld": {
+"en": {
+"one": "%lld training day/week · From profile",
+"other": "%lld training days/week · From profile"
+},
+"zh": "每周 %lld 个训练日 · 来自学员资料"
+},
+"coach.planning.step2.useTemplate": {
+"en": "Use Template",
+"zh": "使用模板"
+},
+"coach.planning.step3.chooseExercise": {
+"en": "Choose",
+"zh": "请选择"
+},
+"coach.planning.step3.mainLiftVariationLabel": {
+"en": "{lift} main lift & variations: {selection}",
+"zh": "{lift}主项及变式: {selection}"
+},
+"coach.planning.step3.mainLiftVariationTitle": {
+"en": "{lift} Main Lift & Variations",
+"zh": "{lift}主项及变式"
+},
+"coach.planning.step3.title": {
+"en": "Select Main Lifts & Variations",
+"zh": "选择主项及变式"
+},
+"coach.planning.step4.acknowledge": {
+"en": "Got It",
+"zh": "知道了"
+},
+"coach.planning.step4.addExercise": {
+"en": "+ Add Exercise",
+"zh": "+ 添加动作"
+},
+"coach.planning.step4.almostThere": {
+"en": "Almost There",
+"zh": "还差一点"
+},
+"coach.planning.step4.completeAndConfigureRules": {
+"en": "Done — Configure Rules",
+"zh": "完成 — 进入规则配置"
+},
+"coach.planning.step4.completionIssues": {
+"en": "Complete these items before continuing:\n\n{issues}",
+"zh": "以下项目需要补全后才能进入下一步：\n\n{issues}"
+},
+"coach.planning.step4.finishTrainingDayAssignment": {
+"en": "Finish assigning training days first",
+"zh": "请先完成训练日分配"
+},
+"coach.planning.step4.selectedExercise %lld": {
+"en": {
+"one": "%lld selected",
+"other": "%lld selected"
+},
+"zh": "已选 %lld 个"
+},
+"coach.planning.step4.selectedExercises %lld": {
+"en": {
+"one": "%lld selected",
+"other": "%lld selected"
+},
+"zh": "已选 %lld 个"
+},
+"coach.planning.step4.setRepIntensity %lld %@ %@": {
+"en": "%lld set x %@ rep · %@",
+"zh": "%lld 组 x %@ 次 · %@"
+},
+"coach.planning.step4.setRepsIntensity %lld %@ %@": {
+"en": "%lld set x %@ reps · %@",
+"zh": "%lld 组 x %@ 次 · %@"
+},
+"coach.planning.step4.setsRepIntensity %lld %@ %@": {
+"en": "%lld sets x %@ rep · %@",
+"zh": "%lld 组 x %@ 次 · %@"
+},
+"coach.planning.step4.setsRepsIntensity %lld %@ %@": {
+"en": "%lld sets x %@ reps · %@",
+"zh": "%lld 组 x %@ 次 · %@"
+},
+"coach.planning.step4.title": {
+"en": "Add Accessories",
+"zh": "添加辅助动作"
+},
+"coach.planning.step4.todayMainLifts": {
+"en": "Today's Main Lifts",
+"zh": "本日主项"
+},
+"coach.planning.step4.todayMainLiftsSubtitle": {
+"en": "Main lifts, variations, and W1 intensity",
+"zh": "上一步选择的主项、变式和 W1 强度"
+},
+"coach.planning.step6.addRule": {
+"en": "+ Add Rule",
+"zh": "+ 添加规则"
+},
+"coach.planning.step6.completeRules": {
+"en": "Complete Rules — Preview 4 Weeks",
+"zh": "完成规则 — 预览 4 周"
+},
+"coach.planning.step6.emptyRules": {
+"en": "No rules yet. Uncovered weeks repeat the prior week.",
+"zh": "还没有规则；未覆盖的周会默认同上周。"
+},
+"coach.planning.step6.title": {
+"en": "Progression / Regression Rules",
+"zh": "递进 / 递减规则"
+},
+"coach.planning.step6.uncovered": {
+"en": "Not Covered by Any Rule",
+"zh": "未被任何规则覆盖"
+},
+"coach.planning.step6.uncoveredWeek %lld %@": {
+"en": "W%lld: %@",
+"zh": "W%lld: %@"
+},
+"coach.planning.step7.completionIssues": {
+"en": "Complete these items before publishing:\n\n{issues}",
+"zh": "以下项目需要补全后才能发布：\n\n{issues}"
+},
+"coach.planning.step7.publishFailed": {
+"en": "Publish Failed",
+"zh": "发布失败"
+},
+"coach.planning.step7.publishToStudent": {
+"en": "Publish to Student",
+"zh": "发布给学员"
+},
+"coach.planning.step7.publishing": {
+"en": "Publishing…",
+"zh": "发布中…"
+},
+"coach.planning.step7.tryAgainLater": {
+"en": "Try again later",
+"zh": "请稍后重试"
+},
+"coach.planning.step7.weekCards": {
+"en": "Week Cards",
+"zh": "周卡片"
+},
+"coach.planning.studentHeader.basic": {
+"en": "Basic",
+"zh": "基础"
+},
+"coach.planning.studentHeader.collapse": {
+"en": "Collapse",
+"zh": "收起"
+},
+"coach.planning.studentHeader.competition": {
+"en": "Meet",
+"zh": "比赛"
+},
+"coach.planning.studentHeader.expand": {
+"en": "Expand",
+"zh": "展开"
+},
+"coach.planning.studentHeader.injuries": {
+"en": "Injuries",
+"zh": "伤病"
+},
+"coach.planning.studentHeader.note": {
+"en": "Note",
+"zh": "留言"
+},
+"coach.planning.studentHeader.profile": {
+"en": "Profile",
+"zh": "资料"
+},
+"coach.planning.studentHeader.profileNotCompleted": {
+"en": "Student has not completed their profile",
+"zh": "学员尚未填写详细资料"
+},
+"coach.planning.studentHeader.profileUnavailable": {
+"en": "Student profile loading or unavailable",
+"zh": "学员资料加载中或暂未填写"
+},
+"coach.planning.studentHeader.venue": {
+"en": "Venue",
+"zh": "场地"
+},
+"coach.planning.validation.assignmentOutsideTrainingDays": {
+"en": "Main lifts can only be assigned to profile training days.",
+"zh": "大项只能分配到学员档案里的训练日。"
+},
+"coach.planning.validation.evaluationRequiresOneWeek": {
+"en": "Students in evaluation can only receive a 1-week adaptation plan.",
+"zh": "评估期内学员只能安排 1 周适应计划。"
+},
+"coach.planning.validation.incompleteMainLiftVariants": {
+"en": "Choose a variation for every assigned main lift.",
+"zh": "每个已分配主项都需要选择动作变式。"
+},
+"coach.planning.validation.incompleteWeekOneSetSpecs": {
+"en": "Complete Week 1 sets, reps, and intensity for every exercise.",
+"zh": "每个已加入计划的动作都需要填写 Week 1 组数、次数和强度。"
+},
+"coach.planning.validation.invalidDuration": {
+"en": "Choose a 1- or 4-week plan.",
+"zh": "请选择 1 周或 4 周计划。"
+},
+"coach.planning.validation.invalidFrequency": {
+"en": "Main-lift frequency must match assigned training days.",
+"zh": "三大项频率需要和训练日分配数量一致。"
+},
+"coach.planning.validation.invalidWeekOneSetSpec": {
+"en": "Week 1 sets, reps, or intensity are out of range.",
+"zh": "Week 1 组数、次数或强度超出范围。"
+},
+"coach.planning.validation.missingStudent": {
+"en": "Select a student.",
+"zh": "请选择学员。"
+},
+"coach.planning.weekCard.baseline": {
+"en": "Baseline",
+"zh": "基线"
+},
+"coach.planning.weekCard.baselineFooter": {
+"en": "Week 1 is the baseline you entered",
+"zh": "Week 1 是基线（你手填的）"
+},
+"coach.planning.weekCard.derived": {
+"en": "Derived",
+"zh": "推导"
+},
+"coach.planning.weekCard.derivedFooter %lld": {
+"en": "Week %lld is derived from rules",
+"zh": "Week %lld 由规则推导"
+},
+"coach.planning.weekCard.intensityRPE %@": {
+"en": "Intensity: @RPE %@",
+"zh": "强度：@RPE %@"
+},
+"coach.planning.weekCard.intensityWeight": {
+"en": "Intensity: {weight}kg",
+"zh": "强度：{weight}kg"
+},
+"coach.planning.weekCard.position %lld %lld": {
+"en": "Week %lld / %lld",
+"zh": "Week %lld / %lld"
+},
+"coach.planning.weekCard.viewDetails": {
+"en": "View Details",
+"zh": "查看详情"
+},
+"coach.planning.weight.commonPercentages": {
+"en": "Common Percentages",
+"zh": "常用百分比"
+},
+"coach.planning.weight.currentWeight": {
+"en": "Current weight {weight} kg",
+"zh": "当前重量 {weight} kg"
+},
+"coach.planning.weight.editPercentages": {
+"en": "Edit Common Percentages",
+"zh": "编辑常用百分比"
+},
+"coach.planning.weight.editWeight": {
+"en": "Edit Weight",
+"zh": "编辑重量"
+},
+"coach.planning.weight.enter": {
+"en": "Enter",
+"zh": "填入"
+},
+"coach.planning.weight.mainLiftBase": {
+"en": "Main Lift · {exercise}",
+"zh": "主项·{exercise}"
+},
+"coach.planning.weight.missingOneRM": {
+"en": "Set a 1RM to use %1RM",
+"zh": "未设 1RM，无法换算 %1RM"
+},
+"coach.planning.weight.newPercentage": {
+"en": "Add %",
+"zh": "新增 %"
+},
+"coach.planning.weight.openPanel": {
+"en": "Open Weight Panel",
+"zh": "打开重量面板"
+},
+"coach.planning.weight.operation": {
+"en": "Operation {operation}",
+"zh": "运算 {operation}"
+},
+"coach.planning.weight.removePercentage %lld": {
+"en": "Remove %lld%%",
+"zh": "移除 %lld%%"
+},
+"coach.planning.weight.restoreDefaults": {
+"en": "Restore Defaults",
+"zh": "恢复默认"
+},
+"coach.planning.weight.targetWeight": {
+"en": "Target Weight",
+"zh": "目标重量"
+},
+"coach.planning.weight.unit": {
+"en": "Weight Unit",
+"zh": "重量单位"
+},
+"coach.planning.weight.value": {
+"en": "Value",
+"zh": "数值"
+},
+"coach.profile.age": {
+"en": "Age {age}",
+"zh": "{age} 岁"
+},
+"coach.profile.appVersion": {
+"en": "App Version",
+"zh": "App 版本"
+},
+"coach.profile.appVersionValue": {
+"en": "{version} · {channel}",
+"zh": "{version} · {channel}"
+},
+"coach.profile.basicInfo": {
+"en": "Basic Info",
+"zh": "基础信息"
+},
+"coach.profile.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"coach.profile.confirmLogout": {
+"en": "Sign Out",
+"zh": "退出"
+},
+"coach.profile.contactHours": {
+"en": "Weekdays 10:00–19:00 · Usually replies within 2 hours",
+"zh": "工作日 10:00–19:00 · 通常 2 小时内回复"
+},
+"coach.profile.contactUnavailable": {
+"en": "Contact details unavailable",
+"zh": "暂时无法打开联系方式"
+},
+"coach.profile.contactUs": {
+"en": "Contact Us",
+"zh": "联系我们"
+},
+"coach.profile.copied": {
+"en": "Copied",
+"zh": "邀请码已复制"
+},
+"coach.profile.copy": {
+"en": "Copy",
+"zh": "复制"
+},
+"coach.profile.copyInvite": {
+"en": "Copy Invite Code",
+"zh": "复制邀请码"
+},
+"coach.profile.currentOneRM": {
+"en": "Current 1RM · Only you can edit",
+"zh": "当前 1RM · 只有你能改"
+},
+"coach.profile.diet": {
+"en": "Diet",
+"zh": "饮食 / 控重"
+},
+"coach.profile.displayName": {
+"en": "Coach",
+"zh": "教练"
+},
+"coach.profile.documentDate": {
+"en": "2026-05-01",
+"zh": "2026-05-01"
+},
+"coach.profile.edit": {
+"en": "Edit",
+"zh": "修改"
+},
+"coach.profile.editUnavailable": {
+"en": "1RM editing is not available here",
+"zh": "本卡不提供 1RM 修改"
+},
+"coach.profile.fallbackName": {
+"en": "Coach",
+"zh": "教练"
+},
+"coach.profile.faq.feedback.answer": {
+"en": "Open Training Videos from Receive or a student's video page, add markers, then write feedback. Sent feedback is archived on that student's Feedback page.",
+"zh": "在「接收 → 训练视频」或学员详情的视频页，逐段打点后写反馈；发出的每条都会归档在该学员的反馈页。"
+},
+"coach.profile.faq.feedback.question": {
+"en": "Where does feedback go?",
+"zh": "反馈写在哪里？"
+},
+"coach.profile.faq.join.answer": {
+"en": "Share the permanent code from Profile. The student enters it during sign-up, then you confirm under Receive → New Students.",
+"zh": "把「我的」页里的永久邀请码发给学员，他在注册时填入即可提交申请，你在「接收 → 新学员」里确认。"
+},
+"coach.profile.faq.join.question": {
+"en": "How does a student join my roster?",
+"zh": "学员怎么加入我的名下？"
+},
+"coach.profile.faq.unbind.answer": {
+"en": "Their history stays in their account, but you lose access. Feedback already sent remains visible to the student.",
+"zh": "学员的历史数据保留在他自己的账号里，你将不再能访问；已发出的反馈会保留在学员端。"
+},
+"coach.profile.faq.unbind.question": {
+"en": "Is data kept after unlinking?",
+"zh": "解除关系后数据还在吗？"
+},
+"coach.profile.faq.video.answer": {
+"en": "A dashed plus lets the student add a video later. You can also message them to re-record a specific set.",
+"zh": "组行会显示虚线加号，学员可以补拍；你也可以在消息里直接要求他重录某一组。"
+},
+"coach.profile.faq.video.question": {
+"en": "What if a student did not record a video?",
+"zh": "学员没录视频怎么办？"
+},
+"coach.profile.focus": {
+"en": "Focus Areas",
+"zh": "想增强"
+},
+"coach.profile.general": {
+"en": "General",
+"zh": "通用"
+},
+"coach.profile.help": {
+"en": "Help & Feedback",
+"zh": "帮助与反馈"
+},
+"coach.profile.helpSubtitle": {
+"en": "FAQs and support",
+"zh": "常见问题与人工支持"
+},
+"coach.profile.injuryHistory": {
+"en": "Injury History",
+"zh": "伤病史"
+},
+"coach.profile.internalBeta": {
+"en": "Beta",
+"zh": "内测"
+},
+"coach.profile.inviteCard": {
+"en": "Invite Code",
+"zh": "邀请码"
+},
+"coach.profile.inviteEmpty": {
+"en": "No permanent code · Tap to generate",
+"zh": "还没有永久码 · 点击生成"
+},
+"coach.profile.inviteFailed": {
+"en": "Load failed · Tap to retry",
+"zh": "加载失败 · 点击重试"
+},
+"coach.profile.inviteLoading": {
+"en": "Loading",
+"zh": "加载中…"
+},
+"coach.profile.inviteUsage %lld": {
+"en": {
+"one": "%lld student joined with this code · Share it to receive application",
+"other": "%lld students joined with this code · Share it to receive applications"
+},
+"zh": "已有 %lld 学员通过它加入 · 发给新学员即可申请"
+},
+"coach.profile.joinedAt": {
+"en": "Joined",
+"zh": "加入时间"
+},
+"coach.profile.loggingOut": {
+"en": "Signing out",
+"zh": "退出中"
+},
+"coach.profile.logout": {
+"en": "Sign out",
+"zh": "退出登录"
+},
+"coach.profile.logout.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"coach.profile.logout.confirm": {
+"en": "Sign Out",
+"zh": "退出"
+},
+"coach.profile.logoutMessage": {
+"en": "You will need to sign in again with your phone number.",
+"zh": "退出后需重新用手机号登录。"
+},
+"coach.profile.logoutTitle": {
+"en": "Log out?",
+"zh": "退出登录？"
+},
+"coach.profile.notProvided": {
+"en": "—",
+"zh": "—"
+},
+"coach.profile.oneRMExplanation": {
+"en": "Plan weights are calculated from these three values",
+"zh": "计划里的重量都从这三个数推算"
+},
+"coach.profile.permanentInvite": {
+"en": "Permanent invite code",
+"zh": "永久邀请码"
+},
+"coach.profile.privacyAndTerms": {
+"en": "Privacy & Terms",
+"zh": "隐私与条款"
+},
+"coach.profile.privacyAndTermsSubtitle": {
+"en": "Data ownership and account management",
+"zh": "数据归属与账号管理"
+},
+"coach.profile.privacyPolicy": {
+"en": "Privacy Policy",
+"zh": "隐私政策"
+},
+"coach.profile.privacyTerms": {
+"en": "Privacy & Terms",
+"zh": "隐私与条款"
+},
+"coach.profile.registrationAnswers": {
+"en": "Registration Answers",
+"zh": "注册时填写"
+},
+"coach.profile.sheet.back": {
+"en": "Back",
+"zh": "返回"
+},
+"coach.profile.studentDataDescription": {
+"en": "Student training data, videos, and physical information are used only for your coaching relationship. You lose access after unlinking.",
+"zh": "学员的训练数据、视频与身体信息仅用于你与该学员之间的训练服务。学员解除关系后，你将不再能访问其历史数据。"
+},
+"coach.profile.studentDataUsage": {
+"en": "Student Data Usage",
+"zh": "学员数据使用说明"
+},
+"coach.profile.studentSaid": {
+"en": "Student Said",
+"zh": "他/她说"
+},
+"coach.profile.targetMeet": {
+"en": "Target Meet",
+"zh": "目标比赛"
+},
+"coach.profile.title": {
+"en": "Profile",
+"zh": "我的"
+},
+"coach.profile.toast": {
+"en": "Copied",
+"zh": "已复制"
+},
+"coach.profile.trainingEnvironment": {
+"en": "Training Environment",
+"zh": "训练环境"
+},
+"coach.profile.trainingHistory": {
+"en": "Training History / Frequency",
+"zh": "训练年限 / 频率"
+},
+"coach.profile.userAgreement": {
+"en": "Terms of Service",
+"zh": "用户服务协议"
+},
+"coach.profile.userAgreement.unavailable": {
+"en": "Terms of Service unavailable",
+"zh": "用户服务协议暂不可用"
+},
+"coach.profile.weeklyFrequency %lld": {
+"en": {
+"one": "%lld session/week",
+"other": "%lld sessions/week"
+},
+"zh": "每周 %lld 次"
+},
+"coach.profile.weightClass": {
+"en": "Weight Class",
+"zh": "体重级别"
+},
+"coach.roster.abnormal": {
+"en": "Needs Attention",
+"zh": "异常"
+},
+"coach.roster.accept": {
+"en": "Accept",
+"zh": "接收"
+},
+"coach.roster.active": {
+"en": "Active",
+"zh": "活跃"
+},
+"coach.roster.age %lld": {
+"en": {
+"one": "%lld year old",
+"other": "%lld years old"
+},
+"zh": "%lld 岁"
+},
+"coach.roster.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"coach.roster.clearSearch": {
+"en": "Clear search",
+"zh": "清除搜索"
+},
+"coach.roster.completionRate": {
+"en": "Completion",
+"zh": "完成率"
+},
+"coach.roster.error.load": {
+"en": "Could not load students. Try again later.",
+"zh": "学员加载失败，请稍后重试"
+},
+"coach.roster.loadFailed": {
+"en": "Load Failed",
+"zh": "加载失败"
+},
+"coach.roster.loadingStudents": {
+"en": "Loading students…",
+"zh": "正在加载学员…"
+},
+"coach.roster.newStudentRequests": {
+"en": "New Student Requests",
+"zh": "新学员申请"
+},
+"coach.roster.noMatchingStudents": {
+"en": "No matching students",
+"zh": "没有匹配的学员"
+},
+"coach.roster.noPlan": {
+"en": "No Plan",
+"zh": "无计划"
+},
+"coach.roster.noStudents": {
+"en": "No students yet",
+"zh": "暂无学员"
+},
+"coach.roster.noStudentsSubtitle": {
+"en": "Copy your invite code from Me and send it to a student",
+"zh": "去「我的」复制邀请码，发给学员加入"
+},
+"coach.roster.noTrainingRecords": {
+"en": "No training this week",
+"zh": "本周未训练"
+},
+"coach.roster.notTrainedReason %lld": {
+"en": {
+"one": "No training for %lld day",
+"other": "No training for %lld days"
+},
+"zh": "已 %lld 天未训练"
+},
+"coach.roster.reject": {
+"en": "Reject",
+"zh": "拒绝"
+},
+"coach.roster.rejectConfirmation": {
+"en": "The student will see a neutral message without a reason. Reject this request?",
+"zh": "拒绝后学员会看到中性提示（不会显示拒绝原因），确定拒绝？"
+},
+"coach.roster.searchStudents": {
+"en": "Search students",
+"zh": "搜索学员"
+},
+"coach.roster.sectionCount %@ %lld": {
+"en": {
+"one": "%@ · %lld",
+"other": "%@ · %lld"
+},
+"zh": "%@ · %lld"
+},
+"coach.roster.triage.missed %lld": {
+"en": {
+"one": "No training for %lld day",
+"other": "No training for %lld days"
+},
+"zh": "没练 %lld 天"
+},
+"coach.roster.triage.missedAwaitingReply %lld": {
+"en": {
+"one": "No training for %lld day · Awaiting reply",
+"other": "No training for %lld days · Awaiting reply"
+},
+"zh": "没练 %lld 天 · 待回复"
+},
+"coach.roster.triage.newRecord": {
+"en": "New log awaiting your reply",
+"zh": "有新记录待你回复"
+},
+"coach.roster.viewProfile": {
+"en": "View Profile",
+"zh": "查看资料"
+},
+"coach.roster.waitingForReplyReason": {
+"en": "Awaiting Reply",
+"zh": "待回复"
+},
+"coach.roster.weekProgress %lld %lld": {
+"en": "This week %lld/%lld",
+"zh": "本周 %lld/%lld"
+},
+"coach.shared.abnormal.dayNotTrained %lld": {
+"en": {
+"one": "No training for %lld day",
+"other": "No training for %lld day"
+},
+"zh": "%lld 天未训练"
+},
+"coach.shared.abnormal.daysNotTrained %lld": {
+"en": {
+"one": "No training for %lld day",
+"other": "No training for %lld days"
+},
+"zh": "%lld 天未训练"
+},
+"coach.shared.abnormal.stuckOnWeek %lld": {
+"en": "Stuck on W%lld",
+"zh": "卡 W%lld 未完成"
+},
+"coach.shared.muscle.back": {
+"en": "Back",
+"zh": "背"
+},
+"coach.shared.muscle.chest": {
+"en": "Chest",
+"zh": "胸"
+},
+"coach.shared.muscle.coreAndLowerBack": {
+"en": "Core · Lower Back",
+"zh": "核心·下背"
+},
+"coach.shared.muscle.glutes": {
+"en": "Glutes",
+"zh": "臀"
+},
+"coach.shared.muscle.hamstrings": {
+"en": "Hamstrings",
+"zh": "腘绳"
+},
+"coach.shared.muscle.quadriceps": {
+"en": "Quads",
+"zh": "股四"
+},
+"coach.shared.muscle.shoulder": {
+"en": "Shoulders",
+"zh": "肩"
+},
+"coach.shared.muscle.triceps": {
+"en": "Triceps",
+"zh": "肱三头"
+},
+"coach.shared.readiness.fatigue": {
+"en": "Fatigue: {items}",
+"zh": "疲劳：{items}"
+},
+"coach.shared.readiness.noMuscleFatigue": {
+"en": "No muscle fatigue",
+"zh": "无肌群疲劳"
+},
+"coach.shared.readiness.scales %lld %lld %lld": {
+"en": "Sleep %lld · Mood %lld · Stress %lld",
+"zh": "睡眠 %lld · 状态 %lld · 压力 %lld"
+},
+"coach.shared.relative.dayAgo %lld": {
+"en": {
+"one": "%lld day ago",
+"other": "%lld day ago"
+},
+"zh": "%lld 天前"
+},
+"coach.shared.relative.daysAgo %lld": {
+"en": {
+"one": "%lld day ago",
+"other": "%lld days ago"
+},
+"zh": "%lld 天前"
+},
+"coach.shared.relative.hourAgo %lld": {
+"en": {
+"one": "%lld hour ago",
+"other": "%lld hour ago"
+},
+"zh": "%lld 小时前"
+},
+"coach.shared.relative.hoursAgo %lld": {
+"en": {
+"one": "%lld hour ago",
+"other": "%lld hours ago"
+},
+"zh": "%lld 小时前"
+},
+"coach.shared.relative.minuteAgo %lld": {
+"en": {
+"one": "%lld minute ago",
+"other": "%lld minute ago"
+},
+"zh": "%lld 分钟前"
+},
+"coach.shared.relative.minutesAgo %lld": {
+"en": {
+"one": "%lld minute ago",
+"other": "%lld minutes ago"
+},
+"zh": "%lld 分钟前"
+},
+"coach.shared.severity.heavy": {
+"en": "Heavy",
+"zh": "重"
+},
+"coach.shared.severity.light": {
+"en": "Light",
+"zh": "轻"
+},
+"coach.shared.severity.moderate": {
+"en": "Moderate",
+"zh": "中"
+},
+"coach.shared.status.active": {
+"en": "Active",
+"zh": "活跃"
+},
+"coach.shared.status.evaluationDay %lld": {
+"en": {
+"one": "Evaluation: %lld day",
+"other": "Evaluation: %lld day"
+},
+"zh": "评估期 %lld 天"
+},
+"coach.shared.status.evaluationDays %lld": {
+"en": {
+"one": "Evaluation: %lld day",
+"other": "Evaluation: %lld days"
+},
+"zh": "评估期 %lld 天"
+},
+"coach.shared.status.evaluationHour %lld": {
+"en": {
+"one": "Evaluation: %lld hour",
+"other": "Evaluation: %lld hour"
+},
+"zh": "评估期 %lld 小时"
+},
+"coach.shared.status.evaluationHours %lld": {
+"en": {
+"one": "Evaluation: %lld hour",
+"other": "Evaluation: %lld hours"
+},
+"zh": "评估期 %lld 小时"
+},
+"coach.shell.profile": {
+"en": "Profile",
+"zh": "我的"
+},
+"coach.shell.students": {
+"en": "Students",
+"zh": "学员"
+},
+"coach.shell.today": {
+"en": "Today",
+"zh": "今日"
+},
+"coach.studentDetail.error.load": {
+"en": "Could not load student details. Try again later.",
+"zh": "学员详情加载失败，请稍后重试"
+},
+"coach.studentDetail.section.feedback": {
+"en": "Feedback",
+"zh": "反馈"
+},
+"coach.studentDetail.section.growth": {
+"en": "Progress",
+"zh": "成长"
+},
+"coach.studentDetail.section.overview": {
+"en": "Overview",
+"zh": "概览"
+},
+"coach.studentDetail.section.profile": {
+"en": "Profile",
+"zh": "资料"
+},
+"coach.studentDetail.section.videos": {
+"en": "Videos",
+"zh": "视频"
+},
+"coach.studentDetail.shiftedDays %lld": {
+"en": {
+"one": "Shifted by %lld day",
+"other": "Shifted by %lld days"
+},
+"zh": "已顺延 %lld 天"
+},
+"coach.today.acceptedStudent": {
+"en": "New student {name} accepted · Added to your roster",
+"zh": "新学员 {name} 已接收 · 已加入学员列表"
+},
+"coach.today.activeAsPlanned": {
+"en": "Training as planned",
+"zh": "按计划在练"
+},
+"coach.today.allDone": {
+"en": "All Done",
+"zh": "今天都处理完了"
+},
+"coach.today.allDoneSubtitle": {
+"en": "New student videos and messages will appear here",
+"zh": "学员新上传视频或发消息时会出现在这里"
+},
+"coach.today.askHowThingsAreGoing": {
+"en": "Ask How Things Are Going",
+"zh": "发条消息问问情况"
+},
+"coach.today.awaitingFeedback": {
+"en": "Awaiting Feedback",
+"zh": "待反馈"
+},
+"coach.today.earliestApplicationSubtitle": {
+"en": "Earliest: {waiting}",
+"zh": "最早{waiting}"
+},
+"coach.today.earliestVideoSubtitle": {
+"en": "Earliest clip {time}",
+"zh": "最早一段 {time}"
+},
+"coach.today.multipleApplicationsTitle %lld": {
+"en": {
+"one": "%lld new student application",
+"other": "%lld new student applications"
+},
+"zh": "%lld 位新学员申请加入"
+},
+"coach.today.needsAttention": {
+"en": "Needs Attention",
+"zh": "待关注"
+},
+"coach.today.newApplication": {
+"en": "New Application",
+"zh": "新申请"
+},
+"coach.today.noTrainingDaysThisWeek": {
+"en": "No training scheduled this week",
+"zh": "本周还没有训练安排"
+},
+"coach.today.notStarted": {
+"en": "Not Started",
+"zh": "还没开始"
+},
+"coach.today.notTrainedTitle %@ %lld": {
+"en": {
+"one": "%@ has not trained for %lld day",
+"other": "%@ has not trained for %lld days"
+},
+"zh": "%@ 已 %lld 天未训练"
+},
+"coach.today.orderedByHandling": {
+"en": "Ordered By Handling",
+"zh": "按处理顺序排列"
+},
+"coach.today.pendingVideosTitle %lld": {
+"en": {
+"one": "%lld video awaiting feedback",
+"other": "%lld videos awaiting feedback"
+},
+"zh": "%lld 段视频等你反馈"
+},
+"coach.today.peopleCount %lld": {
+"en": {
+"one": "%lld student",
+"other": "%lld students"
+},
+"zh": "%lld 人"
+},
+"coach.today.singleApplicationTitle": {
+"en": "{name} applied to join",
+"zh": "{name} 申请加入"
+},
+"coach.today.todo": {
+"en": "Todo",
+"zh": "待办"
+},
+"coach.today.trainingDaysCompleted %lld %lld": {
+"en": "%1$lld / %#@total@ completed",
+"zh": "%lld / %lld 训练日已完成"
+},
+"coach.today.unread": {
+"en": "Unread",
+"zh": "未读"
+},
+"coach.today.unreadMessagesTitle %lld": {
+"en": {
+"one": "%lld unread student message",
+"other": "%lld unread student messages"
+},
+"zh": "%lld 条学员消息未读"
+},
+"coach.today.viewAllStudents": {
+"en": "View All Students",
+"zh": "看全部学员"
+},
+"coach.today.weekOverview": {
+"en": "Week Overview",
+"zh": "本周概况"
+},
+"coach.today.weekday.fri": {
+"en": "F",
+"zh": "五"
+},
+"coach.today.weekday.mon": {
+"en": "M",
+"zh": "一"
+},
+"coach.today.weekday.sat": {
+"en": "S",
+"zh": "六"
+},
+"coach.today.weekday.sun": {
+"en": "S",
+"zh": "日"
+},
+"coach.today.weekday.thu": {
+"en": "T",
+"zh": "四"
+},
+"coach.today.weekday.tue": {
+"en": "T",
+"zh": "二"
+},
+"coach.today.weekday.wed": {
+"en": "W",
+"zh": "三"
+},
+"coach.video.awaitingFeedback": {
+"en": "Awaiting Feedback",
+"zh": "待反馈"
+},
+"coach.video.back": {
+"en": "Back",
+"zh": "返回"
+},
+"coach.video.confirmation": {
+"en": "Got it",
+"zh": "知道了"
+},
+"coach.video.emptySubtitle": {
+"en": "Videos recorded during check-ins will appear here",
+"zh": "学员在打卡时录的视频会出现在这里"
+},
+"coach.video.emptyTitle": {
+"en": "No student videos yet",
+"zh": "学员还没有上传视频"
+},
+"coach.video.error.playback": {
+"en": "Could not load the video. Try again.",
+"zh": "播放链接获取失败，请重试"
+},
+"coach.video.feedbackInput": {
+"en": "Feedback",
+"zh": "反馈"
+},
+"coach.video.feedbackSent": {
+"en": "Feedback Sent",
+"zh": "已反馈"
+},
+"coach.video.feedbackWorkbench": {
+"en": "Feedback Workbench",
+"zh": "反馈工作台"
+},
+"coach.video.loadFailed": {
+"en": "Play Failed",
+"zh": "视频加载失败"
+},
+"coach.video.marker.annotation": {
+"en": "Marker",
+"zh": "打点"
+},
+"coach.video.marker.annotationBadge": {
+"en": "Marker",
+"zh": "打点"
+},
+"coach.video.pullToRetry": {
+"en": "Pull To Retry",
+"zh": "下拉刷新重试"
+},
+"coach.video.retry": {
+"en": "Retry",
+"zh": "重试"
+},
+"coach.video.send": {
+"en": "Send",
+"zh": "发送"
+},
+"coach.video.setInfo": {
+"en": "Set Info",
+"zh": "本组信息"
+},
+"coach.video.skip": {
+"en": "Skip",
+"zh": "跳过"
+},
+"coach.video.today": {
+"en": "Today",
+"zh": "今天"
+},
+"coach.video.trainingVideo": {
+"en": "Training Video",
+"zh": "训练视频"
+},
+"coach.video.yesterday": {
+"en": "Yesterday",
+"zh": "昨天"
+},
+"coach.videoFeedback.addMarker": {
+"en": "Add Marker",
+"zh": "添加打点"
+},
+"coach.videoFeedback.back": {
+"en": "Back",
+"zh": "返回"
+},
+"coach.videoFeedback.cancel": {
+"en": "Cancel",
+"zh": "取消"
+},
+"coach.videoFeedback.deleteMarker": {
+"en": "Delete Marker",
+"zh": "删除打点"
+},
+"coach.videoFeedback.emptyFeedback": {
+"en": "Feedback cannot be empty",
+"zh": "反馈不能为空"
+},
+"coach.videoFeedback.feedbackPlaceholder": {
+"en": "Feedback for {name}",
+"zh": "写给 {name} 的反馈"
+},
+"coach.videoFeedback.headerMeta": {
+"en": "{set} · Uploaded {relativeTime}",
+"zh": "{set} · {relativeTime} 上传"
+},
+"coach.videoFeedback.kilograms": {
+"en": "Kilograms",
+"zh": "kg"
+},
+"coach.videoFeedback.loading": {
+"en": "Loading",
+"zh": "加载中…"
+},
+"coach.videoFeedback.marker": {
+"en": "Marker",
+"zh": "打点"
+},
+"coach.videoFeedback.markerCount %lld": {
+"en": {
+"one": "Marker · %lld",
+"other": "Markers · %lld"
+},
+"zh": "打点 · %lld"
+},
+"coach.videoFeedback.markerDeleteFailed": {
+"en": "Could not delete marker. Try again.",
+"zh": "打点删除失败，请重试"
+},
+"coach.videoFeedback.markerNote": {
+"en": "Note (optional, 500 characters max)",
+"zh": "备注（选填，最多 500 字）"
+},
+"coach.videoFeedback.markerSaveFailed": {
+"en": "Could not save marker. Try again.",
+"zh": "打点保存失败，请重试"
+},
+"coach.videoFeedback.markerTime": {
+"en": "Timestamp",
+"zh": "时间点"
+},
+"coach.videoFeedback.markersLoadFailed": {
+"en": "Could not load markers",
+"zh": "打点加载失败"
+},
+"coach.videoFeedback.missingValue": {
+"en": "—",
+"zh": "—"
+},
+"coach.videoFeedback.noPendingVideos": {
+"en": "No videos awaiting feedback",
+"zh": "没有待反馈视频"
+},
+"coach.videoFeedback.noPendingVideosSubtitle": {
+"en": "This student's pending videos have all been handled",
+"zh": "这位学员的视频都处理完了"
+},
+"coach.videoFeedback.playFailed": {
+"en": "Play Failed",
+"zh": "视频加载失败"
+},
+"coach.videoFeedback.queuePosition %lld %lld": {
+"en": "%lld / %lld",
+"zh": "%lld / %lld"
+},
+"coach.videoFeedback.reps": {
+"en": "Reps",
+"zh": "次数"
+},
+"coach.videoFeedback.repsValue %lld": {
+"en": {
+"one": "%lld rep",
+"other": "%lld reps"
+},
+"zh": "%lld 次"
+},
+"coach.videoFeedback.retry": {
+"en": "Retry",
+"zh": "重试"
+},
+"coach.videoFeedback.rowAccessibility": {
+"en": "{exercise}, tap to write feedback",
+"zh": "{exercise}，点按写反馈"
+},
+"coach.videoFeedback.rpe": {
+"en": "RPE",
+"zh": "RPE"
+},
+"coach.videoFeedback.save": {
+"en": "Save",
+"zh": "保存"
+},
+"coach.videoFeedback.send": {
+"en": "Send",
+"zh": "发送"
+},
+"coach.videoFeedback.sendFailed": {
+"en": "Send failed. Try again later.",
+"zh": "发送失败,请稍后重试"
+},
+"coach.videoFeedback.sentFeedback": {
+"en": "Feedback sent",
+"zh": "已发送反馈"
+},
+"coach.videoFeedback.setInfoLoadFailed": {
+"en": "Could not load set details",
+"zh": "组次信息加载失败"
+},
+"coach.videoFeedback.setInfoUnavailable": {
+"en": "No linked set details",
+"zh": "未关联训练组"
+},
+"coach.videoFeedback.setNumber %lld": {
+"en": "Set %lld",
+"zh": "第 %lld 组"
+},
+"coach.videoFeedback.setOrder": {
+"en": "Set",
+"zh": "组序"
+},
+"coach.videoFeedback.sizeMegabytes": {
+"en": "{size} MB",
+"zh": "{size} MB"
+},
+"coach.videoFeedback.skip": {
+"en": "Skip · Next clip →",
+"zh": "跳过 · 看下一段 →"
+},
+"coach.videoFeedback.title": {
+"en": "{student} · {exercise}",
+"zh": "{student} · {exercise}"
+},
+"coach.videoFeedback.trainingVideo": {
+"en": "Training Video",
+"zh": "训练视频"
+},
+"coach.videoFeedback.weight": {
+"en": "Set Weight",
+"zh": "本组重量"
+},
+"coach.workspace.action.continue": {
+"en": "Continue",
+"zh": "继续"
+},
+"coach.workspace.action.plan": {
+"en": "Plan",
+"zh": "排"
+},
+"coach.workspace.action.view": {
+"en": "View",
+"zh": "查看"
+},
+"coach.workspace.badge.ended": {
+"en": "Ended",
+"zh": "已结束"
+},
+"coach.workspace.badge.endsThisWeek": {
+"en": "Ends This Week",
+"zh": "本周结束"
+},
+"coach.workspace.badge.inProgress": {
+"en": "In Progress",
+"zh": "编到一半"
+},
+"coach.workspace.badge.noPlan": {
+"en": "No Plan",
+"zh": "暂无计划"
+},
+"coach.workspace.badge.published": {
+"en": "Published",
+"zh": "已发布"
+},
+"coach.workspace.defaultAdaptationName": {
+"en": "{student}'s Adaptation Week",
+"zh": "{student} 适应周"
+},
+"coach.workspace.defaultDraftName %@ %lld": {
+"en": {
+"one": "%@'s %lld-Week Plan",
+"other": "%@'s %lld-Week Plan"
+},
+"zh": "%@ %lld 周计划"
+},
+"coach.workspace.draftSummary %@ %@ %lld": {
+"en": {
+"one": "%@ · %@ · %lld week",
+"other": "%@ · %@ · %lld weeks"
+},
+"zh": "%@ · %@ · %lld周"
+},
+"coach.workspace.empty.body": {
+"en": "All students have active plans. Tap “New Plan” to create another cycle.",
+"zh": "所有学员都有在跑计划。需要新建周期时，点上方「排新计划」。"
+},
+"coach.workspace.empty.title": {
+"en": "No Plans Needed",
+"zh": "暂无待排计划"
+},
+"coach.workspace.error.accessibility": {
+"en": "Planning workspace failed to load",
+"zh": "计划工作台加载失败"
+},
+"coach.workspace.error.load": {
+"en": "Could not load planning workspace. Try again later.",
+"zh": "计划工作台加载失败，请稍后重试"
+},
+"coach.workspace.eyebrow": {
+"en": "PLAN BUILDER",
+"zh": "计划编排"
+},
+"coach.workspace.kind.adaptation": {
+"en": "Adaptation Week",
+"zh": "适应周"
+},
+"coach.workspace.kind.regular": {
+"en": "Regular Plan",
+"zh": "正式计划"
+},
+"coach.workspace.need.ended": {
+"en": "Plan ended",
+"zh": "计划已结束"
+},
+"coach.workspace.need.endsThisWeek": {
+"en": "Plan ends this week",
+"zh": "计划本周内结束"
+},
+"coach.workspace.need.noCurrentPlan": {
+"en": "No active plan",
+"zh": "暂无在跑计划"
+},
+"coach.workspace.newPlan": {
+"en": "New Plan",
+"zh": "排新计划"
+},
+"coach.workspace.publishedRow": {
+"en": "{summary} · Sent {date}",
+"zh": "{summary} · {date}发"
+},
+"coach.workspace.publishedSummary %@ %lld": {
+"en": {
+"one": "%@ · %lld week",
+"other": "%@ · %lld weeks"
+},
+"zh": "%@ · %lld周"
+},
+"coach.workspace.section.drafts": {
+"en": "Drafts in Progress",
+"zh": "进行中草稿"
+},
+"coach.workspace.section.needs": {
+"en": "Needs a Plan",
+"zh": "谁需要排计划"
+},
+"coach.workspace.section.recent": {
+"en": "Recently Published",
+"zh": "最近发布"
+},
+"coach.workspace.shortDate": {
+"en": "{month}/{day}",
+"zh": "{month}月{day}日"
+},
+"coach.workspace.step.assignFrequency": {
+"en": "Assign Frequency",
+"zh": "分配频率"
+},
+"coach.workspace.step.configureRules": {
+"en": "Configure Progression",
+"zh": "配置进阶"
+},
+"coach.workspace.step.fillIntensity": {
+"en": "Set Intensity",
+"zh": "填强度"
+},
+"coach.workspace.step.notStarted": {
+"en": "Not Started",
+"zh": "未开始"
+},
+"coach.workspace.step.preview": {
+"en": "Preview & Publish",
+"zh": "预览发布"
+},
+"coach.workspace.step.selectAccessories": {
+"en": "Select Accessories",
+"zh": "选辅助"
+},
+"coach.workspace.step.selectDuration": {
+"en": "Select Duration",
+"zh": "选周期"
+},
+"coach.workspace.step.selectMainLifts": {
+"en": "Select Main Lifts",
+"zh": "选主项"
+},
+"coach.workspace.step.selectStudent": {
+"en": "Select Student",
+"zh": "选学员"
+},
+"coach.workspace.subtitle": {
+"en": "Build cycles · Resume drafts · Review published plans",
+"zh": "为学员排周期 · 续编草稿 · 回看已发布"
+},
+"coach.workspace.title": {
+"en": "Planning",
+"zh": "编排"
+}
+}

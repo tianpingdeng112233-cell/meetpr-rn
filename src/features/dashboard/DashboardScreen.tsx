@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { t } from '@/i18n';
 import { useSessionStore } from '@/api/session';
 import { useShiftPlan, useUndoPlanShift, type FeedbackItem } from '@/api/domains';
 import { AnalyticsScreen, screen } from '@/analytics';
@@ -69,12 +70,12 @@ export function DashboardAsyncSection({
   if (!isError) return <>{children}</>;
   return (
     <View style={styles.errorRow}>
-      <Text style={styles.errorText}>加载失败</Text>
+      <Text style={styles.errorText}>{t('student.growthCurveView.copy006')}</Text>
       <Pressable
         accessibilityRole="button"
         onPress={onRetry}
         style={({ pressed }) => pressed && styles.pressed}>
-        <Text style={styles.retryText}>点击重试</Text>
+        <Text style={styles.retryText}>{/* TODO(i18n:missing) */}点击重试</Text>
       </Pressable>
     </View>
   );
@@ -119,12 +120,12 @@ export function DashboardScreen() {
       addUtcDays(plan.end_date, plan.total_shift_days + 1),
     );
     Alert.alert(
-      '把整份计划往后顺延一天?',
-      `今天的${course}课改到明天,之后的课依次顺延,本周期结束日变为${shiftedEnd}`,
+      /* TODO(i18n:drift) */ '把整份计划往后顺延一天?',
+      /* TODO(i18n:drift) */ `今天的${course}课改到明天,之后的课依次顺延,本周期结束日变为${shiftedEnd}`,
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('student.accountSecuritySheets.copy013'), style: 'cancel' },
         {
-          text: '确认顺延',
+          text: /* TODO(i18n:drift) */ '确认顺延',
           onPress: () => {
             void shiftPlan
               .mutateAsync(plan.id)
@@ -132,13 +133,13 @@ export function DashboardScreen() {
                 bumpPlanRevision();
                 const advisory =
                   result.total_offset_days >= 3
-                    ? `已累计顺延 ${result.total_offset_days} 天,建议联系教练调整计划`
+                    ? /* TODO(i18n:drift) */ `已累计顺延 ${result.total_offset_days} 天,建议联系教练调整计划`
                     : '';
-                Alert.alert('顺延成功', advisory, [{ text: '知道了' }]);
+                Alert.alert(/* TODO(i18n:drift) */ '顺延成功', advisory, [{ text: t('student.dashboardView.copy002') }]);
               })
               .catch((error: unknown) => {
                 const copy = planShiftErrorCopy(error, 'shift');
-                Alert.alert(copy.title, copy.message, [{ text: '知道了' }]);
+                Alert.alert(copy.title, copy.message, [{ text: t('student.dashboardView.copy002') }]);
               });
           },
         },
@@ -149,10 +150,10 @@ export function DashboardScreen() {
   const confirmUndoShift = () => {
     if (!vm.activePlan) return;
     const planId = vm.activePlan.id;
-    Alert.alert('撤销顺延?', `课程会回到${chineseMonthDay(utcDateText(vm.now))}。`, [
-      { text: '保留顺延', style: 'cancel' },
+    Alert.alert(/* TODO(i18n:drift) */ '撤销顺延?', /* TODO(i18n:drift) */ `课程会回到${chineseMonthDay(utcDateText(vm.now))}。`, [
+      { text: /* TODO(i18n:drift) */ '保留顺延', style: 'cancel' },
       {
-        text: '撤销顺延',
+        text: /* TODO(i18n:drift) */ '撤销顺延',
         style: 'destructive',
         onPress: () => {
           void undoPlanShift
@@ -160,7 +161,7 @@ export function DashboardScreen() {
             .then(() => bumpPlanRevision())
             .catch((error: unknown) => {
               const copy = planShiftErrorCopy(error, 'undo');
-              Alert.alert(copy.title, copy.message, [{ text: '知道了' }]);
+              Alert.alert(copy.title, copy.message, [{ text: t('student.dashboardView.copy002') }]);
             });
         },
       },
@@ -182,7 +183,7 @@ export function DashboardScreen() {
         <View style={styles.heroRow}>
           <Text style={styles.hero}>{vm.title}</Text>
           <Pressable
-            accessibilityLabel="通知"
+            accessibilityLabel={t('student.notifications')}
             accessibilityRole="button"
             hitSlop={12}
             onPress={() => setNotificationsOpen(true)}
@@ -211,7 +212,7 @@ export function DashboardScreen() {
         </DashboardAsyncSection>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>本周</Text>
+          <Text style={styles.sectionTitle}>{t('student.trainingCalendarView.copy006')}</Text>
           {vm.week.status === 'loading' ? (
             <ActivityIndicator color={colors.textTertiary} size="small" />
           ) : null}
@@ -237,7 +238,7 @@ export function DashboardScreen() {
                   onPress={() =>
                     router.push({
                       pathname: '/(student)/growth-curve',
-                      params: { lift: vm.selectedDay?.lift?.name ?? '主项' },
+                      params: { lift: vm.selectedDay?.lift?.name ?? t('student.growthCurveView.copy001') },
                     })
                   }
                   periodLabel={vm.e1rm.periodLabel}
@@ -255,7 +256,7 @@ export function DashboardScreen() {
                   onPress={confirmShift}
                   style={({ pressed }) => [styles.shiftButton, pressed && styles.pressed]}>
                   <Text style={styles.shiftLabel}>
-                    {shiftPlan.isPending ? '顺延中…' : '今天有事'}
+                    {shiftPlan.isPending ? /* TODO(i18n:drift) */ '顺延中…' : /* TODO(i18n:drift) */ '今天有事'}
                   </Text>
                 </Pressable>
               ) : null}
@@ -266,7 +267,7 @@ export function DashboardScreen() {
                   onPress={confirmUndoShift}
                   style={({ pressed }) => [styles.undoShiftButton, pressed && styles.pressed]}>
                   <Text style={styles.undoShiftLabel}>
-                    {undoPlanShift.isPending ? '撤销中…' : '撤销顺延'}
+                    {undoPlanShift.isPending ? /* TODO(i18n:drift) */ '撤销中…' : /* TODO(i18n:drift) */ '撤销顺延'}
                   </Text>
                 </Pressable>
               ) : null}
@@ -306,7 +307,7 @@ function ProgressSegments({ week }: { week: ReturnType<typeof useDashboardViewMo
   const trainingDays = week.days.filter((day) => day.day !== null);
   if (trainingDays.length === 0) return null;
   return (
-    <View accessibilityLabel="本周训练进度" style={styles.progressRow}>
+    <View accessibilityLabel={/* TODO(i18n:missing) */ "本周训练进度"} style={styles.progressRow}>
       {trainingDays.map((day) => (
         <View key={day.date} style={styles.progressTrack}>
           <View
@@ -336,8 +337,8 @@ function FeedbackCard({
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const eyebrow = feedback.day_date
-    ? `教练反馈 · 周${chineseWeekday(feedback.day_date)}`
-    : '教练反馈';
+    ? `${t('student.dashboardFeedbackCard.copy003')} · ${chineseWeekday(feedback.day_date)}`
+    : t('student.dashboardFeedbackCard.copy003');
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       {({ pressed }) => (
@@ -350,7 +351,7 @@ function FeedbackCard({
             {feedback.text}
           </Text>
           <Text style={styles.feedbackFooter}>
-            教练 · {relativeFeedbackTime(feedback.posted_at, now)} · 在「成长」查看全部反馈 →
+            {t('student.dashboardView.copy003')} · {relativeFeedbackTime(feedback.posted_at, now)} {/* TODO(i18n:missing) */}· 在「成长」查看全部反馈 →
           </Text>
         </Card>
       )}
@@ -387,7 +388,7 @@ export function WeekGrid({
         const selected = day.date === selectedDate;
         return (
           <Pressable
-            accessibilityLabel={`周${chineseWeekday(day.date)} ${day.lift?.name ?? (day.day ? '训练' : '休息')}`}
+            accessibilityLabel={`${chineseWeekday(day.date)} ${day.lift?.name ?? (day.day ? t('student.studentRootView.copy002') : t('coach.execution.rest'))}`}
             accessibilityRole="button"
             key={day.date}
             onPress={() => onSelect(day.date)}
@@ -447,7 +448,7 @@ function LiftCard({
 }: {
   day: DashboardWeekDay | null;
   point: E1RMSample | null;
-  periodLabel: '90 天' | '历史最佳';
+  periodLabel: string;
   delta: number;
   loading: boolean;
   onPress: () => void;
@@ -478,7 +479,7 @@ function LiftCard({
                 <Text style={styles.bigNumber}>{formatKg(point.valueKg)}</Text>
                 <Text style={styles.bigUnit}>KG</Text>
               </View>
-              <Text style={[styles.delta, { color: deltaColor }]}>90 天 {formatDeltaKg(delta)}</Text>
+              <Text style={[styles.delta, { color: deltaColor }]}>90 {t('student.dashboardProfileMetricsView.copy004')} {formatDeltaKg(delta)}</Text>
               <View style={styles.sparkline}>
                 <Sparkline
                   data={trajectory.map((sample) => ({
@@ -488,13 +489,13 @@ function LiftCard({
                 />
               </View>
               <Text style={styles.liftFooter}>
-                选中 周{chineseWeekday(day.date)} · {chineseMonthDay(day.date)}
+                {/* TODO(i18n:missing) */}选中 {chineseWeekday(day.date)} · {chineseMonthDay(day.date)}
               </Text>
             </>
           ) : (
             <View style={styles.liftEmpty}>
               <View style={styles.liftTitleRow}>
-                <Text style={styles.liftTitle}>成长曲线</Text>
+                <Text style={styles.liftTitle}>{/* TODO(i18n:missing) */}成长曲线</Text>
                 {loading ? (
                   <ActivityIndicator color={colors.textTertiary} size="small" />
                 ) : (
@@ -506,7 +507,7 @@ function LiftCard({
                 )}
               </View>
               <Text style={styles.liftEmptyText}>
-                {lift ? '练几次就有趋势了' : '选中训练日查看对应成长曲线'}
+                {lift ? /* TODO(i18n:missing) */ '练几次就有趋势了' : /* TODO(i18n:missing) */ '选中训练日查看对应成长曲线'}
               </Text>
             </View>
           )}
@@ -543,16 +544,16 @@ export function ProfileMetrics({
   return (
     <View style={styles.metricsRow}>
       <Card style={styles.metricCard}>
-        <Text style={styles.metricLabel}>体重</Text>
+        <Text style={styles.metricLabel}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
         <Text style={styles.metricValue}>
           {profile?.weight_kg ? `${formatKg(Number(profile.weight_kg))} KG` : '—'}
         </Text>
-        <Text style={styles.metricFooter}>资料档案</Text>
+        <Text style={styles.metricFooter}>{/* TODO(i18n:missing) */}资料档案</Text>
       </Card>
       {competitionDays !== null && competitionDays >= 0 ? (
         <Card style={styles.metricCard}>
-          <Text style={styles.metricLabel}>距比赛</Text>
-          <Text style={styles.metricValue}>{competitionDays} 天</Text>
+          <Text style={styles.metricLabel}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
+          <Text style={styles.metricValue}>{competitionDays} {t('student.dashboardProfileMetricsView.copy004')}</Text>
         </Card>
       ) : null}
     </View>
@@ -584,9 +585,9 @@ function NotificationCenterSheet({
       <Pressable accessibilityRole="button" onPress={onClose} style={styles.scrim}>
         <Pressable onPress={(event) => event.stopPropagation()} style={styles.sheet}>
           <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>通知</Text>
+            <Text style={styles.sheetTitle}>{t('student.notifications')}</Text>
             <Pressable accessibilityRole="button" hitSlop={12} onPress={onClose}>
-              <Text style={styles.done}>完成</Text>
+              <Text style={styles.done}>{t('student.readinessCheckinSheet.copy018')}</Text>
             </Pressable>
           </View>
           {notifications.length === 0 ? (
@@ -596,8 +597,8 @@ function NotificationCenterSheet({
                 name="bell-outline"
                 size={38}
               />
-              <Text style={styles.notificationEmptyTitle}>暂无新通知</Text>
-              <Text style={styles.notificationEmptyBody}>新的反馈和计划会在这里出现</Text>
+              <Text style={styles.notificationEmptyTitle}>{/* TODO(i18n:missing) */}暂无新通知</Text>
+              <Text style={styles.notificationEmptyBody}>{/* TODO(i18n:missing) */}新的反馈和计划会在这里出现</Text>
             </View>
           ) : (
             notifications.map((notification) => {
@@ -607,8 +608,8 @@ function NotificationCenterSheet({
                     icon="clipboard-text-outline"
                     key={notification.id}
                     onPress={onPlan}
-                    subtitle={`第 ${notification.weekIndex} 周计划已可查看`}
-                    title="教练发布了新计划"
+                    subtitle={/* TODO(i18n:missing) */ `第 ${notification.weekIndex} 周计划已可查看`}
+                    title={t('student.studentBlackGoldChatView.copy020')}
                   />
                 );
               }
@@ -618,8 +619,8 @@ function NotificationCenterSheet({
                     icon="message-text-outline"
                     key={notification.id}
                     onPress={onFeedback}
-                    subtitle="查看教练最近的训练反馈"
-                    title={`${notification.count} 条未读反馈`}
+                    subtitle={/* TODO(i18n:missing) */ "查看教练最近的训练反馈"}
+                    title={/* TODO(i18n:missing) */ `${notification.count} 条未读反馈`}
                   />
                 );
               }
@@ -628,8 +629,8 @@ function NotificationCenterSheet({
                   icon="check-decagram-outline"
                   key={notification.id}
                   onPress={onClose}
-                  subtitle="查看教练给你的评估结果"
-                  title="评估已完成"
+                  subtitle={/* TODO(i18n:missing) */ "查看教练给你的评估结果"}
+                  title={/* TODO(i18n:missing) */ "评估已完成"}
                 />
               );
             })

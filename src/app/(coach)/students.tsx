@@ -1,5 +1,6 @@
+import { t } from '@/i18n';
 import { FeaturePlaceholderScreen } from '@/navigation/FeaturePlaceholderScreen';
 
 export default function CoachStudentsScreen() {
-  return <FeaturePlaceholderScreen title="学员" />;
+  return <FeaturePlaceholderScreen title={t('coach.shell.students')} />;
 }

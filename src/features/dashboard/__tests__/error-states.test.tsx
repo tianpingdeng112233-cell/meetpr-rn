@@ -1,4 +1,4 @@
-import { expect, jest, test } from '@jest/globals';
+import { beforeEach, afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
 
@@ -9,6 +9,7 @@ import {
   WeekGrid,
 } from '../DashboardScreen';
 import type { DashboardWeekDay } from '../types';
+import { setLocaleOverride } from '@/i18n';
 
 jest.mock('@react-native-async-storage/async-storage', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -132,3 +133,7 @@ test('a profile failure renders its own error row and retry action', () => {
   expect(retry).toHaveBeenCalledTimes(1);
   act(() => renderer?.unmount());
 });
+
+// Existing copy assertions pin the original Chinese presentation.
+beforeEach(() => setLocaleOverride('zh'));
+afterEach(() => setLocaleOverride(null));
