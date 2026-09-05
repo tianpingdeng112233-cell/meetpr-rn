@@ -87,7 +87,7 @@ export function useOpenCoachChat(studentId: string) {
       const queryKey = studentChatKeys.conversations(studentId);
       await client.cancelQueries({ queryKey });
       client.setQueryData<Awaited<ReturnType<typeof chatRepository.list>>>(queryKey, previous => ({ conversations: [...(previous?.conversations ?? []).filter(item => item.id !== conversation.id), conversation] }));
-      router.navigate({ pathname: '/(student)/chat', params: { conversationId: conversation.id, coachName: current.coach_display_name ?? conversation.other_party.display_name } });
+      router.navigate({ pathname: '/(student)/chat', params: { conversationId: conversation.id, coachName: current.coach_display_name?.trim() || conversation.other_party.display_name } });
     } catch (error) {
       if (error instanceof ApiError && String(error.code ?? error.envelope?.error) === 'CHAT_BIND_REQUIRED') {
         void client.invalidateQueries({ queryKey: bindKeys.mine });

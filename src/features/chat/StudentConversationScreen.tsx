@@ -31,6 +31,14 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const inbox = useFeedbackInboxViewModel(studentId);
   const videos = useStudentVideos(studentId);
   const playback = useStudentChatPlayback();
+  // The route param can arrive empty (blank coach display name); fall back to the conversation's other party.
+  const [resolvedName, setResolvedName] = useState(coachName);
+  useEffect(() => {
+    if (coachName) { setResolvedName(coachName); return; }
+    let live = true;
+    void chatRepository.list().then(result => { if (live) setResolvedName(result.conversations.find(item => item.id === conversationId)?.other_party.display_name ?? ''); }).catch(() => {});
+    return () => { live = false; };
+  }, [coachName, conversationId]);
   const [selectedShare, setSelectedShare] = useState<ChatMessage | null>(null);
   const [shareVideoError, setShareVideoError] = useState(false);
   const frames = useRef(new Map<string, VerticalFrame>());
@@ -200,7 +208,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   return <Screen><KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <View style={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 14, borderBottomWidth: 1, borderColor: colors.borderHairline, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy001')} onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="chevron-left" size={20} color={colors.textPrimary} /></Pressable>
-      <View style={{ gap: 2 }}><Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>{coachName}</Text><Text style={{ ...font.body(11), color: colors.success }}>{t(empty ? 'student.studentBlackGoldChatView.copy002' : 'student.studentBlackGoldChatView.copy003')}</Text></View>
+      <View style={{ gap: 2 }}><Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>{resolvedName}</Text><Text style={{ ...font.body(11), color: colors.success }}>{t(empty ? 'student.studentBlackGoldChatView.copy002' : 'student.studentBlackGoldChatView.copy003')}</Text></View>
     </View>
     <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} scrollEventThrottle={16}
       onScrollBeginDrag={() => { initialPosition.current = true; }}
@@ -214,7 +222,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       }} contentContainerStyle={{ flexGrow: 1, padding: 18, gap: 10 }}>
       {loadError && !items.length && !pending.length ? <StudentConversationLoadErrorState retry={() => refresh.current()} /> : empty ? <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 13 }}>
         <View style={{ width: 54, height: 54, borderRadius: 27, borderStyle: 'dashed', borderWidth: 1.5, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="message-outline" size={23} color={colors.textMuted} /></View>
-        <Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy014', [coachName])}</Text>
+        <Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy014', [resolvedName])}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}><Text style={{ ...font.body(13), color: colors.textMuted }}>{t('student.studentBlackGoldChatView.copy015')}</Text><MaterialCommunityIcons name="arrow-down" size={14} color={colors.gold500} /></View>
       </View> : !ready && !items.length && !pending.length ? <ActivityIndicator color={colors.gold500} style={{ flex: 1 }} /> : null}
       {hasOlder ? historyError ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy013')} onPress={() => void loadOlder()}><Text style={{ ...font.body(13), color: colors.textMuted, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy013')}</Text></Pressable> : <ActivityIndicator accessibilityLabel={t('student.studentBlackGoldChatView.copy024')} size="small" color={colors.gold500} style={{ paddingVertical: 8 }} /> : null}
