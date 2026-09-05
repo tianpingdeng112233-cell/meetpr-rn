@@ -9,11 +9,26 @@ export const ConversationSchema = z.object({
   last_message_at: TimestampSchema.nullish(), unread_count: z.number().int().nonnegative(),
   my_last_read: CursorSchema.nullish(), other_last_read: CursorSchema.nullish(),
 });
+/** Frozen SetRefV1 wire contract. Invalid snapshots degrade to a text row, not a failed page. */
+export const ChatSetRefSchema = z.object({
+  v: z.literal(1), source: z.enum(['logged', 'planned']),
+  exerciseName: z.string().min(1).refine(value => [...value].length <= 120 && !/[\p{Cc}\u2028\u2029]/u.test(value)),
+  setNumber: z.number().int().min(1).max(2_147_483_648),
+  setTotal: z.number().int().min(1).max(999).nullish(),
+  weightKg: z.string().regex(/^(?:0|[1-9]\d{0,3})(?:\.\d?[1-9])?$/).nullish(),
+  reps: z.number().int().min(0).max(99).nullish(),
+  repsMax: z.number().int().min(0).max(99).nullish(),
+  rpe: z.string().regex(/^(?:[0-9](?:\.5)?|10)$/).nullish(),
+  dayDate: z.iso.date(), setLogId: UuidSchema.nullish(), planSetId: UuidSchema.nullish(),
+}).strict().refine(value => (value.setTotal == null || value.setNumber <= value.setTotal)
+  && (value.repsMax == null || (value.reps != null && value.repsMax > value.reps))
+  && (value.source === 'logged' ? value.setLogId != null && value.planSetId == null : value.planSetId != null && value.setLogId == null));
+export type ChatSetRef = z.infer<typeof ChatSetRefSchema>;
 export const ChatMessageSchema = z.object({
   id: UuidSchema, conversation_id: UuidSchema, seq: z.number().int().positive(), sender_id: UuidSchema,
   kind: z.enum(['text', 'image', 'set_ref']), body: z.string().nullish(), client_id: z.string(), created_at: TimestampSchema,
   attachment_id: UuidSchema.nullish(), image_url: z.string().url().nullish(), image_expires_in: z.number().nullish(),
-  set_ref: z.unknown().optional(), video_url: z.string().url().nullish(), video_expires_in: z.number().nullish(),
+  set_ref: ChatSetRefSchema.nullish().catch(null), video_url: z.string().url().nullish(), video_expires_in: z.number().nullish(),
 });
 export const ChatMessagesSchema = z.object({ messages: z.array(ChatMessageSchema), meta: z.object({ other_last_read: CursorSchema.nullish(), has_more: z.boolean() }) });
 export const SendTextSchema = z.object({ kind: z.literal('text'), body: z.string().trim().min(1).max(4000), client_id: z.string().min(1) }).strict();

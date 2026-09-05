@@ -66,6 +66,7 @@
 | TrainingHistory | ☐ | 悬空 worktree `feat/w1g-history`(旧基线实装,未 commit);收货前对照 #331 空态 |
 | Readiness | 🔨 | W1-d;训练 tab opt-in 两步 sheet、per-day skip、心形完成态(页头按钮组第二位);细节待 W3 像素对齐 |
 | FeedbackInbox / FeedbackDetail | 🔨 | W3-a:归档列表/详情路由、相对时间/未读态/关联视频三态、行内短链失败;markRead → URL → 开播放器 → markers,回填有 id + 会话守卫;Dashboard/训练页消息按钮直达反馈。复用现有反馈与视频读口,不改 DTO;lint/tsc/64 suites·396 tests/Android JS bundle 通过;ADB socket 被 sandbox 拒绝,待 AVD 截图验收 |
+| StudentChat(学员端教练聊天) | 🔨 | W3-s：全屏黑金会话、文本/训练分享/未看计划/反馈视频混排、分页定位/55%可见已读/pending重试/30s轮询；Dashboard/Training 页头及未读合计已接。Growth/Profile 按追加裁决待合流另卡；CHAT_BIND_REQUIRED 已按追加授权仅补 client.ts 错误码及 HTTP 测试。组分享入口/图片发送/WebSocket/推送深链另卡；74 suites·466 tests、lint/tsc 通过，AVD 截图待验收，详见 JOURNAL W3-s |
 | VideoUpload | ✅ | W1-h v2(#22,R1–R4):W1-d 入口接回、自建相机(录制/回放确认/相册偏好)、720p 直通/转码、静默多分片上传(legacy uploadTask,无 Content-Type)+ 持久化分片/退避、当天留存/组内回放、失败聚合通知；R4 冷启动服务端回填（按日已有 set log 归组、本地优先、远端删除清空，装载/切日/刷新触发，静默失败；自动测试通过，R4 AVD 走查因 ADB 权限受阻待补）。模拟器已走查:选片→懒建日志→initiate→PUT→complete,服务端 `GET /students/:id/videos` 出现附件;**录像本身模拟器不可验(QEMU 相机开录挂死),待真机**。已知偏差:无前台服务真后台续传、无烧录导出、帧率随设备 |
 | MyProfile | ☐ | |
 | 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
