@@ -23,7 +23,7 @@ export const UNIT_LABELS = { get kg() { return t('student.step1BasicsSection.cop
 export const GENDER_LABELS = { get male() { return t('student.onboardingLabels.copy001'); }, get female() { return t('student.onboardingLabels.copy002'); }, get other() { return t('student.onboardingLabels.copy003'); } } as const;
 export const SQUAT_STANCE_LABELS = { get high_bar() { return t('student.onboardingLabels.copy004'); }, get low_bar() { return t('student.onboardingLabels.copy005'); } } as const;
 export const DEADLIFT_STYLE_LABELS = { get conventional() { return t('student.onboardingLabels.copy006'); }, get sumo() { return t('student.onboardingLabels.copy007'); }, get both() { return t('student.onboardingLabels.copy008'); } } as const;
-export const BENCH_GRIP_LABELS = { narrow: '窄' /* TODO(i18n:missing) */, get standard() { return t('student.onboardingLabels.copy010'); }, wide: '宽' /* TODO(i18n:missing) */ } as const;
+export const BENCH_GRIP_LABELS = { get narrow() { return t('student.onboardingLabels.copy009'); }, get standard() { return t('student.onboardingLabels.copy010'); }, get wide() { return t('student.onboardingLabels.copy011'); } } as const;
 export const TRAINING_DAY_LABELS = {
   get mon() { return t('student.onboardingLabels.copy015'); }, get tue() { return t('student.onboardingLabels.copy016'); }, get wed() { return t('student.onboardingLabels.copy017'); }, get thu() { return t('student.onboardingLabels.copy018'); }, get fri() { return t('student.onboardingLabels.copy019'); }, get sat() { return t('student.onboardingLabels.copy020'); }, get sun() { return t('student.onboardingLabels.copy021'); },
 } as const;

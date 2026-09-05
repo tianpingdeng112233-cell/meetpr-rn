@@ -22,6 +22,7 @@ import {
   PrivacyNoticeSheet,
   track,
 } from '@/analytics';
+import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
 import { fontNames, ThemeProvider, useColors, useTheme } from '@/design';
@@ -122,6 +123,7 @@ function ThemedRoot() {
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
         <RootNavigator />
+        <TrainingReminderSession />
         <PrivacyNoticeSheet
           onConfirmed={() => setPrivacyNoticeVisible(false)}
           visible={privacyNoticeVisible}

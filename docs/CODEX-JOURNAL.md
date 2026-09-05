@@ -208,14 +208,14 @@ Received number of calls: 1
 | `src/features/training/SetEntrySheet.tsx:225` | 松开确认 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
 | `src/features/training/SetEntrySheet.tsx:228` | W1-h 接线 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
 | `src/features/training/SetEntrySheet.tsx:243` | 保存中… | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
-| `src/features/training/TodayWorkoutView.tsx:82` | 🎉 今天你的；e1RM 突破! | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
-| `src/features/training/TodayWorkoutView.tsx:86` | (此前 ${formatWeight(event.previousMaxE1RMKg)} kg) | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
-| `src/features/training/TodayWorkoutView.tsx:87` | ,第一个纪录点 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
-| `src/features/training/TodayWorkoutView.tsx:451` | 今日状态已填写 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/training/TodayWorkoutView.tsx:453` | 今日状态已跳过 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/training/TodayWorkoutView.tsx:464` | 刷新训练 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
-| `src/features/training/TodayWorkoutView.tsx:472` | 今日休息；这天休息；看本周计划 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/training/TodayWorkoutView.tsx:475` | 历史记录 · 不可修改；未到训练日 · 仅预览 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TodayWorkoutView.tsx:83` | 🎉 今天你的；e1RM 突破! | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:87` | (此前 ${formatWeight(event.previousMaxE1RMKg)} kg) | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:88` | ,第一个纪录点 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:452` | 今日状态已填写 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TodayWorkoutView.tsx:454` | 今日状态已跳过 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TodayWorkoutView.tsx:465` | 刷新训练 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
+| `src/features/training/TodayWorkoutView.tsx:473` | 今日休息；这天休息；看本周计划 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/training/TodayWorkoutView.tsx:476` | 历史记录 · 不可修改；未到训练日 · 仅预览 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
 | `src/features/training/TrainingCalendarView.tsx:83` | 上一段日期 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
 | `src/features/training/TrainingCalendarView.tsx:87` | 下一段日期 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
 | `src/features/training/TrainingCalendarView.tsx:97` | 月 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
@@ -700,3 +700,73 @@ Ran all test suites.
 - `src/features/history/model.ts`
 - `src/features/history/types.ts`
 - `src/features/history/use-history.ts`
+
+## 2026-09-05 — W1-p MyProfile / settings / account security
+
+- Task: `/private/tmp/claude-501/-Users-david/a02c90bb-a740-4052-8cd6-9325d48a540d/scratchpad/card-w1p-my-profile.md`; canonical reference `docs/w1-reference/my-profile-v2.md`, Appendix B wire tokens; iOS checkout verified at `202e95db`. Used the requested TDD seams. No code-review skill, setup workflow, subagents, installs, commit, or push.
+- MyProfile: v3 header/chat button position, loading skeleton, empty/retry cards, all seven loaded sections, pull-to-refresh, locked 1RM values/SBD sum, readiness summary and shared two-step readiness sheet. Loading/empty/failure retain preferences, account security, and sign-out. Chat remains a disabled button position as scoped by the card; this checkout has no chat route.
+- Editing: extracted and reused onboarding sections for measurements, muscles, injuries, competition; reused complete background/environment/recovery steps. Explicit Save calls the existing upsert mutation and awaits profile invalidation/refetch. `profilePatch` has an outbound allowlist, never executes step 3, and separates injury/competition/measurement writes. Wizard navigation, BindGate, and e1RM engine were not modified. Shared recovery/extra field labels and bench grips now use existing canonical translations.
+- Settings: appearance uses `useTheme().setAppearance`; per-student rest preferences use AsyncStorage with legacy fixed-duration migration, 30–600s/15s clamping and actual-RPE bands. TodayWorkout reads the preference while preserving coach-prescribed priority and the existing first-rest explanation flag. Reminder settings default off, preselect onboarding days or Mon/Wed/Fri, use local 20:00 and shared numeric wheels, request Android permission, expose system settings on denial, and schedule weekly identifiers on the `training-reminder` channel. Updates cancel only that prefix, roll partial schedules back, and serialize with logout. Sign-in restores saved preferences; unsaved defaults are never written. Foreground notifications are suppressed.
+- Account security: current/new/confirmation password sheet with minimum eight characters / maximum 72 UTF-8 bytes, mismatch/generic error copy and success toast; full ledger CSV with exact header, escaping, device-calendar dates, chronological rows, and `meetpr-training-log-YYYYMMDD.csv`; sharing uses the existing Expo FileSystem cache and preinstalled expo-sharing, with temporary file cleanup. Full-screen account deletion requires the exact localized confirmation word and signs out after successful deletion.
+
+### Endpoint findings (source verification, not live production verification)
+
+Verified newer local backend git objects at `origin/staging @ a0846de` (the backend working checkout itself is older, `1e494db`):
+
+- `src/routes/me.ts`: `PUT /me/password` accepts `{ old_password, new_password }`; `204` success, `403 PASSWORD_MISMATCH`, `400 VALIDATION_ERROR`, `401 AUTH_INVALID_TOKEN`. No channel branch: Global email accounts use the same `users.password_hash` path. `src/routes/auth/schemas.ts` validates both old and new passwords with eight-character minimum and 72 UTF-8-byte maximum. Google-only accounts have no known current password; this card preserves the canonical current-password flow and adds no alternative credential flow.
+- `src/services/password.ts`: password change revokes **all** refresh sessions, including the requesting device, and clears legacy `refresh_token_jti`. The canonical success toast mentions other devices, but this device will also need sign-in when its access token needs refresh. No backend workaround was introduced.
+- `DELETE /me`: student roles only (`coached_student`, `self_train_student`), `204` success, deletes the user with cascading data removal; role/token errors use existing auth middleware. No client DELETE was sent during implementation.
+- `src/routes/sets.ts` + `src/handlers/sets-fetch.ts`: `GET /students/:id/sets?from=...&to=...&scope=all` returns `{ logs }`, includes adhoc/orphaned rows, has no pagination or maximum range, and bounds `logged_date` with inclusive `from` / exclusive `to`. Export requests `1970-01-01` through `9999-12-31`, resolves names through `GET /exercises`, and formats CSV dates from `logged_at` using the device calendar as required by the exporter contract.
+- Live Global endpoint/error-code verification could not be performed: sandbox networking is unavailable and no test credentials were requested/read. Existing shared `src/api/client.ts` still defaults to CN staging in this checkout; Global smoke testing must configure `EXPO_PUBLIC_API_BASE_URL=https://api.meetpr.app` or consume the separate Global auth/config work. This card uses the shared repositories without changing that unrelated migration.
+
+### Exact file inventory
+
+Added:
+- `src/features/profile/MyProfileScreen.tsx`
+- `src/features/profile/ProfileEditor.tsx`
+- `src/features/profile/components.tsx`
+- `src/features/profile/model.ts`
+- `src/features/profile/__tests__/model.test.ts`
+- `src/features/settings/AppearancePreferenceRow.tsx`
+- `src/features/settings/RestTimerSettingsScreen.tsx`
+- `src/features/settings/TrainingReminderSettingsScreen.tsx`
+- `src/features/settings/TrainingReminderSession.tsx`
+- `src/features/settings/reminder-lifecycle.ts`
+- `src/features/settings/rest-timer.ts`
+- `src/features/settings/storage.ts`
+- `src/features/settings/training-reminder.ts`
+- `src/features/settings/__tests__/rest-timer.test.ts`
+- `src/features/settings/__tests__/training-reminder.test.ts`
+- `src/features/account/AccountSecuritySection.tsx`
+- `src/features/account/csv.ts`
+- `src/features/account/__tests__/csv.test.ts`
+
+Modified:
+- `src/app/(student)/profile.tsx`
+- `src/app/_layout.tsx`
+- `src/api/session.ts`
+- `src/features/onboarding/OnboardingSteps.tsx`
+- `src/features/onboarding/controls.tsx`
+- `src/features/onboarding/catalog.ts`
+- `src/features/training/TodayWorkoutView.tsx`
+- `app.json`
+- `package.json`
+- `package-lock.json`
+- `PARITY.md`
+- `docs/CODEX-JOURNAL.md` (also rebased existing TodayWorkout TODO line references after imports moved)
+
+Dependency declarations: expo-notifications `~57.0.17`, expo-sharing `~57.0.18`. Exact lock entries and their required transitive updates were copied from the preinstalled `node_modules/.package-lock.json`; no install command ran and the shared symlink target was not edited. The notifications config plugin is registered. FileSystem was already in the Expo dependency tree; no third new direct dependency was added.
+
+### Tests and verification
+
+- Red first: all four task-named test files were written and run before implementation; all four initially failed because their public modules did not exist (`/private/tmp/w1p-red.log`). The subsequent sign-in restoration seam also failed before its module was implemented (`/private/tmp/w1p-lifecycle-red.log`).
+- `profile/__tests__/model.test.ts`: readiness/assessment summaries, three injury states, 1RM total/missing values, missing-row copy, every onboarding step cannot emit three 1RM fields, row patch isolation.
+- `settings/__tests__/rest-timer.test.ts`: three custom bands/null RPE, automatic v1 defaults, duration range/step/NaN clamp.
+- `settings/__tests__/training-reminder.test.ts`: weekday identifiers/local times/dedup/empty/disabled, onboarding day defaults, cancel-before-reschedule, logout cleanup, partial scheduling rollback, logout during scheduling, no persistence for unsaved defaults, saved-account restoration, stale-account protection.
+- `account/__tests__/csv.test.ts`: exact header, comma/quote/LF/CR escaping, device-calendar date instead of gym-day/UTC, filename.
+- `npm run lint`: exit 0, no errors or warnings.
+- `npx tsc --noEmit`: exit 0, no diagnostics.
+- `npx jest`: exit 0, **38 suites / 292 tests passed**, 0 snapshots. Two existing auth test suites now emit the Expo notifications SDK warning about remote push in Expo Go when exercising logout; only local notifications are used here.
+- `git diff --check`: passed.
+- `EXPO_OFFLINE=1 CI=1 npx expo run:android --no-install --device meetpr` with the required PATH/JAVA_HOME/ANDROID_HOME: native prebuild succeeded; ADB failed to open the 5037 smartsocket with `Operation not permitted` (ADB exit 255). Therefore no app launch, device permission/delivery/share validation, or screenshot evidence is claimed. Generated `android/` is ignored local prebuild output, not part of the diff.
+- Offline Android export succeeded at `/private/tmp/w1p-android-export` (Hermes bundle + 56 assets). The first export reused another worktree's router transform and failed resolving its history feature; rerunning with isolated `TMPDIR=/private/tmp/w1p-metro`, this worktree's `EXPO_ROUTER_APP_ROOT`, `--clear --max-workers 1` removed that shared-cache issue. Versioned Expo references read before writing code: https://docs.expo.dev/versions/v57.0.0/, `/sdk/notifications/`, `/sdk/sharing/`.
