@@ -1,3 +1,4 @@
+import { plateBreakdown, breakdownText } from '@/design/plate-visual';
 import { decodePrescription } from '@/domain/plan/prescription';
 import { gymDayToday, localDateText } from '@/domain/plan/workout-date-policy';
 import { t } from '@/i18n';
@@ -84,31 +85,13 @@ export function plateLoadout(totalWeightKg: number, collarOn: boolean): {
   perSideKg: number;
   detail: string;
 } {
-  const collar = collarOn ? TRAINING_LIMITS.collarWeightPerSideKg : 0;
-  const perSideKg = Math.max(
-    0,
-    (totalWeightKg - TRAINING_LIMITS.barWeightKg) / 2 - collar,
-  );
-  if (perSideKg === 0 && !collarOn) {
-    return { perSideKg, detail: t('student.setEntryPlateLoadout.copy003') };
-  }
-  if (perSideKg === 0) {
-    return { perSideKg, detail: t('student.setEntryPlateLoadout.copy001') };
-  }
-  const plates: string[] = [];
-  let remainder = perSideKg;
-  for (const size of [25, 20, 15, 10, 5, 2.5, 1.25]) {
-    const count = Math.floor((remainder + 1e-6) / size);
-    if (count > 0) {
-      plates.push(`${formatWeight(size)}kg×${count}`);
-      remainder -= count * size;
-    }
-  }
-  const plateCopy = plates.join(' + ') || `${formatWeight(perSideKg)}kg`;
-  return {
-    perSideKg,
-    detail: collarOn ? `${plateCopy}${t('student.setEntryPlateLoadout.copy002')}` : plateCopy,
-  };
+  const total = Math.round(Math.max(20, Math.min(500, totalWeightKg)) * 4) / 4;
+  const perSideKg = Math.max(0, (total - 20) / 2 - (collarOn ? 2.5 : 0));
+  const plates = plateBreakdown(totalWeightKg, collarOn);
+  const detail = plates.length === 0
+    ? t(collarOn ? 'student.setEntryPlateLoadout.copy001' : 'student.setEntryPlateLoadout.copy003')
+    : breakdownText(plates) + (collarOn ? t('student.setEntryPlateLoadout.copy002') : '');
+  return { perSideKg, detail };
 }
 
 export function planSetPrescription(planSet: PlanSet): {

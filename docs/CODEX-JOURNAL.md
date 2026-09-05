@@ -823,3 +823,29 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - `npx expo run:android --device meetpr --no-install` 已执行：prebuild 生成被忽略的本 worktree android/，package.json 无改动；随后 ADB 5037 smartsocket listener 因 sandbox `Operation not permitted` 失败。日志 `/private/tmp/w3v-android.log`。未完成原生 build/install、未取得 AVD 截图，不绕过沙箱。
 - Android JS bundle：`npx expo export --platform android --output-dir /private/tmp/w3v-bundle` 成功，日志 `/private/tmp/w3v-bundle.log`；此结果不替代原生安装和视觉验收。
 - PARITY Dashboard/TodayWorkout 追加 **“视觉对照 pass 待 AVD 截图验收”**，保留历史收货状态；本卡视觉 pass 未签收。
+
+## W3-v — SetEntrySheet 组录入页视觉对齐（2026-09-05）
+
+### 改动与边界
+
+- 本卡工作目录 `meetpr-rn-wt-w3v-setsheet` / `feat/w3v-set-sheet`；开工 clean。已读 AGENTS、PLAN、最近三段 JOURNAL、visual-controls、design/i18n 加载器及 Expo SDK 57 versioned docs；旧 visual-controls 的红色/旧控件形制按本卡明确规格和最近 W3-v v3 tokens 覆盖。只读核对 iOS `202e95db` 的 SetEntrySheet、SetEntryRPE/RPEScale/Tests、MeetPRNumberPad、PlateVisual、VideoAttachmentV3Controls。
+- SetEntrySheet 删除重复重量/次数 TextInput 卡、处方行、教练备注胶囊、绿色建议重量胶囊与 `/ side`；改为 PlateVisual → collar/breakdown → 单套重量/次数步进器 → RPE → 视频卡，固定 footer。重量建议副注保留百分比来源/解析原因，其它原因使用 copy002；自动重量虚线 `[2,3]` 描边、小标与手改退出状态沿用现有 reducer。
+- 新 `design/plate-visual.ts` 提供 clamp→0.25 取整、单侧贪心拆片、聚合文案和七档尺寸；policy 仅改 `plateLoadout` 复用拆片/文案，保留 perSideKg，空片按空杠/赛扣分支。新 PlateVisual 使用现有 SVG 依赖，148pt 画布按高度整体缩放（本页 108），实现七色片、端盖/肩/套筒、八边形赛扣/螺母纹/拨杆/圆钮，强制 LTR；渐变与金属常量集中 tokens，5kg/2.5kg 指定色标随主题。
+- 新 NumberPad 页内 absolute 覆盖层（zIndex 100）低于现有 OverlayHost 相机/回放（1000）；无额外 Modal。键盘从下滑入、遮罩/Cancel/空 Confirm 取消、Android 返回优先关闭 overlay 再关键盘；确认重量保留四分之一精度，用 String 写回以避免既有 formatWeight 的一位小数格式抹掉 `.25`。主项 floor20、辅项 floor0；次数确认 clamp1–100，步进 floor0。输入时底层内容从 a11y 树隐藏。
+- 新 SetEntryRPEScale 使用纯 `set-entry-rpe.ts` 的 329pt×3pt 中心点几何、半步吸附、6pt 意图锁与释放策略。单一 PanResponder 负责点按/横拖写入，无刻度 Pressable；纵向 scroll 意图不写，横拖释放不重读触点；捕获关闭并允许 Android native ScrollView 接管。初次写入清除无处方 placeholder；气泡跟随并横向夹边；整卡 adjustable ±0.5。PanResponder.create 只保存事件回调，React Compiler 对传入 ref 回调有保守误报，因此仅该构造调用局部注明并关闭 `react-hooks/refs`，事件外没有读取/写入手势 ref，未修改任何守卫。
+- VideoAttachmentControls 自带 surfaceCard 外观，choices/preparing/attached/failed 四态右侧控件、描边动作钮、可播放标题、发送/送达副注及错误行；无相机时仍显示 disabled Record；Change 直接相册。本地 isPreparing 覆盖选片至 store 发布记录的间隙，通过目标 store 记录变更订阅清除，异常/结束兜底清除。RN 的 store `preparing` 显示 Processing，`waiting` 显示 Sending；上传管线本身未改。
+- Props 类型与 HEAD 逐字比较一致；`initialCamera` 在首次内容布局滚动到底部一次，后续用户滚动不被强制复位。`ensureSetLog`/`onSave` 请求组装、保存 guard、collar 回调、建议引擎及埋点保持原语义；`store.ts`/`manager.ts`/`native.ts`/`multipart.ts`、TodayWorkoutView、suggestion-gating、set-entry-weight 均零 diff。
+
+### 文案与已知差异
+
+- 已通过实际 `t()` 测试确认 DesignSystem numberPad/action/plate 段可访问；有片赛扣 a11y 优先使用 `designSystem.plate.withCollars %@`。业务文案全部复用已有 key，无新增 key、无 missing 标记；KG、数字、数学步长/分隔符和键帽符号按本卡/iOS 固定形式保留。RPE 与空值分别复用既有 `chat.rpeMetric` / `coach.videoFeedback.missingValue` 同义 key。
+- 删除不再引用的 RnExtras key：`student.progression.releaseToConfirm`、`student.progression.perSide`。`student.progression.saving` 仍被 CompletionControls 使用，保留。
+- 与 iOS 已知偏差：**杠铃 PlateVisual 无阴影；返回用 Android 箭头**；SF Symbols 使用指定 MaterialCommunityIcons。RN baseline 对齐使用 Yoga `baseline`；未移植 iOS RPE 条/数字过渡与触觉反馈。PlateVisual 局部片角半径按本卡显式 2pt（当前公共 radius.micro 为4，未改公共 token）。窄屏/大字体动作文案允许在同一横排内压缩换行，44pt 命中高度保留，实际布局待 AVD 核实。
+- 本卡环境明确无 ADB，不运行依赖设备的 expo run:android；未获得模拟器截图，不声称视觉一比一验收通过。PARITY 新增独立 SetEntrySheet 行，状态 🔨。
+
+### 红绿、检查与审查
+
+- 用户预先指定纯函数 seam，逐片 red→green：plateBreakdown、breakdownText、seDimensions、plateLoadout、append、snapped、RPE snap/index、中心点/边界/窄条、意图锁/松手、条高/亮条。红态记录 `/private/tmp/setsheet-{plate,breakdown,dimensions,policy,append,snapped,rpe-snap,rpe-geometry,rpe-intent,rpe-bars}-red.log`。
+- `npm run lint` 与 `npx tsc --noEmit` 通过（本次没有 hovered 残余类型错误）；全量 `npx jest` **68 suites / 411 tests** 通过，既有 set-entry-weight、video-upload、overlay-host、suggestion-gating、两条 i18n 守卫与 tokens 守卫保持绿。日志 `/private/tmp/setsheet-{lint,tsc,jest}.log`；`git diff --check` 通过。
+- 本地 Standards 核对：范围白名单、tokens/字体/i18n、Props 与受保护文件；Spec 核对：结构顺序、几何数值、状态/键盘层级、手势单一写入和保留管线。完整 code-review 技能未启动：缺 `docs/agents/issue-tracker.md`，已按技能原文要求告知需由用户调用 `$setup-matt-pocock-skills`；未静默配置，也未用本地自查冒充双 agent 审查。
+- 未 commit/push、未增加依赖、未改 node_modules symlink。

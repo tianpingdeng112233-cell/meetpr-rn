@@ -16,3 +16,5 @@ export * from './DayChip';
 export * from './IconButton';
 export * from './TabBar';
 export { GradientFill } from './GradientFill';
+export { PlateVisual } from './PlateVisual';
+export { NumberPad } from './NumberPad';
