@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { File } from 'expo-file-system';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Video from 'react-native-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton, spacing, useColors } from '@/design';
@@ -41,7 +41,7 @@ export function VideoPlayback({
     };
   }, [localUri, attachmentId, attempt]);
   return (
-    <Modal visible onRequestClose={onClose} animationType="slide">
+    <View style={{ flex: 1, backgroundColor: colors.bgBase }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
         <View style={{ padding: spacing.base }}>
           <AppButton
@@ -80,6 +80,6 @@ export function VideoPlayback({
           </View>
         )}
       </SafeAreaView>
-    </Modal>
+    </View>
   );
 }

@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   AppState,
   Linking,
-  Modal,
   Pressable,
   StyleSheet,
   Switch,
@@ -179,7 +178,7 @@ export function CameraRecorder({
     onUse(review);
   };
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose}>
+    <View style={{ flex: 1, backgroundColor: colors.bgBase }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
         <View style={{ padding: spacing.base }}>
           <AppButton
@@ -333,6 +332,6 @@ export function CameraRecorder({
           </Text>
         )}
       </SafeAreaView>
-    </Modal>
+    </View>
   );
 }

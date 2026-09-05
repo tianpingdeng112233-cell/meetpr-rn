@@ -8,10 +8,18 @@ import {
   rirCopy,
 } from './policy';
 import { VideoAttachmentControls } from './video-upload/VideoAttachmentControls';
+import { OverlayHostProvider, type OverlayHostHandle } from './OverlayHost';
 import { decodePrescription, prescribed } from '@/domain/plan/prescription';
 import { entryPrefill } from './suggestion-gating';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import {
   Keyboard,
   Modal,
@@ -122,6 +130,7 @@ export function SetEntrySheet({
   suggestion,
   suggestionReason,
 }: Props) {
+  const overlayHost = useRef<OverlayHostHandle>(null);
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const prescription = decodePrescription(draft.planSet);
@@ -214,6 +223,7 @@ export function SetEntrySheet({
     }
   };
   const close = () => {
+    overlayHost.current?.dismiss();
     void track(AnalyticsEvent.NavBack, { screen: 'set_entry' });
     onClose();
   };
@@ -221,267 +231,271 @@ export function SetEntrySheet({
   return (
     <Modal
       animationType="slide"
-      onRequestClose={close}
+      onRequestClose={() => {
+        if (!overlayHost.current?.requestClose()) close();
+      }}
       visible
       transparent={false}
     >
-      <SafeAreaView style={styles.root}>
-        <View style={styles.nav}>
-          <Pressable
-            accessibilityLabel={t('student.progression.backToTraining')}
-            onPress={close}
-          >
-            <MaterialCommunityIcons
-              color={colors.textPrimary}
-              name="arrow-left"
-              size={26}
-            />
-          </Pressable>
-          <Text numberOfLines={1} style={styles.navTitle}>
-            {t('student.setEntrySheet.copy005', [
-              exerciseName,
-              draft.setIndex + 1,
-            ])}
-          </Text>
-          <View style={styles.navSpacer} />
-        </View>
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          {!draft.exercise.is_main_lift ? null : (
-            <Card style={styles.plateCard}>
-              <View style={styles.plateTop}>
-                <Text style={styles.plateDetail}>{loadout.detail}</Text>
-                <Pressable
-                  onPress={() => onChangeCollar(!collarOn)}
-                  style={[styles.collar, collarOn && styles.collarOn]}
-                >
-                  <Text style={styles.collarText}>
-                    {t('student.setEntrySheet.copy007')}
-                  </Text>
-                </Pressable>
-              </View>
-              <View style={styles.barbell}>
-                <View style={styles.plate} />
-                <View style={styles.bar} />
-                <View style={styles.sleeve} />
-                <Text style={styles.perSide}>
-                  {t('student.progression.perSide', [
-                    formatWeight(loadout.perSideKg),
-                  ])}
-                </Text>
-                <View style={styles.sleeve} />
-                <View style={styles.bar} />
-                <View style={styles.plate} />
-              </View>
-            </Card>
-          )}
-          {coachNote ? (
-            <View style={styles.notePill}>
-              <Text style={styles.noteText}>
-                {t('student.todayWorkoutScreen.copy014')} · {coachNote}
-              </Text>
-            </View>
-          ) : null}
-          <Text style={styles.noteText}>
-            {prescribed(prescription, suggestion?.percentage)}
-          </Text>
-          {suggestionReason && !weightEntry.userEdited ? (
-            <Text style={styles.noteText}>{suggestionReason}</Text>
-          ) : null}
-          {activeSuggestion?.percentage ? (
-            <Text style={styles.suggestionText}>
-              {t('student.todayWorkoutTypes.copy027')}
-            </Text>
-          ) : null}
-          {suggestion?.percentage ? (
-            <Text style={styles.noteText}>{suggestion.label}</Text>
-          ) : activeSuggestion ? (
-            <View style={styles.suggestion}>
-              <Text style={styles.suggestionText}>
-                {activeSuggestion.label} ·{' '}
-                {formatWeight(activeSuggestion.weightKg)}kg
-              </Text>
-            </View>
-          ) : null}
-          <Card style={styles.inputCard}>
-            <Text style={styles.sectionLabel}>
-              {t('student.setEntrySheet.copy001')} KG
-            </Text>
-            <TextInput
-              editable={editable}
-              keyboardType="decimal-pad"
-              onChangeText={updateWeight}
-              selectTextOnFocus
-              style={[
-                styles.bigInput,
-                activeSuggestion?.percentage && { color: colors.textMuted },
-              ]}
-              value={weightText}
-            />
-          </Card>
-          <Stepper
-            label={t('student.setEntrySheet.copy001')}
-            onChange={(direction) =>
-              updateWeight(
-                formatWeight(
-                  Math.max(
-                    0,
-                    parsedWeight + direction * TRAINING_LIMITS.weightStepKg,
-                  ),
-                ),
-              )
-            }
-            stepLabel="± 2.5"
-            value={weightText ? `${weightText} kg` : '—'}
-          />
-          <Card style={styles.inputCard}>
-            <Text style={styles.sectionLabel}>
-              {t('student.setEntrySheet.copy003')}
-            </Text>
-            <TextInput
-              editable={editable}
-              keyboardType="number-pad"
-              onChangeText={setRepsText}
-              selectTextOnFocus
-              style={styles.bigInput}
-              value={repsText}
-            />
-          </Card>
-          <Stepper
-            label={t('student.setEntrySheet.copy003')}
-            onChange={(direction) =>
-              setRepsText(
-                String(
-                  Math.max(
-                    0,
-                    (Number(repsText) || 0) +
-                      direction * TRAINING_LIMITS.repsStep,
-                  ),
-                ),
-              )
-            }
-            stepLabel="± 1"
-            value={repsText}
-          />
-          <Card style={styles.rpeCard}>
-            <View style={styles.rpeHeader}>
-              <Text style={styles.sectionLabel}>RPE</Text>
-              <Text style={styles.rpeValue}>{formatWeight(rpe)}</Text>
-            </View>
-            <View
-              {...rpePan.panHandlers}
-              onLayout={(event) =>
-                setScaleWidth(event.nativeEvent.layout.width)
-              }
-              style={styles.rpeScale}
+      <OverlayHostProvider ref={overlayHost}>
+        <SafeAreaView style={styles.root}>
+          <View style={styles.nav}>
+            <Pressable
+              accessibilityLabel={t('student.progression.backToTraining')}
+              onPress={close}
             >
-              {Array.from({ length: 11 }, (_, index) => {
-                const value = 5 + index * 0.5;
-                const selected =
-                  value === Math.max(5, Math.min(10, Math.round(rpe * 2) / 2));
-                return (
+              <MaterialCommunityIcons
+                color={colors.textPrimary}
+                name="arrow-left"
+                size={26}
+              />
+            </Pressable>
+            <Text numberOfLines={1} style={styles.navTitle}>
+              {t('student.setEntrySheet.copy005', [
+                exerciseName,
+                draft.setIndex + 1,
+              ])}
+            </Text>
+            <View style={styles.navSpacer} />
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
+            {!draft.exercise.is_main_lift ? null : (
+              <Card style={styles.plateCard}>
+                <View style={styles.plateTop}>
+                  <Text style={styles.plateDetail}>{loadout.detail}</Text>
                   <Pressable
-                    key={value}
-                    onPress={() => setRpeText(formatWeight(value))}
-                    style={styles.tickTouch}
+                    onPress={() => onChangeCollar(!collarOn)}
+                    style={[styles.collar, collarOn && styles.collarOn]}
                   >
-                    <View
-                      style={[
-                        styles.tick,
-                        Number.isInteger(value)
-                          ? styles.integerTick
-                          : styles.halfTick,
-                        selected && styles.selectedTick,
-                      ]}
-                    />
-                    <Text style={styles.tickLabel}>
-                      {Number.isInteger(value) ? value : ''}
+                    <Text style={styles.collarText}>
+                      {t('student.setEntrySheet.copy007')}
                     </Text>
                   </Pressable>
-                );
-              })}
-            </View>
-            <Text style={styles.rir}>
-              {draggingRPE
-                ? t('student.progression.releaseToConfirm')
-                : rirCopy(rpe)}
+                </View>
+                <View style={styles.barbell}>
+                  <View style={styles.plate} />
+                  <View style={styles.bar} />
+                  <View style={styles.sleeve} />
+                  <Text style={styles.perSide}>
+                    {t('student.progression.perSide', [
+                      formatWeight(loadout.perSideKg),
+                    ])}
+                  </Text>
+                  <View style={styles.sleeve} />
+                  <View style={styles.bar} />
+                  <View style={styles.plate} />
+                </View>
+              </Card>
+            )}
+            {coachNote ? (
+              <View style={styles.notePill}>
+                <Text style={styles.noteText}>
+                  {t('student.todayWorkoutScreen.copy014')} · {coachNote}
+                </Text>
+              </View>
+            ) : null}
+            <Text style={styles.noteText}>
+              {prescribed(prescription, suggestion?.percentage)}
             </Text>
-          </Card>
-          <Card style={{ padding: spacing.base }}>
-            <VideoAttachmentControls
-              studentId={studentId}
-              stableSetId={draft.stableSetId}
-              editable={editable}
-              initialCamera={initialCamera}
-              buildLogRequest={() =>
-                CoachedSetLogRequestSchema.parse({
-                  plan_exercise_id: draft.exercise.id,
-                  logged_date: gymDayText(new Date()),
-                  set_index: draft.setIndex,
-                  weight_kg: weightText.trim(),
-                  reps: Number(repsText),
-                  rpe: rpeText.trim() || null,
-                  completed: draft.status === 'complete',
-                  failed: draft.status === 'failed',
-                })
+            {suggestionReason && !weightEntry.userEdited ? (
+              <Text style={styles.noteText}>{suggestionReason}</Text>
+            ) : null}
+            {activeSuggestion?.percentage ? (
+              <Text style={styles.suggestionText}>
+                {t('student.todayWorkoutTypes.copy027')}
+              </Text>
+            ) : null}
+            {suggestion?.percentage ? (
+              <Text style={styles.noteText}>{suggestion.label}</Text>
+            ) : activeSuggestion ? (
+              <View style={styles.suggestion}>
+                <Text style={styles.suggestionText}>
+                  {activeSuggestion.label} ·{' '}
+                  {formatWeight(activeSuggestion.weightKg)}kg
+                </Text>
+              </View>
+            ) : null}
+            <Card style={styles.inputCard}>
+              <Text style={styles.sectionLabel}>
+                {t('student.setEntrySheet.copy001')} KG
+              </Text>
+              <TextInput
+                editable={editable}
+                keyboardType="decimal-pad"
+                onChangeText={updateWeight}
+                selectTextOnFocus
+                style={[
+                  styles.bigInput,
+                  activeSuggestion?.percentage && { color: colors.textMuted },
+                ]}
+                value={weightText}
+              />
+            </Card>
+            <Stepper
+              label={t('student.setEntrySheet.copy001')}
+              onChange={(direction) =>
+                updateWeight(
+                  formatWeight(
+                    Math.max(
+                      0,
+                      parsedWeight + direction * TRAINING_LIMITS.weightStepKg,
+                    ),
+                  ),
+                )
               }
-              ensureSetLog={() =>
-                ensureSetLog({
-                  stableSetId: draft.stableSetId,
-                  weightText: normalizeDecimalInput(weightText),
-                  repsText,
-                  rpeText: normalizeDecimalInput(rpeText),
-                  failed: draft.status === 'failed',
-                })
+              stepLabel="± 2.5"
+              value={weightText ? `${weightText} kg` : '—'}
+            />
+            <Card style={styles.inputCard}>
+              <Text style={styles.sectionLabel}>
+                {t('student.setEntrySheet.copy003')}
+              </Text>
+              <TextInput
+                editable={editable}
+                keyboardType="number-pad"
+                onChangeText={setRepsText}
+                selectTextOnFocus
+                style={styles.bigInput}
+                value={repsText}
+              />
+            </Card>
+            <Stepper
+              label={t('student.setEntrySheet.copy003')}
+              onChange={(direction) =>
+                setRepsText(
+                  String(
+                    Math.max(
+                      0,
+                      (Number(repsText) || 0) +
+                        direction * TRAINING_LIMITS.repsStep,
+                    ),
+                  ),
+                )
               }
+              stepLabel="± 1"
+              value={repsText}
             />
-          </Card>
-        </ScrollView>
-        <View style={styles.footer}>
-          <Pressable
-            accessibilityRole="button"
-            disabled={!editable || saving || !validWeight}
-            onPress={() => void save(false)}
-            style={({ pressed }) => [
-              styles.completeButton,
-              pressed && styles.footerPressed,
-              (!editable || saving || !validWeight) && styles.footerDisabled,
-            ]}
-          >
-            <MaterialCommunityIcons
-              color={colors.ctaText}
-              name="check"
-              size={18}
-            />
-            <Text style={styles.completeText}>
-              {saving
-                ? t('student.progression.saving')
-                : t('student.setEntrySheet.copy012')}
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            disabled={!editable || saving || !validWeight}
-            onPress={() => void save(true)}
-            style={({ pressed }) => [
-              styles.failedButton,
-              pressed && styles.footerPressed,
-              (!editable || saving || !validWeight) && styles.footerDisabled,
-            ]}
-          >
-            <MaterialCommunityIcons
-              color={colors.textSecondary}
-              name="close"
-              size={18}
-            />
-            <Text style={styles.failedText}>
-              {t('student.setEntrySheet.copy009')}
-            </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+            <Card style={styles.rpeCard}>
+              <View style={styles.rpeHeader}>
+                <Text style={styles.sectionLabel}>RPE</Text>
+                <Text style={styles.rpeValue}>{formatWeight(rpe)}</Text>
+              </View>
+              <View
+                {...rpePan.panHandlers}
+                onLayout={(event) =>
+                  setScaleWidth(event.nativeEvent.layout.width)
+                }
+                style={styles.rpeScale}
+              >
+                {Array.from({ length: 11 }, (_, index) => {
+                  const value = 5 + index * 0.5;
+                  const selected =
+                    value === Math.max(5, Math.min(10, Math.round(rpe * 2) / 2));
+                  return (
+                    <Pressable
+                      key={value}
+                      onPress={() => setRpeText(formatWeight(value))}
+                      style={styles.tickTouch}
+                    >
+                      <View
+                        style={[
+                          styles.tick,
+                          Number.isInteger(value)
+                            ? styles.integerTick
+                            : styles.halfTick,
+                          selected && styles.selectedTick,
+                        ]}
+                      />
+                      <Text style={styles.tickLabel}>
+                        {Number.isInteger(value) ? value : ''}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.rir}>
+                {draggingRPE
+                  ? t('student.progression.releaseToConfirm')
+                  : rirCopy(rpe)}
+              </Text>
+            </Card>
+            <Card style={{ padding: spacing.base }}>
+              <VideoAttachmentControls
+                studentId={studentId}
+                stableSetId={draft.stableSetId}
+                editable={editable}
+                initialCamera={initialCamera}
+                buildLogRequest={() =>
+                  CoachedSetLogRequestSchema.parse({
+                    plan_exercise_id: draft.exercise.id,
+                    logged_date: gymDayText(new Date()),
+                    set_index: draft.setIndex,
+                    weight_kg: weightText.trim(),
+                    reps: Number(repsText),
+                    rpe: rpeText.trim() || null,
+                    completed: draft.status === 'complete',
+                    failed: draft.status === 'failed',
+                  })
+                }
+                ensureSetLog={() =>
+                  ensureSetLog({
+                    stableSetId: draft.stableSetId,
+                    weightText: normalizeDecimalInput(weightText),
+                    repsText,
+                    rpeText: normalizeDecimalInput(rpeText),
+                    failed: draft.status === 'failed',
+                  })
+                }
+              />
+            </Card>
+          </ScrollView>
+          <View style={styles.footer}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!editable || saving || !validWeight}
+              onPress={() => void save(false)}
+              style={({ pressed }) => [
+                styles.completeButton,
+                pressed && styles.footerPressed,
+                (!editable || saving || !validWeight) && styles.footerDisabled,
+              ]}
+            >
+              <MaterialCommunityIcons
+                color={colors.ctaText}
+                name="check"
+                size={18}
+              />
+              <Text style={styles.completeText}>
+                {saving
+                  ? t('student.progression.saving')
+                  : t('student.setEntrySheet.copy012')}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!editable || saving || !validWeight}
+              onPress={() => void save(true)}
+              style={({ pressed }) => [
+                styles.failedButton,
+                pressed && styles.footerPressed,
+                (!editable || saving || !validWeight) && styles.footerDisabled,
+              ]}
+            >
+              <MaterialCommunityIcons
+                color={colors.textSecondary}
+                name="close"
+                size={18}
+              />
+              <Text style={styles.failedText}>
+                {t('student.setEntrySheet.copy009')}
+              </Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </OverlayHostProvider>
     </Modal>
   );
 }
