@@ -25,7 +25,7 @@ export default function GrowthCurvePlaceholderScreen() {
             size={26}
           />
         </Pressable>
-        <Text style={styles.title}>{/* TODO(i18n:missing) */}成长曲线</Text>
+        <Text style={styles.title}>{t('student.rn.growthCurve.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
       <View style={styles.empty}>
@@ -34,8 +34,8 @@ export default function GrowthCurvePlaceholderScreen() {
           name="chart-line"
           size={44}
         />
-        <Text style={styles.emptyTitle}>{lift ?? t('student.growthCurveView.copy001')}{/* TODO(i18n:missing) */}成长曲线</Text>
-        <Text style={styles.emptyBody}>{/* TODO(i18n:missing) */}完整曲线将在成长页图表卡接入</Text>
+        <Text style={styles.emptyTitle}>{t('student.rn.growthCurve.liftTitle', [lift ?? t('student.growthCurveView.copy001')])}</Text>
+        <Text style={styles.emptyBody}>{t('student.rn.growthCurve.placeholder')}</Text>
       </View>
     </Screen>
   );

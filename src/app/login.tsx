@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import { t } from '@/i18n';
 import { ApiError } from '@/api/client';
 import { useSessionStore } from '@/api/session';
 import {
@@ -22,16 +23,16 @@ import {
 
 function loginErrorMessage(error: unknown): string | null {
   if (!(error instanceof ApiError)) {
-    return error ? '登录失败，请稍后重试' : null;
+    return error ? t('appShell.auth.requestFailed') : null;
   }
 
   switch (error.code) {
     case 'AUTH_INVALID_CREDENTIALS':
-      return '手机号或密码不正确';
+      return t('appShell.auth.invalidCredentials');
     case 'RATE_LIMITED':
-      return '尝试过于频繁，请稍后再试';
+      return t('appShell.auth.rateLimited');
     default:
-      return '登录失败，请稍后重试';
+      return t('appShell.auth.requestFailed');
   }
 }
 
@@ -57,19 +58,19 @@ export default function LoginScreen() {
         <View style={styles.content}>
           <View style={styles.heading}>
             <Text style={styles.title}>MeetPR</Text>
-            <Text style={styles.subtitle}>登录你的训练账户</Text>
+            <Text style={styles.subtitle}>{t('appShell.login.instructions')}</Text>
             <View style={styles.accent} />
           </View>
 
           <Card style={styles.card}>
             <View style={styles.field}>
-              <Text style={styles.label}>手机号</Text>
+              <Text style={styles.label}>{t('appShell.auth.phoneNumber')}</Text>
               <TextInput
                 autoCapitalize="none"
                 autoComplete="tel"
                 keyboardType="phone-pad"
                 onChangeText={setPhone}
-                placeholder="请输入手机号"
+                placeholder={t('appShell.auth.phoneInputHint')}
                 placeholderTextColor={colors.textTertiary}
                 style={styles.input}
                 value={phone}
@@ -77,12 +78,12 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>密码</Text>
+              <Text style={styles.label}>{t('appShell.auth.password')}</Text>
               <TextInput
                 autoCapitalize="none"
                 autoComplete="password"
                 onChangeText={setPassword}
-                placeholder="请输入密码"
+                placeholder={t('appShell.auth.passwordInputHint')}
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry
                 style={styles.input}
@@ -98,7 +99,7 @@ export default function LoginScreen() {
 
             <AppButton
               disabled={!phone.trim() || !password}
-              label="登录"
+              label={t('appShell.login.signIn')}
               onPress={handleLogin}
             />
             {/* TODO(W1): Restore the canonical registration entry and flow. */}

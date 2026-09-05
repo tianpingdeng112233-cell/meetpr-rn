@@ -20,12 +20,15 @@ const catalog = {
 export type TranslationKey = keyof typeof catalog;
 export type Locale = 'en' | 'zh';
 type Translation = string | { one?: string; other: string };
-// Mirrors StudentStrings.Key.countIndex; unlisted keys count their first parameter.
+// Mirrors StudentStrings.Key.countIndex and CoachKit plural arguments; unlisted keys count their first parameter.
 const PLURAL_COUNT_INDEX: Record<string, number> = {
   'coach.roster.sectionCount %@ %lld': 1,
   'coach.today.notTrainedTitle %@ %lld': 1,
   'coach.today.trainingDaysCompleted %lld %lld': 1,
   'coach.inbox.pendingVideosAccessibility %@ %lld': 1,
+  'coach.workspace.defaultDraftName %@ %lld': 1,
+  'coach.workspace.draftSummary %@ %@ %lld': 2,
+  'coach.workspace.publishedSummary %@ %lld': 1,
   'student.dashboardPrimaryAction.copy007': 1,
   'student.feedbackVideoPresentation.copy002': 1,
   'student.growthE1Rmcard.copy005': 1,
