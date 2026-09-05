@@ -25,7 +25,7 @@ export function StudentOnboardingProfileView() {
   const [loading, setLoading] = useState(true);
   const actions = useApplicationActions(() => {
     if (router.canGoBack()) router.back();
-    else router.replace('/(coach)/students');
+    else router.replace('/(coach)/(tabs)/students');
   });
   useEffect(() => {
     let active = true;

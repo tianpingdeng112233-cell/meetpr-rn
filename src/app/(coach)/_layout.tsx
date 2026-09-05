@@ -9,5 +9,8 @@ export default function CoachLayout() {
     <Stack.Screen name="student/[studentId]" />
     <Stack.Screen name="application/[requestId]" />
     <Stack.Screen name="invite-codes" />
+    <Stack.Screen name="conversation/[conversationId]" />
+    <Stack.Screen name="pending-videos/[studentId]" />
+    <Stack.Screen name="video-feedback/[videoId]" />
   </Stack></CoachDataProvider></CoachNowProvider>;
 }
