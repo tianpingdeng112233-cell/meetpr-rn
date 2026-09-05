@@ -70,9 +70,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "MeetPR needs access to your photo library so you can choose recorded training videos to upload to your coach.",
-          "cameraPermission": false,
-          "microphonePermission": false
+          "photosPermission": "MeetPR needs access to your photo library so you can choose recorded training videos to upload to your coach."
         }
       ]
     ],
