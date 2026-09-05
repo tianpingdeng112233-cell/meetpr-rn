@@ -1,4 +1,5 @@
 import { SetLogUpsertRequestSchema } from '@/api/domains/sets';
+import { videosRepository, type StudentVideo } from '@/api/domains/videos';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 import { create } from 'zustand';
@@ -86,6 +87,7 @@ async function persist(
 }
 
 let persistChain: Promise<void> = Promise.resolve();
+const remoteRequests = new Map<string, symbol>();
 
 function schedulePersist(records: Record<string, VideoUploadRecord>): void {
   persistChain = persistChain
@@ -127,6 +129,7 @@ export const useVideoUploadStore = create<VideoUploadStore>((set, get) => ({
   },
   dispatch: (studentId, stableSetId, event) => {
     const key = uploadKey(studentId, stableSetId);
+    remoteRequests.delete(key);
     const current = get().records[key] ?? EMPTY_VIDEO_UPLOAD;
     const next = videoUploadReducer(current, event);
     const records = { ...get().records };
@@ -150,8 +153,69 @@ export async function hydrateVideoUploads(): Promise<void> {
   await useVideoUploadStore.getState().hydrate();
 }
 
+export type VideoAttachmentSet = { stableSetId: string; setLogId: string };
+
+/** One student-wide fetch; only the selected day's existing logs are reconciled. */
+export async function hydrateRemoteVideoAttachments(
+  studentId: string,
+  sets: readonly VideoAttachmentSet[],
+): Promise<void> {
+  if (!studentId || sets.length === 0) return;
+  const request = Symbol('remote attachments');
+  const keys = sets.map(({ stableSetId }) => uploadKey(studentId, stableSetId));
+  try {
+    await hydrateVideoUploads();
+    keys.forEach((key) => remoteRequests.set(key, request));
+    const { videos } = await videosRepository.list(studentId);
+    const bySetLog = new Map<string, StudentVideo[]>();
+    for (const video of videos) {
+      if (!video.set_log_id) continue;
+      const group = bySetLog.get(video.set_log_id) ?? [];
+      group.push(video);
+      bySetLog.set(video.set_log_id, group);
+    }
+    const records = { ...useVideoUploadStore.getState().records };
+    for (const { stableSetId, setLogId } of sets) {
+      const key = uploadKey(studentId, stableSetId);
+      // Local mutations and newer refreshes win over an in-flight response.
+      if (remoteRequests.get(key) !== request) continue;
+      const remote = bySetLog.get(setLogId) ?? [];
+      const current = records[key];
+      if (current) {
+        if (
+          current.status === 'uploaded' &&
+          current.setLogId === setLogId &&
+          !remote.some((video) => video.id === current.attachmentId)
+        ) delete records[key];
+        continue;
+      }
+      const video = remote[0];
+      if (!video) continue;
+      records[key] = {
+        ...EMPTY_VIDEO_UPLOAD,
+        status: 'uploaded',
+        progress: 1,
+        attachmentId: video.id,
+        setLogId,
+        sizeBytes: video.size_bytes,
+        createdAt: Date.parse(video.created_at),
+      };
+    }
+    useVideoUploadStore.setState({ records });
+    schedulePersist(records);
+    await flushVideoUploads();
+  } catch {
+    // Attachment refresh must never block recording; the next refresh retries.
+  } finally {
+    keys.forEach((key) => {
+      if (remoteRequests.get(key) === request) remoteRequests.delete(key);
+    });
+  }
+}
+
 export function resetVideoUploadStoreForTests(): void {
   persistChain = Promise.resolve();
+  remoteRequests.clear();
   useVideoUploadStore.setState({ hydrated: false, records: {} });
 }
 

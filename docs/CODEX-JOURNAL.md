@@ -899,6 +899,18 @@ Dependency declarations: expo-notifications `~57.0.17`, expo-sharing `~57.0.18`.
 - 根因:`expo-camera` → `androidx.camera:camera-video:1.6.0` → `androidx.media3:media3-container/muxer:1.9.0`,把 `media3-common/exoplayer` 约束到 1.9.0;`react-native-video 6.19.2` 按 1.8.0 编译,`RNVLoadControl` 调用的 protected 构造器在 1.9 变成 14 参签名。
 - 修法:`patches/react-native-video+6.19.2.patch`(patch-package,`postinstall`)把 `RNVLoadControl` 换成 `DefaultLoadControl.Builder`(跨 1.8/1.9 稳定);放弃 `DependingOnMemory/DisableBuffering` 两种缓冲策略的按内存限流(本 App 不用)。升级 RNV 到已适配 media3 1.9 的版本后可删补丁。
 - 顺带:共享 node_modules 用 `npm install --no-save` 预装 extras 时必须整份列表传入,否则会被 npm 剪掉;Gradle `--build-cache` 曾恢复出一份 7 月的旧 APK(缺新原生模块),排障时用 `--no-build-cache` + 删 `android/app/build`。
+### R4 — 组内视频附件冷启动服务端回填 — 2026-09-05
+
+工作树：`feat/w1h-r4-remote-attachments` / `meetpr-rn-wt-w1h-r4`。仅改此 worktree；未 commit/push、安装依赖/skills、运行 code-review 或修改上传协议/DTO、coach/feedback/history。
+
+- **现场核对**：已读 AGENTS、PLAN、W1-h R1–R3、video-chain-v2 §4 与 [Expo SDK v57.0.0 文档](https://docs.expo.dev/versions/v57.0.0/)。指定 iOS 文件实际与卡面的一处描述不同：`BackendVideoAttachmentRepository.fetch(setLogID:)` / `fetchAll(studentID:)` 都过滤本地 `attachments.json`，不是 GET 学员视频列表。`TodayWorkoutView.swift:372` 在 `.task` 初次加载后调用 `videoViewModel.start`；ViewModel 先订阅事件、恢复上传，再读 manager 的本地学员附件写入组状态。`TodaySetRefSharingSource:140–150` 同样使用 manager 本地附件。本卡服务端回填按用户明确目标实现，不声称 iOS 已有这条全量 GET 链。
+- **实现**：store 新增 `hydrateRemoteVideoAttachments(studentId, sets)`；先完成 AsyncStorage hydration，每次对当前日已有日志的组只调用一次 `videosRepository.list(studentId)`，按 `set_log_id` 归组，忽略 null 关联及范围外视频。本地无记录则写入 uploaded / attachmentId / setLogId / sizeBytes，localUri/source 为 null；本地已有记录优先保留，仅当同组 uploaded 的附件 ID 已不在远端列表中时移除记录。合并沿用串行持久化队列。读取/持久化异常静默，下次刷新重试。
+- **触发与交错保护**：TodayWorkoutView 装载、选日/组日志 ID 变化触发；手动刷新、返回训练 tab 与回前台的既有刷新流程结束后也触发（包括 volatileOnly）。以组 ID 列表的稳定序列避免每次录入重绘都请求。逐组请求 token 让本地上传/删除/更换与较新请求优先，旧空响应不会删掉刚完成的上传，旧有视频响应不会复活已删记录。
+- **播放与删换**：现有 SetVideoUploadIndicator / VideoAttachmentControls 已订阅同一个 selector，回填后直接显示 uploaded 图标及 Video / Play / Change / Delete。沿用 W3-a VideoPlayback → 共享播放器，localUri 为空时现取 `GET /uploads/:id/url`，短链不落盘。已核实 manager.remove 使用 `uploadsRepository.remove` → `DELETE /uploads/:id` 后清本地（404 视为已删）；attach 在发布新记录前先 removeRecord，因此 Change 保持先删远端的原流程。无需改这些组件或 manager。
+- **先红后绿**：新 `video-upload/__tests__/remote-hydration.test.ts` 共 13 项，经真实 store/selector 与 AsyncStorage 重启 seam 验证，替换外部 API/存储边界。冷启动用例最初因缺回填入口红；本地优先最初丢失 localUri/status；远端删除最初仍 uploaded；静默失败最初 Promise rejected；上传完成交错最初被旧空响应清除，各切片逐步转绿。另覆盖持久化、null set_log_id、全日一次请求、范围/学员隔离、无日志不请求、失败重试、保留 uploading/failed、删除交错与响应倒序。
+- **验证**：video-upload 相关 **9 suites / 81 tests** 通过；全仓 `npx jest --runInBand` **66 suites / 413 tests** 通过；`npm run lint` 无诊断；`npx tsc --noEmit` 无诊断；`git diff --check` 干净。日志 `/private/tmp/w1h-r4-{jest,lint,tsc}.log`。
+- **设备验收受阻**：使用指定 PATH/JAVA_HOME/ANDROID_HOME 运行 `EXPO_OFFLINE=1 CI=1 npx expo run:android --device meetpr --no-install --no-bundler`，prebuild 成功，ADB start-server 因 `could not install *smartsocket* listener: Operation not permitted`（5037）exit 255。未安装本轮代码到 AVD、未取得截图，不能声称清数据/换机后的真实 Global 回填与播放已设备验收。日志 `/private/tmp/w1h-r4-android.log`；待可用 ADB 环境补清数据重登 → 训练组指示/附件区 → 云端播放 → Delete/Change 的走查证据。
+
 ## W2-a — 教练外壳、Dashboard、花名册与接收队列（2026-09-05）
 
 ### 改动清单
