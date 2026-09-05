@@ -4,10 +4,15 @@ import { fontNames } from './fonts';
 
 /** DesignSystem v3, iOS release/1.0 @ 202e95db. */
 export const palette = {
+<<<<<<< HEAD
   rpeLit: { light: 'rgb(58,58,64)', dark: 'rgb(138,138,142)' },
   rpeUnlit: { light: 'rgb(209,211,214)', dark: 'rgb(44,44,46)' },
   rpeTickLabel: { light: 'rgb(82,82,82)', dark: 'rgb(82,82,82)' },
   numberPadScrim: { light: 'rgba(0,0,0,0.55)', dark: 'rgba(0,0,0,0.55)' },
+=======
+  // ChatFullScreenImage uses Color.black in both themes.
+  chatImageBackground: { light: '#000000', dark: '#000000' },
+>>>>>>> feat/w3s3-coach-conversation
   coachRequestBorder: { light: 'rgba(217,119,6,0.35)', dark: 'rgba(245,166,35,0.35)' },
   coachNoPlanBorder: { light: 'rgba(217,119,6,0.4)', dark: 'rgba(245,166,35,0.4)' },
   coachAcceptedBorder: { light: 'rgba(21,128,61,0.3)', dark: 'rgba(94,158,120,0.3)' },

@@ -1,3 +1,4 @@
+import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
 import { canonicalBody, ChatSetCardPresentation, displayFirstLine, setRefBodyAllowed } from './set-ref';
 import { loadTodaySetRefCandidates, SetRefSharePicker } from './SetRefSharePicker';
 import { useSetRefStagingStore, waitForSetRefVideo, type SetRefSendIntent } from './set-ref-staging';
@@ -12,7 +13,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { chatRepository, type ChatSetRef, type ChatMessage, type Conversation } from '@/api/domains/chat';
+import { chatRepository, type ChatMessage, type Conversation } from '@/api/domains/chat';
 import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
 import { feedbackKeys, feedbackRepository, type FeedbackResponse, type FeedbackItem } from '@/api/domains/feedback';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,7 +21,7 @@ import { markDashboardPlanSeen } from '@/features/dashboard/plan-seen';
 import { studentChatKeys, useStudentPlanNotice } from './open-coach-chat';
 import { mergeStudentTimeline, visibleFraction, videoLabel, videoDuration, type VerticalFrame, type StudentPlanNotice } from './student-timeline';
 import { useSessionStore } from '@/api/session';
-import { font, radius, GradientFill, Screen, useColors } from '@/design';
+import { font, GradientFill, Screen, useColors } from '@/design';
 import { getLocale, t } from '@/i18n';
 import { createUUID } from '@/analytics/uuid';
 import { applyReadState, CHAT_POLL_MS, createConversationSync, mergeMessages } from './conversation-model';
@@ -34,6 +35,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const inbox = useFeedbackInboxViewModel(studentId);
   const videos = useStudentVideos(studentId);
   const playback = useStudentChatPlayback();
+<<<<<<< HEAD
   // The route param can arrive empty (blank coach display name); fall back to the conversation's other party.
   const [fetchedName, setFetchedName] = useState('');
   const resolvedName = coachName || fetchedName;
@@ -45,6 +47,9 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   }, [coachName, conversationId]);
   const [selectedShare, setSelectedShare] = useState<ChatMessage | null>(null);
   const [shareVideoError, setShareVideoError] = useState(false);
+=======
+  const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId);
+>>>>>>> feat/w3s3-coach-conversation
   const frames = useRef(new Map<string, VerticalFrame>());
   const viewport = useRef<VerticalFrame>({ y: 0, height: 0 });
   const contentHeight = useRef(0);
@@ -130,7 +135,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     run(true);
     const timer = setInterval(run, CHAT_POLL_MS);
     const subscription = AppState.addEventListener('change', state => { if (state === 'active') run(true); });
-    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; setSelectedShare(null); setPickerVisible(false); sync.stop(); clearInterval(timer); subscription.remove(); };
+    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; setPickerVisible(false); sync.stop(); clearInterval(timer); subscription.remove(); };
   }, [acknowledgeSetRef, client, conversationId, studentId]));
   async function loadOlder() {
     const generation = focusGeneration.current;
@@ -236,20 +241,6 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     const frame = requestAnimationFrame(positionTimeline);
     return () => cancelAnimationFrame(frame);
   });
-  async function refreshShareURL(message: ChatMessage) {
-    const page = await chatRepository.messages(conversationId, { since_seq: message.seq - 1, limit: 1 });
-    const url = page.messages.find(item => item.id === message.id)?.video_url;
-    if (!url) throw new Error('Playback unavailable');
-    return url;
-  }
-  async function openShareVideo(message: ChatMessage) {
-    const generation = focusGeneration.current;
-    setShareVideoError(false);
-    try {
-      const video_url = await refreshShareURL(message);
-      if (mounted.current && generation === focusGeneration.current) setSelectedShare({ ...message, video_url });
-    } catch { if (mounted.current && generation === focusGeneration.current) setShareVideoError(true); }
-  }
   const stagedBody = staged ? canonicalBody(staged.setRef, draft) : '';
   const canSend = staged ? setRefBodyAllowed(stagedBody) && !pending.some(item => item.clientId === staged.clientId && !item.failed) : Boolean(draft.trim());
   function discardStaged() {
@@ -323,7 +314,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
 function StudentChatMessageRow({ message, outgoing, read, openVideo }: { message: ChatMessage; outgoing: boolean; read: boolean; openVideo?: () => void }) {
   const colors = useColors();
   const presentation = ChatSetCardPresentation(message);
-  if (presentation) return <StudentSetChatCard note={presentation.note} reference={presentation.setRef} message={message} outgoing={outgoing} read={read} openVideo={openVideo} />;
+  if (presentation) return <ChatSetCard note={presentation.note} reference={presentation.setRef} message={message} outgoing={outgoing} read={read} openVideo={openVideo} />;
   return <View style={{ maxWidth: '76%', alignSelf: outgoing ? 'flex-end' : 'flex-start', alignItems: outgoing ? 'flex-end' : 'flex-start', gap: 4 }}>
     <View style={{ paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: outgoing ? 5 : 16, borderBottomLeftRadius: outgoing ? 16 : 5, backgroundColor: outgoing ? colors.textPrimary : colors.surfaceElevated, flexDirection: 'row', gap: 6 }}>
       {message.kind === 'image' ? <MaterialCommunityIcons name="image" size={18} color={outgoing ? colors.bgBase : colors.textPrimary} /> : null}
@@ -372,30 +363,6 @@ function StudentConversationLoadErrorState({ retry }: { retry: () => void }) {
     <Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>{t('student.studentBlackGoldChatView.copy011')}</Text>
     <Text style={{ ...font.body(13), color: colors.textMuted, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy012')}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy013')} onPress={retry} style={{ minHeight: 38, justifyContent: 'center', paddingHorizontal: 18, borderRadius: 20, borderWidth: 1, borderColor: colors.borderStrong }}><Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.studentBlackGoldChatView.copy013')}</Text></Pressable>
-  </View>;
-}
-
-function StudentSetChatCard({ reference, note, message, outgoing, read, openVideo }: { reference: ChatSetRef; note: string | null; message: ChatMessage; outgoing: boolean; read: boolean; openVideo?: () => void }) {
-  const colors = useColors();
-  const reps = reference.repsMax != null ? `${reference.reps}-${reference.repsMax}` : reference.reps ?? '-';
-  return <View style={{ width: '75%', alignSelf: outgoing ? 'flex-end' : 'flex-start', backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: radius.lg, overflow: 'hidden' }}>
-    <View style={{ padding: 16, gap: 16 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        <MaterialCommunityIcons name="dumbbell" size={13} color={colors.goldText} />
-        <Text style={{ ...font.body(12, 'bold'), color: colors.goldText, flex: 1 }}>{t(reference.source === 'logged' ? 'chat.loggedSetCardLabel' : 'chat.plannedSetCardLabel')}</Text>
-        <Text style={{ ...font.mono(11), color: colors.textTertiary }}>{new Intl.DateTimeFormat(getLocale(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(message.created_at))}</Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}><Text style={{ ...font.body(20, 'bold'), color: colors.textPrimary, flex: 1 }}>{reference.exerciseName}</Text><Text style={{ ...font.mono(11), color: colors.textTertiary }}>{reference.setTotal != null ? t('chat.setPosition %@ of %@', [reference.setNumber, reference.setTotal]) : t('chat.setPosition %@', [reference.setNumber])}</Text></View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <View style={{ flex: 1, gap: 4 }}><Text style={{ ...font.body(11), letterSpacing: 1.1, color: colors.textTertiary }}>{t('chat.weightRepsMetric')}</Text><Text style={{ ...font.body(22, 'bold'), color: colors.textPrimary }}>{reference.weightKg ?? '-'}<Text style={font.body(15, 'bold')}>kg</Text>{` × ${reps}`}</Text></View>
-        <View style={{ height: 52, width: 1, backgroundColor: colors.borderDefault }} />
-        <View style={{ gap: 4 }}><Text style={{ ...font.body(11), letterSpacing: 1.1, color: colors.textTertiary }}>{t('chat.rpeMetric')}</Text><Text style={{ ...font.mono(22, 'bold'), color: colors.goldText }}>{reference.rpe ?? '-'}</Text></View>
-      </View>
-      {message.video_url ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={openVideo} style={{ minHeight: 38, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, borderRadius: 10, borderWidth: 1, borderColor: colors.borderStrong }}><MaterialCommunityIcons name="play-box" size={18} color={colors.goldText} /><Text style={{ ...font.body(14, 'bold'), color: colors.goldText }}>{t('chat.playVideo')}</Text></Pressable> : null}
-      {note ? <Text style={{ ...font.body(16), color: colors.textPrimary, backgroundColor: colors.surfaceElevated, borderRadius: radius.md, padding: 8 }}>{note}</Text> : null}
-    </View>
-    {outgoing ? <Text style={{ ...font.body(12), color: colors.textTertiary, backgroundColor: colors.surfaceElevated, borderTopWidth: 1, borderColor: colors.borderDefault, paddingHorizontal: 16, paddingVertical: 8 }}>{t(read ? 'chat.setCardRead' : 'chat.setCardDelivered')}</Text> : null}
-    <View style={{ position: 'absolute', top: 0, bottom: 0, [outgoing ? 'right' : 'left']: 0, width: 3, backgroundColor: colors.gold500 }} />
   </View>;
 }
 
