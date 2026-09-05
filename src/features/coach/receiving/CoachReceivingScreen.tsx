@@ -5,17 +5,21 @@ import { font, radius, Screen, useColors } from '@/design';
 import { t } from '@/i18n';
 import { chatRepository } from '@/api/domains/chat';
 import { useCoachReceiving } from './use-coach-receiving';
+import { useCoachData } from '../CoachDataProvider';
 import { Pill, ReceivingState } from './ReceivingUI';
 export function CoachReceivingScreen() {
   const colors = useColors();
   const model = useCoachReceiving();
+  // iOS CoachReceivingView hands the roster status to the conversation so its subtitle can show active / attention.
+  const { rows: rosterRows } = useCoachData();
   const [opening, setOpening] = useState(false);
   async function open(row: typeof model.rows[number]) {
     if (opening) return;
     setOpening(true);
     try {
       const id = row.conversation?.id ?? (await chatRepository.open(row.studentID)).conversation.id;
-      router.push({ pathname: '/(coach)/conversation/[conversationId]', params: { conversationId: id, studentName: row.studentName } });
+      const status = rosterRows.find(entry => entry.student.id === row.studentID)?.student.status;
+      router.push({ pathname: '/(coach)/conversation/[conversationId]', params: { conversationId: id, studentName: row.studentName, ...(status ? { status } : {}) } });
     } catch { Alert.alert(t('coach.chat.unableToOpenConversation'), undefined, [{ text: t('coach.chat.ok') }]); }
     finally { setOpening(false); }
   }
