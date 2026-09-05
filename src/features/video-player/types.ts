@@ -6,7 +6,7 @@ export type FeedbackVideoMarker = {
   annotationURL?: string | null;
 };
 
-/** Reserved for W3-b. W3-a does not render a badge or an export action. */
+/** Display-ready training metadata; setOrdinal is already 1-based. */
 export type VideoBadgeInfo = {
   exerciseName?: string | null;
   weightKg?: number | null;
