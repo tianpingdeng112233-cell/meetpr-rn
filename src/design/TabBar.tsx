@@ -36,7 +36,7 @@ export function TabIcon({ name, color }: { name: TabIconName; color: string }) {
   </Svg>;
 }
 
-export function TabBar({ state, descriptors, navigation, insets, icons }: BottomTabBarProps & { icons: Record<string, TabIconName> }) {
+export function TabBar({ state, descriptors, navigation, insets, icons, selectedColor, unselectedColor, badgeColor, badgeDot = false }: BottomTabBarProps & { icons: Record<string, TabIconName>; selectedColor?: string; unselectedColor?: string; badgeColor?: string; badgeDot?: boolean }) {
   const colors = useColors();
   return <View style={{ flexDirection: 'row', backgroundColor: colors.surfaceCard, paddingTop: 5, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }}>
     <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: colors.borderSubtle }} />
@@ -46,7 +46,7 @@ export function TabBar({ state, descriptors, navigation, insets, icons }: Bottom
       if (!icon) return null;
       const { options } = descriptors[route.key];
       const selected = state.index === index;
-      const color = selected ? colors.goldCTA : colors.textTertiary;
+      const color = selected ? selectedColor ?? colors.goldCTA : unselectedColor ?? colors.textTertiary;
       const title = options.title ?? route.name;
       const badge = options.tabBarBadge;
       const showBadge = badge !== undefined && (typeof badge !== 'number' || badge > 0);
@@ -59,8 +59,8 @@ export function TabBar({ state, descriptors, navigation, insets, icons }: Bottom
         style={({ pressed }) => [{ flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.9 }] }]}>
         <View style={{ width: 24, height: 24 }}>
           <TabIcon name={icon} color={color} />
-          {showBadge ? <View style={{ position: 'absolute', right: -10, top: -6, minWidth: 16, minHeight: 16, paddingHorizontal: 3, borderRadius: radius.pill, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ ...font.mono(9, 'bold'), color: '#FFFFFF' }}>{typeof badge === 'number' && badge > 99 ? '99+' : badge}</Text>
+          {showBadge ? <View style={{ position: 'absolute', right: -10, top: -6, minWidth: badgeDot ? 7 : 16, minHeight: badgeDot ? 7 : 16, paddingHorizontal: badgeDot ? 0 : 3, borderRadius: radius.pill, backgroundColor: badgeColor ?? colors.dangerFill, alignItems: 'center', justifyContent: 'center' }}>
+            {!badgeDot ? <Text style={{ ...font.mono(9, 'bold'), color: colors.inkOnCTAFill }}>{typeof badge === 'number' && badge > 99 ? '99+' : badge}</Text> : null}
           </View> : null}
         </View>
         <Text style={{ fontSize: 11, color }}>{title}</Text>

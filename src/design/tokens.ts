@@ -4,6 +4,12 @@ import { fontNames } from './fonts';
 
 /** DesignSystem v3, iOS release/1.0 @ 202e95db. */
 export const palette = {
+  coachRequestBorder: { light: 'rgba(217,119,6,0.35)', dark: 'rgba(245,166,35,0.35)' },
+  coachNoPlanBorder: { light: 'rgba(217,119,6,0.4)', dark: 'rgba(245,166,35,0.4)' },
+  coachAcceptedBorder: { light: 'rgba(21,128,61,0.3)', dark: 'rgba(94,158,120,0.3)' },
+  coachMissedFill: { light: 'rgba(229,72,77,0.16)', dark: 'rgba(229,72,77,0.16)' },
+  videoStageFill: { light: '#1B2534', dark: '#1B2534' },
+  videoStageBorder: { light: '#2A3646', dark: '#2A3646' },
   goldCTA: { light: '#B45309', dark: '#FFB800' },
   gold500: { light: '#D97706', dark: '#F5A623' },
   gold400: { light: '#F59E0B', dark: '#FBBF3E' },
@@ -193,6 +199,7 @@ export const fontMetrics = {
 } as const;
 
 export const spacing = {
+  zero: 0, point1: 1, point2: 2, point3: 3, point5: 5, point6: 6, point7: 7, point9: 9, point10: 10, point11: 11, point13: 13, point14: 14, point15: 15, point18: 18, point22: 22, point26: 26, point28: 28, point30: 30, point32: 32, point40: 40, size46: 46, point52: 52, point56: 56,
   space1: 4, space2: 8, space3: 12, space4: 16, space5: 20, space6: 24,
   xs: 4, sm: 8, md: 12, base: 16, lg: 24, xl: 32, xxl: 48, xxxl: 64,
   pageHorizontal: 20, compactPageHorizontal: 16, cardHorizontal: 16,

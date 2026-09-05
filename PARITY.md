@@ -75,13 +75,14 @@
 
 | 功能区 | 状态 | 备注 |
 |---|---|---|
-| Dashboard | ☐ | |
-| StudentRoster | ☐ | |
-| StudentDetail | ☐ | |
-| BindQueue | ☐ | |
+| Coach shell | 🔨 | W2-a：today/messages/students/profile 四个常驻 tab，Stack 全屏目的地隐藏底栏；messages 数据由 W2-c 接线 |
+| Dashboard | 🔨 | W2-a：六块布局、三态待办、接收横幅与自然周概况已接共享模型；待 Android 视觉验收 |
+| StudentRoster | 🔨 | W2-a：搜索、申请段、四态名单、异常信号/进度和刷新已实装；待模拟器走查 |
+| StudentDetail | 🔨 | W2-a 仅注册全屏 student/[studentId] 占位；详情内容由 W2-b 实装 |
+| BindQueue | 🔨 | W2-a：Accept 恒跳过评估、静默拒绝、4xx 刷新与全屏申请资料页（空态保留操作）；待端到端走查 |
 | Receiving | ☐ | |
 | InviteCodes | ☐ | |
-| Planning / PlanningWorkspace | ☐ | 范围=iOS 实际保留功能,开工前现场核实,不扩权 |
+| Planning / PlanningWorkspace | — | W2-a 按 coach-v2 §7 删除教练 planning tab/路由；v1 无 app 排计划入口 |
 | MyProfile | ☐ | |
 | Evaluation | — | 同上封存 |
 

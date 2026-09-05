@@ -567,3 +567,33 @@ Final exact requested commands (PATH includes /opt/homebrew/bin):
 - 根因:`expo-camera` → `androidx.camera:camera-video:1.6.0` → `androidx.media3:media3-container/muxer:1.9.0`,把 `media3-common/exoplayer` 约束到 1.9.0;`react-native-video 6.19.2` 按 1.8.0 编译,`RNVLoadControl` 调用的 protected 构造器在 1.9 变成 14 参签名。
 - 修法:`patches/react-native-video+6.19.2.patch`(patch-package,`postinstall`)把 `RNVLoadControl` 换成 `DefaultLoadControl.Builder`(跨 1.8/1.9 稳定);放弃 `DependingOnMemory/DisableBuffering` 两种缓冲策略的按内存限流(本 App 不用)。升级 RNV 到已适配 media3 1.9 的版本后可删补丁。
 - 顺带:共享 node_modules 用 `npm install --no-save` 预装 extras 时必须整份列表传入,否则会被 npm 剪掉;Gradle `--build-cache` 曾恢复出一份 7 月的旧 APK(缺新原生模块),排障时用 `--no-build-cache` + 删 `android/app/build`。
+## W2-a — 教练外壳、Dashboard、花名册与接收队列（2026-09-05）
+
+### 改动清单
+
+- `(coach)/_layout.tsx` 改为共享时钟/数据模型之上的 Stack；四 tab 路由迁入 `(coach)/(tabs)`，顺序 today / messages / students / profile。删除 planning 和旧 receiving 路由；profile 标题使用 `coach.shell.profile`。公开 URL 仍为 `/(coach)/today|messages|students|profile`。
+- 注册 `/(coach)/student/[studentId]`（仅占位，W2-b 接手）与 `/(coach)/application/[requestId]`（已实现）；两者在 Tabs 之外，因此隐藏底栏。申请操作完成用返回关闭目的地，保留原花名册搜索/滚动实例。
+- `CoachNowProvider` 是教练特性唯一的当前时间来源；AppState active、设备本地午夜推进。`CoachDataModel` 在日切/时区偏移变化时重拉花名册；在途请求结束后补取新窗口。异步结果发布时按最新 now 重算信号，避免旧请求恢复过期的 Awaiting Reply。
+- Dashboard 六块、待办三态、接收成功横幅、ISO 自然周概况、四种格子/图例/星期头/完成率、恒可见 View All Students 已实现。屏幕只消费共享模型，不发请求。
+- 花名册搜索/清除、新申请倒序段、四态与失败 overlay、异常分组、状态点/原因/活动/No Plan/分段进度/完成率色阶已实现。申请资料页直接复用 onboarding 读口，完整资料按八行展示；404/失败/无资料仍可 Accept/Ignore。
+- 接收 sheet 恒发 `{skip_evaluation:true}`；拒绝 confirm 恒发严格 `{}`。成功摘除申请，接收刷新花名册并回传姓名；4xx 刷新结束后报对应文案。代次保护避免旧队列快照重新插回已处理申请；接收发生在旧花名册刷新中时补拉操作后的真值。接收/拒绝埋点分别为 `accepted_skip` / `rejected`。
+- 新增 `api/domains/coach.ts`，zod 接受嵌套 profile / 旧 flat 学员摘要，队列 onboarding 复用现有 schema 的部分字段；`BIND_REQUEST_EXPIRED` 加入客户端已知错误码。plan/logs/feedback 复用既有 repositories；四学员滑动窗口、槽内串行，实际 HTTP 扇出也不超过四，按原序回填，单学员失败为空信号。plan/logs 复用 TanStack Query keys，先展示已有缓存再有界更新；feedback 与 bind queue 不做持久缓存。
+- 新增 `domain/coach/{calendar,triage,week-overview,todo-list,formatting}`。教练计划日期只读复用 `recommendedDate`，优先展示 `shifted_to_date`；日志上界用次日本地日期（HTTP `to` 开区间）。不使用学员 04:00 切点。
+- `TabBar` 增加可选教练颜色/圆点 badge 参数，现有学员默认参数保留。补齐 v3 所需细间距和申请/成功/漏练透明色 token；videoStage 色值核对 iOS `VideoColors.swift`，分别 `#1B2534` / `#2A3646`。
+
+### 文案 / 正典核对
+
+- 本卡新增界面未命中 key：**无**，没有新增 `TODO(i18n:missing)`。S/B/D、kg/cm、百分比和周号是正典中的数值记号；未知器械 token 原样展示。
+- `t(key, params)` 补充命名占位符支持（`{name}` / `{student}` / `{waiting}` 等），保留已有位置参数行为；增加教练参数索引，避免用姓名判断复数。
+- `coach.today.trainingDaysCompleted %lld %lld` 的提取 catalog 遗留 `%1$lld / %#@total@ completed`，现场核对 iOS xcstrings 的 `total` substitution 后转为 `{0} / {1} training days completed`，`.one` 为 `training day`，复数按第 2 参数。只改运行时 catalog，未动只读参照包。
+- 正典边界：video queue / chat inbox 保留空输入及 `selectMessagesBadge` selector；Dashboard 需发起学员会话的待办先带 `studentId` 到 messages。真正的 coach chat context 激活、会话打开/失败 alert、polling/push 路由由 W2-c 接入；本卡不建立聊天连接。Profile 内容仍为已有占位，由 W2-d 替换 `(tabs)/profile.tsx` 的导出。
+- §8 的“每学员三请求”指 plan/logs/feedback 三个 repository 读操作，其中 plan 实际包含 list + detail。本卡采用更严格的四 HTTP 并发上限，避免四学员各自再扇出时超过四。
+- 没有 Planning UI/外链，没有评估 UI/评估读请求，没有修改 `(student)`、training、video-upload，没有加依赖、commit 或 push，没有运行 code-review/skill 安装。
+
+### 验证与限制
+
+- 按用户指定 seam 逐片红绿：漏练 1/2 天、7 天首尾、待回复三个分支、周一起算/ISO 跨年/±36h/格子/图例/取整、四段待办/未读总数/申请单复数、名单四态/异常/色阶/真实序列化请求体/错误映射。补覆盖滑动窗口与失败退化、4xx 刷新先于 banner、队列与接收竞态、缓存先画后更新、时钟重算/日切。
+- `npm run lint` 通过；`npx tsc --noEmit` 通过；`npx jest --runInBand` **49 suites / 319 tests 通过**；`git diff --check` 通过。
+- 常驻行为已核对当前安装的 Expo Router `BottomTabView`：`lazy:false` 首次渲染所有路由，以稳定 route.key 保留组件；`detachInactiveScreens:false` + `freezeOnBlur:false` 下，react-native-screens 的回退 View 按 activityState 改 display，未卸载子树。仍需模拟器实际确认滚动位/搜索及全屏返回。
+- Android 静态 export 成功。共享 `node_modules -> ../meetpr-rn/node_modules` 的 Metro 转换缓存曾两次错误引用 W2-d 路由；**隔离 TMPDIR 后不再复现**，无仓库构建配置改动、无其他 worktree 改动。复现/验证命令：`mkdir -p /tmp/meetpr-w2a-metro` 后 `TMPDIR=/tmp/meetpr-w2a-metro npx expo export --platform android --output-dir /tmp/meetpr-w2a-export`。此构建问题以真实 CLI 打包作为回归检查，没有追加无法模拟跨进程缓存的单元测试。
+- 已运行 `npx expo run:android --no-install`（设置 JAVA_HOME/ANDROID_HOME）；Expo prebuild 完成，但 ADB 启动报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱禁止监听，不能连接/启动 AVD `meetpr`。**未取得模拟器截图，不宣称 Android 视觉/端到端验收**。生成的 android 目录为 gitignored 构建产物。
