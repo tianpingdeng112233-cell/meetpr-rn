@@ -1,0 +1,47 @@
+import { expect, test, jest } from '@jest/globals';
+import { FeedbackVideoScrubState } from '../scrub-state';
+test('display follows clamped drag position and returns to the player after release', () => {
+  const state = new FeedbackVideoScrubState(jest.fn());
+  expect(state.displayedSeconds(7)).toBe(7);
+  state.begin(-5, 60);
+  expect(state.displayedSeconds(7)).toBe(0);
+  state.move(80, 60);
+  expect(state.displayedSeconds(7)).toBe(60);
+  state.move(NaN, 60);
+  expect(state.displayedSeconds(7)).toBe(0);
+  state.finish(25, 60);
+  expect(state.displayedSeconds(25)).toBe(25);
+});
+test('drag seeks at 80 ms intervals, release always commits, and stale generations cannot seek', () => {
+  jest.useFakeTimers();
+  const seek = jest.fn();
+  const state = new FeedbackVideoScrubState(seek);
+  state.begin(10, 60);
+  state.move(20, 60);
+  jest.advanceTimersByTime(79);
+  expect(seek).not.toHaveBeenCalled();
+  jest.advanceTimersByTime(1);
+  expect(seek.mock.calls).toEqual([[20, false]]);
+  state.move(30, 60);
+  state.finish(35, 60);
+  jest.advanceTimersByTime(80);
+  expect(seek.mock.calls).toEqual([[20, false], [35, true]]);
+  state.begin(40, 60);
+  state.cancel();
+  jest.advanceTimersByTime(80);
+  expect(seek).toHaveBeenCalledTimes(2);
+  jest.useRealTimers();
+});
+test('even an already queued callback from an older gesture is discarded', () => {
+  const callbacks: (() => void)[] = [];
+  const seek = jest.fn();
+  const state = new FeedbackVideoScrubState(seek, callback => { callbacks.push(callback); });
+  state.begin(10, 60);
+  state.finish(15, 60);
+  state.begin(40, 60);
+  callbacks[0]();
+  expect(seek.mock.calls).toEqual([[15, true]]);
+  callbacks[1]();
+  expect(seek.mock.calls).toEqual([[15, true], [40, false]]);
+  state.cancel();
+});

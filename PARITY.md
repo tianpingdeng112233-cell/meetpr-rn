@@ -65,7 +65,7 @@
 | WeekOverview → TrainingCalendarView | ✅ | W1-d v2(#20):周/月日历下线,改「计划汇总」周编排列表(Completed n / m sessions,本周默认展开,序数格子 + 教练推荐日期) |
 | TrainingHistory | ☐ | 悬空 worktree `feat/w1g-history`(旧基线实装,未 commit);收货前对照 #331 空态 |
 | Readiness | 🔨 | W1-d;训练 tab opt-in 两步 sheet、per-day skip、心形完成态(页头按钮组第二位);细节待 W3 像素对齐 |
-| FeedbackInbox | 🔨 | W1-f;共享 VM/未读计数+Today 内联卡/通知中心已接;成长列表消费接口已留 |
+| FeedbackInbox / FeedbackDetail | 🔨 | W3-a:归档列表/详情路由、相对时间/未读态/关联视频三态、行内短链失败;markRead → URL → 开播放器 → markers,回填有 id + 会话守卫;Dashboard/训练页消息按钮直达反馈。复用现有反馈与视频读口,不改 DTO;lint/tsc/64 suites·396 tests/Android JS bundle 通过;ADB socket 被 sandbox 拒绝,待 AVD 截图验收 |
 | VideoUpload | ✅ | W1-h v2(#22,R1–R3):W1-d 入口接回、自建相机(录制/回放确认/相册偏好)、720p 直通/转码、静默多分片上传(legacy uploadTask,无 Content-Type)+ 持久化分片/退避、当天留存/组内回放、失败聚合通知。模拟器已走查:选片→懒建日志→initiate→PUT→complete,服务端 `GET /students/:id/videos` 出现附件;**录像本身模拟器不可验(QEMU 相机开录挂死),待真机**。已知偏差:无前台服务真后台续传、无烧录导出、帧率随设备 |
 | MyProfile | ☐ | |
 | 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
@@ -97,6 +97,7 @@
 
 | 项 | 状态 | 备注 |
 |---|---|---|
+| VideoPlayback / FeedbackVideoPlayer 全屏回放 | 🔨 | W3-a:自绘播放/暂停、四档会话倍速、250 ms 轮询、80 ms 拖拽 seek + generation、失败重试、打点三态面板/标注帧;组内薄封装 markers=null、本地优先/远端现取。单层 Modal 或 OverlayHost;平底材质;无刻度/级别色/角标/导出;静态验证通过,ADB 拒绝导致视觉验收待补;Android seek tolerance 限制见 JOURNAL |
 | CoachVideoPlayer 变速回放 | ☐ | 0.5/1.0/1.5/2.0x |
 | e1RM + 容量/强度图表 | ☐ | victory-native |
 | 学员端走查对齐(36 项) | ☐ | |

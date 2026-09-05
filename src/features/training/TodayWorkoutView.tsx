@@ -139,7 +139,6 @@ export function TodayWorkoutView() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const { unreadCount } = useFeedbackInboxViewModel(studentId);
-  const bumpFeedback = useStudentTabsStore((state) => state.bumpFeedbackJump);
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
   const handoff = useStudentTabsStore((state) => state.trainingHandoff);
@@ -772,8 +771,7 @@ export function TodayWorkoutView() {
               accessibilityRole="button"
               accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
               onPress={() => {
-                bumpFeedback();
-                router.navigate('/(student)/growth');
+                router.navigate('/(student)/feedback');
               }}
               style={styles.navButton}
             >
