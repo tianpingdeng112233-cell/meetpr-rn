@@ -940,3 +940,36 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 
 ### W3-s2 收货修正（Claude，2026-09-05）
 - AVD 首发即失败：后端 `SetRefV1Schema` 是 **snake_case、`.strict()`、每个字段必填可空**（`exercise_name/set_number/set_total/weight_kg/reps/reps_max/rpe/day_date/set_log_id/plan_set_id`，仅 `v` 保持），iOS 靠 `MeetPRCodec` 的 `convertToSnakeCase` 落到同一形状；RN 之前收发都按 camelCase → 发送 400 `Unrecognized key(s)`，接收端 iOS 发来的组卡也会整条降级成文字。修法：`chat.ts` 新增 `SetRefWireSchema` + `toSetRefWire`（显式 `null`，不省字段）与 `ChatSetRefFromWireSchema`（wire→camel→原 `ChatSetRefSchema` 校验），内部类型不动。staging 探针：camelCase → `VALIDATION_ERROR Unrecognized key(s)`；snake_case → 只剩 `plan_set_id must identify …`（假 id）。
+
+
+## W3-s3 — 教练端会话对齐（2026-09-05）
+
+### 范围与正典
+
+- Worktree `feat/w3s3-coach-conversation`，开工 clean；已读 AGENTS、PLAN、W2-c/W3-s/W3-s2 日志、指定 RN 与 iOS 正典文件；本机 iOS HEAD 为 `202e95dbbf88baf5778f2329f206f34e117a4dd0`。已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。
+- 按用户给定组件 seam 使用 tdd，逐片红绿；遵照本卡指令跳过正式 code-review 技能与 issue-tracker 配置，不问配置、不生成配置、不派子 agent。无 commit/push、不加依赖、不动 node_modules symlink、不改 API/DTO/路由。
+- 气泡色遵照卡面明确要求，取 `ConversationView` init 默认 `goldCTA` / `surfaceElevated`；本机 `CoachConversationDestination` 实际另传 `textPrimary` / `borderHairline`，此差异已在施工中说明。既有 goldCTA/goldSoft/白字 token 均可复用；仅补 `chatImageBackground` 对应 `ChatFullScreenImage` 的恒黑背景。
+
+### 实装
+
+- 教练页头：44×44 chevron 返回、居中姓名/body16 bold、已知状态 body11 danger/success 副标题、无状态不渲染，边界分割线 `borderDefault`。
+- 时间线：16 padding/8 行距、初始贴底、近底 followLatest 与新 pending 跟随；首次原生滚动不覆盖初始定位。顶部 spinner sentinel 自动加载 before_seq 历史页，锁住首个可见消息 ID 与相对偏移，等待该行新布局后恢复，避免抢用旧坐标；分页使用 ref 防重入与 focus generation 拒收迟到结果。
+- 定向文字气泡 body14、h12/v8、16 圆角与 5 尾角、对侧至少 32 留白；仅自己的普通文字显示 body12 read/delivered，other_last_read 单调推进。失败横幅 body13/goldCTA/goldSoft；空态和加载失败态按卡面图标/字号，加载态 spinner 与文案。
+- pending 在时间线右侧显示 0.72 气泡、clock/sending 或 goldCTA retry，失败重试冻结原文字/client_id，保留新草稿；轮询确认同 client_id 后删除 pending，HTTP 随后失败不会复活错误行。
+- compactPill：外 h12/v8、surfaceCard、borderDefault 胶囊、gap6、右 padding5、body14/1–5 行/4000 上限；34 圆形 arrow-up 发送键、空白禁用/0.65 透明度/发送 spinner，无附件入口。
+- `StudentSetChatCard` 原样提取为 `ChatSetCard.tsx`，仅增加 `chat.setCard.<id>` testID；保留 75% 宽、lg radius、方向金条、HH:mm、内嵌 kg、视频键、备注与自己的送达 footer。学员/教练共用；教练仅 text+合法 presentation 转卡，outgoing=false，不泄露正典首行或额外送达文案。
+- 将学员组分享视频的消息 URL 刷新/选择/离屏拒收提取为同文件 `useChatSetPlayback`。学员反馈专用 `useStudentChatPlayback`（feedback read/markers）保持原位；学员其余视觉与行为不变。教练复用全屏 `FeedbackVideoPlayer`，失败用现有播放错误呈现。
+- `conversation-model.feedbackVideoBadge` 从 set_ref 组装数值指标与组序，教练传 `includesCoachAttribution=false`。**用户追加裁决：现有播放器 badge 是 W3-b 预留参数，本卡只组装并传参，待 W3-b 合流显示；不扩播放器文件。**
+- 图片消息 75% 宽/4:3，加载 spinner 与失败占位，点开恒黑全屏并支持 close/Android 返回。保留 FullScreenDestination、initialDraft、收件箱 read 回包 cache 写回、30s 轮询与原有前台节流刷新。
+
+### 验证与收货限制
+
+- 新增 `coach-conversation-screen.test.tsx` 17 项、`chat-set-card.test.tsx` 5 项；覆盖标题/状态/返回、组卡与正典隐藏、双方送达、失败重试幂等与新草稿、发送禁用/无附件、自动分页偏移、空/失败态、图片全屏、URL 刷新与无教练归属 badge、首次滚动贴底、read cache/增量分页、轮询确认 pending。
+- 红绿日志 `/private/tmp/w3s3-{card,header,share,read,send,composer,history,states,image,video,initial-scroll}-{red,green}.log`（部分步骤的复跑纳入后续 green 日志）。现有学员屏及 set-ref 测试原断言未修改，全绿。
+- 最终全量 `npx jest --runInBand`：**79 suites / 533 tests 通过**，含两条 i18n 守卫与 tokens 守卫；日志 `/private/tmp/w3s3-final-jest.log`。
+- `npm run lint` 无 errors/warnings；`npx tsc --noEmit` 通过，本轮无 hovered/typed-routes 生成文件诊断；日志 `/private/tmp/w3s3-final-{lint,tsc}.log`。`git diff --check` 通过。
+- 本地 Standards 核对：仅白名单文件/新增测试/台账，颜色 useColors、字体 font、既有翻译键、无依赖与 API 变更。Spec 核对：卡面目标完成，badge 仅传参按追加裁决保留；学员端卡/视频提取外无改动。
+- 按用户明确沙箱无 ADB 约束，未运行 `expo run:android`，未取得 AVD meetpr 截图，**不宣称原生视觉验收通过**。PARITY 教练 Chat 标为 🔨 待走查。
+
+### W3-s3 收货修正(Claude,2026-09-05)
+- 气泡色改回教练端 `CoachConversationDestination` 的覆盖值(自己 = `textPrimary`、对方 = `borderHairline`;pending 同 textPrimary@0.72),不用 `ConversationView` 默认的 goldCTA/surfaceElevated;错误横幅 goldCTA/goldSoft 不变。

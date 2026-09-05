@@ -4,6 +4,8 @@ import { fontNames } from './fonts';
 
 /** DesignSystem v3, iOS release/1.0 @ 202e95db. */
 export const palette = {
+  // ChatFullScreenImage uses Color.black in both themes.
+  chatImageBackground: { light: '#000000', dark: '#000000' },
   coachRequestBorder: { light: 'rgba(217,119,6,0.35)', dark: 'rgba(245,166,35,0.35)' },
   coachNoPlanBorder: { light: 'rgba(217,119,6,0.4)', dark: 'rgba(245,166,35,0.4)' },
   coachAcceptedBorder: { light: 'rgba(21,128,61,0.3)', dark: 'rgba(94,158,120,0.3)' },
