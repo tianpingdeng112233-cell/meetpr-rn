@@ -73,7 +73,8 @@ import {
 } from '@/domain/e1rm';
 import { useStudentTabsStore } from '@/features/student-tabs';
 
-import { DayCompletionBanner, SessionSummaryView } from './CompletionControls';
+import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
+import { workoutCompletionPresentation, type CompletionReference } from './completion-presentation';
 import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
 import { isDraftTerminal, synthesizeDrafts } from './drafts';
 import { recordTrainingSetE1RM } from './e1rm-live';
@@ -179,7 +180,7 @@ export function TodayWorkoutView() {
     status: 'loading' | 'loaded';
     value: SessionReview | null;
   }>(() => ({ key: '', status: 'loading', value: null }));
-  const [summaryVisible, setSummaryVisible] = useState(false);
+  const [completionPhase, setCompletionPhase] = useState<WorkoutCompletionFlowPhase | null>(null);
   const [readinessVisible, setReadinessVisible] = useState(false);
   const [readinessSkipState, setReadinessSkipState] = useState({
     key: '',
@@ -538,7 +539,7 @@ export function TodayWorkoutView() {
       status: 'loading',
       value: null,
     });
-    setSummaryVisible(false);
+    setCompletionPhase(null);
     setE1rmState({ key: '', values: {} });
     setRecordingSetId(null);
     setEditingPlan(null);
@@ -549,7 +550,10 @@ export function TodayWorkoutView() {
     setRequestedDayID(planDay.id);
     try {
       await (undo ? undoCompletion : completion).mutateAsync(planDay.id);
-      if (!undo) setRestSeconds(null);
+      if (!undo) {
+        setRestSeconds(null);
+        setCompletionPhase('celebration');
+      }
       bumpCompletion();
     } catch (error) {
       Alert.alert(
@@ -959,7 +963,7 @@ export function TodayWorkoutView() {
             {dayState?.kind === 'completed' ? (
               <DayCompletionBanner
                 count={realDrafts.length}
-                onPress={() => setSummaryVisible(true)}
+                onPress={() => setCompletionPhase('review')}
               />
             ) : null}
             {completionUI.pill ? (
@@ -1049,16 +1053,41 @@ export function TodayWorkoutView() {
           }}
         />
       ) : null}
-      {summaryVisible && reviewLoaded ? (
-        <SessionSummaryView
-          drafts={liveDrafts}
+      {completionPhase && reviewLoaded && planDay && plan ? (
+        <WorkoutCompletionFlowView
+          key={reviewKey}
+          initialPhase={completionPhase}
+          presentation={workoutCompletionPresentation({
+            planDay,
+            drafts: liveDrafts,
+            weekCode: dayCode(planDay),
+            date: recommendedDate(plan, planDay),
+            coachName: binding.data?.bind_request?.coach_display_name ?? null,
+            exerciseNames: new Map(planDay.exercises.map(exercise => [exercise.exercise_id, exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))])),
+            references: (historyQuery.data?.logs ?? []).reduce((best, log) => {
+              if (!log.completed || log.failed || log.assumed ||
+                planDay.exercises.some(exercise => exercise.id === log.plan_exercise_id)) return best;
+              const weightKg = Number(log.weight_kg);
+              const previous = best.get(log.exercise_id);
+              if (!previous || weightKg > previous.weightKg || (weightKg === previous.weightKg && log.reps > previous.reps)) {
+                best.set(log.exercise_id, { weightKg, reps: log.reps });
+              }
+              return best;
+            }, new Map<string, CompletionReference>()),
+            previousVolumeChangePercent: null,
+          })}
           initialReflection={review?.reflection}
-          onClose={() => setSummaryVisible(false)}
-          onComplete={async (reflection) => {
+          onReflectionChange={async (reflection) => {
+            const next = { completedAt: review?.completedAt ?? '', reflection };
+            await writeReview(studentId, selectedDayID!, next);
+            setReviewState({ key: reviewKey, status: 'loaded', value: next });
+          }}
+          onFinish={async (reflection) => {
             const next = { completedAt: new Date().toISOString(), reflection };
             await writeReview(studentId, selectedDayID!, next);
             setReviewState({ key: reviewKey, status: 'loaded', value: next });
-            setSummaryVisible(false);
+            setCompletionPhase(null);
+            router.navigate('/(student)/today');
             await track(AnalyticsEvent.WorkoutLogSave, {
               date: today,
               sets: liveDrafts.length,
