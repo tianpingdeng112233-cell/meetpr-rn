@@ -32,14 +32,14 @@ export const RIR_KEYS = Object.freeze({
 } as const);
 
 export const READINESS_MUSCLES = Object.freeze([
-  ['quads', 'student.readinessCheckinSheet.copy020'],
-  ['hamstrings', 'student.readinessCheckinSheet.copy021'],
-  ['glutes', 'student.readinessCheckinSheet.copy022'],
+  ['quad', 'student.readinessCheckinSheet.copy020'],
+  ['hamstring', 'student.readinessCheckinSheet.copy021'],
+  ['glute', 'student.readinessCheckinSheet.copy022'],
   ['back', 'student.readinessCheckinSheet.copy023'],
   ['chest', 'student.readinessCheckinSheet.copy024'],
-  ['shoulders', 'student.readinessCheckinSheet.copy025'],
+  ['shoulder', 'student.readinessCheckinSheet.copy025'],
   ['triceps', 'student.readinessCheckinSheet.copy026'],
-  ['core_lower_back', 'student.readinessCheckinSheet.copy027'],
+  ['core', 'student.readinessCheckinSheet.copy027'],
 ] as const);
 
 export const STORAGE_KEYS = Object.freeze({

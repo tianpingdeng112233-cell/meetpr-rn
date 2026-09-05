@@ -835,3 +835,29 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - `npx expo run:android --device meetpr --no-install` 已执行：prebuild 生成被忽略的本 worktree android/，package.json 无改动；随后 ADB 5037 smartsocket listener 因 sandbox `Operation not permitted` 失败。日志 `/private/tmp/w3v-android.log`。未完成原生 build/install、未取得 AVD 截图，不绕过沙箱。
 - Android JS bundle：`npx expo export --platform android --output-dir /private/tmp/w3v-bundle` 成功，日志 `/private/tmp/w3v-bundle.log`；此结果不替代原生安装和视觉验收。
 - PARITY Dashboard/TodayWorkout 追加 **“视觉对照 pass 待 AVD 截图验收”**，保留历史收货状态；本卡视觉 pass 未签收。
+
+## W3-v — ReadinessCheckinSheet 对齐与肌群线值修正（2026-09-05）
+
+### 范围与正典
+
+- 工作目录 `meetpr-rn-wt-w3v-readiness`，分支 `feat/w3v-readiness`，开工 clean。只改 ReadinessSheet、READINESS_MUSCLES、MuscleFatigueSchema 的 enum、相关测试和本日志/PARITY；不 commit/push、不加依赖、不动 node_modules symlink，TodayWorkoutView 调用与 Props 不变。
+- 已读 AGENTS、PLAN、JOURNAL 最近两段、指定 RN 文件及 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。本机 iOS HEAD 核实为 `202e95dbbf88baf5778f2329f206f34e117a4dd0`；全文只读核对 ReadinessCheckinSheet.swift、ReadinessCheckin.swift、MuscleGroup.swift、Spacing.swift。
+- David 续判确认：网格最小宽 92、gap 4；393pt 屏扣左右各 12 后排三列，与其 iOS 模拟器截图一致，不强制四列。
+
+### 实装
+
+- 先修线值：按 iOS allowedMuscleGroups 顺序使用 `quad/hamstring/glute/back/chest/shoulder/triceps/core`；copy020–027 不变；MuscleFatigueSchema 收紧为这八项 enum。提交按白名单生成非零疲劳项，清空后不发送该肌群。
+- Modal 保持全屏及禁用返回关闭；Skip 仍写 per-student/day 本地标记、FlowCancel 埋点并调用 onSkip。导航标题改 copy001 插值 step，body17 semibold 居中；Skip 为 body17 textMuted。
+- ScrollView padding 12，题块 gap 24，题目与量表 gap 4。量表为左右 56 宽锚文案及五个 30 圆，gap 8；小于等于当前值填 gold500，当前值 2pt bgBase 内描边，其余 surfaceElevated。删除卡片、数字及独立端点行；a11y 使用 copy012。
+- 第二步标题 body17、说明 body13；网格按实际容器 onLayout 自适应等宽，min 92/gap 4。chip 名称 body13，严重度 mono12 semibold 点行，零级空格保高；圆角 md，语义底/字/边色及 gold500 的 0.12/0.4 透明度；copy019 a11y，循环 0→1→2→3→0。
+- footer 固定在 ScrollView 外，bgBase/padding12。Next 右对齐、非全宽，三项未填满禁用；提交兜底 copy001 保留。Back 使用非全宽 secondary，Done 使用非全宽 primary，提交中 loading；失败为 alert-outline + body13 dangerMuted，成功仍 onComplete。
+
+### 红绿与验证
+
+- 按用户指定公共 seam 使用 tdd：常量顺序红→绿、schema 拒绝旧 quads 红→绿、Next 门控/第二步标题红→绿、chip a11y/点行循环红→绿。对应日志 `/private/tmp/w3v-readiness-{constants,schema,step,chips}-{red,green}.log`。
+- 提交 payload 测试加入时已因前述线值修复变绿；另暂时注入旧 quads 验证其敏感性，测试确实因 payload 收到 quads 而失败，随即恢复，日志 `/private/tmp/w3v-readiness-payload-mutation.log`。该检查是回归敏感性验证，不冒充原始 red→green。
+- 新增两个测试文件共 8 项：上述行为与完整八项 payload、清空/无疲劳合法提交、失败重试保留答案、提交中禁用/loading。保留真实翻译/AppButton，按卡要求 mock useSubmitReadiness，AsyncStorage 使用官方 Jest mock。
+- 首轮全量测试揭示旧 domain-schemas fixture 仍用 quads；仅将该 fixture/期望改为 quad。首轮 tsc 揭示新测试 key 数组需 as const，已修正。
+- 最终 `npm run lint` exit 0（0 errors/warnings）、`npx tsc --noEmit` exit 0（无需忽略 hovered 或其它类型错误）、`npx jest` exit 0：**68 suites / 421 tests passed**。training 全部测试、两条 i18n 守卫和 tokens 守卫均绿。日志 `/private/tmp/w3v-readiness-{lint,tsc,jest}.log`；`git diff --check` 通过。
+- 人工分轴核对：Standards——修改范围、语义颜色/字体、正典翻译调用符合本卡；Spec——逐项核对两步形制、线值与原行为，未发现剩余实现缺项。正式 code-review 技能流程未启动：该技能要求的 `docs/agents/issue-tracker.md` 缺失，已告知需由用户调用 `$setup-matt-pocock-skills`，未静默搭建 tracker 或运行双 agent review。
+- 按本卡无 ADB 环境约束，未运行 expo run:android、未取得 Android 模拟器截图。源码核对及 Jest 不替代原生视觉验收；PARITY 保留 🔨 并标记待 AVD 截图验收。

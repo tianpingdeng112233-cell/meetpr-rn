@@ -5,7 +5,7 @@ import { authenticatedRequest } from '../session';
 import { DateTextSchema, encodeQuery, TimestampSchema, UuidSchema } from './shared';
 
 export const MuscleFatigueSchema = z.object({
-  muscle_group: z.string(),
+  muscle_group: z.enum(['quad', 'hamstring', 'glute', 'back', 'chest', 'shoulder', 'triceps', 'core']),
   severity: z.number().int().min(1).max(3),
 });
 
