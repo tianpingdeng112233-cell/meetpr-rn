@@ -74,7 +74,7 @@ test('submitting a code for an incomplete profile opens onboarding immediately',
     renderer.root.findByProps({ placeholder: 'XXXXXXXXXX' }).props.onChangeText(stash.code);
     renderer.root.findByProps({ placeholder: t('student.enterCodeView.copy002') }).props.onChangeText(stash.displayName);
   });
-  await act(async () => press('提交'));
+  await act(async () => press(t('student.bindEnterCodeSubviews.copy005')));
   expect(renderer.root.findByType(Modal).props.visible).toBe(true);
 });
 
@@ -100,7 +100,7 @@ test.each([
     renderer.root.findAllByType(TextInput)[0].props.onChangeText(stash.code);
     renderer.root.findAllByType(TextInput)[1].props.onChangeText(` ${stash.displayName} `);
   });
-  await act(async () => press('提交'));
+  await act(async () => press(t('student.bindEnterCodeSubviews.copy005')));
   expect(renderer.root.findByProps({ placeholder: 'XXXXXXXXXX' }).props.value).toBe('');
   expect(renderer.root.findByProps({ placeholder: t('student.enterCodeView.copy002') }).props.value).toBe(stash.displayName);
 });

@@ -309,7 +309,7 @@ function EnterCodeView({
 
   return (
     <GateFrame onLogout={onLogout} title={t('student.bindEnterCodeSubviews.copy001')}>
-      <Text style={styles.detail}>{"没有教练?请向你的教练索取邀请码" /* TODO(i18n:missing) */}</Text>
+      <Text style={styles.detail}>{t('student.bindEnterCodeSubviews.copy002')}</Text>
       {notice ? <Notice>{notice}</Notice> : null}
       <TextField
         autoCapitalize="characters"
@@ -334,7 +334,7 @@ function EnterCodeView({
       {banner ? <Text style={styles.error}>{banner}</Text> : null}
       <AppButton
         disabled={!valid || submitting}
-        label={submitting ? t('student.accountSecuritySheets.copy018') : '提交' /* TODO(i18n:missing) */}
+        label={submitting ? t('student.accountSecuritySheets.copy018') : t('student.bindEnterCodeSubviews.copy005')}
         onPress={() => void submit()}
       />
     </GateFrame>
@@ -425,7 +425,7 @@ function PendingBindView({
         {profile?.completed_at || uploads > 0 ? (
           <Card style={styles.profileCard}>
             <Text style={styles.fieldLabel}>{t('student.pendingBindView.copy010')}</Text>
-            {profile?.completed_at ? <Text style={styles.detail}>{"完整资料" /* TODO(i18n:missing) */}</Text> : null}
+            {profile?.completed_at ? <Text style={styles.detail}>{t('student.pendingBindView.copy011')}</Text> : null}
             {uploads > 0 ? <Text style={styles.detail}>{t(uploads === 1 ? 'student.pendingBindView.copy012.one' : 'student.pendingBindView.copy012', [uploads])}</Text> : null}
           </Card>
         ) : null}
@@ -433,10 +433,10 @@ function PendingBindView({
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <AppButton
           disabled={!request || cancelling}
-          label={cancelling ? '取消中…' /* TODO(i18n:missing) */ : t('student.pendingBindView.copy004')}
+          label={cancelling ? t('student.rn.bind.cancelling') : t('student.pendingBindView.copy004')}
           onPress={() =>
             Alert.alert(t('student.pendingBindView.copy005'), t('student.pendingBindView.copy007'), [
-              { text: '保留请求' /* TODO(i18n:missing) */, style: 'cancel' },
+              { text: t('student.pendingBindView.copy006'), style: 'cancel' },
               { text: t('student.pendingBindView.copy004'), onPress: () => void cancel() },
             ])
           }

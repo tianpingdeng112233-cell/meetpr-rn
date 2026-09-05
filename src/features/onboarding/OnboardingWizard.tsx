@@ -179,7 +179,7 @@ export function OnboardingWizard({
       if (validation) {
         setErrorFields(validation.errorFields);
         setStep(validation.step);
-        setCompletionError('请补全标红的必填资料' /* TODO(i18n:missing) */);
+        setCompletionError(t('student.rn.onboarding.completeRequired'));
       } else {
         setCompletionError(t('student.onboardingWizardViewModel.copy002'));
       }
@@ -250,7 +250,7 @@ export function OnboardingWizard({
                 disabled={editing || !canAdvance(form, step)}
                 label={
                   editing
-                    ? '保存中…' /* TODO(i18n:missing) */
+                    ? t('student.progression.saving')
                     : step === 7
                       ? t('student.onboardingWizardView.copy013')
                       : t('student.onboardingWizardView.copy014')

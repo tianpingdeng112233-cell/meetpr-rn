@@ -78,5 +78,13 @@
 "student.rn.growthCurve.placeholder": {
 "en": "The full chart will be integrated into the Progress page.",
 "zh": "完整曲线将在成长页图表卡接入"
+},
+"student.rn.onboarding.completeRequired": {
+"en": "Complete the required fields marked in red",
+"zh": "请补全标红的必填资料"
+},
+"student.rn.bind.cancelling": {
+"en": "Cancelling…",
+"zh": "取消中…"
 }
 }
