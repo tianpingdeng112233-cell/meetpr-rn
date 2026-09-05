@@ -687,3 +687,72 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - 全量 `npx jest --runInBand`: **47 suites / 312 tests 通过**;指定 W2-c 三个测试文件共 13 项,含 `itemAfterSend`、请求双校验、已读回包即时应用与旧游标拒收。
 - Android production JS/Hermes bundle 导出通过(1829 modules):`/tmp/meetpr-w2c-android-export`。使用本地 Expo CLI,`EXPO_OFFLINE=1`、Global API URL、显式本 worktree 的 `EXPO_ROUTER_APP_ROOT`、独立 `TMPDIR=/tmp/meetpr-w2c-metro`。首次 npx 导出遭 DNS 阻断;本地 CLI 初次读到共享缓存的另一 worktree 路由,隔离缓存后成功。未修改其它 worktree。
 - Android APK/AVD 仍未验证,原因见上方 ADB socket 拒绝;bundle 成功不代表模拟器视觉验收通过。PARITY Receiving/Chat 均为 🔨。
+
+
+## W3-i18n — 字面量收口 (2026-09-05)
+
+- 范围：仅 `meetpr-rn-wt-w3i` / `feat/w3-i18n-sweep`；无 commit/push、安装或 code-review 流程。先读 AGENTS、PLAN、G0-b/R1、i18n runtime/matcher、八份正典与 RnExtras；已读 Expo SDK v57.0.0 文档。
+- 实际基线：非测试源码 15 处 `TODO(i18n:missing)`、0 处 drift，另有旧 guard 内 2 个查找字符串。全部清零。旧 G0-b 的 80 行登记是历史记录，不是本次 checkout 残留数。
+- 使用现有 `punctuationMatches` 对剩余 15 处逐项重扫：逐字/标点匹配均无结果，再按语义复用正典。新 guard 递归扫描整个 `src/**`，包括测试、catalog 和自身；搜索词分段构造以避免自命中，不设置路径豁免。
+- `no-literal-zh` 删除 TODO/登记表放行机制及 login/onboarding 屏幕豁免；只排除翻译 catalog 和测试代码，不排除任何业务页面。收紧后另外检出旧 CN login 10 处中文调用，全部用 AppShell 正典替换；登录逻辑、布局与切轨行为未改。
+
+### 替换清单（文件 → key）
+
+| 文件 | 原文/位置 | 最终 key |
+|---|---|---|
+| `src/navigation/BindGate.tsx` | 绑定申请尚未完成，请重新输入邀请码。 | `student.rn.bind.incompleteRequest` |
+| 同上 | 绑定教练；请输入邀请码（2 处） | `student.bindEnterCodeSubviews.copy001` |
+| 同上 | 提交邀请码 | `student.bindEnterCodeSubviews.copy005` |
+| 同上 | W1 接线 | `student.rn.bind.wiringPlaceholder` |
+| 同上 | 完成训练信息 | `student.rn.bind.completeTrainingInfo` |
+| 同上 | W1 接入学员 Onboarding。 | `student.rn.bind.onboardingPlaceholder` |
+| 同上 | 等待教练确认 | `student.rn.bind.awaitingCoach` |
+| 同上 | 绑定申请处理中，请稍后查看。 | `student.pendingBindView.copy003`（采用正典的 24–48 小时响应/7 天过期说明） |
+| 同上 | 暂时无法检查绑定状态 | `student.bindGateView.copy002` |
+| 同上 | 请稍后再试。 | `coach.planning.step7.tryAgainLater`（通用稍后重试语义） |
+| `src/navigation/FeaturePlaceholderScreen.tsx` | W1 实装 | `student.rn.featurePlaceholder` |
+| `src/app/(student)/growth-curve.tsx` | 成长曲线（页头） | `student.rn.growthCurve.title` |
+| 同上 | 动作名 + 成长曲线 | `student.rn.growthCurve.liftTitle`；原 `student.growthCurveView.copy001` fallback 保留，使用整句插值保证英文间隔 |
+| 同上 | 完整曲线将在成长页图表卡接入 | `student.rn.growthCurve.placeholder` |
+| `src/app/login.tsx` | 登录失败，请稍后重试（2 处） | `appShell.auth.requestFailed` |
+| 同上 | 手机号或密码不正确 | `appShell.auth.invalidCredentials` |
+| 同上 | 尝试过于频繁，请稍后再试 | `appShell.auth.rateLimited` |
+| 同上 | 登录你的训练账户 | `appShell.login.instructions` |
+| 同上 | 手机号；请输入手机号 | `appShell.auth.phoneNumber`；`appShell.auth.phoneInputHint` |
+| 同上 | 密码；请输入密码 | `appShell.auth.password`；`appShell.auth.passwordInputHint` |
+| 同上 | 登录 | `appShell.login.signIn` |
+
+### 新增 RnExtras key（9 个）
+
+所有新增条目含 en/zh 与 `source` 来源文件；既有 15 个 `student.progression.*` key 不改。
+
+| key | 未采用近似正典的原因 |
+|---|---|
+| `student.rn.bind.incompleteRequest` | rejected/expired/cancelled 共用中性提示，不能套用仅过期或邀请码无效的错误原因 |
+| `student.rn.bind.wiringPlaceholder` | RN W1 接线占位，无 iOS 文案 |
+| `student.rn.bind.completeTrainingInfo` | RN 通用训练信息标题；iOS 完成资料文案附带评估条件，不适合此封存分支 |
+| `student.rn.bind.onboardingPlaceholder` | RN W1 onboarding 接入占位 |
+| `student.rn.bind.awaitingCoach` | iOS 等待接收标题需要 coach name，当前占位 gate 没有该参数，不伪造教练名或传空串 |
+| `student.rn.featurePlaceholder` | RN W1 实装占位 |
+| `student.rn.growthCurve.title` | 正典无通用成长曲线标题；带 e1RM/数据点的图表 accessibility key 不是同一语义 |
+| `student.rn.growthCurve.liftTitle` | 同上，含动作名的完整标题 |
+| `student.rn.growthCurve.placeholder` | RN 图表接入占位，不冒充已接入图表的无数据态 |
+
+### 复数核对与正典问题登记
+
+- 只读核对 `/Users/david/Projects/apps/MeetPR-release/Modules/StudentKit/Sources/StudentKit/StudentStrings.swift`：全部 8 个非默认 countIndex 已镜像，7 个 index 1、1 个 index 2，无漏项。
+- CoachKit 根目录没有直接匹配的 `*Strings*.swift`，实际文件位于 `Planning/` 与 `Features/**`。已递归核对 Strings、PlanningWorkspaceModels 与 Localizable.xcstrings，补齐 `PLURAL_COUNT_INDEX`：`coach.workspace.defaultDraftName %@ %lld` → 1、`coach.workspace.draftSummary %@ %@ %lld` → 2、`coach.workspace.publishedSummary %@ %lld` → 1。defaultDraftName 的 one/other 当前同文，但计数参数仍按 iOS weeks 镜像。其它可表示的多参数 one/other key 没有新增漏项。
+- **已知 iOS 误译**：`student.trainingCalendarLogic.copy011` 的 zh 为「日」、en 为 `Sun`。iOS `TrainingCalendarLogic.swift:100` 把它拼到训练日动作名后，语义应是 day，不是星期日。两份 StudentKit JSON 均保留正典原字节。本 checkout 没有该 key 的运行时调用或 drift 标记；已有 `src/domain/plan/presentation.ts` 使用此前收货的 `student.progression.dayName`，本卡未扩改这条无标记调用，也未新增绕过正典的翻译。
+- **既有 CoachKit runtime 差异**：开工时 `src/i18n/catalog/CoachKit.json` 已与 docs 正典有 7 项差异：`coach.shared.readiness.fatigue`、`coach.detail.feedbackMeta`、`coach.profile.age` 的具名占位符转位置占位符；`coach.detail.weekProgress %lld %lld`、`coach.execution.loggedSetsFraction %lld %lld`、`coach.today.trainingDaysCompleted %lld %lld` 的英文格式替换；另有 `coach.today.trainingDaysCompleted %lld %lld.one`。本卡不改该文件，不声称八份 runtime 与 docs 全部相同。
+- docs CoachKit 的 6 个英文 key 保留 Apple `%#@...@` / `%1$lld` substitution：`coach.detail.weekProgress %lld %lld`、`coach.evaluation.remaining %lld %lld`、`coach.execution.loggedSetsFraction %lld %lld`、`coach.execution.setFraction %lld %lld`、`coach.planning.count.setsAndReps %lld %@ %lld`、`coach.today.trainingDaysCompleted %lld %lld`。其中前述 3 项 runtime 已有历史替换；其余 3 项仍不受当前 t formatter 支持。多计数单位需要独立复数选择，单加 countIndex 不能修复；登记留后续 formatter/导出契约卡，不在本次文案调用收口中改正典或扩展运行逻辑。
+
+### 红绿与最终验证
+
+- 用户预先指定的 seam：两个源码守卫及 `t()` 复数行为；相关四个页面未有既存快照/直接文案断言，未新增额外屏幕测试 seam。
+- 新 guard 先红：`/private/tmp/w3-i18n-todo-red.log`，1 failed test，列出 17 行（15 处调用 + 旧 guard 2 处）。去豁免 guard 先红：`/private/tmp/w3-i18n-literal-red.log`，1 failed test，检出 25 处中文。替换后两守卫全绿：`/private/tmp/w3-i18n-guards-green.log`。
+- 复数先红：`/private/tmp/w3-i18n-plural-red.log`，公开 `t()` seam 实际得到 `Alex · Strength · 1 weeks`，预期 `Alex · Strength · 1 week`；补索引后英文变绿。随后把测试中误写的中文空格校正为正典 `%lld周`，没有改翻译来迎合测试。最终覆盖 1/2 周、前置参数为数字 1 的干扰场景及 zh 保持原文。
+- `npm run lint`：exit 0，0 errors / 0 warnings（`/private/tmp/w3-i18n-lint.log`）。
+- `npx tsc --noEmit`：exit 0（`/private/tmp/w3-i18n-tsc.log`）。
+- `npx jest`：exit 0，58 suites / 379 tests passed，0 snapshots（`/private/tmp/w3-i18n-jest.log`）。
+- `git diff --check` 通过；`rg -n 'TODO\(i18n' src` 零命中。八份 docs 正典 SHA-256 与开工记录、HEAD 一致；八份 runtime 正典与各自 HEAD 一致，只有 RnExtras 新增条目。
+- Android 视觉验证未完成：`adb devices` 启动 5037 smartsocket listener 被 sandbox 拒绝（`Operation not permitted`），没有可用模拟器连接。未运行依赖 ADB 的 `npx expo run:android`，未生成截图或 native 工程。PARITY 同步为已实装、待视觉走查。

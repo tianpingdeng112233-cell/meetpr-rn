@@ -40,7 +40,7 @@ export const stubBindRepository: BindRepository = {
 // 2026-07-13 硬封存：accepted 直接进入 tabs。defer ≠ delete。
 export const evaluationSealed = true;
 
-export const NEUTRAL_BIND_NOTICE = /* TODO(i18n:missing) */ '绑定申请尚未完成，请重新输入邀请码。';
+export const NEUTRAL_BIND_NOTICE = t('student.rn.bind.incompleteRequest');
 
 type BindGateProps = PropsWithChildren<{
   repository?: BindRepository;
@@ -111,41 +111,41 @@ export function BindGate({ children, repository = stubBindRepository }: BindGate
 
   if (state === 'needsCode') {
     return (
-      <GateFrame title={/* TODO(i18n:missing) */ "绑定教练"}>
+      <GateFrame title={t('student.bindEnterCodeSubviews.copy001')}>
         {notice ? <Text style={styles.detail}>{notice}</Text> : null}
         <TextInput
           autoCapitalize="characters"
           onChangeText={setInviteCode}
-          placeholder={/* TODO(i18n:missing) */ "请输入邀请码"}
+          placeholder={t('student.bindEnterCodeSubviews.copy001')}
           placeholderTextColor={colors.textTertiary}
           style={styles.input}
           value={inviteCode}
         />
-        <AppButton disabled label={/* TODO(i18n:missing) */ "提交邀请码"} />
-        <Text style={styles.wireNotice}>{/* TODO(i18n:missing) */}W1 接线</Text>
+        <AppButton disabled label={t('student.bindEnterCodeSubviews.copy005')} />
+        <Text style={styles.wireNotice}>{t('student.rn.bind.wiringPlaceholder')}</Text>
       </GateFrame>
     );
   }
 
   if (state === 'needsOnboarding') {
     return (
-      <GateFrame title={/* TODO(i18n:missing) */ "完成训练信息"}>
-        <Text style={styles.detail}>{/* TODO(i18n:missing) */}W1 接入学员 Onboarding。</Text>
+      <GateFrame title={t('student.rn.bind.completeTrainingInfo')}>
+        <Text style={styles.detail}>{t('student.rn.bind.onboardingPlaceholder')}</Text>
       </GateFrame>
     );
   }
 
   if (state === 'pendingAcceptance') {
     return (
-      <GateFrame title={/* TODO(i18n:missing) */ "等待教练确认"}>
-        <Text style={styles.detail}>{/* TODO(i18n:missing) */}绑定申请处理中，请稍后查看。</Text>
+      <GateFrame title={t('student.rn.bind.awaitingCoach')}>
+        <Text style={styles.detail}>{t('student.pendingBindView.copy003')}</Text>
       </GateFrame>
     );
   }
 
   return (
-    <GateFrame title={/* TODO(i18n:missing) */ "暂时无法检查绑定状态"}>
-      <Text style={styles.detail}>{/* TODO(i18n:missing) */}请稍后再试。</Text>
+    <GateFrame title={t('student.bindGateView.copy002')}>
+      <Text style={styles.detail}>{t('coach.planning.step7.tryAgainLater')}</Text>
     </GateFrame>
   );
 }
