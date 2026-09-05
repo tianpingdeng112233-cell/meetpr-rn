@@ -1317,3 +1317,17 @@ Typography families/weights checked against `DesignSystem/Sources/DesignSystem/T
 - `npx tsc --noEmit`：exit 0，日志 `/private/tmp/w3b-tsc.log`；本次没有遗留或忽略 hovered 类型错误。
 - 全量 `npx jest --runInBand`：exit 0，**71 suites / 431 tests passed**，包括原 video-player / feedback / video-upload、两条 i18n 守卫和 tokens 守卫，日志 `/private/tmp/w3b-jest.log`。新增 20 tests；`git diff --check` 通过。
 - code-review 两轴独立子代理审查未提交工作区相对开工 HEAD 的 diff（包括新增文件）：**Standards 0 findings / Spec 0 findings**。仓库缺少 `docs/agents/issue-tracker.md`，已按技能提示用户运行 `/setup-matt-pocock-skills`；本次直接使用会话需求与已给定参照审查，没有创建 tracker 配置，也没有提交以迁就 committed-diff 流程。
+
+## W3-v — Dashboard 教练反馈卡折叠叠层 / 展开行→详情（2026-09-05）
+
+- 工作树 `feat/w3v-feedback-card` / `meetpr-rn-wt-w3v-feedback-card`，开工 clean；仅修改指定 dashboard 组件/model、测试、JOURNAL/PARITY。不 commit/push、不加依赖、不改 node_modules symlink、反馈 DTO、收件箱或详情屏。
+- 已读 AGENTS、PLAN、JOURNAL 最近两段、指定 Dashboard/feedback 源码，以及本机 iOS `DashboardFeedbackCard.swift` 全文和 `DashboardFeedbackText.swift`。通过文档工具读取 [Expo SDK v57.0.0 文档](https://docs.expo.dev/versions/v57.0.0/)，终端验证离线，不使用 ADB。
+- 抽出 `FeedbackCard.tsx`，保留原 props 并新增 `onOpenItem(item)`。RN 原 `pending` 为未读计数，没有 iOS 独立 pending presentation 分支；保持未读胶囊语义与 `copy007` 空态。状态仍为组件内 useState，直接切换，无高度 tween、rise-in 或持久化。
+- 折叠整卡单 Pressable / `copy002(N)` a11y：按 posted_at 倒序取最新未读，否则最新；星期取该条 day_date 优先的既有 Intl 短星期。正文 body14 / lineHeight18 / 两行；底部 copy001(N) + 下箭头。表面 h16/v14、圆角12、3pt gold500 竖条；两层分别 bgStack / surfaceKey（内缩7、下移5）与 bgInset / surfaceKey（内缩14、下移11），外层底部预留11。
+- 展开头部可折叠，右侧 copy005 + 上箭头，无星期；容器 h15/bottom4、无叠层。倒序各行展示 body13 semibold 标签、6pt 未读金点、copy006 + 右箭头，正文 body13 单行；行 v10、gap3、顶部1pt borderSubtle。移除教练名/相对时间。行点击 push `/(student)/feedback/{id}`，由原详情 `[feedbackId]` 与 markRead 接手；其它 openFeedback（消息按钮、等待态）不变。
+- 用户确认 RN DTO 缺 iOS 内嵌 video 后，授权 Dashboard 展示层拼接：直接复用 W3-a 的 `useStudentVideos(studentId)` 与 `feedbackVideoAssociation(video_id, videos)`，不新增读口或关联算法。仅展示类型 `DashboardFeedbackItem` 可带 video，wire DTO 不变。`feedbackLabel` 复用 exerciseDisplayName，以现有 StudentVideo.exercise_name 作为可用名称；无关联用 copy001，有关联但名称缺失/视频暂不可用用 copy002，有 set_index 用 copy003 且仅显示层 +1。现有视频 DTO 没有 name_en，不伪造英文名称字段。
+- TDD 使用指定组件与纯函数 seam，逐片先红后绿：最新未读预览、展开/倒序/金点/收起、原 item 回调、标签三分支与 set_index=0 边界；覆盖全已读、初始空态、展开后变空不残留 Collapse。在既有 Dashboard 渲染测试补视频读口关联、详情路径与消息按钮原路径断言。测试仅 mock native/router/network 边界，实际组件、关联函数和 Query 行为参与验证。
+- 红绿日志：`/private/tmp/w3v-feedback-{collapsed,expand,open,label-none,label-video,label-set,row-label,navigation,empty}-{red,green}.log`。初期修正 test-renderer Pressable memo/host 选择器后继续验证真实交互；未使用实现快照或改翻译迎合断言。
+- 本地 Standards 核对：颜色来自 useColors 语义 token、字体使用 font.body/mono、文案沿用指定 i18n key，改动范围符合约束。Spec 核对：叠层尺寸、头部收起、排序/未读优先、逐行标签与详情接线均符合卡面；发现展开后空态残留 Collapse，补红测后已修正。正式 code-review 因缺 `docs/agents/issue-tracker.md` 未启动；已按技能告知需 `$setup-matt-pocock-skills`，未静默配置。
+- 沙箱无 ADB，未运行 Android 安装或取得截图；PARITY Dashboard 行已追加“W3-v:反馈卡折叠叠层/展开行→详情”，本卡视觉验收仍待可用 AVD 环境。
+- 最终验证：`npm run lint` exit 0、无诊断；`npx tsc --noEmit` exit 0、无诊断（本轮无 hovered 错误）；全量 `npx jest` **68 suites / 428 tests passed**，含所有 dashboard 测试、`no-literal-zh` / `no-i18n-todo` 两条 i18n 守卫与 tokens 守卫。日志 `/private/tmp/w3v-feedback-{lint,tsc,jest}.log`；`git diff --check` 通过。

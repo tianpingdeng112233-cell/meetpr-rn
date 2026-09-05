@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import {
   Alert,
   Pressable,
@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { useSessionStore } from '@/api/session';
 import { useMineBindRequest } from '@/api/domains/bind';
+import { useStudentVideos } from '@/api/domains/videos';
 import {
   useDayCompletion,
   type PlanDay,
-  type FeedbackItem,
 } from '@/api/domains';
 import { AnalyticsScreen, screen } from '@/analytics';
 import {
@@ -36,13 +36,14 @@ import {
 import { useStudentTabsStore } from '@/features/student-tabs';
 import { useExerciseMetadataResolver } from '@/features/training/exercise-metadata';
 import { completionError } from '@/features/training/completion-errors';
+import { feedbackVideoAssociation } from '@/features/feedback/video-presentation';
 import {
   formatKg,
   formatDeltaKg,
   localCompetitionDays,
-  relativeFeedbackTime,
 } from './model';
 import { WeekCalendar } from './WeekCalendar';
+import { FeedbackCard } from './FeedbackCard';
 import { useDashboardViewModel } from './use-dashboard';
 import { MeetPRMark } from './MeetPRMark';
 
@@ -87,6 +88,11 @@ export function DashboardScreen() {
   const colors = useColors();
   const studentId = useSessionStore((s) => s.user?.id ?? '');
   const vm = useDashboardViewModel(studentId);
+  const videos = useStudentVideos(studentId);
+  const feedbackItems = vm.feedback.items.map(item => {
+    const association = feedbackVideoAssociation(item.video_id, videos.data?.videos ?? []);
+    return { ...item, video: association.kind === 'available' ? association.video : null };
+  });
   const binding = useMineBindRequest();
   const coachName =
     binding.data?.bind_request?.coach_display_name ??
@@ -235,10 +241,11 @@ export function DashboardScreen() {
               >
                 <FeedbackCard
                   coachName={coachName}
-                  items={vm.feedback.items}
+                  items={feedbackItems}
                   pending={vm.feedback.unreadCount}
                   now={vm.now}
                   onPress={openFeedback}
+                  onOpenItem={item => router.push(`/(student)/feedback/${item.id}`)}
                 />
               </DashboardAsyncSection>
               <WeekCalendar
@@ -456,52 +463,6 @@ export function TrainingCTA({
   return cta.interactive ? (
     <AppButton label={cta.label} onPress={onPress} />
   ) : null;
-}
-function FeedbackCard({
-  coachName,
-  items,
-  pending,
-  now,
-  onPress,
-}: {
-  coachName: string;
-  items: FeedbackItem[];
-  pending: number;
-  now: Date;
-  onPress: () => void;
-}) {
-  const colors = useColors();
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <Card accent style={{ paddingHorizontal: 16, paddingVertical: 14, gap: 7, borderRadius: 12, overflow: 'hidden' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.gold500 }} />
-        <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.dashboardFeedbackCard.copy003')}</Text>
-        {pending > 0 ? <Text style={{ ...font.mono(10, 'bold'), color: colors.inkOnGold, backgroundColor: colors.goldText, borderRadius: 20, paddingHorizontal: 6, paddingVertical: 1 }}>{t('student.dashboardFeedbackCard.copy004', [pending])}</Text> : null}
-        {!expanded && items[0] ? <Text style={{ ...font.body(12), color: colors.textFaint }}>· {new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(new Date(items[0].day_date ?? items[0].posted_at))}</Text> : null}
-      </View>
-      {!items.length ? (
-        <Text style={{ color: colors.textMuted }}>
-          {t('student.dashboardFeedbackCard.copy007')}
-        </Text>
-      ) : (
-        (expanded ? items : items.slice(0, 1)).map((item) => (
-          <Pressable key={item.id} onPress={onPress}>
-            <Text numberOfLines={expanded ? 1 : 2} style={{ color: expanded ? colors.textSecondary : colors.textPrimary, ...font.body(expanded ? 13 : 14), lineHeight: expanded ? 18 : 22 }}>
-              {item.text}
-            </Text>
-            {expanded ? <Text style={{ color: colors.textMuted, ...font.body(11), marginTop: 3 }}>{coachName} · {relativeFeedbackTime(item.posted_at, now)}</Text> : null}
-          </Pressable>
-        ))
-      )}
-      {items.length > 0 ? (
-        <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2, minHeight: 28 }}>
-          <Text style={{ ...font.body(12), color: colors.textMuted }}>{expanded ? t('student.dashboardFeedbackCard.copy005') : t('student.dashboardFeedbackCard.copy001', [items.length])}</Text>
-          <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
-        </Pressable>
-      ) : null}
-    </Card>
-  );
 }
 export function DashboardPlanWaitingState({
   coachName,

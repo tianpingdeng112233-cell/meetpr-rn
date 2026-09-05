@@ -18,7 +18,9 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 jest.mock('@react-native-community/netinfo', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@react-native-community/netinfo/jest/netinfo-mock'));
-jest.mock('expo-router', () => ({ useRouter: () => ({}), useFocusEffect: () => {} }));
+const mockPush = jest.fn();
+const mockNavigate = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: mockNavigate }), useFocusEffect: () => {} }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -44,10 +46,14 @@ const plan: PlanDetail = {
 let renderer: ReactTestRenderer;
 let client: QueryClient;
 let servedPlan: PlanDetail;
+let feedbackItems: import('@/api/domains').FeedbackItem[];
 
 beforeEach(() => {
   setLocaleOverride('en');
   servedPlan = plan;
+  feedbackItems = [];
+  mockPush.mockClear();
+  mockNavigate.mockClear();
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   jest.mocked(authenticatedRequest).mockImplementation(async (path) => {
@@ -55,7 +61,8 @@ beforeEach(() => {
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: [] } as never;
     if (path.endsWith('/onboarding')) return null as never;
-    if (path.endsWith('/feedback')) return { items: [] } as never;
+    if (path.endsWith('/feedback')) return { items: feedbackItems } as never;
+    if (path.endsWith('/videos')) return { videos: [{ id: 'video', exercise_name: 'Competition squat', set_index: 1 }] } as never;
     if (path.includes('/sets')) return { logs: [] } as never;
     if (path === '/bind-requests/mine') return { bind_request: null } as never;
     if (path.includes('/readiness')) return { checkin: null } as never;
@@ -111,4 +118,26 @@ test('the loaded Dashboard renders section copy without ornamental eyebrows', as
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
   expect(renderer.root.findAllByType(Text).map((node) => node.props.children).join(' ').toLowerCase()).toContain('weekly progress');
   expect(queryAllByTestId('eyebrow')).toHaveLength(0);
+});
+
+test('Dashboard joins the existing video read and opens the selected feedback detail', async () => {
+  const item = { id: '80000000-0000-4000-8000-000000000000', coach_id: 'coach', student_id: studentId,
+    day_date: null, plan_exercise_id: null, video_id: 'video', text: 'Drive through your feet.',
+    posted_at: '2026-09-04T12:00:00Z', read_at: null };
+  feedbackItems = [item];
+  await act(async () => {
+    renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>);
+  });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  const button = (label: string) => renderer.root.find(node =>
+    node.props.accessibilityLabel === label && typeof node.props.onPress === 'function');
+  await act(async () => button(t('student.dashboardFeedbackCard.copy002', [1])).props.onPress());
+  const label = renderer.root.findAllByType(Text).find(node => node.props.children === 'Competition squat · Set 2');
+  expect(label).toBeDefined();
+  let row = label!;
+  while (typeof row.props.onPress !== 'function') row = row.parent!;
+  await act(async () => row.props.onPress());
+  expect(mockPush).toHaveBeenCalledWith(`/(student)/feedback/${item.id}`);
+  await act(async () => button(t('student.dashboardHeader.copy001')).props.onPress());
+  expect(mockNavigate).toHaveBeenCalledWith('/(student)/feedback');
 });

@@ -9,6 +9,7 @@ import type {
   SetLogRange,
 } from '@/api/domains';
 import { cursorDay, progressSegments, recommendedDate, selectCurrentPlan } from '@/domain/plan/sequence';
+import type { StudentVideo } from '@/api/domains/videos';
 import {
   buildE1RMSeries,
   calculateE1RM,
@@ -273,6 +274,19 @@ export function formatDeltaKg(delta: number): string {
 
 export function unreadFeedbackCount(items: readonly FeedbackItem[]): number {
   return items.filter((item) => item.read_at === null).length;
+}
+
+/** Dashboard-only video association; the feedback wire DTO stays unchanged. */
+export type DashboardFeedbackItem = FeedbackItem & {
+  video?: Pick<StudentVideo, 'exercise_name' | 'set_index'> | null;
+};
+
+export function feedbackLabel(item: Pick<DashboardFeedbackItem, 'video_id' | 'video'>): string {
+  if (!item.video_id && !item.video) return t('student.dashboardFeedbackText.copy001');
+  const name = item.video?.exercise_name?.trim();
+  const exercise = name ? exerciseDisplayName({ name, name_en: null }) : t('student.dashboardFeedbackText.copy002');
+  const setIndex = item.video?.set_index;
+  return setIndex == null ? exercise : t('student.dashboardFeedbackText.copy003', [exercise, setIndex + 1]);
 }
 
 export function buildNotifications(input: {
