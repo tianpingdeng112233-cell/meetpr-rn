@@ -13,6 +13,7 @@ import { t } from '@/i18n';
 import { useSessionStore } from '@/api/session';
 import { chatRepository, type ChatMessage, type Conversation } from '@/api/domains/chat';
 import { createUUID } from '@/analytics/uuid';
+import { CoachNavHeader } from '@/features/coach/CoachNavHeader';
 import { receivingKeys } from '@/features/coach/receiving/use-coach-receiving';
 import { FullScreenDestination } from '@/features/coach/receiving/FullScreenDestination';
 import { applyReadState, feedbackVideoBadge, CHAT_POLL_MS, conversationSubtitle, createConversationSync, mergeMessages } from './conversation-model';
@@ -160,10 +161,8 @@ export function ConversationScreen({ conversationId, studentName, status, initia
   const subtitleKey = conversationSubtitle(status);
   const subtitle = subtitleKey ? t(subtitleKey) : null;
   return <FullScreenDestination><Screen><KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-    <View style={{ paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: colors.borderDefault }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('chat.back')} onPress={() => router.back()} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="chevron-left" size={24} color={colors.textPrimary} /></Pressable>
-      <View style={{ flex: 1, alignItems: 'center', gap: 2 }}><Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>{name || t('coach.chat.messages')}</Text>{subtitle !== null ? <Text testID="coach.chat.subtitle" style={{ ...font.body(11), color: status === 'abnormal' ? colors.danger : colors.success }}>{subtitle}</Text> : null}</View>
-      <View style={{ width: 44 }} />
+    <View style={{ borderBottomWidth: 1, borderColor: colors.borderDefault }}>
+      <CoachNavHeader title={name || t('coach.chat.messages')} subtitle={subtitle ?? undefined} subtitleTone={status === 'abnormal' ? 'danger' : 'success'} subtitleTestID="coach.chat.subtitle" onBack={() => router.back()} />
     </View>
     {pending.some(item => item.failed) ? <Text style={{ ...font.body(13), color: colors.goldCTA, backgroundColor: colors.goldSoft, textAlign: 'center', paddingVertical: 8 }}>{t('chat.sendFailed')}</Text> : null}
     <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} scrollEventThrottle={16}

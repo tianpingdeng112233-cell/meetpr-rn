@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -9,8 +8,9 @@ import { AppButton, Card, Screen, font, useColors } from '@/design';
 import { InviteCodeFormat } from '@/domain/coach/invite-code-format';
 import { inviteCodeStatus, isDefunct, type InviteCodeStatus } from '@/domain/coach/invite-code-status';
 import { t } from '@/i18n';
+import { CoachNavHeader } from '../CoachNavHeader';
 import { CreateInviteCodeSheet } from './CreateInviteCodeSheet';
-import { Capsule, Confirmation, InviteSecondaryButton, ProfileText, profileStyles } from './ProfileComponents';
+import { Confirmation, InviteSecondaryButton, ProfileText, profileStyles } from './ProfileComponents';
 import { inviteCardState } from './invite-card-state';
 import { useInviteCodes, type InviteDependencies } from './use-invite-codes';
 
@@ -20,7 +20,6 @@ function statusLabel(status: InviteCodeStatus) {
 
 export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
   const colors = useColors();
-  const router = useRouter();
   const { snapshot, model, now } = useInviteCodes(dependencies);
   const personal = inviteCardState(snapshot).code;
   const secondary = snapshot.codes.filter(code => code.type !== 'personal_permanent');
@@ -59,9 +58,8 @@ export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
   };
 
   return <GestureHandlerRootView style={{ flex: 1 }}><Screen edges={['top', 'left', 'right']}>
+    <CoachNavHeader title={t('coach.invites.navigationTitle')} />
     <ScrollView contentContainerStyle={profileStyles.content} refreshControl={<RefreshControl refreshing={snapshot.refreshing} onRefresh={() => void model.reload()} tintColor={colors.gold500} colors={[colors.gold500]} />}>
-      <View style={{ alignSelf: 'flex-start' }}><Capsule label={t('coach.profile.sheet.back')} onPress={() => router.canGoBack() ? router.back() : router.replace('/(coach)/(tabs)/profile')} /></View>
-      <ProfileText accessibilityRole="header" style={font.display(28)}>{t('coach.invites.navigationTitle')}</ProfileText>
       <ProfileText style={{ ...font.mono(12), color: colors.textTertiary }}>{t('coach.invites.personalSection')}</ProfileText>
       <Card style={profileStyles.section}>
         {snapshot.state === 'idle' || snapshot.state === 'loading' ? <View style={profileStyles.actions}><ActivityIndicator color={colors.gold500} /><ProfileText>{t('coach.profile.inviteLoading')}</ProfileText></View> : null}
