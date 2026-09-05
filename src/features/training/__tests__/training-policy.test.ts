@@ -47,7 +47,7 @@ function log(overrides: Partial<SetLog> = {}): SetLog {
     plan_exercise_id: exercise.id,
     exercise_id: exercise.exercise_id,
     set_index: 0,
-    weight_kg: '100.00',
+    weight_kg: '100',
     reps: 5,
     rpe: '8.0',
     completed: true,
@@ -81,7 +81,7 @@ describe('plan × log draft synthesis', () => {
 
     expect(drafts.map((draft) => draft.stableSetId)).toEqual([first.id, second.id]);
     expect(drafts.map((draft) => draft.status)).toEqual(['pending', 'failed']);
-    expect(drafts[1].weightText).toBe('100.00');
+    expect(drafts[1].weightText).toBe('100');
   });
 });
 
