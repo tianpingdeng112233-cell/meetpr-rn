@@ -19,6 +19,7 @@ import { VideosSection } from './VideosSection';
 import { GrowthSection } from './GrowthSection';
 import { FeedbackSection } from './FeedbackSection';
 import { ProfileSection } from './ProfileSection';
+import { openStudentConversation } from '../receiving/open-conversation';
 
 const sections = ['overview', 'videos', 'growth', 'feedback', 'profile'] as const;
 type Section = typeof sections[number];
@@ -73,19 +74,28 @@ export function StudentDetailScreen({ studentId, now, onBack, coachName = t('coa
     setRefreshing(true);
     try { await model.refresh(); } finally { setRefreshing(false); }
   };
+  const [openingChat, setOpeningChat] = useState(false);
+  const openChat = async (draft?: string) => {
+    if (openingChat) return;
+    setOpeningChat(true);
+    try { await openStudentConversation({ studentId, studentName: model.student?.displayName, draft, status: model.student?.status }); } finally { setOpeningChat(false); }
+  };
   return <Screen>
     <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.gold500} colors={[colors.gold500]} />}>
-      <Pressable testID="coach.detail.back" accessibilityRole="button" onPress={onBack} style={[styles.row, { minHeight: 44, alignSelf: 'flex-start' }]}><Ionicons name="chevron-back" size={20} color={colors.textSecondary} /><Copy size={14} tone="textSecondary">{t('coach.detail.backToStudents')}</Copy></Pressable>
+      <View style={styles.between}>
+        <Pressable testID="coach.detail.back" accessibilityRole="button" onPress={onBack} style={[styles.row, { minHeight: 44, alignSelf: 'flex-start' }]}><Ionicons name="chevron-back" size={20} color={colors.textSecondary} /><Copy size={14} tone="textSecondary">{t('coach.detail.backToStudents')}</Copy></Pressable>
+        <Pressable testID="coach.detail.chat" accessibilityRole="button" accessibilityLabel={t('coach.chat.sendMessage')} disabled={openingChat} onPress={() => void openChat()} style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceCard, opacity: openingChat ? 0.5 : 1 }}><Ionicons name="chatbubble-outline" size={18} color={colors.textPrimary} /></Pressable>
+      </View>
       <View style={styles.between}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ ...font.display(32), color: colors.textPrimary, flex: 1 }}>{model.student?.displayName ?? t('coach.profile.notProvided')}</Text>{status && <Badge label={status.label} tone={status.tone} />}</View>
       <SectionCard>
         {cardState === 'loading' ? <Loading /> : cardState === 'failed' ? <Empty title={t('coach.detail.planLoadFailed')} icon="warning-outline" danger /> : cardState === 'empty' ? <><View style={styles.row}><Ionicons name="calendar-outline" size={22} color={colors.gold500} /><Copy bold>{t('coach.detail.noPlan')}</Copy></View><Copy size={12} tone="textTertiary">{t('coach.detail.noPlanSubtitle')}</Copy></> : <>
           <View style={styles.row}><Copy bold>{t('coach.detail.weekRunningTitle %lld', [naturalWeekNumber(now)])}</Copy><Copy size={12} tone="textTertiary" style={{ flexShrink: 1 }}>· {t('coach.detail.weekProgress %lld %lld', [model.overview.completedTrainingDays, model.overview.plannedTrainingDays])}</Copy></View>
-          <Progress value={progress} /><View style={styles.row}><Capsule label={t('coach.detail.remindTraining')} disabled /><Capsule label={t('coach.detail.weekSummary')} disabled hint={t('coach.detail.weekSummaryUnavailable')} /></View>
+          <Progress value={progress} /><View style={styles.row}><Capsule label={t('coach.detail.remindTraining')} disabled={openingChat} onPress={() => void openChat(t('coach.detail.trainingReminderDraft'))} /><Capsule label={t('coach.detail.weekSummary')} disabled hint={t('coach.detail.weekSummaryUnavailable')} /></View>
         </>}
       </SectionCard>
       <ScrollView horizontal style={{ flexGrow: 0 }} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>{sections.map((entry) => <Capsule key={entry} testID={`coach.detail.tab.${entry}`} label={t(`coach.detail.section.${entry}`)} selected={section === entry} onPress={() => setSection(entry)} />)}</ScrollView>
       {model.state === 'loading' ? <Loading /> : model.state === 'failed' ? <SectionCard><Empty title={t('coach.detail.loadFailed')} subtitle={t('coach.studentDetail.error.load')} danger /><Copy size={12} tone="textTertiary">{t('coach.detail.pullToRetry')}</Copy></SectionCard> : <>
-        {section === 'overview' && <OverviewSection plan={plan} days={model.days} feedback={feedback} readiness={model.readiness} now={now} exerciseName={exerciseName} onDay={setDay} onSection={setSection} />}
+        {section === 'overview' && <OverviewSection plan={plan} days={model.days} feedback={feedback} readiness={model.readiness} now={now} exerciseName={exerciseName} onDay={setDay} onSection={setSection} onRemindReadiness={() => void openChat(t('coach.detail.readinessReminderDraft'))} />}
         {section === 'videos' && <>
           {playbackFailed && <SectionCard><Copy tone="danger">{t('coach.video.error.playback')}</Copy><Capsule label={t('coach.video.confirmation')} onPress={() => setPlaybackFailed(false)} /></SectionCard>}
           {model.videos.isPending ? <Loading /> : model.videos.isError ? <Empty title={t('coach.video.loadFailed')} subtitle={t('coach.video.pullToRetry')} icon="videocam-outline" /> : <VideosSection videos={model.videos.data.videos} feedback={feedback} now={now} title={videoTitle} loadingId={loadingVideo} onPlay={(video) => void play(video)} />}

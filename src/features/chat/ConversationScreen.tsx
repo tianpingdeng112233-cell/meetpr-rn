@@ -11,7 +11,7 @@ import { receivingKeys } from '@/features/coach/receiving/use-coach-receiving';
 import { Pill } from '@/features/coach/receiving/ReceivingUI';
 import { FullScreenDestination } from '@/features/coach/receiving/FullScreenDestination';
 import { applyReadState, CHAT_POLL_MS, conversationSubtitle, createConversationSync, mergeMessages } from './conversation-model';
-export function ConversationScreen({ conversationId, studentName, status }: { conversationId: string; studentName?: string; status?: string }) {
+export function ConversationScreen({ conversationId, studentName, status, initialDraft }: { conversationId: string; studentName?: string; status?: string; initialDraft?: string }) {
   const colors = useColors();
   const userID = useSessionStore(state => state.user?.id ?? '');
   const client = useQueryClient();
@@ -19,7 +19,7 @@ export function ConversationScreen({ conversationId, studentName, status }: { co
   const messagesRef = useRef<ChatMessage[]>([]);
   const fetchedCursor = useRef<number | undefined>(undefined);
   const [name, setName] = useState(studentName);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(initialDraft ?? '');
   const [loading, setLoading] = useState(true);
   const [hasOlder, setHasOlder] = useState(false);
   const [olderLoading, setOlderLoading] = useState(false);
