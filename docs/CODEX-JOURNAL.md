@@ -561,3 +561,9 @@ Final exact requested commands (PATH includes /opt/homebrew/bin):
 - `npx tsc --noEmit`：exit 2，仅报未修改的 `src/app/_layout.tsx:4–5` 无法解析 Archivo `800ExtraBold` / `900Black`。日志 `/private/tmp/w1h-r3-tsc.log`。
 - 本 worktree `node_modules -> ../meetpr-rn/node_modules`。验证期间共享依赖发生外部变化：Archivo 于本机 05:52 变成目标含多个包参数的失效 symlink；随后定向 Jest 重跑又无法解析 expo-notifications / expo-localization（2 suites 无法加载、其余 3 suites / 26 tests 通过）。本轮没有执行任何安装或修改共享 node_modules；不能宣称最终全仓 Jest / tsc 绿，需共享依赖恢复后重新运行上述检查。
 - 使用指定 PATH/JAVA_HOME/ANDROID_HOME 运行 `EXPO_OFFLINE=1 CI=1 npx expo run:android --device meetpr --no-install --no-bundler`，ADB start-server 因 `could not install *smartsocket* listener: Operation not permitted` exit 255，未能安装/取得截图。日志 `/private/tmp/w1h-r3-android.log`。真实 Global 分片 PUT + ETag + complete 仍待 AVD 现场复验。
+
+### W1-h 补记(Claude,2026-09-05)— media3 版本冲突与播放器崩溃
+- 现象:打开任何 `react-native-video` 播放器(学员组内回放、教练工作台)进程即崩,`NoSuchMethodError: DefaultLoadControl.<init>(DefaultAllocator,IIIIIZIZ)`,表现为 App 闪退回上一个任务。
+- 根因:`expo-camera` → `androidx.camera:camera-video:1.6.0` → `androidx.media3:media3-container/muxer:1.9.0`,把 `media3-common/exoplayer` 约束到 1.9.0;`react-native-video 6.19.2` 按 1.8.0 编译,`RNVLoadControl` 调用的 protected 构造器在 1.9 变成 14 参签名。
+- 修法:`patches/react-native-video+6.19.2.patch`(patch-package,`postinstall`)把 `RNVLoadControl` 换成 `DefaultLoadControl.Builder`(跨 1.8/1.9 稳定);放弃 `DependingOnMemory/DisableBuffering` 两种缓冲策略的按内存限流(本 App 不用)。升级 RNV 到已适配 media3 1.9 的版本后可删补丁。
+- 顺带:共享 node_modules 用 `npm install --no-save` 预装 extras 时必须整份列表传入,否则会被 npm 剪掉;Gradle `--build-cache` 曾恢复出一份 7 月的旧 APK(缺新原生模块),排障时用 `--no-build-cache` + 删 `android/app/build`。
