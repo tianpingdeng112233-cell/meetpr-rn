@@ -18,10 +18,10 @@ export function CoachDashboardScreen() {
   const colors = useColors();
   const todo = makeTodoItems({ rows, applications, videos, conversations, now });
   const summary = makeSummary(rows, now);
-  const students = () => router.navigate('/(coach)/students');
+  const students = () => router.navigate('/(coach)/(tabs)/students');
   const openTodo = (item: TodoItem) => {
     if (item.kind === 'applications') students();
-    else router.navigate({ pathname: '/(coach)/messages', params: item.studentId ? { studentId: item.studentId } : {} });
+    else router.navigate({ pathname: '/(coach)/(tabs)/messages', params: item.studentId ? { studentId: item.studentId } : {} });
   };
   const date = `${new Intl.DateTimeFormat(undefined, { month: 'long' }).format(now)} · ${new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(now)}`;
   return <Screen edges={['top', 'left', 'right']}><ScrollView contentContainerStyle={[pageContent, { gap: spacing.point15 }]}>

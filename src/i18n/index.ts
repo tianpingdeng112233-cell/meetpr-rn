@@ -25,6 +25,7 @@ const PLURAL_COUNT_INDEX: Record<string, number> = {
   'coach.roster.sectionCount %@ %lld': 1,
   'coach.today.notTrainedTitle %@ %lld': 1,
   'coach.today.trainingDaysCompleted %lld %lld': 1,
+  'coach.inbox.pendingVideosAccessibility %@ %lld': 1,
   'student.dashboardPrimaryAction.copy007': 1,
   'student.feedbackVideoPresentation.copy002': 1,
   'student.growthE1Rmcard.copy005': 1,

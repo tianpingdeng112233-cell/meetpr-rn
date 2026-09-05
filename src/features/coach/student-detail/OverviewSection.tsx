@@ -10,7 +10,8 @@ import type { ReadinessRowState } from './plan-card-state';
 import { Badge, Capsule, Copy, SectionCard, styles } from './components';
 import { deviceLocale, muscleLabel, relativeText } from './presentation';
 
-export function OverviewSection({ plan, days, feedback, readiness, now, exerciseName, onDay, onSection }: {
+export function OverviewSection({ plan, days, feedback, readiness, now, exerciseName, onDay, onSection, onRemindReadiness }: {
+  onRemindReadiness?: () => void;
   plan: PlanDetail | null; days: ExecutionDay[]; feedback: FeedbackItem[]; readiness: ReadinessRowState; now: Date;
   exerciseName: (id: string) => string; onDay: (day: ExecutionDay) => void; onSection: (section: 'feedback' | 'videos') => void;
 }) {
@@ -42,7 +43,7 @@ export function OverviewSection({ plan, days, feedback, readiness, now, exercise
       {readiness.kind === 'loaded' ? <>
         <Copy size={15} bold>{t('coach.shared.readiness.scales %lld %lld %lld', [readiness.checkin.sleep_quality, readiness.checkin.mood, readiness.checkin.stress])}</Copy>
         <Copy size={12} tone="textTertiary">{readiness.checkin.muscle_fatigue.length ? t('coach.shared.readiness.fatigue', [readiness.checkin.muscle_fatigue.map((entry) => `${muscleLabel(entry.muscle_group)}(${t(severity[entry.severity - 1])})`).join(' · ')]) : t('coach.shared.readiness.noMuscleFatigue')}</Copy>
-      </> : readiness.kind === 'notFiled' ? <View style={styles.between}><Copy size={15} bold>{t('coach.detail.todayNotFiled')}</Copy><Capsule label={t('coach.detail.remindToFile')} disabled /></View> : <Copy size={15} bold>{t('coach.detail.statusUnavailable')}</Copy>}
+      </> : readiness.kind === 'notFiled' ? <View style={styles.between}><Copy size={15} bold>{t('coach.detail.todayNotFiled')}</Copy><Capsule label={t('coach.detail.remindToFile')} disabled={!onRemindReadiness} onPress={onRemindReadiness} /></View> : <Copy size={15} bold>{t('coach.detail.statusUnavailable')}</Copy>}
     </SectionCard>
     <Pressable accessibilityRole="button" onPress={() => onSection(latest ? 'feedback' : 'videos')} style={({ pressed }) => pressed && { transform: [{ scale: 0.97 }] }}>
       <SectionCard><Copy size={11} bold tone="textTertiary">{t('coach.detail.recentFeedback')}</Copy><Copy size={15} bold numberOfLines={1}>{latest?.text ?? t('coach.detail.noFeedback')}</Copy><Copy size={12} tone="textTertiary">{latest ? t('coach.detail.feedbackMeta', [relativeText(latest.posted_at, now)]) : t('coach.detail.writeFirstFeedback')}</Copy></SectionCard>

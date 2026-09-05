@@ -75,22 +75,22 @@
 
 | 功能区 | 状态 | 备注 |
 |---|---|---|
-| Coach shell | 🔨 | W2-a：today/messages/students/profile 四个常驻 tab，Stack 全屏目的地隐藏底栏；messages 数据由 W2-c 接线 |
-| Dashboard | 🔨 | W2-a：六块布局、三态待办、接收横幅与自然周概况已接共享模型；待 Android 视觉验收 |
-| StudentRoster | 🔨 | W2-a：搜索、申请段、四态名单、异常信号/进度和刷新已实装；待模拟器走查 |
-| StudentDetail | 🔨 | W2-a 仅注册全屏 student/[studentId] 占位；详情内容由 W2-b 实装 |
-| BindQueue | 🔨 | W2-a：Accept 恒跳过评估、静默拒绝、4xx 刷新与全屏申请资料页（空态保留操作）；待端到端走查 |
+| Coach shell | ✅ | W2-a：today/messages/students/profile 四个常驻 tab，Stack 全屏目的地隐藏底栏；messages 数据由 W2-c 接线 (integration/w2 教练号模拟器已走查) |
+| Dashboard | ✅ | W2-a：六块布局、三态待办、接收横幅与自然周概况已接共享模型；待 Android 视觉验收 (integration/w2 教练号模拟器已走查) |
+| StudentRoster | ✅ | W2-a：搜索、申请段、四态名单、异常信号/进度和刷新已实装；待模拟器走查 (integration/w2 教练号模拟器已走查) |
+| BindQueue | ✅ | W2-a：Accept 恒跳过评估、静默拒绝、4xx 刷新与全屏申请资料页（空态保留操作）；待端到端走查 (integration/w2 教练号模拟器已走查) |
 | Dashboard | ☐ | |
 | StudentRoster | ☐ | |
-| StudentDetail | 🔨 | W2-b:全屏 Header 四态 + 五段/训练日/视频角标纯回放;exercise-stats 服务端成长,只读反馈/资料;47 suites / 309 tests。AVD 安装受 ADB listener 权限阻断,截图/Global 实机验收待补;见 JOURNAL W2-b |
+| StudentDetail | ✅ | W2-b:全屏 Header 四态 + 五段/训练日/视频角标纯回放;exercise-stats 服务端成长,只读反馈/资料;47 suites / 309 tests。AVD 安装受 ADB listener 权限阻断,截图/Global 实机验收待补;见 JOURNAL W2-b (integration/w2 教练号模拟器已走查) |
 | BindQueue | ☐ | |
-| Receiving | ☐ | |
+| Receiving | ✅ | W2-c:合并收件箱/同源 badge selector、学员日分组队列、反馈工作台/markers/组信息/身份跳转;W2-a 壳接 badge 待合并。播放器为同依赖独立封装(不改 training,组件复用例外见 JOURNAL);ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
+| Chat | ✅ | W2-c:现场核 snake_case DTO、文字发送/稳定 client_id 重试、seq 分页/read/30s 轮询、未知状态不画副标题;lint/tsc/47 suites·312 tests/Android bundle 通过;无 realtime,待 AVD 走查 (integration/w2 教练号模拟器已走查) |
 | InviteCodes | ☐ | |
 | Planning / PlanningWorkspace | — | W2-a 按 coach-v2 §7 删除教练 planning tab/路由；v1 无 app 排计划入口 |
 | MyProfile | ☐ | |
-| InviteCodes | 🔨 | W2-d:永久码显式生成/重生成、单次/时限 7·30·自定义 1–365、五态/复制/左滑撤销、写后重拉;lint/tsc/46 suites·322 Jest 通过。expo-clipboard 待 Claude 安装并接 adapter;ADB socket 被拒,AVD 截图待补 |
+| InviteCodes | ✅ | W2-d:永久码显式生成/重生成、单次/时限 7·30·自定义 1–365、五态/复制/左滑撤销、写后重拉;lint/tsc/46 suites·322 Jest 通过。expo-clipboard 待 Claude 安装并接 adapter;ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
 | Planning / PlanningWorkspace | ☐ | 范围=iOS 实际保留功能,开工前现场核实,不扩权 |
-| MyProfile | 🔨 | W2-d:姓名/邀请码卡三态、裸码复制+2 s toast、Help 四 FAQ/禁用联系、Privacy 三行日期、版本/登出确认与 session 接线;JS bundle 导出通过。剪贴板原生依赖与 AVD 验收待补 |
+| MyProfile | ✅ | W2-d:姓名/邀请码卡三态、裸码复制+2 s toast、Help 四 FAQ/禁用联系、Privacy 三行日期、版本/登出确认与 session 接线;JS bundle 导出通过。剪贴板原生依赖与 AVD 验收待补 (integration/w2 教练号模拟器已走查) |
 | Evaluation | — | 同上封存 |
 
 ## 视频/图表/打磨(W3)
