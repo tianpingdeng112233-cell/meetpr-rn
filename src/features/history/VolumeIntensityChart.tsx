@@ -1,151 +1,53 @@
-import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useId, useState } from 'react';
+import { Text, View } from 'react-native';
+import Svg, { Circle, Defs, G, LinearGradient, Path, Stop, Text as SvgText } from 'react-native-svg';
+
+import { font, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
-import Svg, {
-  Circle,
-  Line,
-  Path,
-  Rect,
-  Text as SvgText,
-} from 'react-native-svg';
 
-import { useColors, radius, spacing, typography } from '@/design';
-
+import { volumeChartGeometry } from './charts/volume-geometry';
+import { GrowthTrendEmptyState } from './GrowthTrendEmptyState';
 import type { VolumeIntensitySeries } from './types';
 
-const WIDTH = 600;
-const HEIGHT = 210;
-const TOP = 18;
-const BOTTOM = 34;
-const PLOT_HEIGHT = HEIGHT - TOP - BOTTOM;
-
-
-export function VolumeIntensityChart({
-  series,
-  isUnlocked,
-}: {
-  series: VolumeIntensitySeries;
-  isUnlocked: boolean;
-}) {
+export function VolumeIntensityChart({ series, isUnlocked }: { series: VolumeIntensitySeries; isUnlocked: boolean }) {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  if (!isUnlocked || series.points.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyTitle}>{t('student.volumeIntensityChart.copy003')}</Text>
+  const gradientId = `volume-bars-${useId().replace(/:/g, '')}`;
+  const isEmpty = !isUnlocked || series.points.length === 0;
+  const [width, setWidth] = useState(320);
+  const geometry = volumeChartGeometry(series.points, width);
+  return <View accessible accessibilityLabel={t(isEmpty ? 'student.volumeIntensityChart.copy003' : 'student.volumeIntensityChart.copy004', [series.points.length])} style={{ gap: 9 }}>
+    {isEmpty ? <GrowthTrendEmptyState /> : <>
+      <View onLayout={event => setWidth(event.nativeEvent.layout.width)} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: '100%', aspectRatio: 320 / 172 }}>
+        <Svg width="100%" height="100%" viewBox="0 0 320 172">
+          <Defs>
+            <LinearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={0} x2={0} y1={18} y2={146}>
+              <Stop offset={0} stopColor={colors.gold400} />
+              <Stop offset={1} stopColor={colors.goldBarDeep} stopOpacity={0.28} />
+            </LinearGradient>
+          </Defs>
+          <Path d={geometry.grid} stroke={colors.surfaceRaised} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          <Path d={geometry.baseline} stroke={colors.borderStrong} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+          {geometry.bars.map(bar => <Path key={bar.key} d={bar.path} fill={`url(#${gradientId})`} />)}
+          <Path d={geometry.rpeLine} fill="none" stroke={colors.bgBase} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d={geometry.rpeLine} fill="none" stroke={colors.chartLine} strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round" />
+          {geometry.rpePoints.map(point => <Circle key={point.key} cx={point.x} cy={point.y} r={2.6} fill={colors.chartLine} stroke={colors.bgBase} strokeWidth={1.2} />)}
+          <G fontFamily={font.mono(9, 'medium').fontFamily} fontSize={geometry.axisFontSize} textAnchor="middle">
+            {geometry.volumeLabels.map(label => <SvgText alignmentBaseline="central" key={label.y} x={label.x} y={label.y} fill={colors.textMuted}>{label.text}</SvgText>)}
+            {geometry.rpeLabels.map(label => <SvgText alignmentBaseline="central" key={label.y} x={label.x} y={label.y} fill={colors.chartLine}>{label.text}</SvgText>)}
+            {geometry.dates.map(label => <SvgText alignmentBaseline="central" key={label.key} x={label.x} y={label.y} opacity={label.opacity} fontSize={geometry.dateFontSize} fill={colors.textMuted}>{label.text}</SvgText>)}
+          </G>
+        </Svg>
       </View>
-    );
-  }
-  const points = series.points;
-  const slot = WIDTH / points.length;
-  const barWidth = Math.min(32, slot * 0.52);
-  const x = (index: number) => slot * index + slot / 2;
-  const y = (value: number) => TOP + PLOT_HEIGHT * (1 - value / series.scale);
-  const rpePoints = points.flatMap((point, index) =>
-    point.rpePlotValue === null
-      ? []
-      : [{ x: x(index), y: y(point.rpePlotValue), key: point.key }],
-  );
-  const linePath = rpePoints
-    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
-    .join(' ');
-
-  return (
-    <View>
-      <Svg
-        accessibilityLabel={t('student.volumeIntensityChart.copy004', [points.length])}
-        height={HEIGHT}
-        preserveAspectRatio="none"
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        width="100%">
-        <Line
-          stroke={colors.chartLine}
-          strokeWidth={1}
-          x1={0}
-          x2={WIDTH}
-          y1={TOP + PLOT_HEIGHT}
-          y2={TOP + PLOT_HEIGHT}
-        />
-        {points.map((point, index) => {
-          const barY = y(point.volumeKg);
-          return (
-            <Rect
-              fill={colors.goldSoft}
-              height={TOP + PLOT_HEIGHT - barY}
-              key={point.key}
-              rx={4}
-              width={barWidth}
-              x={x(index) - barWidth / 2}
-              y={barY}
-            />
-          );
-        })}
-        {linePath ? (
-          <Path
-            d={linePath}
-            fill="none"
-            stroke={colors.chartLine}
-            strokeLinejoin="round"
-            strokeWidth={2.5}
-          />
-        ) : null}
-        {rpePoints.map((point) => (
-          <Circle
-            cx={point.x}
-            cy={point.y}
-            fill={colors.chartLine}
-            key={point.key}
-            r={4}
-          />
-        ))}
-        {points.map((point, index) => (
-          <SvgText
-            fill={colors.textMuted}
-            fontSize={18}
-            key={`label-${point.key}`}
-            textAnchor="middle"
-            x={x(index)}
-            y={HEIGHT - 7}>
-            {Number(point.startDate.slice(5, 7))}/{Number(point.startDate.slice(8, 10))}
-          </SvgText>
-        ))}
-      </Svg>
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={styles.volumeSwatch} />
-          <Text style={styles.legendText}>{t('student.volumeIntensityChart.copy001')}</Text>
+      <View style={{ flexDirection: 'row', gap: spacing.space4, paddingLeft: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <View style={{ width: 9, height: 9, borderRadius: radius.micro, backgroundColor: colors.gold500 }} />
+          <Text style={{ ...font.mono(11), color: colors.textMuted }}>{t('student.volumeIntensityChart.copy001')}</Text>
         </View>
-        <View style={styles.legendItem}>
-          <View style={styles.rpeSwatch} />
-          <Text style={styles.legendText}>{t('student.volumeIntensityChart.copy002')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <View style={{ width: 9, height: 9, borderRadius: radius.pill, backgroundColor: colors.chartLine }} />
+          <Text style={{ ...font.mono(11), color: colors.textMuted }}>{t('student.volumeIntensityChart.copy002')}</Text>
         </View>
       </View>
-    </View>
-  );
+    </>}
+  </View>;
 }
-
-const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
-  empty: {
-    alignItems: 'center',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    minHeight: 180,
-  },
-  emptyTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  emptyBody: { color: colors.textMuted, textAlign: 'center', ...typography.footnote },
-  legend: {
-    flexDirection: 'row',
-    gap: spacing.base,
-    justifyContent: 'center',
-    marginTop: spacing.sm,
-  },
-  legendItem: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  legendText: { color: colors.textSecondary, ...typography.caption },
-  volumeSwatch: {
-    backgroundColor: colors.goldSoft,
-    borderRadius: radius.sm,
-    height: 9,
-    width: 18,
-  },
-  rpeSwatch: { backgroundColor: colors.chartLine, borderRadius: radius.pill, height: 8, width: 8 },
-});
