@@ -239,6 +239,7 @@ export function DashboardScreen() {
           ) : (
             <>
               <DashboardAsyncSection
+<<<<<<< HEAD
                 isError={vm.feedback.isError}
                 onRetry={() => void vm.feedback.reload()}
               >
@@ -248,6 +249,23 @@ export function DashboardScreen() {
                   pending={vm.feedback.unreadCount}
                   now={vm.now}
                   onPress={openFeedback}
+=======
+                isError={vm.e1rm.isError}
+                onRetry={() => void vm.e1rm.retry()}>
+                <LiftCard
+                  day={vm.selectedDay}
+                  delta={vm.e1rm.delta}
+                  loading={vm.e1rm.isLoading}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(student)/growth',
+                      params: { lift: vm.selectedDay?.lift?.name ?? t('student.growthCurveView.copy001') },
+                    })
+                  }
+                  periodLabel={vm.e1rm.periodLabel}
+                  point={vm.e1rm.point}
+                  trajectory={vm.e1rm.trajectory}
+>>>>>>> feat/w1g-history
                 />
               </DashboardAsyncSection>
               <View style={{ gap: 10 }}>

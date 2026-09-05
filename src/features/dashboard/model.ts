@@ -184,6 +184,18 @@ export function replayE1RMSeries(
   familyByExerciseId: ReadonlyMap<string, LiftFamily>,
   family: LiftFamily,
 ): E1RMSeries {
+  return buildE1RMSeries(
+    replayE1RMHistoryPoints(logs, familyByExerciseId, family),
+    family,
+  );
+}
+
+/** Canonical log-to-point projection shared by Dashboard and Growth backfill. */
+export function replayE1RMHistoryPoints(
+  logs: readonly SetLog[],
+  familyByExerciseId: ReadonlyMap<string, LiftFamily>,
+  family: LiftFamily,
+): E1RMHistoryPoint[] {
   const points: E1RMHistoryPoint[] = [];
   const sorted = logs
     .filter(
@@ -210,7 +222,7 @@ export function replayE1RMSeries(
     const confidence =
       classifyE1RMAnomaly(value, previousBest) === 'normal' ? 'normal' : 'low';
     points.push({
-      id: `dashboard-${log.id}`,
+      id: `history-${log.id}`,
       studentId: log.student_id,
       exerciseId: log.exercise_id,
       setLogId: log.id,
@@ -223,7 +235,7 @@ export function replayE1RMSeries(
       origin: 'logged',
     });
   }
-  return buildE1RMSeries(points, family);
+  return points;
 }
 
 export function e1RMPeriodLabel(series: E1RMSeries, now: Date): string {
