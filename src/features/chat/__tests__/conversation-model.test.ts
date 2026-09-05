@@ -7,7 +7,7 @@ test('enter reads the latest message; polls at 30 seconds without overlapping an
   let now = 0;
   const fetchPage = jest.fn<() => Promise<{ id: string; seq: number }[]>>().mockResolvedValue([{ id: 'a', seq: 1 }]);
   const markRead = jest.fn<(id: string) => Promise<void>>().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
-  const sync = createConversationSync({ now: () => now, fetchPage, markRead });
+  const sync = createConversationSync({ now: () => now, fetchPage, markRead, pollInterval: 30_000 });
   await expect(sync.refresh(true)).rejects.toThrow('offline');
   expect(markRead).toHaveBeenCalledWith('a');
   await sync.refresh(true);

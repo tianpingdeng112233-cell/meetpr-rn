@@ -24,6 +24,7 @@ import {
 } from '@/analytics';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
+import { useChatRealtimeLifecycle } from '@/features/chat/realtime';
 import { fontNames, ThemeProvider, useColors, useTheme } from '@/design';
 
 void SplashScreen.preventAutoHideAsync();
@@ -76,6 +77,7 @@ function RootNavigator() {
 }
 
 function ThemedRoot() {
+  useChatRealtimeLifecycle();
   const { colors, scheme } = useTheme();
   const baseTheme = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const navigationTheme = {
