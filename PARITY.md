@@ -46,7 +46,7 @@
 | 项 | 状态 | 备注 |
 |---|---|---|
 | 设计 tokens 主题包 | 🔨 | G0-a:按 design-tokens-v3 / iOS 202e95db 重移植浅色默认、品牌金、三族十字面、主题/基础组件/自绘 tab;lint+tsc+177 Jest 通过,Android bundle 导出通过;ADB sandbox 权限阻断,待模拟器截图走查(旧 W0-A 走查不代表 v3 已对齐);2026-09-04 模拟器亲验 v3 登录页/BindGate 占位页(浅色底、白卡、金杠、Archivo 字标);逐屏视觉对齐随各功能卡走查 |
-| Global 登录 / 注册 / 找回密码 | 🔨 | G0-c:邮箱 + Google PKCE、Global/China 构建切轨、按用户时区上报、英文三屏已实装;31 suites / 228 tests 通过,Android Hermes export 通过;ADB sandbox listener 权限阻断,未走查/无截图;Google client 配置与 backend 多 audience 仍需外部前置验收 |
+| Global 登录 / 注册 / 找回密码 | 🔨 | G0-c:邮箱 + Google PKCE、Global/China 构建切轨、按用户时区上报已实装;W3-v 三屏视觉对齐 iOS GlobalAuth*;SiwA 省略。32 suites / 234 tests、lint、tsc 通过;本卡沙箱无 ADB,视觉走查/截图待补;Google client 配置与 backend 多 audience 仍需外部前置验收 |
 | i18n 字符串层 + 全仓英文化 | 🔨 | W3-i18n:剩余 15 missing/0 drift 清零；取消 login/onboarding 屏幕豁免并替换 login 10 处中文；新增全 src 标记守卫与 9 个带来源 RN key；补 CoachKit 3 个复数索引；lint/tsc/58 suites·379 Jest 通过。正典不改；已知 Sun 误译、历史 CoachKit runtime 差异和 Apple 格式限制见 JOURNAL。ADB socket 被 sandbox 拒绝，待模拟器截图验收 |
 | API client + auth 全链 | ✅ | W0-B;staging 真登录/登出冒烟通过;⚠️后端响应 camelCase 已勘误进参照包 |
 | 导航骨架 + BindGate(评估封存照抄) | ✅ | W0-C;教练 5 tab/学员 4 tab/登出模拟器实测 |

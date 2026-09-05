@@ -1395,3 +1395,34 @@ Final requested checks:
 - Standards：限定文件、useColors/font、已有 svg/GradientFill、翻译 key、存储契约与不提交约束核对通过；无新增依赖和 DTO 变更。正式 code-review 技能要求 `docs/agents/issue-tracker.md`，仓内缺失；已告知需用户调用 `$setup-matt-pocock-skills`，未运行正式双 agent 审查、未静默配置。本段是本地核对，不冒充该技能结果。
 - Spec：计算/两阶段/触发收尾/回顾布局/休息条按卡面接线；静态奖励终态按正典源码转写。**色彩限制**：RN 没有 iOS celebrationRibbonStart、celebrationMedalBottom；在不改 tokens 的范围内分别复用 gold500、gold700；medalInset 与 ring 使用已有 holdTrack、gold200（暗色与正典对应），阴影用静态 radial fill。上述专用渐变色及原生阴影不声明像素相等；待 AVD 对照。
 - 本卡明确沙箱无 ADB，未运行 expo run:android、未获取模拟器截图、未做原生视觉验收。PARITY TodayWorkout 追加“W3-v:庆祝页/回顾页/休息条对齐 iOS;动效按 082 静态”，保留待截图标识。
+## 2026-09-05 — W3-v Global auth visual parity
+
+- Card: W3-v, `feat/w3v-global-auth`, T1; working baseline `7a8a137ca01accc451323a17e25a76472badb9bc`. Read AGENTS, PLAN, G0-c journal, `global-auth.md` §3, the local iOS GlobalAuth views/components, AuthSecureField and MeetPRMark, and Expo SDK 57 versioned docs before coding. Where the old reference prose differs, this card and the iOS source define the visual target.
+- Shared top-aligned ScrollView retains KeyboardAvoidingView and adopts h24/top44/bottom26 padding, max width 520, outlined SVG wordmark, display44 hero, 44×3 gold rule and SVG radial gold background. All three screens use separate field boxes, semantic colors/fonts, password visibility controls and the dedicated 54-high gold CTA. Login uses a monochrome globe Google button, mono separator, plain gold links and inline privacy copy; Android SiwA remains omitted.
+- Errors now render inline between fields and CTA using unchanged `globalAuthErrorMessage`. Reset success replaces the route with `/login` plus a `passwordReset=1` flag; login consumes the flag and shows the success copy once per arrival. A subsequent action/error replaces the success notice. Email blur validation, password validity and submission gates, request payloads, Google OAuth and session actions remain unchanged; password error/helper/placeholder presentation follows this card.
+- Only the allowed auth components, new `MeetPRMark` and its barrel export, screen tests and the two delivery documents changed. `TextField`, `AppButton`, `Toast`, API/session/OAuth/validation/error-copy files were not modified. All requested tokens already existed. Stack header titles were already correct, so route files and `_layout.tsx` needed no change. `GradientFill.tsx` is absent from this baseline. No dependencies added; the pre-existing `node_modules` symlink was untouched; no commit/push.
+
+### Tests — red before green
+
+Added `src/features/auth/__tests__/global-auth-screens.test.tsx` through the user-approved screen seam with mocked session/OAuth/network/navigation boundaries and real visual components. Each vertical slice failed for its missing behavior before implementation, then passed:
+
+- Login copy, initially disabled Sign in and password show/hide.
+- Invalid email on blur, correction, enabled submission and mapped login failure inline with no `showToast` call.
+- Registration subtitle, helper/placeholder/error copy and account-taken failure inline.
+- Recovery Send code → unlabelled code input / Reset password, six ASCII digit filtering, unchanged reset payload and invalid-code error inline.
+- Reset success route flag, login success notice and no replay on remount.
+- Privacy URL failure replaces a prior reset-success notice inline rather than hiding the error.
+
+Final checks after all source/test edits:
+
+- `npm run lint`: exit 0, no warnings/errors.
+- `npx tsc --noEmit`: exit 0, no generated-file exceptions needed.
+- `npx jest --runInBand --silent`: exit 0; 32/32 suites, 234/234 tests. Includes existing auth validation/error-copy, API auth-global, new six screen tests and tokens guard.
+- The two i18n guards are absent from this g0c baseline; David explicitly confirmed they belong to the later G0-b/i18n sweep branch and should be skipped for this card. Auth English literals retain the G0-c / reference §3 exception; no replacement guards added.
+- Android emulator/screenshot and live backend verification were not attempted under the stated no-ADB/network sandbox constraint. PARITY remains implemented (`🔨`), awaiting visual walkthrough evidence.
+
+### Local review
+
+- Standards: checked scope, semantic token/font use, shared auth-only components, no dependency or forbidden-file changes. No remaining local findings.
+- Spec: checked all ten visual requirements, retained requests/validation, inline error placement, reset notice consumption, existing Android headers and SiwA omission. No remaining source-level findings; Android visual parity still needs screenshots.
+- Formal `code-review` skill workflow could not run because `docs/agents/issue-tracker.md` is missing. Its SKILL.md requires “If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.” This was reported; no tracker scaffolding or formal parallel review was performed. The two axes above are a local review, not that formal workflow.
