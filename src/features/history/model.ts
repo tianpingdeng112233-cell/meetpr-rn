@@ -1,11 +1,4 @@
 import { exerciseDisplayName, t } from '@/i18n';
-import type {
-  Exercise,
-  FeedbackItem,
-  OnboardingProfile,
-  PlanDetail,
-  SetLog,
-} from '@/api/domains';
 import {
   displayPoint,
   E1RM_MATH,
@@ -21,6 +14,14 @@ import {
   replayE1RMSeries,
   utcDayDistance,
 } from '@/features/dashboard/model';
+
+import type {
+  Exercise,
+  FeedbackItem,
+  OnboardingProfile,
+  PlanDetail,
+  SetLog,
+} from '@/api/domains';
 
 // Progression model (spec 071): plan end is the coach's end_date; shift offsets are no longer applied.
 const effectivePlanEnd = (plan: { end_date: string }): string => plan.end_date;
