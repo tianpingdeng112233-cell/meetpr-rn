@@ -116,9 +116,13 @@ test('the loaded Dashboard renders section copy without ornamental eyebrows', as
   await act(async () => {
     renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>);
   });
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+  // Poll instead of a fixed 30 ms wait: the loaded copy depends on several async queries and flaked under load.
+  const joinedText = () => renderer.root.findAllByType(Text).map((node) => node.props.children).join(' ').toLowerCase();
+  for (let attempt = 0; attempt < 100 && !joinedText().includes('weekly progress'); attempt += 1) {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+  }
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
-  expect(renderer.root.findAllByType(Text).map((node) => node.props.children).join(' ').toLowerCase()).toContain('weekly progress');
+  expect(joinedText()).toContain('weekly progress');
   expect(queryAllByTestId('eyebrow')).toHaveLength(0);
 });
 

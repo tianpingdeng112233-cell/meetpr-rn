@@ -1,11 +1,4 @@
 import { exerciseDisplayName, t } from '@/i18n';
-import type {
-  Exercise,
-  FeedbackItem,
-  OnboardingProfile,
-  PlanDetail,
-  SetLog,
-} from '@/api/domains';
 import {
   displayPoint,
   E1RM_MATH,
@@ -22,10 +15,13 @@ import {
   utcDayDistance,
 } from '@/features/dashboard/model';
 
-// Progression model (spec 071): plan end is the coach's end_date; shift offsets are no longer applied.
-const effectivePlanEnd = (plan: { end_date: string }): string => plan.end_date;
-// Recommended date is the anchor_weekday-aware position projection (spec 072 §E3).
-const scheduledDate = recommendedDate;
+import type {
+  Exercise,
+  FeedbackItem,
+  OnboardingProfile,
+  PlanDetail,
+  SetLog,
+} from '@/api/domains';
 
 import type {
   GrowthCurve,
@@ -35,6 +31,12 @@ import type {
   HistoryWeek,
   VolumeIntensitySeries,
 } from './types';
+
+// Progression model (spec 071): plan end is the coach's end_date; shift offsets are no longer applied.
+const effectivePlanEnd = (plan: { end_date: string }): string => plan.end_date;
+// Recommended date is the anchor_weekday-aware position projection (spec 072 §E3).
+const scheduledDate = recommendedDate;
+
 
 export const LIFT_PRESENTATION: Record<
   LiftFamily,

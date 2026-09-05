@@ -13,6 +13,10 @@ import { GrowthScreen } from '../GrowthScreen';
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('@/api/session', () => ({ useSessionStore: (selector: (state: { user: { id: string } }) => unknown) => selector({ user: { id: 'student' } }) }));
 const mockNavigate = jest.fn();
+const mockOpenCoachChat = jest.fn();
+let mockChatUnread = 0;
+// The growth header's message button is the coach-chat entry (iOS parity); the hook is exercised in chat tests.
+jest.mock('@/features/chat/open-coach-chat', () => ({ useOpenCoachChat: () => ({ totalUnread: mockChatUnread, openCoachChat: mockOpenCoachChat, isOpening: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockNavigate }), useFocusEffect: () => undefined }));
 jest.mock('@/analytics', () => ({ AnalyticsScreen: {}, AnalyticsEvent: {}, screen: jest.fn(), track: jest.fn() }));
 
@@ -29,6 +33,8 @@ async function render() {
 }
 beforeEach(() => {
   setLocaleOverride('en');
+  mockChatUnread = 0;
+  mockOpenCoachChat.mockReset();
   jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [] });
   jest.spyOn(setsRepository, 'range').mockResolvedValue({ logs: [] });
   jest.spyOn(exercisesRepository, 'list').mockResolvedValue({ exercises: [] });
@@ -96,8 +102,9 @@ test('growth header shows the wordmark and chat action before the title and subt
   expect(renderer.root.findAllByType(Eyebrow)).toHaveLength(0);
   const previousJump = useStudentTabsStore.getState().feedbackJumpToken;
   act(() => chat.props.onPress());
-  expect(useStudentTabsStore.getState().feedbackJumpToken).toBe(previousJump + 1);
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/growth');
+  expect(mockOpenCoachChat).toHaveBeenCalledTimes(1);
+  expect(useStudentTabsStore.getState().feedbackJumpToken).toBe(previousJump);
+  expect(mockNavigate).not.toHaveBeenCalledWith('/(student)/growth');
 });
 
 test('pending data shows the catalog skeleton and a failed request takes priority with retry recovery', async () => {
@@ -122,7 +129,9 @@ test('feedback entry opens the archive and reading a detail marks that item read
   const item = { id: 'feedback', coach_id: 'coach', student_id: 'student', day_date: '2026-08-03', plan_exercise_id: null, text: 'Keep your brace', posted_at: '2026-08-03T12:00:00Z', read_at: null };
   jest.mocked(feedbackRepository.list).mockResolvedValue({ items: [item] });
   const markRead = jest.spyOn(feedbackRepository, 'markRead').mockResolvedValue(undefined);
+  mockChatUnread = 1;
   await render();
+  // The header badge counts unread chat, not unread feedback; reading feedback below leaves it untouched.
   expect(button(t('student.trainingHistoryView.copy012')).props.accessibilityValue).toEqual({ text: '1' });
   expect(textOf(renderer.root.findByProps({ testID: 'growth-header-unread' }))).toBe('1');
   expect(texts()).toContain(t('student.trainingHistoryView.copy010', [1]));
@@ -131,7 +140,6 @@ test('feedback entry opens the archive and reading a detail marks that item read
   expect(texts()).toContain(item.text);
   await act(async () => { button(item.text).props.onPress(); });
   expect(markRead.mock.calls[0][0]).toBe(item.id);
-  expect(button(t('student.trainingHistoryView.copy012')).props.accessibilityValue).toEqual({ text: '' });
-  expect(renderer.root.findAllByProps({ testID: 'growth-header-unread' })).toHaveLength(0);
+  expect(button(t('student.trainingHistoryView.copy012')).props.accessibilityValue).toEqual({ text: '1' });
   expect(texts()).toContain(item.text);
 });

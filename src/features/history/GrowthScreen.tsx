@@ -27,7 +27,7 @@ import {
   typography,
 } from '@/design';
 import { formatKg } from '@/features/dashboard/model';
-import { selectUnreadFeedbackCount } from '@/features/dashboard/feedback-inbox';
+import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { useStudentTabsStore } from '@/features/student-tabs';
 
 import { GrowthE1RMCard } from './GrowthE1RMCard';
@@ -47,8 +47,8 @@ export function GrowthScreen() {
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const router = useRouter();
   const vm = useHistoryViewModel(studentId);
+  const chat = useOpenCoachChat(studentId);
   const feedbackJumpToken = useStudentTabsStore((state) => state.feedbackJumpToken);
-  const bumpFeedbackJump = useStudentTabsStore((state) => state.bumpFeedbackJump);
   const markFeedbackRead = useMarkFeedbackRead();
   const scrollRef = useRef<ScrollView>(null);
   const feedbackY = useRef<number | null>(null);
@@ -78,13 +78,8 @@ export function GrowthScreen() {
     scrollRef.current?.scrollTo({ y: Math.max(0, feedbackY.current - spacing.base), animated: true });
   }, [feedbackJumpToken, vm.state.status]);
 
-  const unreadCount = vm.state.status === 'loaded'
-    ? selectUnreadFeedbackCount(vm.state.feedback.filter(item => !locallyRead.has(item.id)))
-    : 0;
-  const header = <GrowthScreenHeader unreadCount={unreadCount} onOpenChat={() => {
-    bumpFeedbackJump();
-    router.navigate('/(student)/growth');
-  }} />;
+  // iOS: the growth header's message button opens the coach conversation and badges unread chat messages.
+  const header = <GrowthScreenHeader unreadCount={chat.totalUnread} onOpenChat={() => void chat.openCoachChat()} />;
 
   if (vm.state.status === 'idle' || vm.state.status === 'loading') {
     return <Screen accessibilityLabel={t('student.trainingHistoryView.copy021')} style={styles.content}>

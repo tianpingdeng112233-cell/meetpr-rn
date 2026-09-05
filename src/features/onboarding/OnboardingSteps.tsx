@@ -56,7 +56,7 @@ function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
-      <FieldLabel>{"单位" /* TODO(i18n:missing) */}</FieldLabel>
+      <FieldLabel>{t('student.step1BasicsSection.copy004')}</FieldLabel>
       <ChoiceGroup
         choices={UNIT_PREFERENCES.map((value) => ({ value, label: UNIT_LABELS[value] }))}
         onChange={(unitPreference) => update({ unitPreference })}
@@ -379,7 +379,8 @@ function MaterialsStep({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
-      {['上传训练视频' /* TODO(i18n:missing) */, '上传训练资料' /* TODO(i18n:missing) */].map((title) => (
+      {/* iOS step 6 shows the plan-upload and big-three-video cards as coming soon. */}
+      {[t('student.step6MaterialsSection.copy001'), t('student.step6MaterialsSection.copy002')].map((title) => (
         <Card key={title} style={styles.disabledUpload}>
           <Text style={styles.uploadTitle}>{title}</Text>
           <Text style={styles.disabledText}>{t('student.step6MaterialsSection.copy005')}</Text>
