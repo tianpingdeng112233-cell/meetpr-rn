@@ -215,13 +215,22 @@ export function screen(name: AnalyticsScreen): Promise<void> {
   return track(name);
 }
 
-export async function confirmPrivacyNotice(): Promise<void> {
+/**
+ * Persists the confirmation and opens the privacy gate. iOS unblocks the UI as
+ * soon as the confirmation is stored; the first flush is best-effort and must
+ * never hold the sheet open on a slow network, so callers only wait for it when
+ * they ask to (tests).
+ */
+export async function confirmPrivacyNotice(
+  options: { waitForFlush?: boolean } = {},
+): Promise<void> {
   const current = runtime;
   const storage = current?.state.storage ?? AsyncStorage;
   await persistPrivacyNoticeConfirmation(storage);
   if (current) {
     current.flusher.setPrivacyGate(true);
-    await current.flusher.flush();
+    const flush = current.flusher.flush().catch(() => undefined);
+    if (options.waitForFlush) await flush;
   }
 }
 

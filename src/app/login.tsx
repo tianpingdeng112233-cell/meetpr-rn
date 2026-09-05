@@ -1,3 +1,6 @@
+import { BUILD_TRACK } from '@/config/build-track';
+import GlobalLoginScreen from '@/features/auth/GlobalLoginScreen';
+
 import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -36,7 +39,11 @@ function loginErrorMessage(error: unknown): string | null {
   }
 }
 
-export default function LoginScreen() {
+export default function LoginRoute() {
+  return BUILD_TRACK === 'global' ? <GlobalLoginScreen /> : <LoginScreen />;
+}
+
+function LoginScreen() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const login = useSessionStore((state) => state.login);

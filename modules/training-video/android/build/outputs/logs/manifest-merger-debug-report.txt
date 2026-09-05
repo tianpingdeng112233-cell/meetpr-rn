@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml:2:13-83
+INJECTED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml:2:13-83
+	package
+		INJECTED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml
+	xmlns:android
+		ADDED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml:2:23-81
+uses-sdk
+INJECTED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml reason: use-sdk injection requested
+INJECTED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml
+INJECTED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml
+	android:targetSdkVersion
+		INJECTED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml
+	android:minSdkVersion
+		INJECTED from /Users/david/Projects/apps/meetpr-rn-wt-int3/modules/training-video/android/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1662643628315034147.xml

@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export const DEFAULT_API_BASE_URL = 'http://121.40.160.241:3000';
+import { DEFAULT_API_BASE_URL } from '@/config/build-track';
+
+export { DEFAULT_API_BASE_URL } from '@/config/build-track';
 
 export const API_BASE_URL = (
   process.env.EXPO_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
@@ -25,6 +27,14 @@ export type ApiErrorKind = 'backend' | 'server' | 'network';
 
 export const KNOWN_BACKEND_ERROR_CODES = [
   'AUTH_INVALID_CREDENTIALS',
+  'INVALID_TIMEZONE',
+  'AUTH_INVALID_IDENTITY_TOKEN',
+  'AUTH_EMAIL_TAKEN',
+  'AUTH_INVALID_RESET_CODE',
+  'AUTH_REGISTRATION_DISABLED',
+  'AUTH_REGISTRATION_NOT_ALLOWED',
+  'AUTH_PROVIDER_NOT_CONFIGURED',
+  'AUTH_PROVIDER_UNAVAILABLE',
   'AUTH_INVALID_REFRESH',
   'AUTH_INVALID_TOKEN',
   'AUTH_PHONE_TAKEN',
