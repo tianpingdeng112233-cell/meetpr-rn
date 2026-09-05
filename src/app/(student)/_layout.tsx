@@ -10,6 +10,8 @@ function StudentTabs() {
   const bumpTodayReload = useStudentTabsStore((state) => state.bumpTodayReload);
   return (
     <Tabs
+      // iOS returns from the chat (and any other hidden route) to the tab that opened it, not to Today.
+      backBehavior="history"
       tabBar={(props) => props.state.routes[props.state.index]?.name === 'chat' ? null : <TabBar {...props} icons={{ today: 'today', training: 'training', growth: 'growth', profile: 'profile' }} />}
       screenOptions={{ headerShown: false }}>
       <Tabs.Screen
