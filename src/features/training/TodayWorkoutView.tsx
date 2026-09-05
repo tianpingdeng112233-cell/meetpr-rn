@@ -51,7 +51,6 @@ import { useSessionStore } from '@/api/session';
 import {
   AppButton,
   Card,
-  Eyebrow,
   font,
   useColors,
   type Colors,
@@ -848,7 +847,6 @@ export function TodayWorkoutView() {
         ) : null}
         {state.kind === 'loaded' || state.kind === 'recording' ? (
           <>
-            <Eyebrow label={t('student.todayWorkoutScreen.copy017')} />
             {dayState && dayState.kind !== 'current' ? (
               <View
                 style={[

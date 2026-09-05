@@ -1,6 +1,7 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Card, Eyebrow, StatusBadge, font, useColors } from '@/design';
+import { Card, font, useColors } from '@/design';
 import { t } from '@/i18n';
 import type { PlanDetail } from '@/api/domains/plans';
 import {
@@ -40,7 +41,7 @@ export function TrainingCalendarView({
     ),
   ];
   return (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: 8 }}>
       <View
         style={{
           flexDirection: 'row',
@@ -49,7 +50,7 @@ export function TrainingCalendarView({
           gap: 8,
         }}
       >
-        <Eyebrow label={t('student.trainingCalendarView.copy001')} />
+        <Text style={{ color: colors.textSecondary, ...font.mono(12) }}>{t('student.trainingCalendarView.copy001')}</Text>
         <Text style={{ color: colors.textMuted, ...font.mono(11) }}>
           {t('student.trainingCalendarView.copy002', [
             sorted.filter((day) => day.completed_at != null).length,
@@ -62,7 +63,7 @@ export function TrainingCalendarView({
         const open = expanded[week] ?? week === currentWeek;
         const done = days.filter((day) => day.completed_at != null).length;
         return (
-          <View key={week} style={{ gap: 8 }}>
+          <View key={week} style={{ gap: 7 }}>
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ expanded: open }}
@@ -77,8 +78,9 @@ export function TrainingCalendarView({
                 minHeight: 44,
                 flexDirection: 'row',
                 alignItems: 'center',
-                paddingHorizontal: 12,
-                gap: 8,
+                paddingHorizontal: 14,
+                paddingVertical: 11,
+                gap: 10,
               }}
             >
               <Text
@@ -87,21 +89,17 @@ export function TrainingCalendarView({
                 W{week}
               </Text>
               {week === currentWeek ? (
-                <StatusBadge
-                  tone="gold"
-                  label={t('student.trainingCalendarView.copy006')}
-                />
+                <Text style={{ color: colors.goldText, ...font.mono(10, 'bold'), letterSpacing: 0.6, backgroundColor: colors.goldSoft, borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2 }}>{t('student.trainingCalendarView.copy006')}</Text>
               ) : null}
-              <View style={{ flex: 1 }}>
                 <Text
                   numberOfLines={1}
-                  style={{ color: colors.textMuted, ...font.body(13) }}
+                  style={{ color: colors.textMuted, ...font.body(13), flex: 1 }}
                 >
                   {days
                     .map((day) => dayName(day, resolveExerciseMetadata, true))
                     .join(' · ')}
                 </Text>
-                <Text style={{ color: colors.textMuted, ...font.mono(10) }}>
+                <Text style={{ color: colors.textMuted, ...font.mono(11) }}>
                   {t(
                     week === currentWeek
                       ? 'student.trainingCalendarView.copy003'
@@ -114,18 +112,10 @@ export function TrainingCalendarView({
                         ],
                   )}
                 </Text>
-              </View>
-              <Text
-                style={{
-                  color: colors.textMuted,
-                  transform: [{ rotate: open ? '90deg' : '0deg' }],
-                }}
-              >
-                ›
-              </Text>
+              <MaterialCommunityIcons name="chevron-right" size={10} color={colors.textDim} style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }} />
             </Pressable>
             {open
-              ? days.map((day) => {
+              ? <Card style={{ paddingHorizontal: 13, paddingVertical: 0, borderRadius: 14, overflow: 'hidden' }}>{days.map((day) => {
                   const done = day.completed_at != null;
                   const current = day.id === cursor?.id;
                   return (
@@ -137,18 +127,13 @@ export function TrainingCalendarView({
                       key={day.id}
                       onPress={() => onSelectDay(day.id)}
                     >
-                      <Card
+                      <View
                         style={{
-                          paddingHorizontal: 13,
                           paddingVertical: 10,
-                          borderRadius: 14,
-                          backgroundColor:
-                            day.id === selectedDayID
-                              ? colors.goldSoft
-                              : colors.surfaceCard,
+                          backgroundColor: day.id === selectedDayID ? `${colors.goldRGB}14` : 'transparent',
                           flexDirection: 'row',
                           alignItems: 'center',
-                          gap: 10,
+                          gap: 12,
                         }}
                       >
                         <View
@@ -159,7 +144,7 @@ export function TrainingCalendarView({
                             alignItems: 'center',
                             justifyContent: 'center',
                             backgroundColor: current
-                              ? colors.goldSoft
+                              ? `${colors.goldRGB}1F`
                               : colors.bgInset,
                           }}
                         >
@@ -174,7 +159,7 @@ export function TrainingCalendarView({
                             D{day.day_of_week}
                           </Text>
                         </View>
-                        <View style={{ flex: 1, gap: 4 }}>
+                        <View style={{ flex: 1, gap: 3 }}>
                           <Text
                             style={{
                               color: colors.textPrimary,
@@ -199,21 +184,11 @@ export function TrainingCalendarView({
                             ])}
                           </Text>
                         </View>
-                        <Text
-                          style={{
-                            color: done
-                              ? colors.success
-                              : current
-                                ? colors.gold500
-                                : colors.textGhost,
-                          }}
-                        >
-                          {done ? '✓' : current ? '●' : '○'}
-                        </Text>
-                      </Card>
+                        {done ? <MaterialCommunityIcons name="check-circle" color={colors.success} size={16} /> : <View style={{ width: 8, height: 8, borderRadius: 4, borderWidth: current ? 0 : 1, borderColor: colors.textGhost, backgroundColor: current ? colors.gold500 : 'transparent' }} />}
+                      </View>
                     </Pressable>
                   );
-                })
+                })}</Card>
               : null}
           </View>
         );

@@ -789,3 +789,37 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - Android JS bundle：`npx expo export --platform android --output-dir /private/tmp/w3a-bundle` 成功，日志 `/private/tmp/w3a-bundle.log`。
 - `npx expo run:android --device meetpr --no-install` 已执行：prebuild 成功、生成本 worktree 被忽略的 `android/`，package.json 无变化；ADB 5037 smartsocket listener 被 sandbox 拒绝（`Operation not permitted`），命令 exit 1，日志 `/private/tmp/w3a-android.log`。未完成原生 build/install、未取得 AVD 截图；未绕过沙箱或申请新增权限。
 - PARITY 已更新 FeedbackInbox / FeedbackDetail 与 VideoPlayback / FeedbackVideoPlayer 行，保留 🔨（已实装、待视觉验收）。
+
+## W3-v — Dashboard / 训练 tab 视觉对照修正（2026-09-05）
+
+### 范围与基线
+
+- 工作目录 `meetpr-rn-wt-w3v-dt`，分支 `feat/w3v-dashboard-training`，开工 clean；仅修改 dashboard/training 展示层、必要 design 组件和本日志/PARITY。不 commit/push、不安装技能、不跑 code-review、不加依赖；video-upload/feedback/coach 与数据、推进制模块零改动。
+- 已读 AGENTS、PLAN、`core-training-loop-v2.md` §3/4、指定 RN 页面、Eyebrow/LargeTitleBar/tokens，以及 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。iOS 仓只读，HEAD 核实为 `202e95dbbf88baf5778f2329f206f34e117a4dd0`；未使用该仓已修改的翻译资源。
+- 任务速记中的部分数值与 pin 源码不同；按“以 202e95db 源码为准”执行，下表明确记录实际取值，不把速记值当作源码事实。
+
+### 逐项源码依据
+
+| 项 | iOS 依据（StudentKit/Features，除特别注明） | RN 修正 |
+| --- | --- | --- |
+| Eyebrow 清理 | `DashboardTodayScreen.swift:181–184`、`DashboardPlanWaitingState.swift:74–80`、`DashboardPrimaryAction.swift:75`；`TodayWorkoutScreen.swift:731–740` | 两屏及等待/下一节分支不再使用 Eyebrow；e1RM 区标题 mono 12 textSecondary、等待小结 mono 13 textSecondary、下一节 mono 12 gold500。保留全部 copy key 与原大小写。design Eyebrow 保留并增加默认 `testID=eyebrow`，其它调用方不受影响。 |
+| Header | `DashboardHeader.swift:13–66`；DesignSystem `HeaderChatButton.swift:27–89` 与 `Spacing.swift:43` | mark 97×24 与日期共用左对齐 row、gap 10；日期 mono 12 / tracking 0.72 / textMuted；外层 gap 15。headline display 54、状态胶囊 mono 12 bold / surfaceElevated / borderStrong，消息按钮顶对齐、红色 18pt 未读角标。pin 实际按钮是 44 圆（minimumHitTarget），不是任务速记 52。 |
+| 周进度段 | `DashboardHeader.swift:128–195` | 高 4、gap 5、current 宽 1.5 倍，整段 gold500→gold400→gold300 横向渐变；done textPrimary、upcoming borderStrong；空段保留底条。原 RN 通用 GoldProgressBar 已有渐变，但 current 只填 50% 且色标不同；改为本屏完整分段，不改通用进度条。保留静态金色光晕，未移植 iOS 无限 brightness/pulse 动画。 |
+| 反馈卡 | `DashboardFeedbackCard.swift:121–156, 266–312`；`DashboardFeedbackText.swift:23–28` | 左侧 3pt 金条；7pt 金点 + body 13 bold 标题 + mono 10 bold 未读胶囊 + body 12 灰色星期（day_date 优先）；折叠正文 body 14、两行、行距 4，展开正文 body 13；body 12 展开/收起链接带 chevron，1 条反馈也可展开；空态 key 保留。pin 胶囊为 goldText 底 / inkOnGold 字、正文 14，不是速记的深金字 / 15。沿用现有反馈数据顺序、展开 state 与导航回调；未移植 iOS 卡叠层/展开动画。 |
+| 本周进度与格子 | `DashboardWeekCalendar.swift:28–104, 154–174, 217–230` | 标题 mono 13、计数 mono 11 bold，均 textSecondary；右侧 calendar 11 textDisabled + mono 11 textMuted（pin 非 body 12）；格子 gap 6、minHeight 58、radius 12；done ✓ success、current 7pt 实心金点 + gold@0.12 + 1.5 金边、upcoming 7pt 空心 ghost + bgInset。D# mono 10（current bold，其它 semibold），日期 mono 10 并保持单行缩放。 |
+| 体重/比赛 | `DashboardProfileMetricsView.swift:92–208` | 两卡 flex 1 等宽、间距 11；体重标签 body 11 + 秤图标；数值 mono 24 bold + 独立 body 13 semibold ` kg`，无大写 KG。比赛卡斜向 gold@0.13→surfaceCard（0.62 stop）、gold@0.3 边、旗/火图标、mono 24 bold 数值与 body 13 单位。pin 并非 display 30 + mono 单位。 |
+| 训练 hero | `TodayWorkoutScreen.swift:438–477, 546, 590–650, 731–789` | 删除 hero 上方的重复标签；list 仅卡内 copy017 display 22，统计与处方 mono 12 textTertiary，动作行序号 mono 11 bold 金底、动作 body 14 bold。两态共用 3pt gold300→400→500 竖条、bgInset、左直角/右 16、borderStrong，padding 16 + 左 3。recording 单位按 pin 为 mono 16 bold `KG`，目标标签 mono 11 semibold / tracking 0.55，历史参考 mono 12 textTertiary，组进度 body 12、教练备注标签 mono 11。 |
+| 训练周列表 | `TodayWorkout/TrainingCalendarView.swift:50–64, 72–95, 121–169, 193–262` | 标题 mono 12 textSecondary / 计数 mono 11 textMuted；周头 W display 13、当前周 pill mono 10 bold / tracking 0.6 / goldText / gold@0.14（pin 非 11 / @0.12），周摘要与 mono 11 meta 在同一行。展开日行放入同一张 radius 14 卡；current 圆底 @0.12、选中行 @0.08、done check-circle；D# mono 12、摘要 mono 10、推荐日期 body 10。不改周筛选、展开/选中逻辑。 |
+| 其它 mono 复核 | DesignSystem `ExerciseCard.swift:220–226`、`SetRow.swift:86–101, 137–140`；`TodayWorkoutScreen.swift:374` | 组表表头改 mono 10、序号 mono 13 bold、重量 mono 15 bold、次数/RPE mono 14；保留处方摘要 mono 10。训练页未读数 pin 为 mono 9 bold，保持。指定 pin 文件未发现 9.5；不新增虚构 token。CompletionControls 无需改动。 |
+
+- 渐变由新增 `design/GradientFill` 复用现有 react-native-svg；独立 id 防止多卡色标串用，纯装饰 absolute fill，不接收触摸。不修改通用 GoldProgressBar、全局 typography 或其它屏的 token 值。
+- 这张卡收口指定静态展示差异；未把源码复核当作 Android 截图验收，也未声称反馈动画、进度脉冲与整屏剩余布局已经像素级一致。
+
+### 红绿与验证
+
+- 用户已指定 seam：渲染后的 Dashboard header 同行顺序/testID，以及两屏 `queryAllByTestId('eyebrow')` 为空。新增 `visual-parity.test.tsx` 从真实页面入口渲染，保留实际 VM/Query/Zustand；仅替换网络与 native/router 边界，无内部页面组件 mock。覆盖 training list/recording，两态均需出现计划汇总，只有 list 出现卡内标题。
+- Header 红态 `/private/tmp/w3v-header-red.log`（缺失同行节点），绿态 `/private/tmp/w3v-header-green.log`；Dashboard Eyebrow 红态 `/private/tmp/w3v-dashboard-red.log`；训练 Eyebrow 红态 `/private/tmp/w3v-training-red.log`（均检出非零 Eyebrow），绿态 `/private/tmp/w3v-training-green.log`；两态覆盖 `/private/tmp/w3v-states.log`。
+- `npm run lint`、`npx tsc --noEmit` 通过；全量 `npx jest` 65 suites / 400 tests passed，既有 396 项保持绿。日志 `/private/tmp/w3v-{lint,tsc,jest}.log`。`git diff --check` 通过。
+- `npx expo run:android --device meetpr --no-install` 已执行：prebuild 生成被忽略的本 worktree android/，package.json 无改动；随后 ADB 5037 smartsocket listener 因 sandbox `Operation not permitted` 失败。日志 `/private/tmp/w3v-android.log`。未完成原生 build/install、未取得 AVD 截图，不绕过沙箱。
+- Android JS bundle：`npx expo export --platform android --output-dir /private/tmp/w3v-bundle` 成功，日志 `/private/tmp/w3v-bundle.log`；此结果不替代原生安装和视觉验收。
+- PARITY Dashboard/TodayWorkout 追加 **“视觉对照 pass 待 AVD 截图验收”**，保留历史收货状态；本卡视觉 pass 未签收。

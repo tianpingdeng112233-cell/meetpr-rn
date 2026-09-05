@@ -2,11 +2,10 @@ import { useCameraAvailability } from './video-upload/use-camera-availability';
 import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { t } from '@/i18n';
 import type { PlanExercise } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
-import { AppButton, Card, Eyebrow, font, useColors } from '@/design';
+import { AppButton, Card, GradientFill, font, useColors } from '@/design';
 import {
   decodePrescription,
   intensityText,
@@ -104,8 +103,12 @@ export function WorkoutBody({
           backgroundColor: colors.bgInset,
           borderColor: colors.borderStrong,
           borderWidth: 1,
-          borderRadius: 16,
-          padding: 20,
+          borderTopLeftRadius: 0,
+          borderBottomLeftRadius: 0,
+          borderTopRightRadius: 16,
+          borderBottomRightRadius: 16,
+          padding: 16,
+          paddingLeft: 19,
           gap: 14,
           overflow: 'hidden',
         }}
@@ -114,36 +117,30 @@ export function WorkoutBody({
           pointerEvents="none"
           style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 }}
         >
-          <Svg width="100%" height="100%">
-            <Defs>
-              <LinearGradient id="hero-stripe" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor={colors.gold300} />
-                <Stop offset="1" stopColor={colors.gold500} />
-              </LinearGradient>
-            </Defs>
-            <Rect width="100%" height="100%" fill="url(#hero-stripe)" />
-          </Svg>
+          <GradientFill direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
         </View>
         {!recording ? (
           <>
-            <Eyebrow label={t('student.todayWorkoutScreen.copy017')} />
-            <Text style={{ color: colors.textMuted, ...font.mono(12) }}>
+            <Text style={{ color: colors.textPrimary, ...font.display(22) }}>{t('student.todayWorkoutScreen.copy017')}</Text>
+            <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
               {t('student.todayWorkoutScreen.copy018', [groups.length])}
               {t('student.todayWorkoutScreen.copy019', [drafts.length])}
             </Text>
-            {groups.map((group) => (
-              <View key={group.exercise.id} style={{ gap: 6 }}>
+            {groups.map((group, index) => (
+              <View key={group.exercise.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+                <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>
                 <Text
                   style={{
                     color: colors.textPrimary,
-                    ...font.body(16, 'bold'),
+                    ...font.body(14, 'bold'),
+                    flex: 1,
                   }}
                 >
                   {exerciseTitle(
                     resolveExerciseMetadata(group.exercise.exercise_id),
                   )}
                 </Text>
-                <Text style={{ color: colors.textMuted, ...font.mono(12) }}>
+                <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 1 }}>
                   {prescriptionSummary(
                     group.drafts.map((draft) => ({
                       prescription: decodePrescription(draft.planSet),
@@ -188,12 +185,12 @@ export function WorkoutBody({
                 {number}
               </Text>
               {targetWeight !== undefined ? (
-                <Text style={{ color: colors.textMuted, ...font.mono(14) }}>
-                  kg
+                <Text style={{ color: colors.textMuted, ...font.mono(16, 'bold') }}>
+                  KG
                 </Text>
               ) : null}
             </View>
-            <Text style={{ color: colors.textMuted, ...font.body(12) }}>
+            <Text style={{ color: colors.textFaint, ...font.mono(11, 'semibold'), letterSpacing: 0.55 }}>
               {p.intensity?.kind === 'pct'
                 ? percentageAnchorText(p, outcome?.percentage)
                 : t('student.todayWorkoutScreen.copy027')}
@@ -201,7 +198,7 @@ export function WorkoutBody({
             <Text style={{ color: colors.textSecondary, ...font.mono(12) }}>
               {prescribed(p, outcome?.percentage)}
             </Text>
-            <Text style={{ color: colors.textMuted, ...font.mono(12) }}>
+            <Text style={{ color: colors.textMuted, ...font.body(12) }}>
               {t('student.todayWorkoutPresentation.copy002', [
                 active.setIndex + 1,
                 active.exercise.sets.length,
@@ -212,15 +209,15 @@ export function WorkoutBody({
               ])}
             </Text>
             {reference(historyLogs, active.exercise.exercise_id) ? (
-              <Text style={{ color: colors.textMuted, ...font.body(12) }}>
+              <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
                 {reference(historyLogs, active.exercise.exercise_id)}
               </Text>
             ) : null}
             {(active.planSet.coach_note ?? active.exercise.notes) ? (
-              <Text style={{ color: colors.textSecondary, ...font.body(13) }}>
-                {t('student.todayWorkoutScreen.copy014')} ·{' '}
-                {active.planSet.coach_note ?? active.exercise.notes}
-              </Text>
+              <View style={{ paddingHorizontal: 12, paddingVertical: 10, gap: 3, borderRadius: 10, backgroundColor: colors.bgInset }}>
+                <Text style={{ color: colors.textFaint, ...font.mono(11) }}>{t('student.todayWorkoutScreen.copy014')}</Text>
+                <Text style={{ color: colors.coachNoteText, ...font.body(12), lineHeight: 18 }}>{active.planSet.coach_note ?? active.exercise.notes}</Text>
+              </View>
             ) : null}
             {editable ? (
               <>
@@ -288,7 +285,7 @@ export function WorkoutBody({
                         style={{
                           flex: i === 0 ? 0.5 : 1,
                           color: colors.textMuted,
-                          ...font.mono(11),
+                          ...font.mono(10),
                           textAlign: 'center',
                         }}
                       >
@@ -317,6 +314,7 @@ export function WorkoutBody({
                         <Text
                           style={{
                             flex: 0.5,
+                            ...font.mono(13, 'bold'),
                             color: colors.textMuted,
                             textAlign: 'center',
                           }}
@@ -334,7 +332,7 @@ export function WorkoutBody({
                               flex: 1,
                               textAlign: 'center',
                               color: colors.textPrimary,
-                              ...font.mono(12),
+                              ...font.mono(i === 0 ? 15 : 14, i === 0 ? 'bold' : 'regular'),
                             }}
                           >
                             {value}
