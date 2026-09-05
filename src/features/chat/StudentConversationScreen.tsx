@@ -35,7 +35,6 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const inbox = useFeedbackInboxViewModel(studentId);
   const videos = useStudentVideos(studentId);
   const playback = useStudentChatPlayback();
-<<<<<<< HEAD
   // The route param can arrive empty (blank coach display name); fall back to the conversation's other party.
   const [fetchedName, setFetchedName] = useState('');
   const resolvedName = coachName || fetchedName;
@@ -45,11 +44,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     void chatRepository.list().then(result => { if (live) setFetchedName(result.conversations.find(item => item.id === conversationId)?.other_party.display_name ?? ''); }).catch(() => {});
     return () => { live = false; };
   }, [coachName, conversationId]);
-  const [selectedShare, setSelectedShare] = useState<ChatMessage | null>(null);
-  const [shareVideoError, setShareVideoError] = useState(false);
-=======
   const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId);
->>>>>>> feat/w3s3-coach-conversation
   const frames = useRef(new Map<string, VerticalFrame>());
   const viewport = useRef<VerticalFrame>({ y: 0, height: 0 });
   const contentHeight = useRef(0);
