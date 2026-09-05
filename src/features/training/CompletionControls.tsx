@@ -1,14 +1,15 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
-import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
-
-import type { SessionReflection, WorkoutSetDraft } from './model';
-import { isDraftTerminal } from './drafts';
-import { parseFiniteDecimal } from './policy';
+import { AppButton, useColors, type Colors, font, radius } from '@/design';
+import { GradientFill } from '@/design/GradientFill';
+import type { SessionReflection } from './model';
+import type { WorkoutCompletionPresentation } from './completion-presentation';
+import { WorkoutCelebrationView } from './WorkoutCelebrationView';
+import { saveErrorCopy } from './save-errors';
 
 export function DayCompletionBanner({ count, onPress }: { count: number; onPress: () => void }) {
   const colors = useColors();
@@ -29,86 +30,154 @@ export function DayCompletionBanner({ count, onPress }: { count: number; onPress
   );
 }
 
-export function SessionSummaryView({
-  drafts,
-  onClose,
-  onComplete,
-  initialReflection,
-}: {
-  drafts: readonly WorkoutSetDraft[];
+export type WorkoutCompletionFlowPhase = 'celebration' | 'review';
+
+export function WorkoutCompletionFlowView({ presentation, initialPhase, initialReflection, onReflectionChange, onFinish }: {
+  presentation: WorkoutCompletionPresentation;
+  initialPhase: WorkoutCompletionFlowPhase;
   initialReflection?: SessionReflection;
-  onClose: () => void;
-  onComplete: (reflection: SessionReflection) => Promise<void>;
+  onReflectionChange: (reflection: SessionReflection) => Promise<void>;
+  onFinish: (reflection: SessionReflection) => Promise<void>;
 }) {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const [reflection, setReflection] = useState<SessionReflection>(initialReflection ?? { goal: '', achieved: '', improve: '' });
+  const [phase, setPhase] = useState(initialPhase);
+  const [reflection, setReflection] = useState(initialReflection ?? { goal: '', achieved: '', improve: '' });
   const [saving, setSaving] = useState(false);
-  const completed = drafts.filter(isDraftTerminal);
-  const totalReps = completed.reduce((sum, draft) => sum + (Number(draft.repsText) || 0), 0);
-  const totalVolume = completed.reduce((sum, draft) => sum + (parseFiniteDecimal(draft.weightText) ?? 0) * (Number(draft.repsText) || 0), 0);
-  const rpes = completed.map((draft) => parseFiniteDecimal(draft.rpeText)).filter((value): value is number => value !== null);
-  const averageRPE = rpes.length ? rpes.reduce((sum, value) => sum + value, 0) / rpes.length : null;
-  const heaviest = completed.reduce<WorkoutSetDraft | null>((best, draft) => !best || (parseFiniteDecimal(draft.weightText) ?? 0) > (parseFiniteDecimal(best.weightText) ?? 0) ? draft : best, null);
-
+  const finishing = useRef(false);
+  const pendingWrites = useRef(Promise.resolve());
+  const showSaveError = (error: unknown) => Alert.alert(t('student.todayWorkoutScreen.copy001'), saveErrorCopy(error));
+  const finish = async () => {
+    if (finishing.current) return;
+    finishing.current = true;
+    setSaving(true);
+    try {
+      await pendingWrites.current;
+      await onFinish(reflection);
+    } catch (error) {
+      showSaveError(error);
+      finishing.current = false;
+      setSaving(false);
+    }
+  };
+  const changeReflection = (next: SessionReflection) => {
+    setReflection(next);
+    // An older slow autosave must not overwrite newer text or completedAt.
+    pendingWrites.current = pendingWrites.current.then(() => onReflectionChange(next)).catch(showSaveError);
+  };
   return (
-    <Modal animationType="slide" onRequestClose={onClose} visible>
-      <SafeAreaView style={styles.summaryRoot}>
-        <View style={styles.summaryNav}><Text style={styles.summaryNavTitle}>{t('student.sessionSummaryView.copy003')}</Text><Pressable onPress={onClose}><Text style={styles.done}>{t('student.readinessCheckinSheet.copy018')}</Text></Pressable></View>
-        <ScrollView contentContainerStyle={styles.summaryContent} keyboardShouldPersistTaps="handled">
-          <Text style={styles.summaryHero}>{t('student.workoutCompletionFlowView.copy001')}</Text>
-          <Card style={styles.overview}>
-            {[[t('student.progression.completedSets'), String(completed.length)], [t('student.sessionSummaryView.copy008'), String(totalReps)], [t('student.sessionSummaryView.copy005'), `${Math.round(totalVolume)} kg`], [t('student.sessionSummaryView.copy009'), averageRPE === null ? '—' : averageRPE.toFixed(1)]].map(([label, value]) => (
-              <View key={label} style={styles.metric}><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>
-            ))}
-          </Card>
-          <Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy001')}</Text>
-          <Card style={styles.performance}><Text style={styles.performanceLabel}>{t('student.sessionSummaryView.copy010', ['']).trimEnd()}</Text><Text style={styles.performanceValue}>{heaviest ? `${heaviest.weightText}kg × ${heaviest.repsText}` : '—'}</Text></Card>
-          <View><Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy011')}</Text><Text style={styles.privateNote}>🔒 {t('student.progression.privateNote')}</Text></View>
-          {([
-            ['goal', t('student.sessionSummaryView.copy013'), t('student.sessionSummaryView.copy014')],
-            ['achieved', t('student.sessionSummaryView.copy015'), t('student.sessionSummaryView.copy016')],
-            ['improve', t('student.sessionSummaryView.copy017'), t('student.sessionSummaryView.copy018')],
-          ] as const).map(([key, label, placeholder]) => (
-            <Card key={key} style={styles.reflectionCard}><Text style={styles.performanceLabel}>{label}</Text><TextInput multiline onChangeText={(value) => setReflection((current) => ({ ...current, [key]: value }))} placeholder={placeholder} placeholderTextColor={colors.textTertiary} style={styles.reflectionInput} value={reflection[key]} /></Card>
-          ))}
-          <AppButton
-            disabled={saving}
-            label={saving ? t('student.progression.saving') : t('student.readinessCheckinSheet.copy018')}
-            onPress={() => {
-              setSaving(true);
-              void onComplete(reflection).finally(() => setSaving(false));
-            }}
-          />
-        </ScrollView>
+    <Modal animationType="none" presentationStyle="fullScreen" visible onRequestClose={() => void finish()}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
+        {phase === 'celebration'
+          ? <WorkoutCelebrationView presentation={presentation} streak={null} saving={saving} onOpenReview={() => setPhase('review')} onFinish={() => void finish()} />
+          : <SessionSummaryView presentation={presentation} reflection={reflection} onReflectionChange={changeReflection} onFinish={() => void finish()} saving={saving} />}
       </SafeAreaView>
     </Modal>
   );
 }
 
+export function SessionSummaryView({ presentation, reflection, onReflectionChange, onFinish, saving }: {
+  presentation: WorkoutCompletionPresentation;
+  reflection: SessionReflection;
+  onReflectionChange: (reflection: SessionReflection) => void;
+  onFinish: () => void;
+  saving: boolean;
+}) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
+    <View style={styles.summaryRoot}>
+      <View style={styles.summaryNav}>
+        <View style={styles.headingCopy}><Text style={styles.summaryNavTitle}>{t('student.sessionSummaryView.copy003')}</Text><Text style={styles.subtitle}>{presentation.dateSubtitle}</Text></View>
+        <Text style={styles.notified}>{t('student.sessionSummaryView.copy004')}</Text>
+      </View>
+      <ScrollView contentContainerStyle={styles.summaryContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={styles.volumeCard}>
+          <GradientFill direction="vertical" stops={[{ color: colors.reviewHeroTop, offset: 0 }, { color: colors.surfaceCard, offset: 1 }]} />
+          <Text style={styles.volumeLabel}>{t('student.sessionSummaryView.copy005')}</Text>
+          <View style={styles.volumeRow}>
+            <Text style={styles.volumeValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{presentation.totalVolumeText}</Text>
+            <Text style={styles.unit}>kg</Text><View style={styles.spacer} />
+            <Text style={styles.comparison}>{presentation.volumeComparisonText}</Text>
+          </View>
+          <View style={styles.stats}>
+            {([
+              [presentation.exerciseCount, 'student.sessionSummaryView.copy006'],
+              [presentation.completedSetCount, 'student.sessionSummaryView.copy007'],
+              [presentation.totalReps, 'student.sessionSummaryView.copy008'],
+              [presentation.averageRPEText, 'student.sessionSummaryView.copy009'],
+            ] as const).map(([value, key]) => <View style={styles.stat} key={key}><Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{value}</Text><Text style={styles.statLabel} numberOfLines={1}>{t(key)}</Text></View>)}
+          </View>
+        </View>
+        {presentation.hasPersonalRecord ? <View style={styles.record}><MaterialCommunityIcons name="crown" size={18} color={colors.gold500} /><Text style={styles.recordText}>{presentation.personalRecordText}</Text></View> : null}
+        <View style={styles.section}><Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy001')}</Text><View style={styles.rule} /></View>
+        <View style={styles.performances}>
+          {presentation.exercises.map(exercise => <View key={exercise.id} style={styles.performance}>
+            <View style={styles.exerciseCopy}><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.bestSet}>{t('student.sessionSummaryView.copy010', [exercise.bestSetText])}</Text></View>
+            {exercise.isPersonalRecord ? <Text style={styles.prBadge}>PR</Text> : null}
+            <Text style={[styles.status, { color: exercise.failedSetCount > 0 ? colors.danger : colors.success }]}>{exercise.statusText}</Text>
+          </View>)}
+        </View>
+        <View style={[styles.section, { marginTop: 2 }]}>
+          <Text style={styles.sectionTitle}>{t('student.sessionSummaryView.copy011')}</Text><View style={styles.rule} />
+          <View style={styles.privacy}><MaterialCommunityIcons name="lock" size={10} color={colors.textDim} /><Text style={styles.privateNote}>{t('student.sessionSummaryView.copy012')}</Text></View>
+        </View>
+        <View style={styles.reflections}>
+          {([
+            ['goal', 'student.sessionSummaryView.copy013', 'student.sessionSummaryView.copy014'],
+            ['achieved', 'student.sessionSummaryView.copy015', 'student.sessionSummaryView.copy016'],
+            ['improve', 'student.sessionSummaryView.copy017', 'student.sessionSummaryView.copy018'],
+          ] as const).map(([key, label, placeholder], index) => <View key={key} style={[styles.reflectionField, index < 2 && styles.fieldDivider]}>
+            <Text style={styles.reflectionLabel}>{t(label)}</Text>
+            <TextInput multiline editable={!saving} accessibilityLabel={t(label)} onChangeText={value => onReflectionChange({ ...reflection, [key]: value })} placeholder={t(placeholder)} placeholderTextColor={colors.textMuted} style={styles.reflectionInput} value={reflection[key]} />
+          </View>)}
+        </View>
+      </ScrollView>
+      <View style={styles.footer}><AppButton variant="primary" label={t('student.sessionSummaryView.copy002')} onPress={onFinish} loading={saving} /></View>
+    </View>
+  );
+}
+
 const createStyles = (colors: Colors) => StyleSheet.create({
-  slider: { backgroundColor: colors.success, borderColor: colors.success, borderRadius: radius.pill, borderWidth: 1, height: 58, justifyContent: 'center', overflow: 'hidden' },
-  sliderLabel: { color: '#FFFFFF', textAlign: 'center', ...typography.bodyEmphasis },
-  sliderThumb: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: radius.pill, height: 50, justifyContent: 'center', position: 'absolute', width: 50 },
-  banner: { alignItems: 'center', backgroundColor: `${colors.success}24`, borderColor: `${colors.success}66`, borderWidth: 1, borderRadius: radius.control, flexDirection: 'row', gap: 10, padding: 16 },
+  banner: { alignItems: 'center', backgroundColor: `${colors.successRGB}24`, borderColor: `${colors.successRGB}66`, borderWidth: 1, borderRadius: radius.control, flexDirection: 'row', gap: 10, padding: 16 },
   bannerSpacer: { flexGrow: 1 },
   bannerTitle: { color: colors.textPrimary, ...font.body(16, 'bold'), flexShrink: 1 },
   reviewLink: { color: colors.textSecondary, ...font.body(13) },
   summaryRoot: { backgroundColor: colors.bgBase, flex: 1 },
-  summaryNav: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingHorizontal: spacing.base },
-  summaryNavTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  done: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  summaryContent: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xxl },
-  summaryHero: { color: colors.textPrimary, ...typography.title1 },
-  overview: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.sm },
-  metric: { padding: spacing.md, width: '50%' },
-  metricValue: { color: colors.textPrimary, ...typography.headline },
-  metricLabel: { color: colors.textSecondary, marginTop: spacing.xs, ...typography.caption },
-  sectionTitle: { color: colors.textPrimary, ...typography.headline },
-  performance: { flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
-  performanceLabel: { color: colors.textSecondary, ...typography.footnote },
-  performanceValue: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  privateNote: { color: colors.textTertiary, marginTop: spacing.xs, ...typography.footnote },
-  reflectionCard: { gap: spacing.sm, padding: spacing.base },
-  reflectionInput: { color: colors.textPrimary, minHeight: 72, textAlignVertical: 'top', ...typography.body },
+  summaryNav: { alignItems: 'center', borderBottomColor: colors.borderHairline, borderBottomWidth: 1, flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 4, paddingBottom: 13 },
+  headingCopy: { flex: 1, gap: 2 },
+  summaryNavTitle: { color: colors.textPrimary, ...font.display(17) },
+  subtitle: { color: colors.textMuted, ...font.mono(11) },
+  notified: { color: colors.success, ...font.mono(11, 'bold'), letterSpacing: 0.55, backgroundColor: `${colors.successRGB}29`, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 4, overflow: 'hidden' },
+  summaryContent: { gap: 14, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 },
+  volumeCard: { borderColor: `${colors.goldRGB}40`, borderWidth: 1, borderRadius: radius.card, overflow: 'hidden', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 15 },
+  volumeLabel: { color: colors.goldText, ...font.mono(11, 'semibold'), letterSpacing: 0.88 },
+  volumeRow: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 5 },
+  volumeValue: { color: colors.textPrimary, ...font.display(46), flexShrink: 1 },
+  unit: { color: colors.textMuted, ...font.body(14, 'bold') },
+  spacer: { flex: 1 },
+  comparison: { color: colors.success, ...font.mono(12), flexShrink: 1 },
+  stats: { flexDirection: 'row', gap: 8, marginTop: 15 },
+  stat: { flex: 1, alignItems: 'center', paddingVertical: 9, gap: 2, backgroundColor: colors.medalStatTile, borderRadius: radius.control },
+  statValue: { color: colors.textPrimary, ...font.display(19) },
+  statLabel: { color: colors.textMuted, ...font.body(10) },
+  record: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: `${colors.goldRGB}1A`, borderColor: `${colors.goldRGB}59`, borderWidth: 1, borderRadius: radius.control },
+  recordText: { color: colors.goldText, ...font.body(13, 'bold'), flexShrink: 1 },
+  section: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  sectionTitle: { color: colors.textMuted, ...font.mono(11) },
+  rule: { flex: 1, height: 1, backgroundColor: colors.borderSubtle },
+  performances: { backgroundColor: colors.surfaceCard, borderRadius: radius.card, overflow: 'hidden' },
+  performance: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 15, paddingVertical: 13, borderTopColor: colors.borderSubtle, borderTopWidth: 1 },
+  exerciseCopy: { flex: 1, gap: 3 },
+  exerciseName: { color: colors.textPrimary, ...font.body(14, 'bold') },
+  bestSet: { color: colors.textFaint, ...font.mono(11) },
+  prBadge: { color: colors.goldText, ...font.mono(10, 'bold'), borderColor: `${colors.goldRGB}66`, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  status: { ...font.mono(11), flexShrink: 1 },
+  privacy: { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 1 },
+  privateNote: { color: colors.textDim, ...font.body(10), flexShrink: 1 },
+  reflections: { backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: 15, paddingVertical: 4 },
+  reflectionField: { paddingVertical: 11, gap: 6 },
+  fieldDivider: { borderBottomColor: colors.borderSubtle, borderBottomWidth: 1 },
+  reflectionLabel: { color: colors.textPrimary, ...font.body(13, 'bold') },
+  reflectionInput: { color: colors.textSecondary, ...font.body(13), lineHeight: 19, minHeight: 19, maxHeight: 76, padding: 0, textAlignVertical: 'top' },
+  footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, borderTopColor: colors.borderHairline, borderTopWidth: 1 },
 });

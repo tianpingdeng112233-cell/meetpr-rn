@@ -3,10 +3,6 @@
 "en": "Back to training",
 "zh": "返回训练"
 },
-"student.progression.completedSets": {
-"en": "Sets completed",
-"zh": "完成组数"
-},
 "student.progression.dayName": {
 "en": "{0} day",
 "zh": "{0}日"
@@ -26,10 +22,6 @@
 "student.progression.prTitle": {
 "en": "Your {0} e1RM improved today!",
 "zh": "今天你的{0} e1RM 突破!"
-},
-"student.progression.privateNote": {
-"en": "Private training notes, saved on this device",
-"zh": "仅自己可见的训练笔记,保存在本机"
 },
 "student.progression.saving": {
 "en": "Saving…",
@@ -53,47 +45,38 @@
 },
 "student.rn.bind.incompleteRequest": {
 "en": "Your connection request is incomplete. Enter an invite code again.",
-"zh": "绑定申请尚未完成，请重新输入邀请码。",
-"source": "src/navigation/BindGate.tsx"
+"zh": "绑定申请尚未完成，请重新输入邀请码。"
 },
 "student.rn.bind.wiringPlaceholder": {
 "en": "W1 integration",
-"zh": "W1 接线",
-"source": "src/navigation/BindGate.tsx"
+"zh": "W1 接线"
 },
 "student.rn.bind.completeTrainingInfo": {
 "en": "Complete your training information",
-"zh": "完成训练信息",
-"source": "src/navigation/BindGate.tsx"
+"zh": "完成训练信息"
 },
 "student.rn.bind.onboardingPlaceholder": {
 "en": "Student onboarding will be integrated in W1.",
-"zh": "W1 接入学员 Onboarding。",
-"source": "src/navigation/BindGate.tsx"
+"zh": "W1 接入学员 Onboarding。"
 },
 "student.rn.bind.awaitingCoach": {
 "en": "Waiting for coach confirmation",
-"zh": "等待教练确认",
-"source": "src/navigation/BindGate.tsx"
+"zh": "等待教练确认"
 },
 "student.rn.featurePlaceholder": {
 "en": "W1 implementation",
-"zh": "W1 实装",
-"source": "src/navigation/FeaturePlaceholderScreen.tsx"
+"zh": "W1 实装"
 },
 "student.rn.growthCurve.title": {
 "en": "Progress chart",
-"zh": "成长曲线",
-"source": "src/app/(student)/growth-curve.tsx"
+"zh": "成长曲线"
 },
 "student.rn.growthCurve.liftTitle": {
 "en": "{0} progress chart",
-"zh": "{0}成长曲线",
-"source": "src/app/(student)/growth-curve.tsx"
+"zh": "{0}成长曲线"
 },
 "student.rn.growthCurve.placeholder": {
 "en": "The full chart will be integrated into the Progress page.",
-"zh": "完整曲线将在成长页图表卡接入",
-"source": "src/app/(student)/growth-curve.tsx"
+"zh": "完整曲线将在成长页图表卡接入"
 }
 }
