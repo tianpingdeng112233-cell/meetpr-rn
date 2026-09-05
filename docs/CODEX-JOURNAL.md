@@ -756,3 +756,36 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - `npx jest`：exit 0，58 suites / 379 tests passed，0 snapshots（`/private/tmp/w3-i18n-jest.log`）。
 - `git diff --check` 通过；`rg -n 'TODO\(i18n' src` 零命中。八份 docs 正典 SHA-256 与开工记录、HEAD 一致；八份 runtime 正典与各自 HEAD 一致，只有 RnExtras 新增条目。
 - Android 视觉验证未完成：`adb devices` 启动 5037 smartsocket listener 被 sandbox 拒绝（`Operation not permitted`），没有可用模拟器连接。未运行依赖 ADB 的 `npx expo run:android`，未生成截图或 native 工程。PARITY 同步为已实装、待视觉走查。
+
+## W3-a — 学员共享全屏播放器、打点/标注帧、反馈收件箱与详情（2026-09-05）
+
+### 改动清单
+
+- 本卡以 `docs/w3-reference/video-player-charts-v2.md` §0/1/3/5/6 和 David 本卡裁决为正典；已读 Expo SDK 57 versioned docs。仅在 `meetpr-rn-wt-w3a-player` 修改；未 commit/push、未加依赖、未运行 code-review 或技能安装流程。
+- `features/video-player/FeedbackVideoPlayer.tsx`：共享 fullScreen surface，react-native-video `controls={false}`；自动播、中央自绘播放/暂停、末尾重播、36×36 关闭圆/eyebrow/四档 ASCII x 胶囊、rate 每次打开为 1、retry 换 item 保留会话 rate 并播放。失败换链静默留卡；成功关闭标注层；关闭键先暂停；卸载取消拖拽任务，Video 原生卸载释放播放。
+- `rate.ts` / `time.ts` / `scrub-state.ts`：两套速率文案、不进位小时的 floor 时间、秒/毫秒钳位；250 ms 读取 native position；拖拽显示位置使用独立 React state（兼容本仓 React Compiler），80 ms 合并 seek，松手终态提交，generation 丢弃过期任务/读取。原生同位置 seek 可能没有 onSeek，保留最多 1 s acknowledgement 窗后恢复轮询，避免时间轴永久冻结。
+- `FeedbackVideoScrubber` / `FeedbackVideoMarkerPanel`：gold500 轨道、videoStageBorder 底、mono 时间/a11y adjustable；面板黑 0.72、头行 count/失败、列表最高 190、空备注 fallback、pencil 标识与跳转。null/[] 隐藏，failed 显示空列表失败头；无进度刻度或 level 颜色。
+- `annotation-select.ts` / `FeedbackVideoAnnotationOverlay`：普通行只 seek；有标注先 pause+seek 再覆盖；整面关闭热区、黑底 contain/白 spinner；图片失败先关层再恰好一次 refresh，不自动重试图片或续播。每次选中独立 generation，旧图片错误不能关闭新图，旧 load 事件不能清掉新图 spinner。
+- `features/feedback` 与 `app/(student)/feedback/{index,[feedbackId],_layout}.tsx`：收件箱、详情、共享 playback session 与顶层单层 Modal。复用 Dashboard 反馈 VM 与 StudentVideos 查询关联元数据；详情 available/unavailable/none；反馈列表文本/相对时间/未读态/播放卡；短链失败按反馈行显示 copy002 / 详情 copy004。
+- 打开契约：先 await markRead（沿用 iOS best effort），再 uploads.url，发布 playbackItem 后才 list markers。markers 映射为 loaded/failed/hidden；404、传输失败、取消隐藏，其他 HTTP/DTO 错误失败。回填验证 video id + session generation + 请求 generation；关闭/失焦清会话，同一视频重开也不会串入上一次响应。
+- Dashboard 与训练页消息按钮跳反馈归档；路由不增加可见 tab。组内 `VideoPlayback` 变成源解析薄封装，继续走现有 OverlayHost；`markers={null}`，纯 selector 本地存在优先→远端→null，异步源入口只在需要远端时现取短链，初次和 retry 用同规则。
+- `badge?: VideoBadgeInfo | null` 仅保留类型位，未渲染角标/压暗/导出按钮。聊天路径与 `src/features/coach/**` 零改动；协议/DTO、i18n 正典、依赖清单零改动。
+
+### 与 iOS 的差异 / 拿不准处
+
+- AVKit transport 按裁决换 Android 自绘中央钮；ultraThinMaterial 按裁决换 `rgba(0,0,0,0.35)`，描边白 0.18。未引 blur；烧录/导出完全不渲染，角标归 W3-b，工作台归 W3-d。
+- iOS CoachFeedback 带内嵌 video，当前 RN FeedbackItem DTO 仅有 video_id。因此关联卡在展示边界 join 已有 `/students/:id/videos`，没有扩协议/DTO。视频查询未完成显示 loading，失败可重试，不把临时查询失败冒充已删除视频；实际生产关联与缺失卡仍需 AVD 走查。列表日期遵照本卡明确要求用相对时间（iOS 归档源码是 Today / 月日）。
+- iOS 固定 ±50 ms seek tolerance：JS 调用 `seek(seconds, 0.05)` 保留意图，但已核本地 react-native-video 6.19.2 Android `VideoManagerModule.kt:48-50` 不使用 tolerance 参数，只传毫秒给 ExoPlayer。没有改 native/加依赖；不能声称 Android 已验证 ±50 ms，拖拽精度待模拟器/真机核。
+- v3 token 守卫禁止 legacy `colors.amber`；失败卡图标使用已有语义 gold500。与 iOS amber 的色值差异待双端截图核，未绕过 token 守卫。
+- 全屏播放器的真实拖拽跟手、原生末尾/断网/短链过期重试、标注层触摸/黑底 contain、旋转与 Fabric 叠层均尚未完成视觉验收，不标记为已走查对齐。
+
+### 红绿及验证证据
+
+- 按用户指定 seam 分片先红后绿：rate、time、scrub-state、markers-outcome、annotation-select、feedback-inbox-open-order；另在既有 local-retention seam 补 selector 三态。新增 17 项测试；旧 379 项保持绿。
+- 红态日志：`/private/tmp/w3a-{rate,time,scrub,outcome,annotation,order,source,transport}-red.log`。scrub 还覆盖已进入队列的旧 callback；open-order 覆盖慢 markers、短链失败、取 URL 中关闭、同视频重开后的旧响应。
+- `npm run lint`：exit 0，0 errors / 0 warnings，`/private/tmp/w3a-lint.log`。
+- `npx tsc --noEmit`：exit 0，`/private/tmp/w3a-tsc.log`。
+- `npx jest`：exit 0，64 suites / 396 tests passed，`/private/tmp/w3a-jest.log`。
+- Android JS bundle：`npx expo export --platform android --output-dir /private/tmp/w3a-bundle` 成功，日志 `/private/tmp/w3a-bundle.log`。
+- `npx expo run:android --device meetpr --no-install` 已执行：prebuild 成功、生成本 worktree 被忽略的 `android/`，package.json 无变化；ADB 5037 smartsocket listener 被 sandbox 拒绝（`Operation not permitted`），命令 exit 1，日志 `/private/tmp/w3a-android.log`。未完成原生 build/install、未取得 AVD 截图；未绕过沙箱或申请新增权限。
+- PARITY 已更新 FeedbackInbox / FeedbackDetail 与 VideoPlayback / FeedbackVideoPlayer 行，保留 🔨（已实装、待视觉验收）。

@@ -2,6 +2,7 @@ import { test, expect, jest } from '@jest/globals';
 import {
   localRetentionRemovals,
   selectPlaybackSource,
+  VideoAttachmentPlaybackSourceSelector,
   removedVideoUris,
 } from '../local-retention';
 const now = new Date(2026, 8, 5, 0, 30).getTime();
@@ -84,4 +85,10 @@ test('unprepared sources, including a just attached file, are protected under st
     { key: 'unprepared', createdAt: yesterday, sizeBytes: 600 * 1024 * 1024, uploaded: false, prepared: false },
     { key: 'prepared', createdAt: today + 1, sizeBytes: 10, uploaded: true, prepared: true },
   ], now)).toEqual(['prepared']);
+});
+
+test('source selection is local first, remote second, or unavailable', () => {
+  expect(VideoAttachmentPlaybackSourceSelector.select('file:///video', true, 'https://remote')).toBe('file:///video');
+  expect(VideoAttachmentPlaybackSourceSelector.select('file:///video', false, 'https://remote')).toBe('https://remote');
+  expect(VideoAttachmentPlaybackSourceSelector.select(null, false, null)).toBeNull();
 });
