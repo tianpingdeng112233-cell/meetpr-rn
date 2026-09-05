@@ -6,18 +6,20 @@ import { AppButton, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { uploadsRepository } from '@/api/domains/uploads';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
+import type { VideoBadgeInfo } from '@/features/video-player/types';
 import { selectPlaybackSource } from './local-retention';
 
 /** Source resolution only; the OverlayHost owner supplies the full-screen layer. */
-export function VideoPlayback({ localUri, attachmentId, onClose }: {
+export function VideoPlayback({ localUri, attachmentId, onClose, badge }: {
+  badge?: VideoBadgeInfo | null;
   localUri: string | null;
   attachmentId: string | null;
   onClose: () => void;
 }) {
-  return <ResolvedVideoPlayback key={`${attachmentId}:${localUri}`} localUri={localUri} attachmentId={attachmentId} onClose={onClose} />;
+  return <ResolvedVideoPlayback key={`${attachmentId}:${localUri}`} localUri={localUri} attachmentId={attachmentId} onClose={onClose} badge={badge} />;
 }
 
-function ResolvedVideoPlayback({ localUri, attachmentId, onClose }: { localUri: string | null; attachmentId: string | null; onClose: () => void }) {
+function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge }: { localUri: string | null; attachmentId: string | null; onClose: () => void; badge?: VideoBadgeInfo | null }) {
   const colors = useColors();
   const [uri, setUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -36,7 +38,7 @@ function ResolvedVideoPlayback({ localUri, attachmentId, onClose }: { localUri: 
       .catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
   }, [refreshURL, attempt]);
-  if (uri) return <FeedbackVideoPlayer videoId={attachmentId ?? localUri ?? ''} url={uri} markers={null} refreshURL={refreshURL} onClose={onClose} />;
+  if (uri) return <FeedbackVideoPlayer videoId={attachmentId ?? localUri ?? ''} url={uri} markers={null} badge={badge} refreshURL={refreshURL} onClose={onClose} />;
   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
     <View style={{ padding: spacing.base, gap: spacing.md }}>
       <AppButton variant="secondary" label={t('chat.closePlayback')} onPress={onClose} />

@@ -13,6 +13,7 @@ export const StudentVideoSchema = z.object({
   /** Optional Decimal wire value; kept as a string. */
   weight_kg: DecimalStringSchema.nullable().default(null),
   reps: z.number().int().nullable().default(null),
+  rpe: z.string().nullish(),
   content_type: z.string(),
   size_bytes: z.number().int(),
   filename: z.string().nullable(),

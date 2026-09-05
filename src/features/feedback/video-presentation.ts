@@ -1,4 +1,5 @@
 import type { StudentVideo } from '@/api/domains/videos';
+import type { VideoBadgeInfo } from '@/features/video-player/types';
 import { t } from '@/i18n';
 
 export type FeedbackVideoAssociation = { kind: 'available'; video: StudentVideo } | { kind: 'unavailable' } | { kind: 'none' };
@@ -13,4 +14,22 @@ export function feedbackVideoSummary(video: StudentVideo): string {
     : video.reps !== null ? t('student.feedbackVideoPresentation.copy003', [video.reps])
     : weight !== null ? `${weight}kg` : null;
   return [video.exercise_name?.trim(), video.set_index !== null ? t('student.feedbackVideoPresentation.copy001', [video.set_index + 1]) : null, load].filter(Boolean).join(' · ');
+}
+
+/** Student display boundary: wire decimals become numbers and set indices become ordinals. */
+export function feedbackVideoBadge(video: StudentVideo | null | undefined): VideoBadgeInfo | undefined {
+  if (!video) return undefined;
+  const decimal = (value: string | null | undefined): number | null => {
+    if (!value?.trim()) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+  return {
+    exerciseName: video.exercise_name?.trim() || null,
+    weightKg: decimal(video.weight_kg),
+    reps: video.reps,
+    rpe: decimal(video.rpe),
+    setOrdinal: video.set_index !== null ? video.set_index + 1 : null,
+    coachName: null,
+  };
 }

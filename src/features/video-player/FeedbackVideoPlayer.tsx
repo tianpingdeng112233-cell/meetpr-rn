@@ -10,6 +10,8 @@ import { FeedbackVideoAnnotationSelection, type AnnotationFrame } from './annota
 import { FeedbackVideoAnnotationOverlay } from './FeedbackVideoAnnotationOverlay';
 import { FeedbackVideoMarkerPanel } from './FeedbackVideoMarkerPanel';
 import { FeedbackVideoScrubber } from './FeedbackVideoScrubber';
+import { VideoBadgeScrim } from './VideoBadgeScrim';
+import { VideoBadgeOverlay } from './VideoBadgeOverlay';
 import { cycleRate, rateText } from './rate';
 import { FeedbackVideoScrubState } from './scrub-state';
 import { seekTime } from './time';
@@ -21,6 +23,7 @@ export type FeedbackVideoPlayerProps = {
   markers?: FeedbackVideoMarker[] | null;
   markersFailed?: boolean;
   badge?: VideoBadgeInfo | null;
+  allowsExpansion?: boolean;
   onSeek?: (milliseconds: number) => void;
   refreshURL: (videoId: string) => Promise<string>;
   onMarkersRefresh?: () => void | Promise<void>;
@@ -33,7 +36,7 @@ export function FeedbackVideoPlayer(props: FeedbackVideoPlayerProps) {
   return <PlayerSession key={`${props.videoId}:${props.url}`} {...props} />;
 }
 
-function PlayerSession({ videoId, url, markers = null, markersFailed = false, onSeek, refreshURL, onMarkersRefresh, onClose }: FeedbackVideoPlayerProps) {
+function PlayerSession({ videoId, url, markers = null, markersFailed = false, badge = null, allowsExpansion = true, onSeek, refreshURL, onMarkersRefresh, onClose }: FeedbackVideoPlayerProps) {
   const colors = useColors();
   const player = useRef<VideoRef>(null);
   const live = useRef(true);
@@ -43,6 +46,7 @@ function PlayerSession({ videoId, url, markers = null, markersFailed = false, on
   const seekGeneration = useRef(0);
   const pendingSeek = useRef<{ seconds: number; deadline: number } | null>(null);
   const [item, setItem] = useState({ uri: url, revision: 0 });
+  const [badgeExpanded, setBadgeExpanded] = useState(true);
   const [rate, setRate] = useState(1);
   const [paused, setPaused] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -146,6 +150,7 @@ function PlayerSession({ videoId, url, markers = null, markersFailed = false, on
       onEnd={() => { scrub.cancel(); setDragSeconds(null); pendingSeek.current = null; setSeconds(durationRef.current); setPaused(true); }}
       onError={() => { scrub.cancel(); setDragSeconds(null); setFailed(true); }}
     />
+    {badge ? <VideoBadgeScrim /> : null}
     <SafeAreaView style={styles.controls} pointerEvents={annotation ? 'none' : 'box-none'} accessibilityElementsHidden={Boolean(annotation)} importantForAccessibility={annotation ? 'no-hide-descendants' : 'auto'}>
       <View style={styles.chrome}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('chat.closePlayback')} onPress={() => { scrub.cancel(); player.current?.pause(); onClose(); }} style={styles.close}>
@@ -157,7 +162,7 @@ function PlayerSession({ videoId, url, markers = null, markersFailed = false, on
           <Text style={styles.rate}>{rateText(rate)}</Text>
         </Pressable>
       </View>
-      <View style={styles.center} pointerEvents="box-none">
+      <View style={[styles.center, badge ? StyleSheet.absoluteFill : null]} pointerEvents="box-none">
         {failed ? <View style={[styles.failure, { backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault }]}>
           <MaterialCommunityIcons name="alert" size={26} color={colors.gold500} />
           <Text style={[styles.failureText, { color: colors.textPrimary }]}>{t('chat.playbackFailed')}</Text>
@@ -174,6 +179,7 @@ function PlayerSession({ videoId, url, markers = null, markersFailed = false, on
           <MaterialCommunityIcons name={paused ? 'play' : 'pause'} size={paused ? 22 : 20} color="white" />
         </Pressable>}
       </View>
+      {badge ? <VideoBadgeOverlay allowsExpansion={allowsExpansion} info={badge} expanded={badgeExpanded} onToggle={() => setBadgeExpanded(value => !value)} /> : null}
       <FeedbackVideoMarkerPanel markers={markers} failed={markersFailed} seconds={displayed} duration={duration} select={marker => selection.select(marker)} />
       <FeedbackVideoScrubber seconds={displayed} duration={duration}
         begin={position => { scrub.begin(position, duration); setDragSeconds(scrub.displayedSeconds(seconds)); }}

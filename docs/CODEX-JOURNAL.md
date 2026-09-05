@@ -849,3 +849,34 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - `npm run lint` 与 `npx tsc --noEmit` 通过（本次没有 hovered 残余类型错误）；全量 `npx jest` **68 suites / 411 tests** 通过，既有 set-entry-weight、video-upload、overlay-host、suggestion-gating、两条 i18n 守卫与 tokens 守卫保持绿。日志 `/private/tmp/setsheet-{lint,tsc,jest}.log`；`git diff --check` 通过。
 - 本地 Standards 核对：范围白名单、tokens/字体/i18n、Props 与受保护文件；Spec 核对：结构顺序、几何数值、状态/键盘层级、手势单一写入和保留管线。完整 code-review 技能未启动：缺 `docs/agents/issue-tracker.md`，已按技能原文要求告知需由用户调用 `$setup-matt-pocock-skills`；未静默配置，也未用本地自查冒充双 agent 审查。
 - 未 commit/push、未增加依赖、未改 node_modules symlink。
+
+## W3-b — 学员端 VideoBadge 角标浮层与 scrim（2026-09-05）
+
+### 改动清单
+
+- 基线：worktree `meetpr-rn-wt-w3b-badge` / `feat/w3b-video-badge`，开工 HEAD `d762620320490ce270279c6a38fbd0d8faf9d9e0`，工作区 clean。已读 AGENTS、PLAN、W3-a 日志、`video-player-charts-v2.md` §1.3–1.4 / §2 全文与调用点，并通过外部文档工具读取 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。没有 commit/push、增加依赖或更改 node_modules symlink。
+- `badge-presentation.ts`：`presentBadge` trim 字符串并隐藏空值；weight/RPE 只接受有限数，以 en-US、无分组、0–1 位小数展示；hasLoad 用 weightText/reps 判定，零值保留；setOrdinal 原样透传。
+- `badge-palette.ts`：固定 VideoBadgePalette，不入 tokens、不跟主题。`VideoBadgeLogoMark` 用 100×100 SVG 的琥珀圆盘、轨道弧、趋势折线、淡下划线和实心点。
+- `VideoBadgeCard`：width/468 缩放所有卡内几何与字体；品牌头/组号、单行动作名、重量与次数、RPE 胶囊按参照实现，空字段隐藏，en 空 suffix 不生成 Text；署名仅在 includesCoachAttribution 且 coachName 非空时存在。屏上始终传 false。
+- `VideoBadgeScrim`：复用已有 SVG GradientFill，绝对定位容器底部 44%，#050507 的 alpha 0→0.72；不接触摸且隐藏无障碍子树。
+- `VideoBadgeOverlay` / `FeedbackVideoPlayer`：badge 非空才铺 scrim/角标；角标区 flex 贪心、底部居中、底距 13，卡宽容器宽×468/540，无上限；中央自绘按钮保留独立 center 层，角标与 center 使用 box-none。角标在打点面板/进度条之前，未改 markers、scrub、seek 逻辑；标注帧遮盖且禁用 controls 的触摸/无障碍。expanded 在播放器会话内持有，默认 true，不持久化；收起为 44 logo；allowsExpansion=false 恒收起、不可点且无障碍隐藏，仅预留，不接教练。
+- `FeedbackPlaybackModal`：复用 W3-a 的 StudentVideos 查询关联 item.id，用 `feedbackVideoBadge` 将字串 weight/rpe 经 Number + finite 检查转换，缺失/非法置 null；动作名沿用 summary 的 trim 逻辑；set_index 在此展示映射 +1；无关联视频不传 badge，coachName=null。
+- **⚖️David 本会话明确批准的 additive DTO 例外**：当前仓实际无 CoachFeedbackVideo，W3-a 使用的 StudentVideoSchema 原本无 rpe。因此仅在 `src/api/domains/videos.ts` 追加 `rpe: z.string().nullish()`，保留其余字段和请求不变；旧响应缺字段仍能解码，新响应 RPE 字串可到达展示边界。
+- `VideoPlayback` / `VideoAttachmentControls` 只加 badge prop 透传；`SetEntrySheet` 只在现有 VideoAttachmentControls 调用增加 badge 对象，使用 exerciseName、当前 weightText/repsText/rpeText、draft.setIndex+1、coachName=null；未动其他视觉或输入/上传逻辑。
+
+### 与 iOS 的已知偏差 / 待验收
+
+- **⚖️David 2026-09-05：安卓 v1 不做角标烧录导出，播放器完全没有导出按钮**；不加 disabled 占位或导出权限流程。旧参照 §2.7 的“待拍板”由本次裁决覆盖。
+- iOS 字标 PNG 在 Android 按本卡要求用 MeetPRMark 风格的 SVG 描边文字，填 ink、不做反色镂空；字体栅格化与 PNG 存在平台差异。
+- 收起 logo 阴影用 RN shadowColor=black / opacity=.38 / radius=9 / offset y=4，加 Android elevation=9；Android elevation 的投影算法不等同 SwiftUI shadow，实际形状和浓度需设备截图核对。
+- 沙箱无 ADB，本卡未运行原生 build/install 或截图，不重复尝试受限 ADB。横竖屏实际排版、长动作名缩放、打点面板较高时的布局、中央按钮/角标触摸区域与 TalkBack 仍需 AVD `meetpr` 验收；PARITY 保留 🔨。
+
+### 红绿与验证
+
+- 用户事先指定的三个 seam：presentBadge、真实 FeedbackVideoPlayer 的角标交互、反馈视频纯映射。先红后绿日志：`/private/tmp/w3b-presentation-red.log`、`w3b-numbers-red.log`、`w3b-overlay-red.log`、`w3b-scrim-red.log`、`w3b-mapping-red.log`；绿态及补充会话重置/标注帧回归见 `w3b-overlay-green.log`、`w3b-overlay-regression.log`。
+- UI 测试仅替换 native Video/SafeArea/AsyncStorage 边界，保留真实播放器、角标组件、字体、翻译与标注选择逻辑。反馈测试从真实 StudentVideoSchema 解码至 badge，锁定 set_index=1→setOrdinal=2、100.00→100、8.0→8，并覆盖老响应缺 rpe 与无关联视频。
+- 最终命令结果与审查结论见下。
+- `npm run lint`：exit 0，0 errors / 0 warnings，日志 `/private/tmp/w3b-lint.log`。
+- `npx tsc --noEmit`：exit 0，日志 `/private/tmp/w3b-tsc.log`；本次没有遗留或忽略 hovered 类型错误。
+- 全量 `npx jest --runInBand`：exit 0，**71 suites / 431 tests passed**，包括原 video-player / feedback / video-upload、两条 i18n 守卫和 tokens 守卫，日志 `/private/tmp/w3b-jest.log`。新增 20 tests；`git diff --check` 通过。
+- code-review 两轴独立子代理审查未提交工作区相对开工 HEAD 的 diff（包括新增文件）：**Standards 0 findings / Spec 0 findings**。仓库缺少 `docs/agents/issue-tracker.md`，已按技能提示用户运行 `/setup-matt-pocock-skills`；本次直接使用会话需求与已给定参照审查，没有创建 tracker 配置，也没有提交以迁就 committed-diff 流程。
