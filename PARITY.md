@@ -66,7 +66,7 @@
 | TrainingHistory | ☐ | 悬空 worktree `feat/w1g-history`(旧基线实装,未 commit);收货前对照 #331 空态 |
 | Readiness | 🔨 | W1-d;训练 tab opt-in 两步 sheet、per-day skip、心形完成态(页头按钮组第二位);细节待 W3 像素对齐 |
 | FeedbackInbox | 🔨 | W1-f;共享 VM/未读计数+Today 内联卡/通知中心已接;成长列表消费接口已留 |
-| VideoUpload | 🔨 | W1-h R2:修复 SDK 57 异步 copy 未等待导致源先删/虚假副本;并发 attach 去重、在途复制/未 prepared 留存保护、日志校验 deterministic 与附件行错误已补;lint/tsc/44 suites·299 Jest 通过,本轮 ADB socket 仍被拒,AVD 截图待补。W1-h v2:W1-d 入口接回、自建相机/回放确认/相册偏好、720p 码率直通/转码、静默上传/持久化分片与退避、当天留存/组内播放、失败聚合本地通知;lint/tsc/42 suites·279 Jest 通过、Android JS bundle 导出通过。ADB/Gradle socket 被 sandbox 拒绝,尚未完成 APK 编译与 AVD 截图验收。已知 v1 偏差:无原生前台服务,进程内上传+冷启/回前台续传;无烧录导出(W3-video 待决策) |
+| VideoUpload | ✅ | W1-h v2(#22,R1–R3):W1-d 入口接回、自建相机(录制/回放确认/相册偏好)、720p 直通/转码、静默多分片上传(legacy uploadTask,无 Content-Type)+ 持久化分片/退避、当天留存/组内回放、失败聚合通知。模拟器已走查:选片→懒建日志→initiate→PUT→complete,服务端 `GET /students/:id/videos` 出现附件;**录像本身模拟器不可验(QEMU 相机开录挂死),待真机**。已知偏差:无前台服务真后台续传、无烧录导出、帧率随设备 |
 | MyProfile | ☐ | |
 | 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
 | Evaluation | — | 硬封存,不复刻 UI,仅 BindGate 跳过逻辑 |
