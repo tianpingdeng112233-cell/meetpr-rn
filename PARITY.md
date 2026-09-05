@@ -77,6 +77,7 @@
 | FeedbackInbox / FeedbackDetail | 🔨 | W3-a:归档列表/详情路由、相对时间/未读态/关联视频三态、行内短链失败;markRead → URL → 开播放器 → markers,回填有 id + 会话守卫;Dashboard/训练页消息按钮直达反馈。复用现有反馈与视频读口,不改 DTO;lint/tsc/64 suites·396 tests/Android JS bundle 通过;ADB socket 被 sandbox 拒绝,待 AVD 截图验收 |
 | VideoUpload | ✅ | W1-h v2(#22,R1–R3):W1-d 入口接回、自建相机(录制/回放确认/相册偏好)、720p 直通/转码、静默多分片上传(legacy uploadTask,无 Content-Type)+ 持久化分片/退避、当天留存/组内回放、失败聚合通知。模拟器已走查:选片→懒建日志→initiate→PUT→complete,服务端 `GET /students/:id/videos` 出现附件;**录像本身模拟器不可验(QEMU 相机开录挂死),待真机**。已知偏差:无前台服务真后台续传、无烧录导出、帧率随设备 |
 | MyProfile | ☐ | |
+| MyProfile | ✅ | W1-p(#21,integration/w1 模拟器已走查:七块、偏好三行、组间休息/训练提醒页、改密码/导出 CSV/注销确认页):v2/v3 七块资料卡、三态防困死兜底、复用向导行编辑且结构性锁 1RM、外观/分 RPE 休息/本地周提醒、改密码/全量 CSV/注销；lint/tsc/Jest 与离线 Android bundle 验证见 CODEX-JOURNAL。ADB 5037 被 sandbox 拒绝，端点已核本地 backend origin/staging 源码，Global 在线与模拟器截图待验收；W3-v：视觉对照 pass（逐项 iOS 源码核对：header/1RM kg 与 SBD/chip/组标题/外观与行字号）；39 suites / 294 tests、lint、tsc 绿。当前 worktree 的 Android 截图待验收（ADB sandbox 拒绝）；聊天未读源尚未接入，详见 JOURNAL |
 | 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
 | Evaluation | — | 硬封存,不复刻 UI,仅 BindGate 跳过逻辑 |
 

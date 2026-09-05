@@ -1,24 +1,34 @@
 import { expect, test, beforeEach, afterEach } from '@jest/globals';
-import { setLocaleOverride } from '@/i18n';
+import { setLocaleOverride, t } from '@/i18n';
 import { createEmptyOnboardingForm, type OnboardingStep } from '@/features/onboarding/model';
-import { injurySummary, oneRMValues, profilePatch, readinessSummary, recoverySummary, rowValue } from '../model';
+import { injuryChips, injurySummary, oneRMValues, profilePatch, readinessSummary, recoverySummary, rowValue } from '../model';
 
 beforeEach(() => setLocaleOverride('zh'));
 afterEach(() => setLocaleOverride(null));
 
+test('injury chips name each area and preserve other and empty fallbacks', () => {
+  expect(injuryChips(['shoulder', 'knee', 'other'])).toEqual([
+    t('student.myProfileV3Presentation.copy009', [t('student.onboardingLabels.copy029')]),
+    t('student.myProfileV3Presentation.copy009', [t('student.onboardingLabels.copy034')]),
+    t('student.myProfileV3Presentation.copy008'),
+  ]);
+  expect(injuryChips([])).toEqual([t('student.myProfileV3Presentation.copy007')]);
+  expect(injuryChips(null)).toEqual([t('student.myProfileV3Presentation.copy007')]);
+});
+
 test('readiness summarizes sleep, mood and stress out of five', () => {
-  expect(readinessSummary({ sleep_quality: 4, mood: 3, stress: 2 })).toEqual(['睡眠 4/5', '状态 3/5', '压力 2/5']);
+  expect(readinessSummary({ sleep_quality: 4, mood: 3, stress: 2 })).toEqual([t('student.myProfileV3Presentation.copy001', [4]), t('student.myProfileV3Presentation.copy002', [3]), t('student.myProfileV3Presentation.copy003', [2])]);
 });
 test('assessment summary and missing row values use canonical copy', () => {
-  expect(recoverySummary({ daily_life_intensity: 3, life_stress: 2, recovery_speed: 4 })).toEqual(['中等强度', '较低压力', '约1天恢复']);
-  expect(rowValue([])).toBe('未填写');
-  expect(rowValue(null)).toBe('未填写');
+  expect(recoverySummary({ daily_life_intensity: 3, life_stress: 2, recovery_speed: 4 })).toEqual([t('student.onboardingLabels.copy050') + t('student.myProfileV3Presentation.copy004'), t('student.onboardingLabels.copy049') + t('student.myProfileV3Presentation.copy005'), t('student.onboardingLabels.copy057') + t('student.myProfileV3Presentation.copy006')]);
+  expect(rowValue([])).toBe(t('student.myProfileV3Presentation.copy010'));
+  expect(rowValue(null)).toBe(t('student.myProfileV3Presentation.copy010'));
   expect(rowValue(['A', 'B'])).toBe('A · B');
 });
 test('injuries have none, counted and other states', () => {
-  expect(injurySummary([])).toBe('无伤病记录');
-  expect(injurySummary(['shoulder', 'knee'])).toBe('2部伤病');
-  expect(injurySummary(['other'])).toBe('其他伤病');
+  expect(injurySummary([])).toBe(t('student.myProfileV3Presentation.copy007'));
+  expect(injurySummary(['shoulder', 'knee'])).toBe(t('student.myProfileV3Presentation.copy009', [2]));
+  expect(injurySummary(['other'])).toBe(t('student.myProfileV3Presentation.copy008'));
 });
 test('1RM total requires all three lifts and missing values display an em dash', () => {
   expect(oneRMValues({ squat_1rm_kg: '150.5', bench_1rm_kg: '100', deadlift_1rm_kg: '200' })).toEqual({ lifts: ['150.5', '100', '200'], total: '450.5' });
