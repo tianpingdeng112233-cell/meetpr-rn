@@ -1610,3 +1610,31 @@ Final checks after all source/test edits:
 - `npm run lint` 与 `npx tsc --noEmit` 通过，无需忽略生成文件诊断；`git diff --check` 通过。日志 `/private/tmp/w3e-final-{lint,tsc}.log`。
 - 本地 Standards：白名单内改动，新增颜色均 useColors token、字体 font、复用已有 en/zh 翻译键；未改 API/路由/播放器/VideoFeedbackScreen。Spec：页头与视频列表要求已落地，卡面和源码差异按上文记录；无其他业务行为扩展。
 - 沙箱无 ADB，未运行 `expo run:android`、未取得 AVD meetpr 截图，**不宣称原生视觉验收完成**。PARITY 的 Receiving/InviteCodes 标为本轮 🔨 待走查，保留 integration/w2 既有走查记录。
+
+## W3-r — 双端实时聊天通道（2026-09-05）
+
+### 范围与正典
+
+- Worktree `feat/w3r-realtime-chat`，开工 clean，HEAD `19e42439709997a0f215f06e0a2f2158be61bb78`。按卡面白名单实装；无 commit/push、不加依赖、不动 node_modules symlink、不改后端、既有 DTO 或 UI 文案。
+- 已读 AGENTS、PLAN、W3-s/W3-s2/W3-s3 日志及指定 RN 文件；只读 iOS `202e95dbbf88baf5778f2329f206f34e117a4dd0` 的 RealtimeClient/RealtimeEvent、ChatRealtimeRouter、ChatInboxViewModel、ConversationViewModel+Loading、ChatSessionController。后端 SPEC 032、events.ts/hub.ts 使用 `git show feat/032-realtime-chat:<path>` 读取。已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。
+- 卡面提到的 `src/config/build-track.ts` 在本 worktree 不存在；直接复用 `src/api/client.ts` 的 `API_BASE_URL`（由 `EXPO_PUBLIC_API_BASE_URL` 覆盖，现有默认值仍为 staging），没有另设主机或修改配置。access token 通过现有 `getAccessToken()` 获取，复用过期判断、单航班 refresh 与 session generation。
+- 使用 tdd 技能，公开 seam 由卡面预先指定，不重复询问。按用户本卡约束，不要求／创建 issue-tracker 配置；最终 Standards 与 Spec 为本地核对，未执行正式双 agent review。
+
+### 实装
+
+- `src/api/realtime.ts`：纯逻辑客户端，注入 socket/sleep/jitter；RN 内建 WebSocket 第三参携带 Authorization。API URL 的协议转 ws/wss、路径追加 `/realtime`；只有 hello 才发布 connected。用现有 zod 校验信封、在客户端边界将 snake_case 指针转为 camelCase；未知 type、坏 JSON／坏 payload 静默忽略。
+- 每次连接结束后 full jitter 退避，上限依次 1/2/4/8/16/30 秒，hello 后重置。disconnect 同步撤销当前 generation、发布 disconnected、关闭 socket、取消原生退避定时器；旧帧、旧 close/error 与迟到 token 不会影响新连接。开发态只用 `[realtime]` console.debug 记录状态迁移，不输出 token。不发送 JSON 心跳或任何业务帧，协议 pong 交由 Android OkHttp。
+- `chat/realtime.ts`：按 authenticated user 建拆单例，在根布局仅加生命周期 hook。active 连接，其余 AppState 断开；前台以事件值为准；登出／换号拆 transport 与事件订阅。连接状态变化只替换轮询定时器，不重新执行会话 focus 初始加载。
+- 两端收件箱 connected 时 `refetchInterval: false`，断线 30s。`chat.message` 和非本人的 `chat.read` 触发串行合并刷新；同一 QueryClient/query key 的 badge 与页面共享 worker。事件撞上现有初始加载／轮询时先加入进行中请求，再合并为一次追加刷新，避免丢事件或多打一轮。回前台失效刷新；学员查询尚未 enabled 时先标 stale，启用后再拉取。
+- `conversation-model.ts`：默认 `CONVERSATION_POLL_MS = 3_000`，`CHAT_POLL_MS` 只供收件箱使用。force 刷新忙时记 pending、完成后再跑一次，stop 清 pending。按会话 ID 过滤；他人 read 仅在 seq 推进时处理，本地有对应消息则直接更新 other read 游标，否则强刷。
+- 两屏共用 sync 与 focus 实时接线；连上停止轮询，断线每 3s、后台不请求、回前台强刷；保留 since_seq 排空、历史分页、pending 发送与 read cache 写回。HTTP 与实时游标均单调推进；实时刷新成功会清除旧的初始加载错误态。无新 UI 文案或功能。
+
+### 红绿、检查与验收边界
+
+- 新增 API 5 项、接线 11 项测试：覆盖握手／hello、退避与重置、坏帧／wire 映射、旧 generation、token 与构造失败、取消睡眠，以及登录／冷启／前后台／换号订阅、双端收件箱 interval 与并发合并、本人 read 忽略、双屏匹配／本地 read／3s 回落、初始 HTTP 竞态与加载失败恢复。
+- 红绿证据 `/private/tmp/w3r-{api-handshake,api-retry,api-decode,lifecycle,inbox,conversation,screens,races,default-poll,recovery}-{red,green}.log`；补充传输取消验证 `/private/tmp/w3r-api-cancellation.log`。换号队列补测首跑即通过，证据 `/private/tmp/w3r-account-queue-red.log`（文件名保留执行时命名，不宣称该项曾失败）。
+- 既有测试断言全部未改：旧 conversation-model 的 30s 节流用例仅显式传入 `pollInterval: 30_000`，继续验证其原节流／去并发／read 重试断言；analytics root-layout 的 session mock 仅补 `getState/subscribe` 以支持根布局新增生命周期。
+- 全量 `npx jest --runInBand`：**83 suites / 559 tests 全绿**，含现有 chat/coach/student 测试、两条 i18n 守卫与 tokens 守卫。日志 `/private/tmp/w3r-final-jest.log`；新增 seam 复验日志 `/private/tmp/w3r-final-targeted.log`。
+- `npm run lint` 通过，无 errors/warnings；`npx tsc --noEmit` 通过，无 hovered／typed-routes 生成文件诊断。日志 `/private/tmp/w3r-final-{lint,tsc}.log`。`git diff --check` 通过。
+- Standards 本地核对：仅白名单源码／测试／台账，复用现有 token/API 配置，无依赖、文案、颜色字体、后端或 DTO 改动。Spec 本地核对：双端共享连接、事件筛选、串行合并、已读游标和两档回落轮询均有覆盖；无 typing／FCM／客户端业务帧。
+- 用户明确沙箱无 ADB：未运行 `npx expo run:android`、未做真实 WebSocket 联调、无 AVD meetpr 截图，不声明原生验收通过。PARITY StudentChat／Receiving 已追加「W3-r 实时通道接入,断线回落轮询」，保持 🔨 待走查。

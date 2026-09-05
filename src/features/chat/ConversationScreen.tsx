@@ -1,3 +1,4 @@
+import { startConversationRealtime, useChatRealtime } from './realtime';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
 import { PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
 import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
@@ -16,17 +17,23 @@ import { createUUID } from '@/analytics/uuid';
 import { CoachNavHeader } from '@/features/coach/CoachNavHeader';
 import { receivingKeys } from '@/features/coach/receiving/use-coach-receiving';
 import { FullScreenDestination } from '@/features/coach/receiving/FullScreenDestination';
-import { applyReadState, feedbackVideoBadge, CHAT_POLL_MS, conversationSubtitle, createConversationSync, mergeMessages } from './conversation-model';
+import { applyReadState, feedbackVideoBadge, CONVERSATION_POLL_MS, conversationSubtitle, createConversationSync, mergeMessages } from './conversation-model';
 // Bubble colors follow CoachConversationDestination (outgoing textPrimary, incoming borderHairline), not ConversationView's defaults.
 type PendingMessage = { text: string; clientID: string; failed: boolean };
 
 export function ConversationScreen({ conversationId, studentName, status, initialDraft }: { conversationId: string; studentName?: string; status?: string; initialDraft?: string }) {
+  const { subscribe } = useChatRealtime();
   const colors = useColors();
   const [selectedImage, setSelectedImage] = useState<ChatMessage | null>(null);
   const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId);
   const userID = useSessionStore(state => state.user?.id ?? '');
   const client = useQueryClient();
   const [otherReadSeq, setOtherReadSeq] = useState(0);
+  const otherReadRef = useRef(0);
+  const updateOtherRead = useCallback((seq: number) => {
+    otherReadRef.current = Math.max(otherReadRef.current, seq);
+    setOtherReadSeq(otherReadRef.current);
+  }, []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
   const fetchedCursor = useRef<number | undefined>(undefined);
@@ -59,6 +66,8 @@ export function ConversationScreen({ conversationId, studentName, status, initia
     let live = true;
     const sync = createConversationSync({
       now: Date.now,
+      pollInterval: CONVERSATION_POLL_MS,
+      realtime: { conversationId, userId: userID, messages: () => messagesRef.current, otherReadSeq: () => otherReadRef.current, updateOtherRead },
       fetchPage: async () => {
         const latest = fetchedCursor.current;
         let cursor = latest;
@@ -67,7 +76,7 @@ export function ConversationScreen({ conversationId, studentName, status, initia
           const page = await chatRepository.messages(conversationId, cursor ? { since_seq: cursor } : {});
           incoming = mergeMessages(incoming, page.messages);
           if (!live) return [];
-          setOtherReadSeq(previous => Math.max(previous, page.meta.other_last_read?.seq ?? 0));
+          updateOtherRead(page.meta.other_last_read?.seq ?? 0);
           if (!latest) setHasOlder(page.meta.has_more);
           const next = incoming.at(-1)?.seq;
           if (!latest || !page.meta.has_more || !next || next === cursor) break;
@@ -92,10 +101,12 @@ export function ConversationScreen({ conversationId, studentName, status, initia
       void sync.refresh(force).then(() => { if (live) setLoadError(false); }).catch(() => { if (live) setLoadError(true); }).finally(() => { if (live) setLoading(false); });
     };
     run(true);
-    const timer = setInterval(() => run(), CHAT_POLL_MS);
-    const subscription = AppState.addEventListener('change', state => { if (state === 'active') run(); });
-    return () => { live = false; active.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; sync.stop(); clearInterval(timer); subscription.remove(); };
-  }, [client, conversationId, userID]));
+    const stopRealtime = startConversationRealtime({ subscribe, refresh: run, receive: async event => {
+      const result = await sync.receive(event);
+      if (live && result) { setLoadError(false); setLoading(false); }
+    } });
+    return () => { live = false; active.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; sync.stop(); stopRealtime(); };
+  }, [client, conversationId, userID, subscribe, updateOtherRead]));
   async function send(retryIntent?: PendingMessage) {
     const text = retryIntent?.text ?? draft.trim();
     if (!text || sendingLock.current) return;
@@ -133,7 +144,7 @@ export function ConversationScreen({ conversationId, studentName, status, initia
       if (merged.length === messagesRef.current.length) historyAnchor.current = null;
       else if (historyAnchor.current) frames.current.delete(historyAnchor.current.id);
       messagesRef.current = merged;
-      setOtherReadSeq(previous => Math.max(previous, page.meta.other_last_read?.seq ?? 0));
+      updateOtherRead(page.meta.other_last_read?.seq ?? 0);
       setMessages(merged); setHasOlder(page.meta.has_more);
     } catch { if (active.current && generation === focusGeneration.current) { historyAnchor.current = null; setLoadError(true); } }
     finally { if (generation === focusGeneration.current) olderLoading.current = false; }

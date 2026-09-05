@@ -5,6 +5,7 @@ import { chatRepository } from '@/api/domains/chat';
 import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
 import { t } from '@/i18n';
 import { CHAT_POLL_MS } from './conversation-model';
+import { useChatRealtime, useRealtimeInboxRefresh } from './realtime';
 import { totalUnreadCount } from './student-timeline';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -39,6 +40,7 @@ export function useStudentPlanNotice(studentId: string) {
 
 /** Shared student inbox cache: only the currently bound coach contributes chat unread. */
 export function useOpenCoachChat(studentId: string) {
+  const { connected } = useChatRealtime();
   const router = useRouter();
   const client = useQueryClient();
   const binding = useMineBindRequest();
@@ -49,14 +51,14 @@ export function useOpenCoachChat(studentId: string) {
   const [foreground, setForeground] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const conversations = useQuery({
     queryKey: studentChatKeys.conversations(studentId), queryFn: chatRepository.list,
-    enabled: Boolean(studentId && coachId && foreground), staleTime: CHAT_POLL_MS, refetchInterval: CHAT_POLL_MS,
+    enabled: Boolean(studentId && coachId && foreground), staleTime: CHAT_POLL_MS, refetchInterval: connected ? false : CHAT_POLL_MS,
     refetchIntervalInBackground: false,
   });
+  useRealtimeInboxRefresh(studentId, Boolean(studentId && coachId), studentChatKeys.conversations(studentId));
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => {
       setForeground(state === 'active');
       if (state === 'active') {
-        void client.invalidateQueries({ queryKey: studentChatKeys.conversations(studentId) });
         void client.invalidateQueries({ queryKey: ['student-chat', studentId, 'plan-seen'] });
       }
     });

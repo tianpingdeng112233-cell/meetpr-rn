@@ -6,18 +6,22 @@ import { inboxCount, inboxRows, receivingContentState } from '@/domain/coach/inb
 import { studentVideoGroups, type PendingVideo } from '@/domain/coach/pending-videos';
 import { fetchPendingVideos } from './receiving-api';
 import { useReceivingNow } from './use-receiving-now';
+import { CHAT_POLL_MS } from '@/features/chat/conversation-model';
+import { useChatRealtime, useRealtimeInboxRefresh } from '@/features/chat/realtime';
 export const receivingKeys = {
   videos: (userID: string) => ['coach-receiving', userID, 'videos'] as const,
   chats: (userID: string) => ['coach-receiving', userID, 'chats'] as const,
 };
 export function useCoachReceiving() {
+  const { connected } = useChatRealtime();
   const user = useSessionStore(state => state.user);
   const userID = user?.id ?? '';
   const client = useQueryClient();
   const now = useReceivingNow();
   const enabled = Boolean(userID) && user?.role === 'coach';
   const videos = useQuery({ queryKey: receivingKeys.videos(userID), queryFn: fetchPendingVideos, enabled, staleTime: Infinity, retry: false });
-  const chat = useQuery({ queryKey: receivingKeys.chats(userID), queryFn: chatRepository.list, enabled, staleTime: 30_000, refetchInterval: 30_000, retry: false });
+  const chat = useQuery({ queryKey: receivingKeys.chats(userID), queryFn: chatRepository.list, enabled, staleTime: CHAT_POLL_MS, refetchInterval: connected ? false : CHAT_POLL_MS, retry: false });
+  useRealtimeInboxRefresh(userID, enabled, receivingKeys.chats(userID));
   const items = videos.data ?? [];
   const conversations = (chat.data?.conversations ?? []).map(inboxConversation);
   const rows = inboxRows({ conversations, videoGroups: studentVideoGroups(items), now });
