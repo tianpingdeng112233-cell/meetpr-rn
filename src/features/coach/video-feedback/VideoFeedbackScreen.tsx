@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { font, radius, Screen, useColors } from '@/design';
 import { t } from '@/i18n';
+import { deviceLocale } from '../student-detail/presentation';
 import { useSessionStore } from '@/api/session';
 import { uploadsRepository } from '@/api/domains/uploads';
 import type { VideoMarker } from '@/api/domains/video-markers';
@@ -68,7 +69,7 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
     finally { sendingRef.current = false; if (alive.current) setSending(false); }
   }
   const cells = log ? [
-    [t('coach.videoFeedback.weight'), Number(log.weight_kg).toLocaleString('en-US', { maximumFractionDigits: 1, useGrouping: false }), t('coach.videoFeedback.kilograms')],
+    [t('coach.videoFeedback.weight'), Number(log.weight_kg).toLocaleString(deviceLocale(), { maximumFractionDigits: 1, useGrouping: false }), t('coach.videoFeedback.kilograms')],
     [t('coach.videoFeedback.reps'), String(log.reps), t('coach.videoFeedback.repsValue %lld', [log.reps])],
     [t('coach.videoFeedback.rpe'), log.rpe === null ? t('coach.videoFeedback.missingValue') : String(Number(log.rpe)), ''],
     [t('coach.videoFeedback.setOrder'), String(log.set_index + 1), t('coach.videoFeedback.setNumber %lld', [log.set_index + 1])],

@@ -5,6 +5,7 @@ import { t } from '@/i18n';
 import { makeSummary, type WeekCell, type WeekGroup } from '@/domain/coach/week-overview';
 import { makeTodoItems, type TodoItem } from '@/domain/coach/todo-list';
 import { sameDay } from '@/domain/coach/calendar';
+import { deviceLocale } from '../student-detail/presentation';
 import { useCoachNow } from '../CoachNowProvider';
 import { useCoachData } from '../CoachDataProvider';
 import { Copy, EmptyState, Icon, pageContent, rowStyle } from '../ui';
@@ -23,7 +24,8 @@ export function CoachDashboardScreen() {
     if (item.kind === 'applications') students();
     else router.navigate({ pathname: '/(coach)/(tabs)/messages', params: item.studentId ? { studentId: item.studentId } : {} });
   };
-  const date = `${new Intl.DateTimeFormat(undefined, { month: 'long' }).format(now)} · ${new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(now)}`;
+  // iOS CoachTodayFormatting: wide month + day, then the wide weekday ("September 5 · Saturday").
+  const date = `${new Intl.DateTimeFormat(deviceLocale(), { month: 'long', day: 'numeric' }).format(now)} · ${new Intl.DateTimeFormat(deviceLocale(), { weekday: 'long' }).format(now)}`;
   return <Screen edges={['top', 'left', 'right']}><ScrollView contentContainerStyle={[pageContent, { gap: spacing.point15 }]}>
     <View style={[rowStyle, { justifyContent: 'space-between' }]}><View><Copy mono size={12} tone="textTertiary" style={{ letterSpacing: 0.72 }}>{date}</Copy><Copy display size={38}>{t('coach.shell.today')}</Copy></View><View style={{ alignItems: 'flex-end' }}><Copy size={11} tone="textTertiary">{t('coach.today.todo')}</Copy><Copy display size={28}>{todo.length}</Copy></View></View>
     <Copy mono size={12} tone="textTertiary">{t('coach.today.orderedByHandling')}</Copy>
