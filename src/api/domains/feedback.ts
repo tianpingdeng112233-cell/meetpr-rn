@@ -36,7 +36,11 @@ async function markRead(feedbackId: string): Promise<void> {
   await authenticatedRequest(`/feedback/${id}/read`, { method: 'PATCH' });
 }
 
-export const feedbackRepository = { list, markRead };
+export const PostFeedbackSchema = z.object({ student_id: UuidSchema, day_date: DateTextSchema.nullable(), plan_exercise_id: UuidSchema, video_id: UuidSchema, text: z.string().trim().min(1) }).strict();
+async function post(input: z.infer<typeof PostFeedbackSchema>) {
+  return authenticatedRequest('/coach/feedback', { method: 'POST', body: PostFeedbackSchema.parse(input), schema: FeedbackItemSchema });
+}
+export const feedbackRepository = { list, markRead, post };
 
 export const feedbackKeys = {
   all: ['feedback'] as const,

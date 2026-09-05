@@ -84,7 +84,8 @@
 | StudentRoster | ☐ | |
 | StudentDetail | 🔨 | W2-b:全屏 Header 四态 + 五段/训练日/视频角标纯回放;exercise-stats 服务端成长,只读反馈/资料;47 suites / 309 tests。AVD 安装受 ADB listener 权限阻断,截图/Global 实机验收待补;见 JOURNAL W2-b |
 | BindQueue | ☐ | |
-| Receiving | ☐ | |
+| Receiving | 🔨 | W2-c:合并收件箱/同源 badge selector、学员日分组队列、反馈工作台/markers/组信息/身份跳转;W2-a 壳接 badge 待合并。播放器为同依赖独立封装(不改 training,组件复用例外见 JOURNAL);ADB socket 被拒,AVD 截图待补 |
+| Chat | 🔨 | W2-c:现场核 snake_case DTO、文字发送/稳定 client_id 重试、seq 分页/read/30s 轮询、未知状态不画副标题;lint/tsc/47 suites·312 tests/Android bundle 通过;无 realtime,待 AVD 走查 |
 | InviteCodes | ☐ | |
 | Planning / PlanningWorkspace | — | W2-a 按 coach-v2 §7 删除教练 planning tab/路由；v1 无 app 排计划入口 |
 | MyProfile | ☐ | |

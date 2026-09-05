@@ -636,3 +636,54 @@ Final exact requested commands (PATH includes /opt/homebrew/bin):
 - 按指定 seam 逐片红→绿:状态优先级/到期边界/ceil≥1、isDefunct、分组;profile 三副标题、真实 HTTP 加载后无 POST、显式生成 POST→GET、重复 DELETE 204→GET、裸码复制/失败无成功反馈。挂载真实 profile 验证加载和 toast;重复复制同一码的 2 秒计时新增红测发现旧 timer 被复用,用 copy revision 重启计时后转绿。补查时限 1/7/30/365、越界/小数不 POST、label trim/省略、刷新失败保留旧列表与写失败重拉。新增 2 suites / 23 tests。
 - 最终检查:`npm run lint` 0 errors/0 warnings,`npx tsc --noEmit` 无诊断,`npx jest` **46 suites / 322 tests 全绿**。日志 `/private/tmp/w2d-{lint,tsc,jest}.log`;红/绿证据 `/private/tmp/w2d-*-red.log`、`w2d-repeat-copy.log` / `w2d-repeat-copy-green.log`。`git diff --check` 干净。Android Hermes bundle 导出成功(`/private/tmp/w2d-export`,日志 `w2d-export.log`);首次导出误用共享 Metro 缓存内相邻 W2-b 路由,`--clear` 后在本 worktree 成功,未修改相邻 worktree。
 - **设备验收未完成**:`npx expo run:android --device meetpr --no-install` prebuild 成功,随后 ADB start-server 因监听 5037 的 `Operation not permitted` 失败(exit 255)。没有安装本轮 APK、没有取得 AVD 截图、没有以 Jest/bundle 替代原生验收。日志 `/private/tmp/w2d-android.log`。待依赖接线后现场补两屏/Help/Privacy/登出、剪贴板裸码、左滑撤销、键盘/Stepper 与截图。PARITY 仅教练 MyProfile/InviteCodes 行标 🔨。
+## 2026-09-05 — W2-c 教练消息 / 待反馈视频 / 视频反馈 / Chat
+
+- Worktree `feat/w2c-receiving`;仅本 worktree 改动,无 commit/push,未运行 code-review、skill 安装或新增依赖。
+- 已读 AGENTS、PLAN、coach-v2 §4/5/8/9/10/12、CoachKit/ChatUI catalog、design v3、现有 feedback/videos/uploads/plans 和 VideoPlayback。Expo SDK 57 文档已现场读取: https://docs.expo.dev/versions/v57.0.0/ 。iOS 只读仓 HEAD 核实为 `202e95dbbf88baf5778f2329f206f34e117a4dd0`。
+
+### Chat DTO 现场核结论
+
+现场文件(均相对 `apps/MeetPR-release`):
+
+- `Modules/RepositoryContracts/Sources/RepositoryContracts/ChatRepository.swift`
+- `Modules/Networking/Sources/Networking/DTO/ChatDTOs.swift`
+- `Modules/Networking/Sources/Networking/NetworkChatRepository.swift`
+- `Modules/Networking/Tests/NetworkingTests/ChatDTOTests.swift`(snake_case wire fixtures/编码断言)
+- `Modules/ChatUI/Sources/ChatUI/ConversationViewModel.swift`、`ChatInboxViewModel.swift`
+
+| HTTP | 实际 wire |
+|---|---|
+| `GET /conversations` | `{conversations:[{id,other_party:{id,display_name},last_message:{id,seq,kind,preview,created_at,sender_id}|null,last_message_at,unread_count,my_last_read,other_last_read}]}` |
+| `POST /conversations` | body **`{other_user_id}`**,不是 student_id/other_party_id;响应 **`{conversation}`** |
+| `GET /conversations/:id/messages` | `limit` 1–100(本卡 50);增量 **`since_seq`**,历史 **`before_seq`**;响应 `{messages,meta:{other_last_read,has_more}}` |
+| message | `{id,conversation_id,seq,sender_id,kind,body,client_id,created_at,attachment_id?,image_url?,image_expires_in?,set_ref?,video_url?,video_expires_in?}`;kind 为 `text/image/set_ref` |
+| `POST /conversations/:id/messages` | 文字 body **`{kind:"text",body,client_id}`**;响应 **`{message}`**;失败重试保留同一 client_id |
+| `POST /conversations/:id/read` | body **`{message_id}`**,不能空 POST;响应 `{my_last_read:{message_id,seq},unread_count}` |
+
+Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不能原样当 HTTP 字段。进入会话拉最新页后对最新消息 read,空会话无游标不发 read;新页到达推进 read。按 seq 升序、ID 稳定并列、跨页 ID 去重;30 s 轮询防重入、离屏停止、回前台节流;增量和历史分页均处理。发送后的本地消息不推进抓取游标,避免跳过尚未抓取的中间消息。realtime 不做。
+
+### 实装与接线
+
+- `(coach)/messages` → `CoachReceivingScreen`:eyebrow、四态、每学员一行、未读点、视频计数胶囊、姓名开会话、下拉并发刷新。旧 `(coach)/receiving` 仅留同屏兼容入口,使尚未合并 W2-a 的壳也可进入本卡。
+- W2-a 约定导出 `useCoachMessagesBadge` 位于 `features/coach/receiving/index.ts` 和 `use-coach-receiving.ts`。头部和 selector 共用 `inboxCount`,都按最新会话折叠后计数。未改 W2-a 的 `_layout`/Today/花名册/详情页;由 W2-a 将 tab 名换为 messages 并接 badge。
+- 列表按设备本地训练日倒序,日内按 uploadedAt 倒序;工作台打开期间不 dismiss,返回且学生队列空时退出。全屏路由使用随焦点显示的 Modal 覆盖旧底栏,不侵入独立负责的 W2-a 壳。
+- 队列聚合 students/videos/feedback/current plan,排除未挂计划、已答视频、legacy 已答动作;动作名只取当前计划槽位与 catalog。当前计划复用 `selectCurrentPlan`(published_at、created_at、id),计划失败只缺动作名;必要请求失败保留旧队列。每次至多 4 位学员聚合。
+- 反馈成功先取消在途旧队列查询再按 video ID 摘除,防止旧快照恢复已反馈条目。发送前保存后继 ID,成功后在最新队列按身份查找,缺失落 first,空则 dismiss。Skip 环形。
+- 工作台有短链失败/重试、播放进度、时间标记跳转、按时间排序的标记列表/删除/已有批注图、四格 set-info、反馈输入/发送/banner/Skip;三条请求链路各用 requestID + itemID 验证,切片清除播放位置/表单/批注状态。组数据拉近 5 年,按 plan exercise + set log ID 精确匹配。
+- 标记 note 硬截 500 字符,wire level 恒 info;404 隐藏可选标记区,其余失败显示对应失败行。不做批注绘制/导出/realtime。
+- Chat 为最小文字 composer(4000 字符、失败重试),显示文字与已有图片,结构化训练分享沿用 wire body 文本降级;未知学员状态返回 null,副标题整行不渲染。
+- `t()` 支持本卡命名占位符的按序参数,并补 `pendingVideosAccessibility` 第二参数的复数计数索引。
+- 现场发现现有 `StudentVideoSchema` 强制要求 iOS wire 中不存在的 exercise_name/set_index/weight_kg/reps;先用 pinned 最小响应跑红,再将这四个额外字段缺省归 null,保留原消费者类型和已有扩展响应兼容。
+
+### 播放器边界与验证限制
+
+- 卡同时要求复用 `training/video-upload/VideoPlayback.tsx` 与不改 training 内部。该组件只有独立全屏接口,没有进度、嵌入布局或 markers 插槽。已通过异步问题请求最小可选接口扩展;尚未收到答复,因此遵循不改 training 的明确边界,本卡 `VideoWorkbenchPlayer` 使用相同 `react-native-video` 依赖单独封装,**没有复用 VideoPlayback 组件本身**。若要求组件级复用,仍需确认允许该最小接口扩展。
+- 使用 tdd 的指定公共 seam 做逐片 red→green:会话折叠/排序/预览/同源计数,排除规则/日期分组/自动退出,Skip/itemAfterSend,三资源请求防串片,消息排序/read/轮询/离屏迟到结果/未知状态。未启动 code-review 工作流。
+- `npx expo run:android --no-install` 完成 prebuild 后被环境阻断:ADB 5037 listener `Operation not permitted`,未到 APK 编译/安装。未绕过沙箱,未取得 AVD `meetpr` 实机画面或截图,不可标记视觉验收通过。
+
+### 最终验证结果
+
+- `npm run lint`、`npx tsc --noEmit`、`git diff --check` 通过。
+- 全量 `npx jest --runInBand`: **47 suites / 312 tests 通过**;指定 W2-c 三个测试文件共 13 项,含 `itemAfterSend`、请求双校验、已读回包即时应用与旧游标拒收。
+- Android production JS/Hermes bundle 导出通过(1829 modules):`/tmp/meetpr-w2c-android-export`。使用本地 Expo CLI,`EXPO_OFFLINE=1`、Global API URL、显式本 worktree 的 `EXPO_ROUTER_APP_ROOT`、独立 `TMPDIR=/tmp/meetpr-w2c-metro`。首次 npx 导出遭 DNS 阻断;本地 CLI 初次读到共享缓存的另一 worktree 路由,隔离缓存后成功。未修改其它 worktree。
+- Android APK/AVD 仍未验证,原因见上方 ADB socket 拒绝;bundle 成功不代表模拟器视觉验收通过。PARITY Receiving/Chat 均为 🔨。
