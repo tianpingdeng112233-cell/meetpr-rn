@@ -94,7 +94,8 @@ export async function uploadFileParts(
             method: 'PUT',
             body: temporary,
             signal: controller.signal,
-            headers: { 'content-type': 'application/octet-stream' },
+            // No headers: the OSS presigned URL is signed without Content-Type (sending one yields
+            // SignatureDoesNotMatch), and expo/fetch on Android rejects a plain-object headers init.
           });
           if (!response.ok) throw new PartUploadError(response.status);
           const etag = response.headers.get('etag');
