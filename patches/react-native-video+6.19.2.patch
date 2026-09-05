@@ -1,0 +1,106 @@
+diff --git a/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/ReactExoplayerView.java b/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/ReactExoplayerView.java
+index e16ac96..e9baa29 100644
+--- a/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/ReactExoplayerView.java
++++ b/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/ReactExoplayerView.java
+@@ -561,70 +561,7 @@ public class ReactExoplayerView extends FrameLayout implements
+         exoPlayerView.updateSurfaceView(viewType);
+     }
+ 
+-    private class RNVLoadControl extends DefaultLoadControl {
+-        private final int availableHeapInBytes;
+-        private final Runtime runtime;
+-        public RNVLoadControl(DefaultAllocator allocator, BufferConfig config) {
+-            super(allocator,
+-                    config.getMinBufferMs() != BufferConfig.Companion.getBufferConfigPropUnsetInt()
+-                            ? config.getMinBufferMs()
+-                            : DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+-                    config.getMaxBufferMs() != BufferConfig.Companion.getBufferConfigPropUnsetInt()
+-                            ? config.getMaxBufferMs()
+-                            : DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+-                    config.getBufferForPlaybackMs() != BufferConfig.Companion.getBufferConfigPropUnsetInt()
+-                            ? config.getBufferForPlaybackMs()
+-                            : DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS ,
+-                    config.getBufferForPlaybackAfterRebufferMs() != BufferConfig.Companion.getBufferConfigPropUnsetInt()
+-                            ? config.getBufferForPlaybackAfterRebufferMs()
+-                            : DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
+-                    -1,
+-                    true,
+-                    config.getBackBufferDurationMs() != BufferConfig.Companion.getBufferConfigPropUnsetInt()
+-                            ? config.getBackBufferDurationMs()
+-                            : DefaultLoadControl.DEFAULT_BACK_BUFFER_DURATION_MS,
+-                    DefaultLoadControl.DEFAULT_RETAIN_BACK_BUFFER_FROM_KEYFRAME);
+-            runtime = Runtime.getRuntime();
+-            ActivityManager activityManager = (ActivityManager) themedReactContext.getSystemService(ThemedReactContext.ACTIVITY_SERVICE);
+-            double maxHeap = config.getMaxHeapAllocationPercent() != BufferConfig.Companion.getBufferConfigPropUnsetDouble()
+-                    ? config.getMaxHeapAllocationPercent()
+-                    : DEFAULT_MAX_HEAP_ALLOCATION_PERCENT;
+-            availableHeapInBytes = (int) Math.floor(activityManager.getMemoryClass() * maxHeap * 1024 * 1024);
+-        }
+-
+-        @Override
+-        public boolean shouldContinueLoading(long playbackPositionUs, long bufferedDurationUs, float playbackSpeed) {
+-            if (bufferingStrategy == BufferingStrategy.BufferingStrategyEnum.DisableBuffering) {
+-                return false;
+-            } else if (bufferingStrategy == BufferingStrategy.BufferingStrategyEnum.DependingOnMemory) {
+-                // The goal of this algorithm is to pause video loading (increasing the buffer)
+-                // when available memory on device become low.
+-                int loadedBytes = getAllocator().getTotalBytesAllocated();
+-                boolean isHeapReached = availableHeapInBytes > 0 && loadedBytes >= availableHeapInBytes;
+-                if (isHeapReached) {
+-                    return false;
+-                }
+-                long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+-                long freeMemory = runtime.maxMemory() - usedMemory;
+-                double minBufferMemoryReservePercent = source.getBufferConfig().getMinBufferMemoryReservePercent() != BufferConfig.Companion.getBufferConfigPropUnsetDouble()
+-                        ? source.getBufferConfig().getMinBufferMemoryReservePercent()
+-                        : ReactExoplayerView.DEFAULT_MIN_BUFFER_MEMORY_RESERVE;
+-                long reserveMemory = (long) minBufferMemoryReservePercent * runtime.maxMemory();
+-                long bufferedMs = bufferedDurationUs / (long) 1000;
+-                if (reserveMemory > freeMemory && bufferedMs > 2000) {
+-                    // We don't have enough memory in reserve so we stop buffering to allow other components to use it instead
+-                    return false;
+-                }
+-                if (runtime.freeMemory() == 0) {
+-                    DebugLog.w(TAG, "Free memory reached 0, forcing garbage collection");
+-                    runtime.gc();
+-                    return false;
+-                }
+-            }
+-            // "default" case or normal case for "DependingOnMemory"
+-            return super.shouldContinueLoading(playbackPositionUs, bufferedDurationUs, playbackSpeed);
+-        }
+-    }
++    // meetpr patch: RNVLoadControl removed (see initializePlayerCore).
+ 
+     private void initializePlayer() {
+         disableCache = ReactNativeVideoManager.Companion.getInstance().shouldDisableCache(source);
+@@ -719,10 +656,25 @@ public class ReactExoplayerView extends FrameLayout implements
+                 .setMaxVideoBitrate(maxBitRate == 0 ? Integer.MAX_VALUE : maxBitRate));
+ 
+         DefaultAllocator allocator = new DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE);
+-        RNVLoadControl loadControl = new RNVLoadControl(
+-                allocator,
+-                source.getBufferConfig()
+-        );
++        // meetpr patch: build through DefaultLoadControl.Builder so the module no longer depends on the
++        // protected DefaultLoadControl constructor, whose signature changed between media3 1.8 and 1.9
++        // (expo-camera pulls media3 1.9 onto the classpath). Memory-dependent buffering strategies are
++        // not used by this app.
++        BufferConfig bufferConfig = source.getBufferConfig();
++        int unsetInt = BufferConfig.Companion.getBufferConfigPropUnsetInt();
++        DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
++                .setAllocator(allocator)
++                .setBufferDurationsMs(
++                        bufferConfig.getMinBufferMs() != unsetInt ? bufferConfig.getMinBufferMs() : DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
++                        bufferConfig.getMaxBufferMs() != unsetInt ? bufferConfig.getMaxBufferMs() : DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
++                        bufferConfig.getBufferForPlaybackMs() != unsetInt ? bufferConfig.getBufferForPlaybackMs() : DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
++                        bufferConfig.getBufferForPlaybackAfterRebufferMs() != unsetInt ? bufferConfig.getBufferForPlaybackAfterRebufferMs() : DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS)
++                .setTargetBufferBytes(-1)
++                .setPrioritizeTimeOverSizeThresholds(true)
++                .setBackBuffer(
++                        bufferConfig.getBackBufferDurationMs() != unsetInt ? bufferConfig.getBackBufferDurationMs() : DefaultLoadControl.DEFAULT_BACK_BUFFER_DURATION_MS,
++                        DefaultLoadControl.DEFAULT_RETAIN_BACK_BUFFER_FROM_KEYFRAME)
++                .build();
+ 
+         long initialBitrate = source.getBufferConfig().getInitialBitrate();
+         if (initialBitrate > 0) {
