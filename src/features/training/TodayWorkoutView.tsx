@@ -21,6 +21,10 @@ import { replayE1RMSeries } from '@/features/dashboard/model';
 import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
+import {
+  hydrateRemoteVideoAttachments,
+  type VideoAttachmentSet,
+} from './video-upload/store';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -183,6 +187,7 @@ export function TodayWorkoutView() {
     values: Record<string, number | null>;
   }>({ key: '', values: {} });
   const [initialCamera, setInitialCamera] = useState(false);
+  const [videoRefresh, setVideoRefresh] = useState(0);
   const saveQueue = useRef(new SerialTaskQueue());
   const jumpToken = useStudentTabsStore((state) => state.trainingJumpToken);
   const planRevision = useStudentTabsStore((state) => state.planRevision);
@@ -248,6 +253,18 @@ export function TodayWorkoutView() {
       ? draftOverrides[draft.stableSetId]
       : draft,
   );
+  // Drafts are rebuilt each render; only changes to log identities need a fetch.
+  const videoSetKey = JSON.stringify(
+    liveDrafts.flatMap((draft) =>
+      draft.sourceLog?.id
+        ? [{ stableSetId: draft.stableSetId, setLogId: draft.sourceLog.id }]
+        : [],
+    ),
+  );
+  useEffect(() => {
+    const sets: VideoAttachmentSet[] = JSON.parse(videoSetKey);
+    void hydrateRemoteVideoAttachments(studentId, sets);
+  }, [studentId, selectedDayID, videoSetKey, videoRefresh]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -361,6 +378,8 @@ export function TodayWorkoutView() {
           );
       }
       await Promise.all(requests);
+      // Also refresh attachments on throttled tab returns and manual refreshes.
+      setVideoRefresh((value) => value + 1);
     },
     [
       historyQuery,
