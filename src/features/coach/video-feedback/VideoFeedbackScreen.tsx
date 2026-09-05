@@ -1,9 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
-import { Image, KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, ToastAndroid, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { font, radius, Screen, useColors } from '@/design';
 import { t } from '@/i18n';
+import { useSessionStore } from '@/api/session';
+import { uploadsRepository } from '@/api/domains/uploads';
+import type { VideoMarker } from '@/api/domains/video-markers';
 import { track } from '@/analytics/client';
 import { AnalyticsEvent } from '@/analytics/types';
 import { itemAfterSend, nextItem } from '@/domain/coach/queue-navigator';
@@ -44,8 +47,9 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
   const colors = useColors();
   const slice = useVideoFeedbackSlice(item, now);
   const [seconds, setSeconds] = useState(0);
-  const [annotation, setAnnotation] = useState<string | null>(null);
-  const [annotationFailed, setAnnotationFailed] = useState(false);
+  const [selectedMarkerID, setSelectedMarkerID] = useState<string | null>(null);
+  if (selectedMarkerID !== null && !slice.markers?.some(marker => marker.id === selectedMarkerID)) setSelectedMarkerID(null);
+  const coachName = useSessionStore(state => state.user?.name ?? null);
   const [markerSheet, setMarkerSheet] = useState<{ time: number; note: string } | null>(null);
   const [feedback, setFeedback] = useState('');
   const [sending, setSending] = useState(false);
@@ -63,7 +67,6 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
     catch { if (alive.current) setBanner('failed'); }
     finally { sendingRef.current = false; if (alive.current) setSending(false); }
   }
-  function showAnnotation(url: string) { setAnnotationFailed(false); setAnnotation(url); }
   const cells = log ? [
     [t('coach.videoFeedback.weight'), Number(log.weight_kg).toLocaleString('en-US', { maximumFractionDigits: 1, useGrouping: false }), t('coach.videoFeedback.kilograms')],
     [t('coach.videoFeedback.reps'), String(log.reps), t('coach.videoFeedback.repsValue %lld', [log.reps])],
@@ -77,9 +80,15 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
       {index >= 0 ? <Text style={{ ...font.mono(12), color: colors.textTertiary }}>{t('coach.videoFeedback.queuePosition %lld %lld', [index + 1, total])}</Text> : null}
     </View>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20, gap: 16 }}>
-      <VideoWorkbenchPlayer url={slice.url} failed={slice.urlFailed} markers={slice.markers} onProgress={setSeconds} onFailure={() => slice.setURLFailed(true)} onRetry={() => void slice.loadURL()} onAddMarker={() => setMarkerSheet({ time: seconds, note: '' })} onAnnotation={showAnnotation} />
+      <VideoWorkbenchPlayer videoId={item.id} url={slice.url} failed={slice.urlFailed} markers={slice.markers}
+        markersFailed={slice.markerError === 'load'} onProgress={setSeconds} onRetry={slice.loadURL}
+        refreshURL={async videoId => (await uploadsRepository.url(videoId)).url} onMarkersRefresh={slice.loadMarkers}
+        badge={{ exerciseName: item.exerciseName, weightKg: log ? Number(log.weight_kg) : null, reps: log?.reps,
+          rpe: log?.rpe != null ? Number(log.rpe) : null, setOrdinal: log ? log.set_index + 1 : null, coachName }}
+        selectedMarkerID={selectedMarkerID} onAnnotationClose={() => setSelectedMarkerID(null)}
+        onAddMarker={slice.markers !== null ? () => setMarkerSheet({ time: Math.max(0, Math.round(seconds * 1000)) / 1000, note: '' }) : undefined} />
       {slice.markers?.length ? <View style={{ gap: 8 }}><Text style={{ ...font.body(14, 'bold'), color: colors.textPrimary }}>{t('coach.videoFeedback.markerCount %lld', [slice.markers.length])}</Text>{slice.markers.map(marker => <View key={marker.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderColor: colors.borderHairline }}>
-        <Pressable accessibilityRole={marker.annotation_url ? 'button' : undefined} disabled={!marker.annotation_url} testID={marker.annotation_url ? 'coach.video.marker.annotation' : undefined} onPress={() => marker.annotation_url && showAnnotation(marker.annotation_url)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48 }}><Text style={{ ...font.mono(12, 'bold'), color: colors.gold500 }}>{markerTime(marker.time_ms / 1000)}</Text><Text style={{ flex: 1, ...font.body(12), color: colors.textPrimary }}>{marker.note || t('coach.videoFeedback.marker')}{marker.annotation_url ? ' ✎' : ''}</Text></Pressable>
+        <CoachVideoMarkerRow marker={marker} select={() => setSelectedMarkerID(marker.id)} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('coach.videoFeedback.deleteMarker')} disabled={slice.markerBusy} onPress={() => void slice.deleteMarker(marker.id)} style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}><MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.danger} /></Pressable>
       </View>)}</View> : null}
       {slice.markerError ? <Text style={{ ...font.body(12), color: colors.danger }}>{t(slice.markerError === 'load' ? 'coach.videoFeedback.markersLoadFailed' : slice.markerError === 'save' ? 'coach.videoFeedback.markerSaveFailed' : 'coach.videoFeedback.markerDeleteFailed')}</Text> : null}
@@ -95,6 +104,17 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
       {slice.markerError === 'save' ? <Text style={{ color: colors.danger }}>{t('coach.videoFeedback.markerSaveFailed')}</Text> : null}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Pill label={t('coach.videoFeedback.cancel')} disabled={slice.markerBusy} onPress={() => setMarkerSheet(null)} /><Pill label={t('coach.videoFeedback.save')} disabled={slice.markerBusy} onPress={() => { if (markerSheet) void slice.addMarker(markerSheet.time, markerSheet.note).then(saved => { if (saved) setMarkerSheet(null); }); }} /></View>
     </View></Screen></View></Modal>
-    <Modal visible={annotation !== null} animationType="fade" onRequestClose={() => setAnnotation(null)}><Screen><View style={{ padding: 16 }}><Pill label={t('chat.closeAnnotation')} onPress={() => setAnnotation(null)} /></View>{annotationFailed ? <Text style={{ color: colors.danger, padding: 20 }}>{t('chat.imageUnavailable')}</Text> : annotation ? <Image source={{ uri: annotation }} resizeMode="contain" style={{ flex: 1 }} accessibilityLabel={t('chat.image')} onError={() => setAnnotationFailed(true)} /> : null}</Screen></Modal>
   </KeyboardAvoidingView></Screen>;
+}
+
+function CoachVideoMarkerRow({ marker, select }: { marker: VideoMarker; select: () => void }) {
+  const colors = useColors();
+  const style = { flex: 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, minHeight: 48 };
+  const label = <>
+    <Text style={{ ...font.mono(12, 'bold'), color: colors.gold500 }}>{markerTime(marker.time_ms / 1000)}</Text>
+    <Text style={{ flex: 1, ...font.body(12), color: colors.textPrimary }}>{marker.note || t('coach.videoFeedback.marker')}</Text>
+    {marker.annotation_url ? <MaterialCommunityIcons name="pencil" size={11} color={colors.gold500} accessible={false} /> : null}
+  </>;
+  return marker.annotation_url ? <Pressable accessibilityRole="button" testID="coach.video.marker.annotation" onPress={select} style={style}>{label}</Pressable>
+    : <View style={style}>{label}</View>;
 }

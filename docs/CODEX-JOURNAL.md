@@ -1464,3 +1464,32 @@ Final checks after all source/test edits:
 - 图片发送(iOS `sendImage` 学员端也没有入口)。
 - 实时 WebSocket(iOS `ChatRealtimeRouter`);沿用 30 s 轮询 + 回前台刷新(与教练端 `createConversationSync` 一致)。
 - 推送深链。
+## W3-d — 教练工作台内嵌播放器与教练角标（2026-09-05）
+
+### 范围与依据
+
+- Worktree `meetpr-rn-wt-w3d-workbench-player` / `feat/w3d-workbench-player`，开工 HEAD `8c24914a73382ee4908e94c3cde2cd3ae852494b`，工作区 clean。未 commit/push、未加依赖、未更改 node_modules symlink。
+- 已读 AGENTS、PLAN、W2-c/W3-a/W3-b 日志、参照包 `docs/w3-reference/video-player-charts-v2.md` §0.2/0.7/1.4/1.5/2.4、指定 RN 文件与本机 iOS Swift 正典；已通过外部文档工具读取 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。用户给定的 iOS `Features/VideoFeedback/VideoFeedbackDetailView.swift` 路径不存在，实际只读路径为 `Features/Receiving/VideoFeedbackDetailView.swift`，同时读了 `VideoFeedbackPlayerCard.swift`。
+- **口径冲突以本卡明确要求为准**：本机 Swift 与参照 §0.4 的工作台 Slider 仍为 gold500、时间 textDisabled；本卡明确要求白色轨道系与白色 70% 时间字，因此工作台用白色填充/拇指、白色 20% 底轨、白色 70% 时间字，保持 Swift workbench 的零 padding/零背景与 mono11。全屏分支保持原金色轨道和原 padding。
+
+### 实装
+
+- `FeedbackVideoPlayer` 新增默认 `fullScreen` 的 `layout`、秒单位 `onProgress`、`onAddMarker`，以及外部标注选择/关闭接口；既有学员调用点不变。共享 session 继续负责 Video、250ms native position 轮询、80ms scrub seek/generation、重试与标注选择。
+- `FeedbackVideoWorkbenchPlayer.tsx` 为工作台展示分支：外壳 gap11/padding12/textPrimary/radius16；270 高舞台、videoStageFill/videoStageBorder、radius10/1px 边；Video 不接触摸，按 scrim→56 圆钮→标注覆盖层→恒收起角标叠放。复用角标内部 13pt 底距，容器下移 3pt 得工作台 10pt；角标禁用交互并隐藏无障碍。四段等宽倍速分段器与仅有回调时出现的 Add marker 描边钮，字体用 font，新增颜色全从 useColors 语义 token 取得。
+- workbench 初始暂停；暂停时选择倍速只保存下一次播放速率，播放/等待时即时应用。末尾点击先 seek0 再播；重试换 URL 保留会话倍速、关闭标注、重置进度并立即播，换链等待期间新选的倍速也生效。共享失败卡在工作台用深色舞台底/白字；全屏保持原失败卡外观。
+- `VideoWorkbenchPlayer` 移除原生 controls、surfaceFocus 舞台、可 seek 时间 chips 与 Pill 重试，改为 DTO 展示映射薄封装；初次 URL loading/failed 也用工作台舞台与共享失败卡。`markers === null` 不向共享播放器传 Add marker。现有 slice/上传/markers API/DTO 均未改。
+- `VideoFeedbackScreen` 用 PendingVideo 动作名、现有 SetLog 的重量/次数/RPE/set_index+1、当前 session 教练 name 组 badge；屏上不显示教练署名。Add marker 在打开原 sheet 时冻结 `max(0, round(seconds*1000))`，保存仍走现有秒入参 slice。播放 URL 续签直接走现有 uploadsRepository.url，避免重置外层 session/倍速。
+- 教练列表普通行改为 View，无按钮角色或点击；有标注行 pause+seek 后在舞台内显示共享覆盖层，移除独立标注 Modal。选择按 id 关联当前 markers 新实例，同 id 新签名不重复 seek，移除后清空选择；图片失败关闭后恰好一次 refresh，旧 URL 错误和同 marker 关闭后重开的旧图片错误均不能影响当前覆盖层。
+- 两个舞台 token 本来就存在，`tokens.ts` 未改。**⚖️无导出**：没有导出按钮、占位、权限/确认流程或“已存入相册”toast；原有发送反馈成功 toast 保留。
+
+### 红绿、验证与审查限制
+
+- 使用 tdd skill，seam 沿用本卡用户已指定的共享播放器、教练封装及教练列表；系统边界 mock 为 native Video/SafeArea/AsyncStorage/SecureStore、路由与 fetch，Screen 测试保留真实 slice、DTO 解码、查询缓存和共享播放器。新增 3 suites / 10 tests。
+- 红绿记录：`/private/tmp/w3d-playback-{red,green}.log`、`w3d-controls-{red,green}.log`、`w3d-progress-{red,green}.log`、`w3d-wrapper-{red,green}.log`、`w3d-screen-{red,green}.log`、`w3d-annotation-{red,green}.log`、`w3d-retry-rate-{red,green}.log`、`w3d-reopen-{red,green}.log`；暂停倍速红态 `w3d-rate-red.log`，绿态见 targeted/final Jest。
+- 覆盖初始 paused、中央切换/末尾重播、四段速度/暂停选速/重试中改速、条件 Add marker、无关闭键/打点面板/导出、恒收起角标、进度回调、coach 角标映射（set_index=1→2）、12.3456s→12346ms、普通行不可点/标注行 pause+seek、同 id URL 更新/删除清选择/旧图片事件拒收。
+- `npm run lint`：exit 0，0 errors / 0 warnings，`/private/tmp/w3d-lint.log`。
+- `npx tsc --noEmit`：exit 0，`/private/tmp/w3d-tsc.log`；本次无需忽略 hovered 或 typed-routes 类型错误。
+- `npx jest --runInBand`：exit 0，**74 suites / 441 tests passed**，含原 video-player/coach 测试、两条 i18n 守卫与 tokens 守卫，`/private/tmp/w3d-jest.log`。
+- `git diff --check` 通过。按 Standards 自查：修改路径在白名单内，无依赖/DTO/API/i18n catalog/token 扩张；按 Spec 自查：工作台布局/交互/角标/标注与本卡对应，记录了白色 scrubber 的明确覆盖口径。
+- **正式 code-review 双子代理工作流未运行**：已读 `/Users/david/.codex/skills/code-review/SKILL.md`，其中要求 “If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.”；本仓缺失该配置，已提示用户调用 `$setup-matt-pocock-skills`，未擅自创建 tracker，也未把自查声称为独立双轴 review。
+- 沙箱无 ADB，本卡未重复尝试原生 build/install 或截图。270 舞台实际排版、Video/标注/scrim/logo 的 Fabric 叠层与触摸、TalkBack、长文案/横竖屏、原生缓冲与末尾状态仍待 AVD `meetpr` 截图验收。PARITY 的 CoachVideoPlayer 行标 🔨，注明「W3-d 工作台形态;⚖️无导出」。
