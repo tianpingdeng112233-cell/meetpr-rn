@@ -194,7 +194,7 @@ test('a catalog failure does not hide the week grid or disable its CTA', () => {
     },
     lift: null,
     completion: 0.5,
-    status: 'partial' as const,
+    status: 'current' as const,
   };
 
   jest.mocked(usePlans).mockReturnValue({
@@ -204,7 +204,7 @@ test('a catalog failure does not hide the week grid or disable its CTA', () => {
     refetch,
   } as never);
   jest.mocked(usePlan).mockReturnValue({
-    data: plan,
+    data: { ...plan, days: [unresolvedDay.day] },
     isPending: false,
     isError: false,
     refetch,
@@ -248,7 +248,7 @@ test('a catalog failure does not hide the week grid or disable its CTA', () => {
         <WeekGrid
           days={vm.week.status === 'loaded' ? vm.week.days : []}
           onSelect={selectDate}
-          selectedDate={vm.selectedDate}
+          selectedDayID={vm.selectedDayID}
         />
         <TrainingCTA cta={vm.cta} onPress={openTraining} />
       </>
@@ -265,17 +265,17 @@ test('a catalog failure does not hide the week grid or disable its CTA', () => {
     .map((node) => node.props.children)
     .join(' ');
   expect(copy).toContain('计划可用');
-  expect(copy).toContain('继续 W1D1 · 锻炼');
+  expect(copy).toContain('开始训练');
   expect(
     renderer?.root.find(
-      (node) => node.props?.accessibilityLabel === '周日 训练',
+      (node) => node.props?.accessibilityLabel?.startsWith('W1D7 '),
     ),
   ).toBeDefined();
 
   const cta = renderer?.root.find(
     (node) =>
       node.props?.accessibilityRole === 'button' &&
-      node.findAllByType(Text).some((text) => text.props.children === '继续 W1D1 · 锻炼'),
+      node.findAllByType(Text).some((text) => text.props.children === '开始训练'),
   );
   act(() => cta?.props.onPress());
   expect(openTraining).toHaveBeenCalledTimes(1);

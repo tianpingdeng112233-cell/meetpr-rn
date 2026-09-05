@@ -7,11 +7,14 @@ import CoachKit from './catalog/CoachKit.json';
 import CoreModels from './catalog/CoreModels.json';
 import DesignSystem from './catalog/DesignSystem.json';
 import RepositoryContracts from './catalog/RepositoryContracts.json';
+import RnExtras from './catalog/RnExtras.json';
 import StudentKit from './catalog/StudentKit.json';
 
 const catalog = {
   ...Analytics, ...AppShell, ...ChatUI, ...CoachKit, ...CoreModels,
   ...DesignSystem, ...RepositoryContracts, ...StudentKit,
+  // Android-only copy with no iOS counterpart; English approved by Claude, zh mirrors the RN literal.
+  ...RnExtras,
 } as const;
 
 export type TranslationKey = keyof typeof catalog;

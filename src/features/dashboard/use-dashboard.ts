@@ -10,7 +10,10 @@ import {
   type PlanDetail,
 } from '@/api/domains';
 import { AnalyticsEvent, track } from '@/analytics';
-import { useSessionStore } from '@/api/session';
+import { t } from '@/i18n';
+import { cursorDay, currentWeekDays, dayCode, sequenceDays } from '@/domain/plan/sequence';
+import { gymDayToday } from '@/domain/plan/workout-date-policy';
+import { todayModel } from './today-model';
 import {
   displayPoint,
   ninetyDayRecordTrajectory,
@@ -24,17 +27,12 @@ import {
   buildNotifications,
   buildResolvedExerciseFamilies,
   dashboardE1RMRange,
-  dashboardCTA,
-  dashboardTitle,
   e1RMDelta,
   e1RMPeriodLabel,
   replayE1RMSeries,
+  resolveDashboardLifts,
   selectDashboardPlan,
   selectLatestPublishedPlan,
-  shouldOfferPlanShift,
-  utcDateText,
-  weekIndexForDate,
-  canUndoPlanShift,
 } from './model';
 import type {
   DashboardNotification,
@@ -65,15 +63,18 @@ export type DashboardViewModel = {
   week: WeekOverviewState;
   todayDay: DashboardWeekDay | null;
   selectedDay: DashboardWeekDay | null;
-  selectedDate: string | null;
-  selectDate: (date: string) => void;
+  selectedDayID: string | null;
+  selectDay: (dayId: string) => void;
+  today: ReturnType<typeof todayModel>;
   cta: { interactive: boolean; label: string };
   plans: {
     isLoading: boolean;
     isError: boolean;
+    message: string;
     retry: () => Promise<void>;
   };
   e1rm: {
+    rails: { exerciseId: string; family: import('@/domain/e1rm').LiftFamily; name: string; point: ReturnType<typeof displayPoint>; periodLabel: string; delta: number; trajectory: readonly E1RMSample[] }[];
     series: E1RMSeries;
     point: ReturnType<typeof displayPoint>;
     periodLabel: string;
@@ -86,24 +87,23 @@ export type DashboardViewModel = {
   feedback: ReturnType<typeof useFeedbackInboxViewModel>;
   profile: ReturnType<typeof useOnboardingProfile>['data'];
   profileError: boolean;
+  profileLoading: boolean;
   retryProfile: () => Promise<void>;
   notifications: DashboardNotification[];
   dismissPlanNotification: () => void;
-  canShift: boolean;
-  canUndoShift: boolean;
   isRefreshing: boolean;
   reload: () => Promise<void>;
 };
 
 export function useDashboardViewModel(studentId: string): DashboardViewModel {
-  const now = new Date();
-  const today = utcDateText(now);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(timer); }, []);
+  const today = gymDayToday(now);
   const todayReloadToken = useStudentTabsStore((state) => state.todayReloadToken);
   const planRevision = useStudentTabsStore((state) => state.planRevision);
-  const role = useSessionStore((state) => state.user?.role);
   const plansQuery = usePlans(studentId);
   const planSummaries = plansQuery.data?.plans ?? [];
-  const activeSummary = selectDashboardPlan(planSummaries, today);
+  const activeSummary = selectDashboardPlan(planSummaries);
   const latestPublishedPlan = selectLatestPublishedPlan(planSummaries);
   const detailQuery = usePlan(activeSummary?.id ?? '');
   const activePlan = detailQuery.data ?? null;
@@ -121,11 +121,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
         : buildExerciseIndex(exerciseCatalogQuery.data?.exercises ?? []),
     [exerciseCatalogQuery.data?.exercises, liftMetadataUnavailable],
   );
-  const currentWeekIndex = activePlan
-    ? weekIndexForDate(activePlan, today)
-    : activeSummary
-      ? weekIndexForDate(activeSummary, today)
-      : 1;
+  const currentWeekIndex = currentWeekDays(activePlan?.days ?? [])[0]?.week_number ?? 1;
   const week = useWeekOverviewViewModel(
     studentId,
     activePlan,
@@ -140,7 +136,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
     dashboardE1RMRange(today),
     Boolean(activePlan),
   );
-  const [requestedDate, setRequestedDate] = useState<string | null>(null);
+  const [requestedDayID, setRequestedDayID] = useState<string | null>(null);
   const [planSeenState, setPlanSeenState] = useState<{
     signatureKey: string | null;
     unread: boolean;
@@ -181,17 +177,11 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
   }, [planSignature, planSignatureKey, studentId]);
 
   const days = week.state.status === 'loaded' ? week.state.days : [];
-  const todayDay = days.find((day) => day.date === today) ?? null;
-  const selectedDate =
-    (requestedDate && days.some((day) => day.date === requestedDate)
-      ? requestedDate
-      : null) ??
-    todayDay?.date ??
-    days.find((day) => day.day !== null)?.date ??
-    days[0]?.date ??
-    null;
-  const selectedDay =
-    days.find((day) => day.date === selectedDate) ?? todayDay ?? null;
+  const todayState = todayModel(activePlan, now, planSummaries);
+  const current = cursorDay(activePlan?.days ?? []);
+  const todayDay = days.find(day => day.day.id === current?.id) ?? days[days.length - 1] ?? null;
+  const selectedDayID = requestedDayID && days.some(day => day.day.id === requestedDayID) ? requestedDayID : todayDay?.day.id ?? null;
+  const selectedDay = days.find(day => day.day.id === selectedDayID) ?? todayDay;
   const familyByExerciseId = useMemo(
     () =>
       liftMetadataUnavailable
@@ -214,18 +204,17 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
     now,
     () => `dashboard-trajectory-${projectionIndex++}`,
   );
-  const todayLogs =
-    week.state.status === 'loaded'
-      ? week.state.logs.filter((log) => log.logged_date === today)
-      : [];
-  const canShift = shouldOfferPlanShift({
-    role,
-    plan: activeSummary,
-    todayDay,
-    todayLogs,
-    now,
+  const railDay = todayState.completedToday ?? todayState.cursor ?? todayDay?.day;
+  const lifts = activePlan ? resolveDashboardLifts(activePlan, exerciseIndex, profileQuery.data ?? null) : new Map();
+  const seenFamilies = new Set<string>();
+  const rails = (railDay?.exercises ?? []).filter(exercise => exercise.is_main_lift).flatMap(exercise => {
+    const lift = lifts.get(exercise.exercise_id);
+    if (!lift || seenFamilies.has(lift.family)) return [];
+    seenFamilies.add(lift.family);
+    const railSeries = replayE1RMSeries(historyQuery.data?.logs ?? [], familyByExerciseId, lift.family);
+    let index = 0;
+    return [{ ...lift, point: displayPoint(railSeries), periodLabel: e1RMPeriodLabel(railSeries, now), delta: e1RMDelta(railSeries, now), trajectory: ninetyDayRecordTrajectory(railSeries, now, () => `${lift.family}-${index++}`) }];
   });
-  const undoAvailable = role === 'coached_student' && canUndoPlanShift(activeSummary, now);
   const notifications = buildNotifications({
     planId:
       latestPublishedPlan &&
@@ -233,9 +222,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
       planSeenState.unread
         ? latestPublishedPlan.id
         : null,
-    weekIndex: latestPublishedPlan
-      ? weekIndexForDate(latestPublishedPlan, today)
-      : currentWeekIndex,
+    weekIndex: currentWeekIndex,
     unreadFeedback: feedback.unreadCount,
   });
 
@@ -317,14 +304,15 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
 
   return {
     now,
-    title: dashboardTitle(todayDay),
+    title: current ? dayCode(current) : activePlan?.days.length ? dayCode(sequenceDays(activePlan.days)[activePlan.days.length - 1]) : t('student.dashboardTodayScreen.copy001'),
     activePlan,
     week: week.state,
     todayDay,
     selectedDay,
-    selectedDate,
-    selectDate: setRequestedDate,
-    cta: dashboardCTA(todayDay),
+    selectedDayID,
+    selectDay: setRequestedDayID,
+    today: todayState,
+    cta: { interactive: todayState.stickyStartDay !== null, label: t('student.dashboardPrimaryAction.copy001') },
     plans: {
       isLoading:
         plansQuery.isPending ||
@@ -334,9 +322,11 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
         plansQuery.isError ||
         detailQuery.isError ||
         week.state.status === 'error',
+      message: week.state.status === 'error' && !week.state.error ? t('student.dashboardTodayScreen.copy004') : t('student.dashboardTodayScreen.copy008'),
       retry: retryPlans,
     },
     e1rm: {
+      rails,
       series,
       point,
       periodLabel: e1RMPeriodLabel(series, now),
@@ -351,6 +341,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
     feedback,
     profile: profileQuery.data,
     profileError: profileQuery.isError,
+    profileLoading: profileQuery.isPending,
     retryProfile: async () => {
       await profileQuery.refetch();
     },
@@ -360,8 +351,6 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
       setPlanSeenState({ signatureKey: planSignatureKey, unread: false });
       void markDashboardPlanSeen(studentId, planSignature).catch(() => undefined);
     },
-    canShift,
-    canUndoShift: undoAvailable,
     isRefreshing,
     reload,
   };

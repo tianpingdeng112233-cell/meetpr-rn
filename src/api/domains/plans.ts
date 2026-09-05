@@ -10,18 +10,6 @@ import {
   UuidSchema,
 } from './shared';
 
-export const PLAN_SHIFT_CONFLICT_CODES = [
-  'PLAN_NOT_ACTIVE',
-  'SHIFT_ONLY_TODAY',
-  'ALREADY_STARTED',
-] as const;
-export const PLAN_SHIFT_FORBIDDEN_CODE = 'NOT_PLAN_STUDENT' as const;
-export const PLAN_UNDO_SHIFT_CONFLICT_CODES = [
-  'NO_ACTIVE_SHIFT',
-  'UNDO_WINDOW_PASSED',
-  'ALREADY_STARTED',
-] as const;
-
 export const PlanSummarySchema = z.object({
   id: UuidSchema,
   coach_id: UuidSchema.nullable(),
@@ -36,6 +24,8 @@ export const PlanSummarySchema = z.object({
   source_template_id: UuidSchema.nullable(),
   status: z.enum(['draft', 'published', 'completed', 'paused']),
   kind: z.enum(['regular', 'adaptation']),
+  published_at: TimestampSchema.nullable().optional(),
+  anchor_weekday: z.number().int().min(1).max(7).nullable().optional(),
   created_at: TimestampSchema,
   updated_at: TimestampSchema,
   total_shift_days: z.number().int(),
@@ -48,6 +38,23 @@ export const PlanSetSchema = z.object({
   set_number: z.number().int(),
   target_reps: z.number().int(),
   target_reps_max: z.number().int().nullable(),
+  load_mode: z
+    .enum(['pct', 'rpe', 'rir', 'weight_range', 'rpe_range', 'fixed_weight'])
+    .nullable()
+    .optional(),
+  // Backend 0063 uses one_rm; normalize only in the domain decoder.
+  pct_anchor: z
+    .enum(['one_rm', 'registered_1rm', 'e1rm', 'top_set'])
+    .nullable()
+    .optional(),
+  target_pct: DecimalStringSchema.nullable().optional(),
+  target_rpe: DecimalStringSchema.nullable().optional(),
+  rir_target: z.number().int().nullable().optional(),
+  rpe_low: DecimalStringSchema.nullable().optional(),
+  rpe_high: DecimalStringSchema.nullable().optional(),
+  weight_low: DecimalStringSchema.nullable().optional(),
+  weight_high: DecimalStringSchema.nullable().optional(),
+  target_weight: DecimalStringSchema.nullable().optional(),
   intensity_mode: z.enum(['weight', 'rpe']),
   /** Decimal wire value; kept as a string. */
   target_value: DecimalStringSchema,
@@ -75,6 +82,11 @@ export const PlanDaySchema = z.object({
   sort_order: z.number().int(),
   /** Nullable DATE-text column. */
   shifted_to_date: DateTextSchema.nullable(),
+  completed_at: TimestampSchema.nullable().optional(),
+  completion_source: z
+    .enum(['manual', 'auto', 'backfill'])
+    .nullable()
+    .optional(),
   exercises: z.array(PlanExerciseSchema),
 });
 
@@ -86,16 +98,12 @@ export const PlansResponseSchema = z.object({
   plans: z.array(PlanSummarySchema),
 });
 
-export const ShiftPlanResponseSchema = z.object({
-  batch_id: UuidSchema,
-  shifted_days: z.array(
-    z.object({
-      day_id: UuidSchema,
-      /** DATE-text column. */
-      shifted_to_date: DateTextSchema,
-    }),
-  ),
-  total_offset_days: z.number().int(),
+export const DayCompletionSchema = z.object({
+  id: UuidSchema,
+  plan_day_id: UuidSchema,
+  student_id: UuidSchema,
+  source: z.enum(['manual', 'auto', 'backfill']),
+  completed_at: TimestampSchema,
 });
 
 export type PlanSummary = z.infer<typeof PlanSummarySchema>;
@@ -104,7 +112,7 @@ export type PlanExercise = z.infer<typeof PlanExerciseSchema>;
 export type PlanDay = z.infer<typeof PlanDaySchema>;
 export type PlanDetail = z.infer<typeof PlanDetailSchema>;
 export type PlansResponse = z.infer<typeof PlansResponseSchema>;
-export type ShiftPlanResponse = z.infer<typeof ShiftPlanResponseSchema>;
+export type DayCompletion = z.infer<typeof DayCompletionSchema>;
 
 async function list(studentId: string): Promise<PlansResponse> {
   const id = UuidSchema.parse(studentId);
@@ -118,20 +126,26 @@ async function detail(planId: string): Promise<PlanDetail> {
   return authenticatedRequest(`/plans/${id}`, { schema: PlanDetailSchema });
 }
 
-async function shift(planId: string): Promise<ShiftPlanResponse> {
-  const id = UuidSchema.parse(planId);
-  return authenticatedRequest(`/plans/${id}/shift`, {
+async function completeDay(dayId: string): Promise<DayCompletion> {
+  const id = UuidSchema.parse(dayId);
+  return authenticatedRequest(`/plans/days/${id}/complete`, {
     method: 'POST',
-    schema: ShiftPlanResponseSchema,
+    schema: DayCompletionSchema,
   });
 }
 
-async function undoShift(planId: string): Promise<void> {
-  const id = UuidSchema.parse(planId);
-  await authenticatedRequest(`/plans/${id}/shift`, { method: 'DELETE' });
+async function undoDayCompletion(dayId: string): Promise<void> {
+  const id = UuidSchema.parse(dayId);
+  try {
+    await authenticatedRequest(`/plans/days/${id}/complete`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    if (!isApiErrorCode(error, ['NO_COMPLETION_TO_UNDO'])) throw error;
+  }
 }
 
-export const plansRepository = { detail, list, shift, undoShift };
+export const plansRepository = { detail, list, completeDay, undoDayCompletion };
 
 export const planKeys = {
   all: ['plans'] as const,
@@ -155,38 +169,59 @@ export function usePlan(planId: string) {
   });
 }
 
-/** Role gate: this mutation is available only to `coached_student`. */
-export function useShiftPlan() {
+/** Both tabs share this cache; rollback preserves the last acknowledged cursor. */
+export function useDayCompletion(planId: string, undo = false) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: plansRepository.shift,
-    onSuccess: async (_, planId) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: planKeys.all }),
-        queryClient.invalidateQueries({ queryKey: planKeys.detail(planId) }),
-      ]);
+    mutationFn: async (dayId: string) =>
+      undo
+        ? (await plansRepository.undoDayCompletion(dayId), null)
+        : plansRepository.completeDay(dayId),
+    onMutate: async (dayId) => {
+      await queryClient.cancelQueries({ queryKey: planKeys.detail(planId) });
+      const previous = queryClient.getQueryData<PlanDetail>(
+        planKeys.detail(planId),
+      );
+      queryClient.setQueryData<PlanDetail>(
+        planKeys.detail(planId),
+        (plan) =>
+          plan && {
+            ...plan,
+            days: plan.days.map((day) =>
+              day.id === dayId
+                ? {
+                    ...day,
+                    completed_at: undo ? null : new Date().toISOString(),
+                    completion_source: undo ? null : 'manual',
+                  }
+                : day,
+            ),
+          },
+      );
+      return { previous };
     },
-  });
-}
-
-/** Role gate: this mutation is available only to `coached_student`. */
-export function useUndoPlanShift() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: plansRepository.undoShift,
-    onSuccess: async (_, planId) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: planKeys.all }),
-        queryClient.invalidateQueries({ queryKey: planKeys.detail(planId) }),
-      ]);
+    onError: (_, __, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(planKeys.detail(planId), context.previous);
     },
+    onSuccess: (completion, dayId) => {
+      queryClient.setQueryData<PlanDetail>(
+        planKeys.detail(planId),
+        (plan) =>
+          plan && {
+            ...plan,
+            days: plan.days.map((day) =>
+              day.id === dayId
+                ? {
+                    ...day,
+                    completed_at: completion?.completed_at ?? null,
+                    completion_source: completion?.source ?? null,
+                  }
+                : day,
+            ),
+          },
+      );
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: planKeys.all }),
   });
-}
-
-export function isPlanShiftConflict(error: unknown) {
-  return isApiErrorCode(error, PLAN_SHIFT_CONFLICT_CODES);
-}
-
-export function isPlanUndoShiftConflict(error: unknown) {
-  return isApiErrorCode(error, PLAN_UNDO_SHIFT_CONFLICT_CODES);
 }
