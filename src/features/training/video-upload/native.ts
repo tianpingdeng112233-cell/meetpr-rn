@@ -11,17 +11,9 @@ import { passthroughEligibility, type TrackMetadata } from './passthrough';
 import { UploadCancelledError } from './multipart';
 import * as ImagePicker from 'expo-image-picker';
 import * as Compressor from 'react-native-compressor';
+import { VideoNativeError } from './native-error';
 export type VideoSource = 'camera' | 'library';
-export class VideoNativeError extends Error {
-  readonly deterministic: boolean;
-  constructor(
-    readonly copy: string,
-    options?: { cause?: unknown; deterministic?: boolean },
-  ) {
-    super(copy, options);
-    this.deterministic = options?.deterministic ?? false;
-  }
-}
+export { VideoNativeError } from './native-error';
 const exportsQueue = new SerialTaskQueue();
 // compressor 2.0.3 writes UUID-named MP4s directly to cache (including fast-start siblings).
 function cachedExports(): File[] {
@@ -115,11 +107,24 @@ export async function pickTrainingVideo(
     rotationDegrees: 0,
   };
 }
-export function retainVideoSource(source: SelectedVideo): SelectedVideo {
-  const file = new File(directory(), `${uuid.v4()}.mp4`);
-  new File(source.uri).copy(file);
-  deleteLocalVideo(source.uri);
-  return { ...source, uri: file.uri };
+export async function retainVideoSource(
+  source: SelectedVideo,
+): Promise<SelectedVideo> {
+  let file: File | undefined;
+  try {
+    file = new File(directory(), `${uuid.v4()}.mp4`);
+    await new File(source.uri).copy(file);
+    if (!file.exists || file.size <= 0) throw new Error('Empty retained video');
+    const deletionError = deleteLocalVideo(source.uri);
+    if (deletionError) throw deletionError;
+    return { ...source, uri: file.uri };
+  } catch (cause) {
+    if (file) deleteLocalVideo(file.uri);
+    throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
+      cause,
+      deterministic: true,
+    });
+  }
 }
 export type PrepareVideoControl = {
   signal: AbortSignal;
@@ -158,7 +163,7 @@ export async function prepareTrainingVideo(
       return { localUri: source.uri, sizeBytes: new File(source.uri).size };
     output = await compressVideo(source, control);
     check();
-    const retained = retainVideoSource({ ...source, uri: output });
+    const retained = await retainVideoSource({ ...source, uri: output });
     output = retained.uri;
     const file = new File(output);
     if (!file.exists || file.size <= 0) throw new Error('Empty export');
@@ -187,17 +192,22 @@ export function localVideoSize(uri: string): number {
     return 0;
   }
 }
-export function deleteLocalVideo(uri: string | null): void {
+/** Cleanup is best effort; ownership transfers must check the returned error. */
+export function deleteLocalVideo(uri: string | null): VideoNativeError | null {
   if (
     !uri?.startsWith('file://') ||
     (!uri.startsWith(Paths.cache.uri) && !uri.startsWith(Paths.document.uri))
   )
-    return;
+    return null;
   try {
     const file = new File(uri);
     if (file.exists) file.delete();
-  } catch {
-    /* Best effort cleanup. */
+    return null;
+  } catch (cause) {
+    return new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
+      cause,
+      deterministic: true,
+    });
   }
 }
 

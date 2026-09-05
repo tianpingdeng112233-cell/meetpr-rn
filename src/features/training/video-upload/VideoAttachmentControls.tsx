@@ -14,7 +14,7 @@ import { useColors, radius, spacing, typography } from '@/design';
 
 import { requestVideoUploadConsent } from './consent';
 import { videoUploadManager } from './manager';
-import { pickTrainingVideo, type VideoSource } from './native';
+import { pickTrainingVideo, VideoNativeError, type VideoSource } from './native';
 import { selectVideoUpload, useVideoUploadStore } from './store';
 
 type Props = {
@@ -66,6 +66,13 @@ export function VideoAttachmentControls({
   const colors = useColors();
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [choosing, setChoosing] = useState(false);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const showActionError = (error: unknown) =>
+    setActionErrorMessage(
+      error instanceof VideoNativeError
+        ? error.copy
+        : t('student.videoAttachmentViewModel.copy001'),
+    );
   const hasCamera = useCameraAvailability();
   const overlay = useOverlayHost();
   const [fallbackNode, setFallbackNode] = useState<ReactNode>(null);
@@ -81,6 +88,7 @@ export function VideoAttachmentControls({
   const choose = async (source: VideoSource) => {
     if (!editable || choosing) return;
     setChoosing(true);
+    setActionErrorMessage(null);
     try {
       if (!(await requestVideoUploadConsent(AsyncStorage, promptConsent)))
         return;
@@ -107,16 +115,17 @@ export function VideoAttachmentControls({
       }
       const video = await pickTrainingVideo();
       if (video) attach(video);
-    } catch {
-      Alert.alert(t('student.videoAttachmentViewModel.copy001'));
+    } catch (error) {
+      showActionError(error);
     } finally {
       setChoosing(false);
     }
   };
   const attach = (video: SelectedVideo) => {
+    setActionErrorMessage(null);
     void videoUploadManager
       .attach(identity, video, ensureSetLog, buildLogRequest)
-      .catch(() => Alert.alert(t('student.videoAttachmentViewModel.copy001')));
+      .catch(showActionError);
   };
   const autoOpened = useRef(false);
   useEffect(() => {
@@ -126,10 +135,11 @@ export function VideoAttachmentControls({
     }
   });
   const remove = async () => {
+    setActionErrorMessage(null);
     try {
       await videoUploadManager.remove(identity);
-    } catch {
-      Alert.alert(t('student.videoAttachmentViewModel.copy001'));
+    } catch (error) {
+      showActionError(error);
     }
   };
   const action = (label: string, onPress: () => void) => (
@@ -235,14 +245,22 @@ export function VideoAttachmentControls({
             gap: spacing.sm,
           }}
         >
-          <Text style={{ color: colors.danger }}>
-            {t('student.videoAttachmentV3Controls.copy008')}
+          <Text style={{ color: colors.danger, flex: 1 }}>
+            {record.errorMessage ?? t('student.videoAttachmentV3Controls.copy008')}
           </Text>
           {action(
             t('student.videoAttachmentV3Controls.copy009'),
-            () => void videoUploadManager.retry(identity, ensureSetLog),
+            () => {
+              setActionErrorMessage(null);
+              void videoUploadManager
+                .retry(identity, ensureSetLog)
+                .catch(showActionError);
+            },
           )}
         </View>
+      ) : null}
+      {actionErrorMessage ? (
+        <Text style={{ color: colors.danger }}>{actionErrorMessage}</Text>
       ) : null}
       {overlay.isFallback && fallbackNode !== null ? (
         <Modal visible animationType="slide" onRequestClose={dismiss}>
