@@ -32,11 +32,12 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const videos = useStudentVideos(studentId);
   const playback = useStudentChatPlayback();
   // The route param can arrive empty (blank coach display name); fall back to the conversation's other party.
-  const [resolvedName, setResolvedName] = useState(coachName);
+  const [fetchedName, setFetchedName] = useState('');
+  const resolvedName = coachName || fetchedName;
   useEffect(() => {
-    if (coachName) { setResolvedName(coachName); return; }
+    if (coachName) return;
     let live = true;
-    void chatRepository.list().then(result => { if (live) setResolvedName(result.conversations.find(item => item.id === conversationId)?.other_party.display_name ?? ''); }).catch(() => {});
+    void chatRepository.list().then(result => { if (live) setFetchedName(result.conversations.find(item => item.id === conversationId)?.other_party.display_name ?? ''); }).catch(() => {});
     return () => { live = false; };
   }, [coachName, conversationId]);
   const [selectedShare, setSelectedShare] = useState<ChatMessage | null>(null);
