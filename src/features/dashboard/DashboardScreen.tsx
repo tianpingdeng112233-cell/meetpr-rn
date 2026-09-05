@@ -20,9 +20,7 @@ import { AnalyticsScreen, screen } from '@/analytics';
 import {
   AppButton,
   Card,
-  Eyebrow,
-  GoldProgressBar,
-  StatusBadge,
+  GradientFill,
   Screen,
   Sparkline,
   useColors,
@@ -115,6 +113,13 @@ export function DashboardScreen() {
   };
   const action = vm.today.action;
   const selected = vm.today.cursor ?? vm.today.completedToday;
+  const statusLabel = action.kind === 'waiting'
+    ? t('student.dashboardTodayScreen.copy005')
+    : vm.today.cursor?.exercises.length === 0
+      ? t('student.dashboardTodayScreen.copy006')
+      : action.kind === 'cycleCompleted'
+        ? t('student.dashboardTodayScreen.copy002')
+        : null;
   const profile = (
     <ProfileMetrics
       profile={vm.profile}
@@ -134,16 +139,18 @@ export function DashboardScreen() {
           />
         }
       >
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: 15 }}>
           <View
+            testID="dashboard-brand-date-row"
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              gap: 10,
             }}
           >
-            <MeetPRMark />
+            <MeetPRMark testID="dashboard-mark" />
             <Text
+              testID="dashboard-date"
               style={{
                 ...font.mono(12),
                 letterSpacing: 0.72,
@@ -161,64 +168,48 @@ export function DashboardScreen() {
               ])}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text
-              style={{
-                ...font.display(54),
-                color: colors.textPrimary,
-                flex: 1,
-              }}
-            >
-              {vm.title}
-            </Text>
-            {action.kind === 'waiting' ? (
-              <StatusBadge label={t('student.dashboardTodayScreen.copy005')} />
-            ) : vm.today.cursor?.exercises.length === 0 ? (
-              <StatusBadge label={t('student.dashboardTodayScreen.copy006')} />
-            ) : action.kind === 'cycleCompleted' ? (
-              <StatusBadge
-                tone="success"
-                label={t('student.dashboardTodayScreen.copy002')}
-              />
-            ) : null}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', gap: 11 }}>
+              <Text style={{ ...font.display(54), color: statusLabel ? colors.textDim : colors.textPrimary }}>
+                {vm.title}
+              </Text>
+              {statusLabel ? (
+                <Text style={{ ...font.mono(12, 'bold'), color: colors.textMuted, backgroundColor: colors.surfaceElevated, borderColor: colors.borderStrong, borderWidth: 1, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 5, marginBottom: 12 }}>
+                  {statusLabel}
+                </Text>
+              ) : null}
+            </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
               onPress={openFeedback}
               style={{
-                minWidth: 44,
-                minHeight: 44,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                backgroundColor: colors.surfaceCard,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
               <MaterialCommunityIcons
                 name="message-outline"
-                size={25}
+                size={21}
                 color={colors.textPrimary}
               />
               {vm.feedback.unreadCount > 0 ? (
-                <StatusBadge
-                  tone="gold"
-                  label={String(vm.feedback.unreadCount)}
-                />
+                <View style={{ position: 'absolute', top: 0, right: 0, minWidth: 18, minHeight: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: colors.unread, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: colors.ctaTopHighlight, ...font.mono(10, 'bold') }}>{vm.feedback.unreadCount > 99 ? '99+' : vm.feedback.unreadCount}</Text>
+                </View>
               ) : null}
             </Pressable>
           </View>
-          <View style={{ flexDirection: 'row', gap: 5 }}>
-            {vm.today.segments.map((segment) => (
-              <GoldProgressBar
-                key={segment.day.id}
-                progress={
-                  segment.state === 'done'
-                    ? 1
-                    : segment.state === 'current'
-                      ? 0.5
-                      : 0
-                }
-                style={{ flex: segment.state === 'current' ? 1.5 : 1 }}
-              />
-            ))}
+          <View style={{ flexDirection: 'row', gap: 5, marginTop: -8 }}>
+            {vm.today.segments.length ? vm.today.segments.map((segment) => (
+              <View key={segment.day.id} style={{ flex: segment.state === 'current' ? 1.5 : 1, height: 4, borderRadius: 2, backgroundColor: segment.state === 'done' ? colors.textPrimary : colors.borderStrong, ...(segment.state === 'current' ? { boxShadow: `0 0 4px ${colors.gold500}59` } : {}) }}>
+                {segment.state === 'current' ? <View style={{ flex: 1, borderRadius: 2, overflow: 'hidden' }}><GradientFill stops={[{ color: colors.gold500, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold300, offset: 1 }]} /></View> : null}
+              </View>
+            )) : <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong }} />}
           </View>
         </View>
         <DashboardAsyncSection
@@ -257,12 +248,14 @@ export function DashboardScreen() {
                     gap: 8,
                   }}
                 >
-                  <Eyebrow
-                    label={`${t('student.dashboardWeekCalendar.copy012')} · ${vm.today.segments.filter((s) => s.state === 'done').length}/${vm.today.segments.length}`}
-                  />
-                  <Text style={{ ...font.mono(10), color: colors.textMuted }}>
-                    {t('student.dashboardWeekCalendar.copy014')}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+                    <Text style={{ ...font.mono(13), color: colors.textSecondary }}>{t('student.dashboardWeekCalendar.copy012')}</Text>
+                    <Text style={{ ...font.mono(11, 'bold'), color: colors.textSecondary }}>{vm.today.segments.filter((segment) => segment.state === 'done').length} / {vm.today.segments.length}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <MaterialCommunityIcons name="calendar-blank-outline" size={11} color={colors.textDisabled} />
+                    <Text style={{ ...font.mono(11), color: colors.textMuted }}>{t('student.dashboardWeekCalendar.copy014')}</Text>
+                  </View>
                 </View>
                 <WeekGrid
                   days={vm.week.status === 'loaded' ? vm.week.days : []}
@@ -300,7 +293,7 @@ export function DashboardScreen() {
         !vm.plans.isLoading &&
         action.kind !== 'waiting' ? (
           <>
-            <Eyebrow label={t('student.dashboardTodayScreen.copy003')} />
+            <Text style={{ ...font.mono(12), color: colors.textSecondary }}>{t('student.dashboardTodayScreen.copy003')}</Text>
             <DashboardAsyncSection
               isError={vm.e1rm.isError}
               onRetry={() => void vm.e1rm.retry()}
@@ -424,11 +417,9 @@ export function DashboardScreen() {
                         backgroundColor: colors.bgInset,
                       }}
                     >
-                      <Eyebrow
-                        label={t('student.dashboardPrimaryAction.copy004', [
-                          dayCode(action.nextDay),
-                        ])}
-                      />
+                      <Text style={{ ...font.mono(12), color: colors.gold500 }}>
+                        {t('student.dashboardPrimaryAction.copy004', [dayCode(action.nextDay)])}
+                      </Text>
                       <Text style={{ color: colors.textPrimary }}>
                         {dayName(action.nextDay, resolve)}
                       </Text>
@@ -481,7 +472,7 @@ export function WeekGrid({
 }) {
   const colors = useColors();
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
       {days.map(({ day, status, date }) => (
         <Pressable
           key={day.id}
@@ -490,16 +481,17 @@ export function WeekGrid({
           accessibilityState={{ selected: selectedDayID === day.id }}
           onPress={() => onSelect(day.id)}
           style={{
-            minWidth: 64,
+            minWidth: 0,
             flex: 1,
             minHeight: 58,
             borderRadius: 12,
             alignItems: 'center',
             padding: 6,
-            gap: 4,
+            justifyContent: 'center',
+            gap: 5,
             backgroundColor:
               status === 'current'
-                ? colors.goldSoft
+                ? `${colors.goldRGB}1F`
                 : status === 'done'
                   ? colors.surfaceCard
                   : colors.bgInset,
@@ -507,24 +499,9 @@ export function WeekGrid({
             borderColor: colors.gold500,
           }}
         >
-          <Text
-            style={{
-              color:
-                status === 'done'
-                  ? colors.success
-                  : status === 'current'
-                    ? colors.gold500
-                    : colors.textGhost,
-            }}
-          >
-            {status === 'done' ? '✓' : status === 'current' ? '●' : '○'}
-          </Text>
-          <Text style={{ color: colors.textPrimary, ...font.mono(10) }}>
-            D{day.day_of_week}
-          </Text>
-          <Text style={{ color: colors.textMuted, ...font.mono(10) }}>
-            {recommendedDateText(date)}
-          </Text>
+          {status === 'done' ? <MaterialCommunityIcons name="check" size={11} color={colors.success} /> : <View style={{ width: 7, height: 7, borderRadius: 3.5, borderWidth: status === 'current' ? 0 : 1, borderColor: colors.textGhost, backgroundColor: status === 'current' ? colors.gold500 : 'transparent' }} />}
+          <Text style={{ color: status === 'current' ? colors.textPrimary : colors.textMuted, ...font.mono(10, status === 'current' ? 'bold' : 'semibold') }}>D{day.day_of_week}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ color: status === 'current' ? colors.textSecondary : colors.textMuted, ...font.mono(10) }}>{recommendedDateText(date)}</Text>
         </Pressable>
       ))}
     </View>
@@ -557,14 +534,13 @@ function FeedbackCard({
   const colors = useColors();
   const [expanded, setExpanded] = useState(false);
   return (
-    <Card style={{ padding: 16, gap: 12 }}>
-      <Eyebrow label={t('student.dashboardFeedbackCard.copy003')} />
-      {pending > 0 ? (
-        <StatusBadge
-          tone="gold"
-          label={t('student.dashboardFeedbackCard.copy004', [pending])}
-        />
-      ) : null}
+    <Card accent style={{ paddingHorizontal: 16, paddingVertical: 14, gap: 7, borderRadius: 12, overflow: 'hidden' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+        <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.gold500 }} />
+        <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.dashboardFeedbackCard.copy003')}</Text>
+        {pending > 0 ? <Text style={{ ...font.mono(10, 'bold'), color: colors.inkOnGold, backgroundColor: colors.goldText, borderRadius: 20, paddingHorizontal: 6, paddingVertical: 1 }}>{t('student.dashboardFeedbackCard.copy004', [pending])}</Text> : null}
+        {!expanded && items[0] ? <Text style={{ ...font.body(12), color: colors.textFaint }}>· {new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(new Date(items[0].day_date ?? items[0].posted_at))}</Text> : null}
+      </View>
       {!items.length ? (
         <Text style={{ color: colors.textMuted }}>
           {t('student.dashboardFeedbackCard.copy007')}
@@ -572,31 +548,18 @@ function FeedbackCard({
       ) : (
         (expanded ? items : items.slice(0, 1)).map((item) => (
           <Pressable key={item.id} onPress={onPress}>
-            <Text style={{ color: colors.textPrimary, ...font.body(15) }}>
+            <Text numberOfLines={expanded ? 1 : 2} style={{ color: expanded ? colors.textSecondary : colors.textPrimary, ...font.body(expanded ? 13 : 14), lineHeight: expanded ? 18 : 22 }}>
               {item.text}
             </Text>
-            <Text
-              style={{
-                color: colors.textMuted,
-                ...font.mono(11),
-                marginTop: 6,
-              }}
-            >
-              {coachName} · {relativeFeedbackTime(item.posted_at, now)}
-            </Text>
+            {expanded ? <Text style={{ color: colors.textMuted, ...font.body(11), marginTop: 3 }}>{coachName} · {relativeFeedbackTime(item.posted_at, now)}</Text> : null}
           </Pressable>
         ))
       )}
-      {items.length > 1 ? (
-        <AppButton
-          variant="link"
-          label={
-            expanded
-              ? t('student.dashboardFeedbackCard.copy005')
-              : t('student.dashboardFeedbackCard.copy001', [items.length])
-          }
-          onPress={() => setExpanded(!expanded)}
-        />
+      {items.length > 0 ? (
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(!expanded)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 2, minHeight: 28 }}>
+          <Text style={{ ...font.body(12), color: colors.textMuted }}>{expanded ? t('student.dashboardFeedbackCard.copy005') : t('student.dashboardFeedbackCard.copy001', [items.length])}</Text>
+          <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textMuted} />
+        </Pressable>
       ) : null}
     </Card>
   );
@@ -626,7 +589,7 @@ export function DashboardPlanWaitingState({
         label={t('student.dashboardPlanWaitingState.copy005')}
         onPress={onMessage}
       />
-      <Eyebrow label={t('student.dashboardPlanWaitingState.copy006', [week])} />
+      <Text style={{ ...font.mono(13), color: colors.textSecondary }}>{t('student.dashboardPlanWaitingState.copy006', [week])}</Text>
       {(
         [
           'student.dashboardPlanWaitingState.copy007',
@@ -662,24 +625,26 @@ export function ProfileMetrics({
       ? localCompetitionDays(profile.competition_date, now)
       : null;
   const bodyWeightText = profile?.weight_kg
-    ? `${formatKg(Number(profile.weight_kg))} KG`
+    ? `${formatKg(Number(profile.weight_kg))} kg`
     : '—';
   return (
     <DashboardAsyncSection isError={profileError} onRetry={onRetry}>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 11 }}>
         <Card
           accessible
           accessibilityLabel={t('student.dashboardProfileMetricsView.copy002', [
             bodyWeightText,
           ])}
-          style={{ flex: 1, padding: 16, gap: 8 }}
+          style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3 }}
         >
-          <Text style={{ color: colors.textMuted }}>
-            {t('student.dashboardProfileMetricsView.copy001')}
-          </Text>
-          <Text style={{ color: colors.textPrimary, ...font.display(24) }}>
-            {bodyWeightText}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <MaterialCommunityIcons name="scale-bathroom" size={13} color={colors.textPrimary} />
+            <Text style={{ color: colors.textPrimary, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            <Text style={{ color: colors.textPrimary, ...font.mono(24, 'bold') }}>{profile?.weight_kg ? formatKg(Number(profile.weight_kg)) : '—'}</Text>
+            {profile?.weight_kg ? <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}> kg</Text> : null}
+          </View>
         </Card>
         {competitionDays !== null && competitionDays >= 0 ? (
           <Card
@@ -687,15 +652,18 @@ export function ProfileMetrics({
             accessibilityLabel={t('student.dashboardProfileMetricsView.copy005', [
               competitionDays,
             ])}
-            style={{ flex: 1, padding: 16, gap: 8 }}
+            style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3, overflow: 'hidden', borderWidth: 1, borderColor: `${colors.goldRGB}4D` }}
           >
-            <Text style={{ color: colors.textMuted }}>
-              {t('student.dashboardProfileMetricsView.copy003')}
-            </Text>
-            <Text style={{ color: colors.textPrimary, ...font.display(24) }}>
-              {competitionDays}{' '}
-              {t('student.dashboardProfileMetricsView.copy004')}
-            </Text>
+            <GradientFill direction="diagonal" stops={[{ color: colors.goldRGB, opacity: 0.13, offset: 0 }, { color: colors.surfaceCard, offset: 0.62 }, { color: colors.surfaceCard, offset: 1 }]} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MaterialCommunityIcons name="flag-outline" size={13} color={colors.gold500} />
+              <Text style={{ color: colors.textPrimary, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <MaterialCommunityIcons name="fire" size={16} color={colors.gold500} />
+              <Text style={{ color: colors.goldText, ...font.mono(24, 'bold') }}>{competitionDays}</Text>
+              <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}>{t('student.dashboardProfileMetricsView.copy004')}</Text>
+            </View>
           </Card>
         ) : null}
       </View>
