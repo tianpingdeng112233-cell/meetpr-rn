@@ -1,3 +1,4 @@
+import { startConversationRealtime, useChatRealtime } from './realtime';
 import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
 import { canonicalBody, ChatSetCardPresentation, displayFirstLine, setRefBodyAllowed } from './set-ref';
 import { loadTodaySetRefCandidates, SetRefSharePicker } from './SetRefSharePicker';
@@ -24,9 +25,10 @@ import { useSessionStore } from '@/api/session';
 import { font, GradientFill, Screen, useColors } from '@/design';
 import { getLocale, t } from '@/i18n';
 import { createUUID } from '@/analytics/uuid';
-import { applyReadState, CHAT_POLL_MS, createConversationSync, mergeMessages } from './conversation-model';
+import { applyReadState, CONVERSATION_POLL_MS, createConversationSync, mergeMessages } from './conversation-model';
 
 export function StudentConversationScreen({ conversationId, coachName }: { conversationId: string; coachName: string }) {
+  const { subscribe } = useChatRealtime();
   const colors = useColors();
   const router = useRouter();
   const studentId = useSessionStore(state => state.user?.id ?? '');
@@ -42,6 +44,11 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const initialPosition = useRef(false);
   const historyAnchor = useRef<{ id: string; offset: number } | null>(null);
   const [otherReadSeq, setOtherReadSeq] = useState(0);
+  const otherReadRef = useRef(0);
+  const updateOtherRead = useCallback((seq: number) => {
+    otherReadRef.current = Math.max(otherReadRef.current, seq);
+    setOtherReadSeq(otherReadRef.current);
+  }, []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
   const fetchedCursor = useRef<number | undefined>(undefined);
@@ -85,6 +92,8 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     focusGeneration.current += 1;
     const sync = createConversationSync({
       now: Date.now,
+      pollInterval: CONVERSATION_POLL_MS,
+      realtime: { conversationId, userId: studentId, messages: () => messagesRef.current, otherReadSeq: () => otherReadRef.current, updateOtherRead },
       fetchPage: async () => {
         const latest = fetchedCursor.current;
         let cursor = latest;
@@ -92,7 +101,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
         for (;;) {
           const page = await chatRepository.messages(conversationId, cursor ? { since_seq: cursor } : {});
           if (!live) return [];
-          setOtherReadSeq(previous => Math.max(previous, page.meta.other_last_read?.seq ?? 0));
+          updateOtherRead(page.meta.other_last_read?.seq ?? 0);
           incoming = mergeMessages(incoming, page.messages);
           if (!latest) setHasOlder(page.meta.has_more);
           const next = incoming.at(-1)?.seq;
@@ -119,10 +128,12 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     };
     refresh.current = () => run(true);
     run(true);
-    const timer = setInterval(run, CHAT_POLL_MS);
-    const subscription = AppState.addEventListener('change', state => { if (state === 'active') run(true); });
-    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; setPickerVisible(false); sync.stop(); clearInterval(timer); subscription.remove(); };
-  }, [acknowledgeSetRef, client, conversationId, studentId]));
+    const stopRealtime = startConversationRealtime({ subscribe, refresh: run, receive: async event => {
+      const result = await sync.receive(event);
+      if (live && result) { setLoadError(false); setLoading(false); }
+    } });
+    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; setPickerVisible(false); sync.stop(); stopRealtime(); };
+  }, [acknowledgeSetRef, client, conversationId, studentId, subscribe, updateOtherRead]));
   async function loadOlder() {
     const generation = focusGeneration.current;
     const first = messagesRef.current[0];

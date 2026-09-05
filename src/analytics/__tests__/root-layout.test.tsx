@@ -36,7 +36,10 @@ jest.mock('@/api/session', () => {
     user: null,
   };
   return {
-    useSessionStore: (selector: (value: typeof state) => unknown) => selector(state),
+    useSessionStore: Object.assign((selector: (value: typeof state) => unknown) => selector(state), {
+      getState: () => state,
+      subscribe: () => () => {},
+    }),
   };
 });
 jest.mock('expo-router', () => {
