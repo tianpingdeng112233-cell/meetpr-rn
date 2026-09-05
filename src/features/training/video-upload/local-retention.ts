@@ -3,6 +3,7 @@ export type RetainedVideo = {
   createdAt: number;
   sizeBytes: number;
   uploaded: boolean;
+  prepared: boolean;
 };
 export const VIDEO_LOCAL_LIMIT_BYTES = 500 * 1024 * 1024;
 export function localRetentionRemovals(
@@ -13,6 +14,7 @@ export function localRetentionRemovals(
     files
       .filter(
         (file) =>
+          file.prepared &&
           file.uploaded &&
           new Date(file.createdAt).toDateString() !==
             new Date(now).toDateString(),
@@ -25,6 +27,8 @@ export function localRetentionRemovals(
   let total = remaining.reduce((sum, file) => sum + file.sizeBytes, 0);
   for (const file of remaining) {
     if (total <= VIDEO_LOCAL_LIMIT_BYTES) break;
+    // A source still awaiting preparation owns its only recoverable copy.
+    if (!file.prepared) continue;
     removed.add(file.key);
     total -= file.sizeBytes;
   }

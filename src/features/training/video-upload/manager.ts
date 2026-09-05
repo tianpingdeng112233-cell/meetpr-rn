@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { SerialTaskQueue } from '../serial-task-queue';
 import { setsRepository, type SetLogUpsertRequest } from '@/api/domains/sets';
 import { AppState } from 'react-native';
@@ -42,6 +43,10 @@ type ActiveJob = {
   compressionId: string | null;
   done: Promise<void>;
 };
+const attachments = new Map<
+  string,
+  { sourceUri: string; done: Promise<void> }
+>();
 const mutations = new Map<string, SerialTaskQueue>();
 const jobs = new Map<string, ActiveJob>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -154,6 +159,27 @@ async function run(
     if (!setLogId) {
       try {
         setLogId = await ensureSetLog();
+      } catch (cause) {
+        // These are local validation failures from the sheet's save queue.
+        // API/transport errors keep their original retry classification.
+        if (
+          cause instanceof Error &&
+          [
+            'Set log unavailable',
+            'Invalid set input',
+            'Selected day is no longer current',
+          ].includes(cause.message)
+        ) {
+          throw new VideoNativeError(
+            t(
+              cause.message === 'Selected day is no longer current'
+                ? 'student.todayWorkoutScreen.copy024'
+                : 'student.todayWorkoutViewModelRecordingError.copy004',
+            ),
+            { cause, deterministic: true },
+          );
+        }
+        throw cause;
       } finally {
         ensureCallbacks.delete(keyFor(id));
       }
@@ -233,7 +259,7 @@ async function run(
     };
     dispatch(id, { type: 'waiting', retry });
     if (UploadRetryScheduler({ ...retry, now }).kind === 'terminal')
-      terminal(id);
+      terminal(id, error instanceof VideoNativeError ? error.copy : undefined);
     await flushVideoUploads();
     void track(AnalyticsEvent.MediaUpload, {
       status: 'failed',
@@ -306,6 +332,7 @@ async function sweep(): Promise<void> {
       0,
     ),
     uploaded: record.status === 'uploaded',
+    prepared: record.prepared,
   }));
   for (const key of localRetentionRemovals(files, Date.now())) {
     const separator = key.indexOf(':');
@@ -337,38 +364,47 @@ function mutate<T>(
 const remove = (id: UploadIdentity) => mutate(id, () => removeRecord(id));
 
 export const videoUploadManager = {
-  async attach(
+  attach(
     id: UploadIdentity,
     source: SelectedVideo,
     ensure: EnsureSetLog,
     buildLogRequest?: () => SetLogUpsertRequest,
   ): Promise<void> {
-    const retainedUri = await mutate(id, async () => {
-      await useVideoUploadStore.getState().hydrate();
-      const retained = retainVideoSource(source);
-      let logRequest: SetLogUpsertRequest | undefined;
-      try {
-        logRequest = buildLogRequest?.();
-        await removeRecord(id);
-      } catch (error) {
-        deleteLocalVideo(retained.uri);
-        throw error;
-      }
-      dispatch(id, { type: 'attach', source: retained, logRequest });
-      ensureCallbacks.set(keyFor(id), ensure);
-      await flushVideoUploads();
-      return retained.uri;
+    const key = keyFor(id);
+    const pending = attachments.get(key);
+    if (pending?.sourceUri === source.uri) return pending.done;
+    const done = (async () => {
+      const retainedUri = await mutate(id, async () => {
+        await useVideoUploadStore.getState().hydrate();
+        const retained = await retainVideoSource(source);
+        let logRequest: SetLogUpsertRequest | undefined;
+        try {
+          logRequest = buildLogRequest?.();
+          await removeRecord(id);
+        } catch (error) {
+          deleteLocalVideo(retained.uri);
+          throw error;
+        }
+        dispatch(id, { type: 'attach', source: retained, logRequest });
+        ensureCallbacks.set(keyFor(id), ensure);
+        await flushVideoUploads();
+        return retained.uri;
+      });
+      void track(AnalyticsEvent.MediaUpload, {
+        status: 'started',
+        kind: 'set_video',
+      });
+      await sweep();
+      if (
+        recordFor(id)?.source?.uri === retainedUri &&
+        recordFor(id)?.status !== 'failed'
+      )
+        await execute(id, ensure);
+    })().finally(() => {
+      if (attachments.get(key)?.done === done) attachments.delete(key);
     });
-    void track(AnalyticsEvent.MediaUpload, {
-      status: 'started',
-      kind: 'set_video',
-    });
-    await sweep();
-    if (
-      recordFor(id)?.source?.uri === retainedUri &&
-      recordFor(id)?.status !== 'failed'
-    )
-      await execute(id, ensure);
+    attachments.set(key, { sourceUri: source.uri, done });
+    return done;
   },
   async retry(id: UploadIdentity, ensure: EnsureSetLog): Promise<void> {
     if (recordFor(id)?.status !== 'failed') return;
@@ -397,7 +433,8 @@ export const videoUploadManager = {
     void (async () => {
       await useVideoUploadStore.getState().hydrate();
       if (disposed || activeSession !== session) return;
-      if (jobs.size === 0) {
+      // Retain can be copying a file before its record is published.
+      if (jobs.size === 0 && attachments.size === 0) {
         cleanInterruptedParts();
         cleanOrphanVideos(
           Object.values(useVideoUploadStore.getState().records).flatMap(

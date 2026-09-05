@@ -11,25 +11,27 @@ test('keeps today by device calendar day and clears prior uploaded files only', 
   expect(
     localRetentionRemovals(
       [
-        { key: 'today', createdAt: today, sizeBytes: 10, uploaded: true },
+        { key: 'today', createdAt: today, sizeBytes: 10, uploaded: true, prepared: true },
         {
           key: 'yesterday',
           createdAt: yesterday,
           sizeBytes: 10,
           uploaded: true,
+          prepared: true,
         },
         {
           key: 'pending',
           createdAt: yesterday,
           sizeBytes: 10,
           uploaded: false,
+          prepared: true,
         },
       ],
       now,
     ),
   ).toEqual(['yesterday']);
 });
-test('over 500 MiB evicts oldest first, including pending files', () => {
+test('over 500 MiB evicts oldest prepared files first, including pending uploads', () => {
   expect(
     localRetentionRemovals(
       [
@@ -38,12 +40,14 @@ test('over 500 MiB evicts oldest first, including pending files', () => {
           createdAt: today + 1,
           sizeBytes: 300 * 1024 * 1024,
           uploaded: true,
+          prepared: true,
         },
         {
           key: 'old',
           createdAt: today,
           sizeBytes: 250 * 1024 * 1024,
           uploaded: false,
+          prepared: true,
         },
       ],
       now,
@@ -72,4 +76,12 @@ test('playback chooses existing local file, otherwise fetches a fresh remote URL
   ).resolves.toBe('https://signed/new');
   await selectPlaybackSource(null, () => false, remote);
   expect(remote).toHaveBeenCalledTimes(2);
+});
+
+test('unprepared sources, including a just attached file, are protected under storage pressure', () => {
+  expect(localRetentionRemovals([
+    { key: 'just-attached', createdAt: today, sizeBytes: 350000, uploaded: false, prepared: false },
+    { key: 'unprepared', createdAt: yesterday, sizeBytes: 600 * 1024 * 1024, uploaded: false, prepared: false },
+    { key: 'prepared', createdAt: today + 1, sizeBytes: 10, uploaded: true, prepared: true },
+  ], now)).toEqual(['prepared']);
 });

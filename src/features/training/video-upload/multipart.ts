@@ -1,7 +1,12 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { fetch } from 'expo/fetch';
 import type { UploadCompleteRequest } from '@/api/domains/uploads';
-import { VIDEO_PART_SIZE_BYTES, VIDEO_UPLOAD_CONCURRENCY } from './model';
+import {
+  VIDEO_PART_SIZE_BYTES,
+  VIDEO_UPLOAD_CONCURRENCY,
+  VIDEO_UPLOAD_ERRORS,
+} from './model';
+import { VideoNativeError } from './native-error';
 export class UploadCancelledError extends Error {
   constructor() {
     super('Video upload cancelled');
@@ -23,8 +28,15 @@ export type MultipartOptions = {
 const partDirectory = () => new Directory(Paths.cache, 'video-parts');
 /** Called at cold startup, before any workers exist. */
 export function cleanInterruptedParts(): void {
-  const directory = partDirectory();
-  if (directory.exists) directory.delete();
+  try {
+    const directory = partDirectory();
+    if (directory.exists) directory.delete();
+  } catch (cause) {
+    throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
+      cause,
+      deterministic: true,
+    });
+  }
 }
 export async function uploadFileParts(
   fileUri: string,
@@ -95,7 +107,14 @@ export async function uploadFileParts(
           throw timedOut ? new PartUploadError(408) : error;
         } finally {
           clearTimeout(timeout);
-          if (temporary.exists) temporary.delete();
+          try {
+            if (temporary.exists) temporary.delete();
+          } catch (cause) {
+            throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
+              cause,
+              deterministic: true,
+            });
+          }
         }
       }
     } catch (error) {
