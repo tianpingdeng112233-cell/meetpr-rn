@@ -4,7 +4,8 @@ import { font, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { timeText } from './time';
 
-export function FeedbackVideoScrubber({ seconds, duration, begin, move, finish }: {
+export function FeedbackVideoScrubber({ layout = 'fullScreen', seconds, duration, begin, move, finish }: {
+  layout?: 'fullScreen' | 'workbench';
   seconds: number;
   duration: number;
   begin: (seconds: number) => void;
@@ -19,8 +20,10 @@ export function FeedbackVideoScrubber({ seconds, duration, begin, move, finish }
     return lastPosition.current;
   };
   const ratio = duration > 0 ? Math.min(1, Math.max(0, seconds / duration)) : 0;
-  return <View style={styles.row}>
-    <Text style={styles.time}>{timeText(seconds)}</Text>
+  const workbench = layout === 'workbench';
+  const timeStyle = [styles.time, workbench && { color: `${colors.inkOnCTAFill}B3` }];
+  return <View style={[styles.row, workbench && { paddingHorizontal: 0, paddingVertical: 0, backgroundColor: `${colors.inkOnCTAFill}00` }]}>
+    <Text style={timeStyle}>{timeText(seconds)}</Text>
     <View
       testID="feedback.video.scrubber"
       accessible accessibilityRole="adjustable"
@@ -41,12 +44,12 @@ export function FeedbackVideoScrubber({ seconds, duration, begin, move, finish }
       onResponderTerminate={() => finish(lastPosition.current)}
       onResponderTerminationRequest={() => false}
     >
-      <View pointerEvents="none" style={[styles.track, { backgroundColor: colors.videoStageBorder }]}>
-        <View style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: colors.gold500 }]} />
-        <View style={[styles.thumb, { left: `${ratio * 100}%`, backgroundColor: colors.gold500 }]} />
+      <View pointerEvents="none" style={[styles.track, { backgroundColor: workbench ? `${colors.inkOnCTAFill}33` : colors.videoStageBorder }]}>
+        <View style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: workbench ? colors.inkOnCTAFill : colors.gold500 }]} />
+        <View style={[styles.thumb, { left: `${ratio * 100}%`, backgroundColor: workbench ? colors.inkOnCTAFill : colors.gold500 }]} />
       </View>
     </View>
-    <Text style={styles.time}>{timeText(duration)}</Text>
+    <Text style={timeStyle}>{timeText(duration)}</Text>
   </View>;
 }
 const styles = StyleSheet.create({
