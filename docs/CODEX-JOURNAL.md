@@ -907,3 +907,33 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - 图片发送(iOS `sendImage` 学员端也没有入口)。
 - 实时 WebSocket(iOS `ChatRealtimeRouter`);沿用 30 s 轮询 + 回前台刷新(与教练端 `createConversationSync` 一致)。
 - 推送深链。
+
+## W3-s2 — 学员端组分享（2026-09-05）
+
+### 范围与正典
+
+- Worktree `feat/w3s-setref`，开工 HEAD `b5fc967a4a50f0c51a19fddd551d6acc447caeab`，开工 clean。只改卡面白名单与对应测试/守卫/台账；不加依赖、不改上传管线或教练端、不动 node_modules symlink、无 commit/push。
+- 已读 AGENTS、PLAN、JOURNAL W3-s/W2-c、指定 RN 文件与本机 iOS SetRefV1/formatter/picker/presentation/send coordinator/card/Today sharing source/入口/NetworkChatRepository。只读 iOS HEAD 为 `202e95dbbf88baf5778f2329f206f34e117a4dd0`；已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。追加核对 `StudentPlanProjection` 与 `PrescribedSet.rpe`：处方组号来自 `set_number`，legacy RPE 0 合法，区间/百分比/RIR 不冒充 RPE。
+- 用户后续明确要求跳过 code-review 技能与 issue-tracker 配置；本卡未执行该技能、未生成配置、未派 review 子 agent。
+
+### 实装
+
+- `chatRepository.sendSetRef` 复用已有 `ChatSetRefSchema`，发送 `POST /conversations/:id/messages`，body 为 `{ kind: 'text', body, client_id, set_ref, video_id? }`。快照仍是驼峰字段，decimal 保持字符串；保留接收端 `ChatSetRefSchema.nullish().catch(null)` 整条快照降级语义，不另造 schema。
+- `set-ref.ts` 提供中文正典首行/body、独立 i18n display 首行、十进制源字符串规范化与既有 schema 校验、UTF-16 4000 上限、候选构造、picker 状态机、四条件入口策略、精确 note 解析。note 保留 nil / 显式空串 / 非空三态；body 不匹配正典首行或 `首行\n` 时按普通文字呈现。保留 W3-s 已有 `kind=set_ref` 兼容；新发送统一 `kind=text`。
+- 中文正典字面量仅放 `set-ref.ts` 的 `CANONICAL` 常量。`no-literal-zh` 增加**仅该文件**的豁免：这是与 iOS/plan-web 共用的消息协议线值，不是 UI 文案。其余新增 UI 全用既有 ChatUI/StudentKit key，颜色用 `useColors()`，字体用 `font.*`。
+- 两入口共用 picker 数据源：读取当前计划 cursor day、设备训练日的日志与动作 catalog。logged 按后台完成时间倒序，并列按动作序/组序倒序；包含已有日志、重复记录、额外组与无剩余处方的动作。planned 按动作序/处方组号，排除已记录槽位，非法处方跳过；logged 非法数据保留行并显示 invalidSetRecord，确认时拒绝。消息日期使用计划日 scheduled/recommended date，与 iOS 一致；日志筛选使用实际 gym day。
+- Modal 选组器实现加载、空态、加载失败、logged/planned 分节、默认当前 hero log 或首条、选择→确认→返回、视频默认开关、失败视频禁用、确认防重入与会话级 staged store。Android 系统返回关闭；确认 stage 后关闭，由训练入口导航、聊天入口留在当前会话。
+- Training hero 右上 Ask coach 使用 36 高胶囊/44 命中区、准备 spinner。可编辑日、有组、有 accepted coach、聊天上下文可用四条件同时成立才显示。现有 `useOpenCoachChat.openCoachChat()` 会直接导航且不返回 ID，按文件白名单不改该模块：hero 在 `TodayWorkoutView` 调同一 `chatRepository.open` 并同步同一 conversations cache，取得 ID 后先开 picker，确认后才导航。原页头聊天行为保持；失败显示 trainingShareConversationFailed，离屏迟到结果不打开 picker。
+- Chat composer 增加 34 圆形＋入口、staged 哑铃/摘要/移除条、可选备注 placeholder、错误与包含正典首行的 UTF-16 计数。有 staged 时备注可空，超长禁发；发送成功清 staged/原备注，新输入的文字不被迟到回包擦除。pending 重试固定 body/client_id/已解析 video_id；轮询发现相同 client_id 也确认并清 staged，覆盖 HTTP 回包丢失。
+- 上传 store 在本卡生产代码中只读/订阅，不改上传流程。ready 直接携带 video_id；pending/preparing/uploading/waiting 等待该本地记录 uploaded；failed/removed/replaced 显示对应错误，移除 staged 可取消等待，卸载释放订阅。RN 的 attachmentId 属于可续期的远端上传会话，pending 也可能为空或旧 ID，因此冻结 `recordKey + createdAt` 作为本地附件身份，完成后取最新 attachmentId；远端会话 ID 更新不误判为更换视频。确认阶段同样处理“选择时 uploading、确认时已 uploaded”的竞态。
+- 训练分享卡精修 3/4 宽、lg/md radius、两侧 gold 竖条、HH:mm、重量内嵌小号 kg、play-box 按钮、备注底与我方送达条；不匹配 body 不再近似剥离首行。
+
+### 测试与验证
+
+- 按卡面五组公开 seam 使用 TDD；红绿证据位于 `/private/tmp/w3s2-*-{red,green}.log`，覆盖 formatter/normalize/body、候选与状态机、wire send、picker、staged composer、入口可见性，并补确认竞态、上传会话续期、轮询确认、无处方日志的红绿回归。
+- 纯函数测试覆盖三条 iOS 字面首行、有无备注、en/zh 摘要、非法组号/total/date/reps/decimal、100.00→100/8.0→8、4000/4001 UTF-16、候选顺序与 total/排除/video 三态、处方原组号与 legacy 0 RPE、note 三态和错配降级。
+- UI/发送测试覆盖空态/加载失败/系统返回/选择返回确认、固定 client_id staging、uploading 默认开/failed 关且禁用、确认时完成和重复确认、staged placeholder/可空发送/成功清理、视频等待/失败/移除/替换/续期、HTTP 重试不变的 body/client_id/video_id、超长禁发、聊天＋真实 picker、轮询回执确认；训练覆盖 16 行可见性真值表、不可编辑 hero 不显示、Ask coach→picker→staged→聊天与会话失败 Alert。
+- Android：按用户明确的沙箱无 ADB 约束，未运行 `expo run:android`，无 AVD `meetpr` 截图或原生视觉验收证据。PARITY 保持 🔨，不得记为已走查对齐。
+
+- 最终 `npx jest --runInBand`：**77 suites / 511 tests 全通过**，含现有 chat/training、两条 i18n 守卫与 tokens 守卫；日志 `/private/tmp/w3s2-final-jest.log`。
+- `npm run lint`：无 errors / warnings（`/private/tmp/w3s2-final-lint.log`）；`npx tsc --noEmit`：通过且无生成文件诊断（`/private/tmp/w3s2-final-tsc.log`）；`git diff --check`：通过。
