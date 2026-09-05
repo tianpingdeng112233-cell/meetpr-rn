@@ -10,6 +10,7 @@ import {
 import { passthroughEligibility, type TrackMetadata } from './passthrough';
 import { UploadCancelledError } from './multipart';
 import * as ImagePicker from 'expo-image-picker';
+import * as Compressor from 'react-native-compressor';
 export type VideoSource = 'camera' | 'library';
 export class VideoNativeError extends Error {
   readonly deterministic: boolean;
@@ -38,7 +39,6 @@ async function compressVideo(
 ): Promise<string> {
   return exportsQueue.enqueue(async () => {
     if (control.signal.aborted) throw new UploadCancelledError();
-    const compressor = await import('react-native-compressor');
     const before = new Set(cachedExports().map((file) => file.uri));
     let cancellationId: string | null = null;
     let abort: () => void = () => {};
@@ -49,7 +49,7 @@ async function compressVideo(
       };
       control.signal.addEventListener('abort', abort, { once: true });
     });
-    const pending = compressor.Video.compress(source.uri, {
+    const pending = Compressor.Video.compress(source.uri, {
       compressionMethod: 'manual',
       maxSize: 1280,
       bitrate: 2_750_000,
@@ -137,10 +137,9 @@ export async function prepareTrainingVideo(
     throw new VideoNativeError(t('student.videoAttachmentViewModel.copy002'), {
       deterministic: true,
     });
-  const compressor = await import('react-native-compressor');
   let output: string | null = null;
   try {
-    const metadata = await compressor.getVideoMetaData(source.uri);
+    const metadata = await Compressor.getVideoMetaData(source.uri);
     if (
       metadata.duration > VIDEO_MAX_DURATION_SECONDS ||
       (source.durationMs ?? 0) > VIDEO_MAX_DURATION_SECONDS * 1000
@@ -176,8 +175,8 @@ export async function prepareTrainingVideo(
 }
 export function cancelVideoCompression(id: string | null): void {
   if (id)
-    void import('react-native-compressor')
-      .then(({ Video }) => Video.cancelCompression(id))
+    void Promise.resolve()
+      .then(() => Compressor.Video.cancelCompression(id))
       .catch(() => undefined);
 }
 export function localVideoSize(uri: string): number {
