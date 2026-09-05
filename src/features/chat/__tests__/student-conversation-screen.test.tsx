@@ -180,7 +180,7 @@ test('the visible history sentinel requests older messages without discarding th
   expect(copy()).toContain('Latest'); expect(copy()).toContain('Earlier');
 });
 test('valid training shares render their metrics and note, invalid snapshots fall back to ordinary text', async () => {
-  const valid = ChatMessageSchema.parse({ ...message(studentId, 1, studentId, '[训练分享] Squat 第2组/3 100.5kg×5 @RPE8.5 (2026-09-05)\nKeep the tempo'), kind: 'set_ref', set_ref: { v: 1, source: 'logged', exerciseName: 'Squat', setNumber: 2, setTotal: 3, weightKg: '100.5', reps: 5, rpe: '8.5', dayDate: '2026-09-05', setLogId: studentId } });
+  const valid = ChatMessageSchema.parse({ ...message(studentId, 1, studentId, '[训练分享] Squat 第2组/3 100.5kg×5 @RPE8.5 (2026-09-05)\nKeep the tempo'), kind: 'set_ref', set_ref: { v: 1, source: 'logged', exercise_name: 'Squat', set_number: 2, set_total: 3, weight_kg: '100.5', reps: 5, reps_max: null, rpe: '8.5', day_date: '2026-09-05', set_log_id: studentId, plan_set_id: null } });
   const invalid = ChatMessageSchema.parse({ ...message(coachId, 2, coachId, 'broken'), kind: 'set_ref', set_ref: { v: 3 } });
   jest.mocked(chatRepository.messages).mockResolvedValue({ messages: [valid, invalid], meta: { has_more: false } });
   await renderScreen();

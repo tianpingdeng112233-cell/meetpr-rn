@@ -937,3 +937,6 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 
 - 最终 `npx jest --runInBand`：**77 suites / 511 tests 全通过**，含现有 chat/training、两条 i18n 守卫与 tokens 守卫；日志 `/private/tmp/w3s2-final-jest.log`。
 - `npm run lint`：无 errors / warnings（`/private/tmp/w3s2-final-lint.log`）；`npx tsc --noEmit`：通过且无生成文件诊断（`/private/tmp/w3s2-final-tsc.log`）；`git diff --check`：通过。
+
+### W3-s2 收货修正（Claude，2026-09-05）
+- AVD 首发即失败：后端 `SetRefV1Schema` 是 **snake_case、`.strict()`、每个字段必填可空**（`exercise_name/set_number/set_total/weight_kg/reps/reps_max/rpe/day_date/set_log_id/plan_set_id`，仅 `v` 保持），iOS 靠 `MeetPRCodec` 的 `convertToSnakeCase` 落到同一形状；RN 之前收发都按 camelCase → 发送 400 `Unrecognized key(s)`，接收端 iOS 发来的组卡也会整条降级成文字。修法：`chat.ts` 新增 `SetRefWireSchema` + `toSetRefWire`（显式 `null`，不省字段）与 `ChatSetRefFromWireSchema`（wire→camel→原 `ChatSetRefSchema` 校验），内部类型不动。staging 探针：camelCase → `VALIDATION_ERROR Unrecognized key(s)`；snake_case → 只剩 `plan_set_id must identify …`（假 id）。
