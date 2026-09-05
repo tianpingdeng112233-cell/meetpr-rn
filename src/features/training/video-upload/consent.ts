@@ -1,10 +1,12 @@
+import { t } from '@/i18n';
 import type AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { VIDEO_UPLOAD_CONSENT_KEY } from './model';
 
-export const VIDEO_UPLOAD_CONSENT_TITLE = '视频上传须知';
-export const VIDEO_UPLOAD_CONSENT_MESSAGE =
-  '你上传的训练视频将仅你绑定的教练可见。MeetPR 不会向其他人公开你的视频。';
+export const VIDEO_UPLOAD_CONSENT_TITLE = t('student.videoPrivacyCopy.copy001');
+export const VIDEO_UPLOAD_CONSENT_MESSAGE = t(
+  'student.videoPrivacyCopy.copy002',
+);
 
 type ConsentStorage = Pick<typeof AsyncStorage, 'getItem' | 'setItem'>;
 type ConsentPrompt = (input: {
@@ -23,10 +25,10 @@ export async function requestVideoUploadConsent(
   }
 
   const accepted = await prompt({
-    title: VIDEO_UPLOAD_CONSENT_TITLE,
-    message: VIDEO_UPLOAD_CONSENT_MESSAGE,
-    acceptLabel: '同意上传',
-    declineLabel: '不上传',
+    title: t('student.videoPrivacyCopy.copy001'),
+    message: t('student.videoPrivacyCopy.copy002'),
+    acceptLabel: t('student.videoPrivacyCopy.copy003'),
+    declineLabel: t('student.videoPrivacyCopy.copy004'),
   });
   if (accepted) {
     await storage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');

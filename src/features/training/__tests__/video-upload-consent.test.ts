@@ -28,8 +28,8 @@ describe('video upload privacy gate', () => {
     expect(prompt).toHaveBeenCalledWith({
       title: VIDEO_UPLOAD_CONSENT_TITLE,
       message: VIDEO_UPLOAD_CONSENT_MESSAGE,
-      acceptLabel: '同意上传',
-      declineLabel: '不上传',
+      acceptLabel: 'Agree and upload',
+      declineLabel: 'Do not upload',
     });
     expect(storage.setItem).toHaveBeenCalledWith(
       VIDEO_UPLOAD_CONSENT_KEY,

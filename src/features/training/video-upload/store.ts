@@ -1,10 +1,10 @@
+import { SetLogUpsertRequestSchema } from '@/api/domains/sets';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 import { create } from 'zustand';
 
 import {
   EMPTY_VIDEO_UPLOAD,
-  recoverInterruptedVideoUploads,
   type VideoUploadEvent,
   type VideoUploadRecord,
   videoUploadReducer,
@@ -24,6 +24,30 @@ const SelectedVideoSchema = z.object({
 });
 
 const VideoUploadRecordSchema = z.object({
+  logRequest: SetLogUpsertRequestSchema.nullable().default(null),
+  createdAt: z.number().default(0),
+  retry: z
+    .object({
+      failureCount: z.number(),
+      firstFailureAt: z.number(),
+      lastFailureAt: z.number(),
+      failure: z.enum(['network', 'deterministic', 'unknown']),
+    })
+    .nullable()
+    .default(null),
+  session: z
+    .object({
+      attachment_id: z.string(),
+      upload_id: z.string(),
+      part_urls: z.array(
+        z.object({ part_number: z.number(), url: z.string() }),
+      ),
+    })
+    .nullable()
+    .default(null),
+  parts: z
+    .array(z.object({ part_number: z.number(), etag: z.string() }))
+    .default([]),
   status: z.enum([
     'none',
     'pending',
@@ -31,6 +55,7 @@ const VideoUploadRecordSchema = z.object({
     'uploading',
     'uploaded',
     'failed',
+    'waiting',
   ]),
   progress: z.number().min(0).max(1),
   source: SelectedVideoSchema.nullable(),
@@ -51,7 +76,9 @@ function uploadKey(studentId: string, stableSetId: string): string {
   return `${studentId}:${stableSetId}`;
 }
 
-async function persist(records: Record<string, VideoUploadRecord>): Promise<void> {
+async function persist(
+  records: Record<string, VideoUploadRecord>,
+): Promise<void> {
   await AsyncStorage.setItem(
     VIDEO_UPLOAD_STORAGE_KEY,
     JSON.stringify({ version: 1, records }),
@@ -62,8 +89,9 @@ let persistChain: Promise<void> = Promise.resolve();
 
 function schedulePersist(records: Record<string, VideoUploadRecord>): void {
   persistChain = persistChain
-    .then(() => persist(records))
-    .catch(() => undefined);
+    .catch(() => undefined)
+    .then(() => persist(records));
+  void persistChain.catch(() => undefined);
 }
 
 type VideoUploadStore = {
@@ -93,16 +121,9 @@ export const useVideoUploadStore = create<VideoUploadStore>((set, get) => ({
       records = {};
     }
 
-    let changed = false;
-    changed = Object.values(records).some(
-      (record) =>
-        record.status === 'pending' ||
-        record.status === 'preparing' ||
-        record.status === 'uploading',
-    );
-    records = recoverInterruptedVideoUploads(records);
-    set({ hydrated: true, records });
-    if (changed) await persist(records);
+    // Never overwrite newer in-memory records when root and attach hydrate together.
+    if (!get().hydrated)
+      set({ hydrated: true, records: { ...records, ...get().records } });
   },
   dispatch: (studentId, stableSetId, event) => {
     const key = uploadKey(studentId, stableSetId);
@@ -132,4 +153,8 @@ export async function hydrateVideoUploads(): Promise<void> {
 export function resetVideoUploadStoreForTests(): void {
   persistChain = Promise.resolve();
   useVideoUploadStore.setState({ hydrated: false, records: {} });
+}
+
+export async function flushVideoUploads(): Promise<void> {
+  await persistChain;
 }

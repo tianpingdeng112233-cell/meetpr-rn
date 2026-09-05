@@ -1,3 +1,13 @@
+import { CoachedSetLogRequestSchema } from '@/api/domains/sets';
+import {
+  gymDayText,
+  formatWeight,
+  normalizeDecimalInput,
+  parseFiniteDecimal,
+  plateLoadout,
+  rirCopy,
+} from './policy';
+import { VideoAttachmentControls } from './video-upload/VideoAttachmentControls';
 import { decodePrescription, prescribed } from '@/domain/plan/prescription';
 import { entryPrefill } from './suggestion-gating';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -18,7 +28,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { t } from '@/i18n';
 import { AnalyticsEvent, track } from '@/analytics';
 import {
-  AppButton,
   Card,
   useColors,
   type Colors,
@@ -30,16 +39,18 @@ import {
 
 import { TRAINING_LIMITS } from './constants';
 import type { WeightSuggestion, WorkoutSetDraft } from './model';
-import {
-  formatWeight,
-  normalizeDecimalInput,
-  parseFiniteDecimal,
-  plateLoadout,
-  rirCopy,
-} from './policy';
 import { createWeightEntryState, weightEntryReducer } from './set-entry-weight';
 
 type Props = {
+  studentId: string;
+  initialCamera?: boolean;
+  ensureSetLog: (input: {
+    stableSetId: string;
+    weightText: string;
+    repsText: string;
+    rpeText: string;
+    failed: boolean;
+  }) => Promise<string>;
   collarOn: boolean;
   draft: WorkoutSetDraft;
   editable: boolean;
@@ -98,6 +109,9 @@ function Stepper({
 }
 
 export function SetEntrySheet({
+  studentId,
+  initialCamera,
+  ensureSetLog,
   collarOn,
   draft,
   editable,
@@ -395,25 +409,34 @@ export function SetEntrySheet({
                 : rirCopy(rpe)}
             </Text>
           </Card>
-          <Card style={styles.videoCard}>
-            <View>
-              <Text style={styles.sectionLabel}>
-                {t('student.videoAttachmentSection.copy001')}
-              </Text>
-              <Text style={styles.videoStub}>
-                {t('student.videoAttachmentSection.copy001')}
-              </Text>
-            </View>
-            <View style={styles.videoActions}>
-              <AppButton
-                disabled
-                label={t('student.videoAttachmentV3Controls.copy001')}
-              />
-              <AppButton
-                disabled
-                label={t('student.videoAttachmentV3Controls.copy002')}
-              />
-            </View>
+          <Card style={{ padding: spacing.base }}>
+            <VideoAttachmentControls
+              studentId={studentId}
+              stableSetId={draft.stableSetId}
+              editable={editable}
+              initialCamera={initialCamera}
+              buildLogRequest={() =>
+                CoachedSetLogRequestSchema.parse({
+                  plan_exercise_id: draft.exercise.id,
+                  logged_date: gymDayText(new Date()),
+                  set_index: draft.setIndex,
+                  weight_kg: weightText.trim(),
+                  reps: Number(repsText),
+                  rpe: rpeText.trim() || null,
+                  completed: draft.status === 'complete',
+                  failed: draft.status === 'failed',
+                })
+              }
+              ensureSetLog={() =>
+                ensureSetLog({
+                  stableSetId: draft.stableSetId,
+                  weightText: normalizeDecimalInput(weightText),
+                  repsText,
+                  rpeText: normalizeDecimalInput(rpeText),
+                  failed: draft.status === 'failed',
+                })
+              }
+            />
           </Card>
         </ScrollView>
         <View style={styles.footer}>
@@ -605,18 +628,6 @@ const createStyles = (colors: Colors) =>
       textAlign: 'center',
       ...typography.body,
     },
-    videoCard: {
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      padding: spacing.base,
-    },
-    videoStub: {
-      color: colors.textTertiary,
-      marginTop: spacing.xs,
-      ...typography.caption,
-    },
-    videoActions: { flexDirection: 'row', gap: spacing.sm },
     footer: {
       borderTopColor: colors.borderDefault,
       borderTopWidth: StyleSheet.hairlineWidth,

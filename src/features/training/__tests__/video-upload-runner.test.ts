@@ -60,11 +60,11 @@ describe('prepared video upload retry', () => {
     ).resolves.toBe(ATTACHMENT_2);
     expect(initiate).toHaveBeenCalledTimes(2);
     expect(initiate.mock.calls[0][0]).toMatchObject({
-      filename: `setlog-${SET_LOG_ID}.mp4`,
+      filename: `setlog-${SET_LOG_ID}-prepared.mp4`,
       set_log_id: SET_LOG_ID,
     });
     expect(initiate.mock.calls[1][0]).toMatchObject({
-      filename: `setlog-${SET_LOG_ID}.mp4`,
+      filename: `setlog-${SET_LOG_ID}-prepared.mp4`,
       set_log_id: SET_LOG_ID,
     });
     expect(complete).toHaveBeenCalledWith(ATTACHMENT_2, {

@@ -184,6 +184,7 @@ export function TodayWorkoutView() {
     key: string;
     values: Record<string, number | null>;
   }>({ key: '', values: {} });
+  const [initialCamera, setInitialCamera] = useState(false);
   const saveQueue = useRef(new SerialTaskQueue());
   const jumpToken = useStudentTabsStore((state) => state.trainingJumpToken);
   const planRevision = useStudentTabsStore((state) => state.planRevision);
@@ -532,7 +533,8 @@ export function TodayWorkoutView() {
     rpeText: string;
     failed: boolean;
     completed?: boolean;
-  }): Promise<void> => {
+    attachmentOnly?: boolean;
+  }): Promise<string | undefined> => {
     const operation = async () => {
       const draft = liveDrafts.find(
         (candidate) => candidate.stableSetId === input.stableSetId,
@@ -547,7 +549,7 @@ export function TodayWorkoutView() {
           (latestPlan.status !== 'published' ||
             cursorDay(latestPlan.days)?.id !== selectedDayID))
       ) {
-        Alert.alert(
+        if (!input.attachmentOnly) Alert.alert(
           t('student.setEntrySheet.copy010'),
           t('student.todayWorkoutScreen.copy024'),
         );
@@ -566,7 +568,7 @@ export function TodayWorkoutView() {
         reps > 99 ||
         (rpe !== null && (rpe < 0 || rpe > 10))
       ) {
-        Alert.alert(
+        if (!input.attachmentOnly) Alert.alert(
           t('student.setEntrySheet.copy010'),
           t('student.todayWorkoutViewModelRecordingError.copy004'),
           [{ text: t('student.restTimerExplanationView.copy005') }],
@@ -625,6 +627,7 @@ export function TodayWorkoutView() {
             [updatedDraft.stableSetId]: updatedDraft,
           }));
         }
+        if (input.attachmentOnly) return response.id;
         setRecordingSetId(null);
         setEditingPlan(null);
         void track(AnalyticsEvent.SetLogged, {
@@ -676,7 +679,7 @@ export function TodayWorkoutView() {
           }
         }
       } catch (error) {
-        Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error), [
+        if (!input.attachmentOnly) Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error), [
           { text: t('student.restTimerExplanationView.copy005') },
         ]);
         throw error;
@@ -899,7 +902,9 @@ export function TodayWorkoutView() {
               historyLogs={(historyQuery.data?.logs ?? []).filter(
                 (log) => log.logged_date < today,
               )}
-              onRecord={openDraft}
+              studentId={studentId}
+              onRecord={(draft) => { setInitialCamera(false); openDraft(draft); }}
+              onVideo={(draft) => { setInitialCamera(true); openDraft(draft); }}
               onToggleComplete={(draft) => {
                 void commit({
                   stableSetId: draft.stableSetId,
@@ -965,6 +970,13 @@ export function TodayWorkoutView() {
       {selectedDraft ? (
         <SetEntrySheet
           key={selectedDraft.stableSetId}
+          studentId={studentId}
+          initialCamera={initialCamera}
+          ensureSetLog={async (input) => {
+            const id = await commit({ ...input, completed: selectedDraft.status === 'complete', attachmentOnly: true });
+            if (!id) throw new Error('Set log unavailable');
+            return id;
+          }}
           collarOn={collarOn}
           draft={selectedDraft}
           editable={editable}
@@ -981,7 +993,7 @@ export function TodayWorkoutView() {
             setRecordingSetId(null);
             setEditingPlan(null);
           }}
-          onSave={commit}
+          onSave={async (input) => { await commit(input); }}
         />
       ) : null}
       {readinessVisible ? (

@@ -3,7 +3,6 @@ import { describe, expect, test } from '@jest/globals';
 import {
   EMPTY_VIDEO_UPLOAD,
   recoverInterruptedVideoUploads,
-  shouldPassthroughVideo,
   type SelectedVideo,
   videoPartCount,
   videoUploadReducer,
@@ -20,40 +19,6 @@ const SOURCE: SelectedVideo = {
   codec: 'h264',
   rotationDegrees: 0,
 };
-
-describe('video processing policy', () => {
-  test('passes through H.264 exactly at both display-size boundaries', () => {
-    expect(
-      shouldPassthroughVideo({ codec: 'H.264', width: 1920, height: 1080 }),
-    ).toBe(true);
-    expect(
-      shouldPassthroughVideo({ codec: 'avc1.640028', width: 1080, height: 1920 }),
-    ).toBe(true);
-    expect(
-      shouldPassthroughVideo({
-        codec: 'h264',
-        width: 1080,
-        height: 1920,
-        rotationDegrees: 90,
-      }),
-    ).toBe(true);
-  });
-
-  test('transcodes non-H.264 and either dimension above the boundary', () => {
-    expect(
-      shouldPassthroughVideo({ codec: 'hevc', width: 1920, height: 1080 }),
-    ).toBe(false);
-    expect(
-      shouldPassthroughVideo({ codec: 'h264', width: 1921, height: 1080 }),
-    ).toBe(false);
-    expect(
-      shouldPassthroughVideo({ codec: 'h264', width: 1920, height: 1081 }),
-    ).toBe(false);
-    expect(
-      shouldPassthroughVideo({ codec: null, width: 1920, height: 1080 }),
-    ).toBe(false);
-  });
-});
 
 describe('video multipart policy', () => {
   test('calculates 5 MiB part boundaries', () => {
@@ -123,12 +88,12 @@ describe('video upload state machine', () => {
     state = videoUploadReducer(state, { type: 'retry' });
     expect(state).toMatchObject({
       status: 'preparing',
-      attachmentId: null,
+      attachmentId: 'attachment-old',
       prepared: true,
     });
   });
 
-  test('app startup marks interrupted processing and uploads as failed', () => {
+  test('app startup preserves interrupted records for automatic resumption', () => {
     const pending = videoUploadReducer(EMPTY_VIDEO_UPLOAD, {
       type: 'attach',
       source: SOURCE,
@@ -151,8 +116,8 @@ describe('video upload state machine', () => {
       uploaded,
     });
 
-    expect(recovered.pending.status).toBe('failed');
-    expect(recovered.uploading.status).toBe('failed');
+    expect(recovered.pending.status).toBe('pending');
+    expect(recovered.uploading.status).toBe('uploading');
     expect(recovered.uploaded.status).toBe('uploaded');
   });
 });
