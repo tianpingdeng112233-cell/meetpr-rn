@@ -31,15 +31,20 @@ export function synthesizeDrafts(
               : log?.completed
                 ? 'complete'
                 : 'pending',
+            // Server decimals arrive as strings ("100.00", "8.0"); show them the way iOS does (0–2 fraction digits).
             weightText:
-              log?.weight_kg ??
-              (prescription.weightKg === null
-                ? ''
-                : formatWeight(prescription.weightKg)),
+              log?.weight_kg != null
+                ? formatWeight(Number(log.weight_kg))
+                : prescription.weightKg === null
+                  ? ''
+                  : formatWeight(prescription.weightKg),
             repsText: String(log?.reps ?? prescription.reps),
             rpeText:
-              log?.rpe ??
-              (prescription.rpe === null ? '' : formatWeight(prescription.rpe)),
+              log?.rpe != null
+                ? formatWeight(Number(log.rpe))
+                : prescription.rpe === null
+                  ? ''
+                  : formatWeight(prescription.rpe),
             sourceLog: log ?? null,
           } satisfies WorkoutSetDraft;
         }),
