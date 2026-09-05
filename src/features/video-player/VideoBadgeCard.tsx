@@ -13,6 +13,8 @@ export function VideoBadgeCard({ info, width, includesCoachAttribution = false }
   includesCoachAttribution?: boolean;
 }) {
   const badge = presentBadge(info);
+  // Android rejects a 0 font size (and letterSpacing on it); wait for a measured width.
+  if (!(width > 0)) return null;
   const s = width / 468;
   const suffix = t('chat.videoBadge.setSuffix');
   return <View style={{ width, gap: 10 * s, paddingTop: 13 * s, paddingHorizontal: 14 * s, paddingBottom: 14 * s,
