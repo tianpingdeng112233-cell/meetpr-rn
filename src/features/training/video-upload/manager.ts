@@ -257,6 +257,22 @@ async function run(
       failureCount: (record.retry?.failureCount ?? 0) + 1,
       failure: classify(error),
     };
+    if (
+      retry.failure === 'network' &&
+      error instanceof Error &&
+      !(error instanceof ApiError) &&
+      !(error instanceof PartUploadError) &&
+      !['AbortError', 'TimeoutError'].includes(error.name)
+    ) {
+      // Keep native/JS rejection diagnostics; the waiting dispatch below persists them
+      // with the unchanged retry classification, without a transient failed status.
+      useVideoUploadStore.setState((state) => ({
+        records: {
+          ...state.records,
+          [keyFor(id)]: { ...record, errorMessage: error.message },
+        },
+      }));
+    }
     dispatch(id, { type: 'waiting', retry });
     if (UploadRetryScheduler({ ...retry, now }).kind === 'terminal')
       terminal(id, error instanceof VideoNativeError ? error.copy : undefined);
