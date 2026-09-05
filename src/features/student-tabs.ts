@@ -34,7 +34,6 @@ export const useStudentTabsStore = create<StudentTabsStore>((set) => ({
   bumpPlanRevision: () => set((s) => ({ planRevision: s.planRevision + 1 })),
   bumpImportedHistoryRefresh: () =>
     set((s) => ({ importedHistoryRefreshToken: s.importedHistoryRefreshToken + 1 })),
-  // TODO(W1 Growth): consume this token and scroll to 教练反馈记录.
   bumpFeedbackJump: () =>
     set((s) => ({ feedbackJumpToken: s.feedbackJumpToken + 1 })),
 }));

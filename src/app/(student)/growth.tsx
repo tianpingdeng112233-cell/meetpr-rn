@@ -1,6 +1,5 @@
-import { t } from '@/i18n';
-import { FeaturePlaceholderScreen } from '@/navigation/FeaturePlaceholderScreen';
+import { GrowthScreen } from '@/features/history';
 
 export default function StudentGrowthScreen() {
-  return <FeaturePlaceholderScreen title={t('student.studentRootView.copy003')} />;
+  return <GrowthScreen />;
 }

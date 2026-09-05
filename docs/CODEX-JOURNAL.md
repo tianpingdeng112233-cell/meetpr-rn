@@ -188,17 +188,17 @@ Received number of calls: 1
 | `src/features/dashboard/model.ts:312` | 今日已完成 · 查看 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
 | `src/features/dashboard/model.ts:315` | 继续 ${code} · ${lift} | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
 | `src/features/dashboard/model.ts:317` | 开始 ${code} · ${lift} | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:438` | 当前计划未生效,暂时不能顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:439` | 只能顺延今天的训练 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:440` | 今天的训练已经开始,不能顺延或撤销 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:441` | 只有计划所属学员可以顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:442` | 当前没有可撤销的顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:443` | 只能在顺延当天撤销,请联系教练调整计划 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:457` | 无法顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:460` | 当前计划暂不支持顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:462` | 顺延失败,请检查网络后重试 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:463` | 撤销顺延失败,请检查网络后重试 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
-| `src/features/dashboard/model.ts:468` | 无法顺延；当前计划暂不支持顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:450` | 当前计划未生效,暂时不能顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:451` | 只能顺延今天的训练 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:452` | 今天的训练已经开始,不能顺延或撤销 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:453` | 只有计划所属学员可以顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:454` | 当前没有可撤销的顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:455` | 只能在顺延当天撤销,请联系教练调整计划 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:469` | 无法顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:472` | 当前计划暂不支持顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:474` | 顺延失败,请检查网络后重试 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:475` | 撤销顺延失败,请检查网络后重试 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
+| `src/features/dashboard/model.ts:480` | 无法顺延；当前计划暂不支持顺延 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
 | `src/features/training/CompletionControls.tsx:40` | 滑动完成今日训练 | drift: 待 W1 复核卡处理；保留旧交互口径，不译。 |
 | `src/features/training/CompletionControls.tsx:91` | 完成组数 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
 | `src/features/training/CompletionControls.tsx:97` | 🔒 仅自己可见的训练笔记,保存在本机 | missing: W1-d/W1-f 推进制复核卡重写,随卡消灭 |
@@ -344,3 +344,55 @@ Ran all test suites.
 
 - 本地 Standards 检查：无未解决问题；本地 Spec 检查：17 个命中全替换、模板参数保留、剩余 missing 全分流、drift 不变。正式 code-review skill 未运行：`docs/agents/issue-tracker.md` 缺失，已提示用户调用 `$setup-matt-pocock-skills`；未声称双 agent review。沿用前轮 Android 模拟器未验收的限制，本轮不宣称视觉验收。
 - 保留全部前轮 G0-b 工作；未安装依赖、未编辑 node_modules、未 commit/push。PARITY 同步 R1 收货状态；本卡实现无偏离。
+
+## 2026-09-05 — W1-g 成长 tab v2 复核
+
+- 卡：`card-w1g-growth-recheck.md`；施工固定点 `9e83cc3`，仅当前 worktree。先读卡及规定参照，已读取 Expo SDK 57 版本文档。未安装依赖、未改 node_modules symlink、未 commit/push。
+- 第一步重现两个 tsc 错误及两条 guard 失败，再完成 Sparkline API/文案类型修复、history 的 v3 颜色分流和 catalog 迁移。随后 tsc exit 0，两条 guard 2 suites / 5 tests 全绿。guard 另揭示 rebase 后 Dashboard model 的 11 个旧 TODO 登记行号偏移，仅校正 JOURNAL 登记，未改该 model。临时 unmatched history TODO 已全部随 v2 替换清除，history 无新增 i18n TODO、无中文 UI 字面量。
+- 先写卡指定两个 seam：model 首红 9 failed / 6 passed；growth-screen 首红 4 failed。screen 测试使用真实 QueryClient、history VM、model 和组件，只替换 API repository/原生持久化/会话/路由/analytics 边界。RN 0.86 的 Pressable 在 renderer 中需通过公开 a11y role 查找，已修正测试选择器。补测加载/失败优先/重试、反馈归档 markRead，以及 daily-best 同值可信度与时间优先规则；后者首红 1 failed / 16 passed 后修复。
+
+### 实装与四态依据
+
+- Growth 保留既有加载、刷新回填和 feedbackJumpToken 滚动实现，按 Header → 三项 e1RM 卡 → 比较 → 反馈入口 → 历史 stats/入口 → 容量强度排序。v3 reactive useColors、Card/LargeTitleBar/StatTile；页面 20 padding，主块 14 间距。移除旧 PR 横幅主入口布局。
+- `TREND_UNLOCK_THRESHOLD = 3` 为共享门槛。`e1rmCardState`：familyTotal=0 → zero；1/2 → formingProgress；达到 3 但窗口主线不足 3，或值域缺失/不大于 0 → formingWindowSparse；其余 → chart。窗口计数先夹到 familyTotal，主线再夹到窗口。容量图由全局去重训练日达到 3 解锁。
+- snapshot 以设备日历归并 daily-best eligible；同值优先 normal，再取最新时间。low-confidence 日点仅画散点；主线为可信 daily-best 折线，非 Dashboard record trajectory。headline 取 smoothed 最后样本指向的原始 winner，delta 为窗口主线首尾差；当前 kg 一位小数、正负 delta、首次估算、最新纪录日与 sparse 文案均已接线。
+- 每卡独立循环 30 天 → 90 天 → 历史总览。按 pinned `GrowthCurveViewModel.windowCutoff`，30 天显示标签实际映射既有 rollingWindowDays=28；90 天映射 90；all 不过滤。未改 e1RM 引擎任何常量。
+- `historyStats` 只算 completed && !assumed；以 logged_at 的设备日历日去重，以 ISO 周一日期标识跨年周，容量 Σ weight×reps。`chartBuckets` 与 pinned `.suffix(6)` 一致，保留最新六个有数据的 ISO 周（不凭空补周），截断后重新计算量程。
+- 两个比较总值任一组成项缺失即显示 —；注册训练 1RM 从现有 onboarding query 读取。突破百分数沿 pinned percentage 的 estimated/training×100 口径。历史零训练三个值均为 —，入口 disabled / opacity 0.55 / copy005。反馈入口有无两态、全屏归档、两行正文/日期/未读点，详情打开执行 markRead。无 chat 路由/服务的当前 RN 树不显示条件式 HeaderChatButton。
+- 两类数据任一失败优先显示失败卡和 message/重试；未齐全显示 catalog a11y 骨架。progress_viewed 在进屏发送 tab=e1rm/volume，打开历史时 tab=history（与 pinned Analytics+Events 一致）。
+
+### HistoryEntriesView 与 GrowthCurveScreen 现场核验
+
+- 通过 `git -C ../MeetPR-release show 202e95db:...` 读取 pinned `HistoryEntriesView.swift` 全文：保留周分组、每日卡、动作过滤及组数据；补日期下的星期、搜索/清除/无匹配文案、按系统语言排序；过滤保留匹配训练日的全部动作，符合源 `filteredWeeks`。组序号从 prescribed set_number 映射到零基 set_index；无 log 显示处方，有 log 显示重量×次数 @ RPE，完成色 success。
+- 此 pinned 文件没有周/月切换控件、DayDetail 跳转或视频指示；因此不凭导航副标题新增这些控件。反馈详情沿已有正文实现；视频播放属于未接通的后续视频能力，本卡未引入依赖。
+- 路由结论：删除 `GrowthCurveScreen`、`growth-curve.tsx` 及隐藏 tab/export 注册。证据：`git -C ../MeetPR-release grep -n 'GrowthCurveView(' 202e95db -- '*.swift'` 无结果，旧 Swift view 定义仍在 MyProfile 但没有调用点。按 v2 §1 不可达即删 RN 路由；Dashboard 仅将成长入口 pathname 改为 `/(student)/growth`，其它交互保持既有实现。
+
+### 验证与限制
+
+- `npm run lint`：exit 0，0 errors / 0 warnings。
+- `npx tsc --noEmit`：exit 0，无输出。
+- `npx jest`：exit 0，31 passed / 31 suites，212 passed / 212 tests，0 snapshots。
+- `git diff --check`：exit 0。
+- `EXPO_OFFLINE=1 npx expo export --platform android --output-dir .expo/w1g-export`：exit 0，1 个 Android Hermes bundle（4.4 MB）。
+- 设置 PATH/JAVA_HOME/ANDROID_HOME 后 `npx expo run:android --no-install --no-bundler` 在启动 ADB 时失败：`could not install *smartsocket* listener: Operation not permitted`，adb start-server exit 255。sandbox 不允许提权，不能连接 AVD meetpr；未亲眼走查、未产截图。PARITY 标为实装待走查，W3 像素对齐未冒充完成。
+- Standards 直接复核：无剩余代码问题；Spec 直接复核：实现卡指定行为，上述 native 验证/条件式 chat 与源文件差异明确登记。正式 code-review 双 agent workflow 未运行：`docs/agents/issue-tracker.md` 缺失，已按 skill 向用户提示 `$setup-matt-pocock-skills`；未静默配置 tracker。
+
+### W1-g 精确改动文件（17）
+
+- `PARITY.md`
+- `docs/CODEX-JOURNAL.md`
+- `src/app/(student)/_layout.tsx`
+- `src/app/(student)/growth-curve.tsx`（删除）
+- `src/features/dashboard/DashboardScreen.tsx`（仅路由目标）
+- `src/features/history/E1RMChart.tsx`
+- `src/features/history/GrowthCurveScreen.tsx`（删除）
+- `src/features/history/GrowthE1RMCard.tsx`（新增）
+- `src/features/history/GrowthScreen.tsx`
+- `src/features/history/HistoryEntriesView.tsx`
+- `src/features/history/VolumeIntensityChart.tsx`
+- `src/features/history/__tests__/growth-screen.test.tsx`（新增）
+- `src/features/history/__tests__/model.test.ts`
+- `src/features/history/index.ts`
+- `src/features/history/model.ts`
+- `src/features/history/types.ts`
+- `src/features/history/use-history.ts`
