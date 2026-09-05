@@ -973,3 +973,27 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 
 ### W3-s3 收货修正(Claude,2026-09-05)
 - 气泡色改回教练端 `CoachConversationDestination` 的覆盖值(自己 = `textPrimary`、对方 = `borderHairline`;pending 同 textPrimary@0.72),不用 `ConversationView` 默认的 goldCTA/surfaceElevated;错误横幅 goldCTA/goldSoft 不变。
+
+## W3-e — 教练子页内联页头与待处理视频列表（2026-09-05）
+
+### 范围与正典
+
+- Worktree `feat/w3e-coach-subscreen-headers`，开工 clean；已读 AGENTS、PLAN、W2-c/W2-d/W3-s3 日志、指定 RN 文件，以及本机 iOS StudentPendingVideosView、InviteCodesView、StudentOnboardingProfileView、AcceptBindRequestSheet、CoachStudentFormatting、Typography/Radius/Spacing。已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。
+- 按用户指定 CoachNavHeader / StudentPendingVideosScreen 公共 seam 使用 tdd 逐片红绿；按本卡明确约束不询问/创建 tracker 配置，跳过正式 tracker review 流程，末尾分别做本地 Standards / Spec 核对。无 commit/push、无依赖安装，node_modules symlink 保持原样。
+- 现场差异按卡面明确值处理：原会话栏由 44 高按钮撑高，新组件统一 56 高、Ionicons chevron-back 22；iOS 待处理视频缩略块原用 bgStack，本卡指定 surfaceElevated；日期保留 RN 的 locale full date，日标题采用卡面 mono12 medium/0.6 字距。
+
+### 实装
+
+- 新增 `CoachNavHeader`：左右对称 44 区域，body16 bold 单行居中标题、可选 body11 副标题与 token tone、trailing 插槽；默认返回先 canGoBack，否则 navigate today。返回 a11y 复用 `coach.videoFeedback.back`。额外可选 subtitleTestID 仅用于保留会话原有测试标识。
+- ConversationScreen 仅替换页头，保留原 onBack、danger/success 副标题、`coach.chat.subtitle` 和屏幕自己的 1px 分割线，既有测试原断言未改。
+- 待处理列表采用共享页头；内容 h20/v14、日组距24、组内距8。行 padding16/gap16，52×52 缩略块/radius.inset/play-box20，动作名16 semibold（缺失复用 `coach.videoFeedback.trainingVideo`，a11y 同口径）、meta mono11 medium/0.8 字距、右 chevron13；保留 HH:mm 与现有 MB 舍入口径、原详情路由和 shouldDismissStudentList。
+- pending 状态单独对齐：空态 check-circle-outline44、body20 bold 标题/body15 secondary 描述，失败态三角44与失败文案，二者 v18；加载 spinner v32。失败后通过原下拉刷新重试；普通收件箱 ReceivingState 保持原显示与重试按钮。
+- 邀请码页去掉 ScrollView 中的 Capsule/大标题，在内容前接共享页头；其余内容不变。申请详情实际为全屏且 iOS 源码为自定义 header（并无 navigationTitle），沿用 `coach.applicationProfile.title` 与 waitingText，保留返回/接收/拒绝行为。AcceptBindRequestSheet 实际为底部 sheet，仅将页头标题改为 body16 bold 并水平居中，保留取消与 busy 行为、不加返回键。
+
+### 验证与限制
+
+- 新增两套组件测试共 10 项：标题/可选副标题、a11y/自定义返回、无历史回 today、有历史 back、trailing；待处理页姓名/无 Back 胶囊文案、动作名/回退/时间/大小/详情入口、空态/自动返回、加载、失败不退出。使用真实组件与 QueryClient 缓存，未 mock 内部 receiving hook。
+- 红绿日志：`/private/tmp/w3e-{header,back,fallback,list-header,rows,empty}-{red,green}.log`。现有 coach/chat 断言未改；全量 `npx jest --runInBand` **81 suites / 543 tests 全绿**，含两条 i18n 守卫与 tokens 守卫；日志 `/private/tmp/w3e-final-jest.log`。
+- `npm run lint` 与 `npx tsc --noEmit` 通过，无需忽略生成文件诊断；`git diff --check` 通过。日志 `/private/tmp/w3e-final-{lint,tsc}.log`。
+- 本地 Standards：白名单内改动，新增颜色均 useColors token、字体 font、复用已有 en/zh 翻译键；未改 API/路由/播放器/VideoFeedbackScreen。Spec：页头与视频列表要求已落地，卡面和源码差异按上文记录；无其他业务行为扩展。
+- 沙箱无 ADB，未运行 `expo run:android`、未取得 AVD meetpr 截图，**不宣称原生视觉验收完成**。PARITY 的 Receiving/InviteCodes 标为本轮 🔨 待走查，保留 integration/w2 既有走查记录。
