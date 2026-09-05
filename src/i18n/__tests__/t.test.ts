@@ -56,3 +56,12 @@ test('returns an unknown runtime key without throwing, while rejecting it at com
   // @ts-expect-error Unknown catalog keys are rejected by TypeScript.
   expect(t('missing.key')).toBe('missing.key');
 });
+
+test('plural sibling keys (<key>.one) are used for a count of exactly one in English', () => {
+  setLocaleOverride('en');
+  expect(t('student.todayWorkoutScreen.copy019', [1])).toBe('1 set');
+  expect(t('student.todayWorkoutScreen.copy019', [3])).toBe('3 sets');
+  setLocaleOverride('zh');
+  expect(t('student.todayWorkoutScreen.copy019', [1])).toBe('1 组');
+  setLocaleOverride(null);
+});
