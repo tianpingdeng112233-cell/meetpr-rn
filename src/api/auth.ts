@@ -37,6 +37,7 @@ export const UserSchema = z.preprocess(
   z.object({
     id: z.string().uuid(),
     phone: z.string(),
+    name: z.string().nullish(),
     role: UserRoleSchema,
     created_at: Iso8601DateTimeSchema,
   }),

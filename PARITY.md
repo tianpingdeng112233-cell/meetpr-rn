@@ -80,6 +80,10 @@
 | StudentRoster | 🔨 | W2-a：搜索、申请段、四态名单、异常信号/进度和刷新已实装；待模拟器走查 |
 | StudentDetail | 🔨 | W2-a 仅注册全屏 student/[studentId] 占位；详情内容由 W2-b 实装 |
 | BindQueue | 🔨 | W2-a：Accept 恒跳过评估、静默拒绝、4xx 刷新与全屏申请资料页（空态保留操作）；待端到端走查 |
+| Dashboard | ☐ | |
+| StudentRoster | ☐ | |
+| StudentDetail | 🔨 | W2-b:全屏 Header 四态 + 五段/训练日/视频角标纯回放;exercise-stats 服务端成长,只读反馈/资料;47 suites / 309 tests。AVD 安装受 ADB listener 权限阻断,截图/Global 实机验收待补;见 JOURNAL W2-b |
+| BindQueue | ☐ | |
 | Receiving | ☐ | |
 | InviteCodes | ☐ | |
 | Planning / PlanningWorkspace | — | W2-a 按 coach-v2 §7 删除教练 planning tab/路由；v1 无 app 排计划入口 |

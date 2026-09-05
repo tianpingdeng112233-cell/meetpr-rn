@@ -611,8 +611,8 @@
 "zh": "评估状态加载失败"
 },
 "coach.detail.feedbackMeta": {
-"en": "{relativeTime} · View all →",
-"zh": "{relativeTime} · 看全部 →"
+"en": "{0} · View all →",
+"zh": "{0} · 看全部 →"
 },
 "coach.detail.loadFailed": {
 "en": "Load Failed",
@@ -727,7 +727,7 @@
 "zh": "提醒训练"
 },
 "coach.detail.weekProgress %lld %lld": {
-"en": "This week %1$lld/%#@total@",
+"en": "This week {0}/{1}",
 "zh": "本周 %lld/%lld 训练日"
 },
 "coach.detail.weekRunningTitle %lld": {
@@ -916,7 +916,7 @@
 "zh": "%lld 组已记录"
 },
 "coach.execution.loggedSetsFraction %lld %lld": {
-"en": "%1$lld/%#@total@ logged",
+"en": "{0}/{1} logged",
 "zh": "%lld/%lld 组已记录"
 },
 "coach.execution.noLoggedSets": {
@@ -2440,8 +2440,8 @@
 "zh": "数值"
 },
 "coach.profile.age": {
-"en": "Age {age}",
-"zh": "{age} 岁"
+"en": "Age {0}",
+"zh": "{0} 岁"
 },
 "coach.profile.appVersion": {
 "en": "App Version",
@@ -2883,8 +2883,8 @@
 "zh": "肱三头"
 },
 "coach.shared.readiness.fatigue": {
-"en": "Fatigue: {items}",
-"zh": "疲劳：{items}"
+"en": "Fatigue: {0}",
+"zh": "疲劳：{0}"
 },
 "coach.shared.readiness.noMuscleFatigue": {
 "en": "No muscle fatigue",
