@@ -1151,3 +1151,31 @@ Typography families/weights checked against `DesignSystem/Sources/DesignSystem/T
 - Android command: `EXPO_OFFLINE=1 CI=1 npx expo run:android --no-install --device meetpr` with documented PATH/JAVA_HOME/ANDROID_HOME. First attempt hit ENOSPC during icon generation. Removed only this attempt's newly generated ignored `android/` directory and retried: prebuild succeeded, then ADB daemon smartsocket startup was denied (`Operation not permitted`, exit 255). `/private/tmp/w3v-profile-android.log`, `/private/tmp/w3v-profile-android-retry.log`.
 - **视觉对照 pass（逐项源码核对）；Android 运行与双端截图验收待完成。** No screenshot or native runtime pass is claimed. Generated native output remains ignored, outside the submitted diff. Chat live unread remains deferred with the existing chat integration gap.
 - `git diff --check`: passed. Changed source is limited to `src/features/profile/**`; documentation updates are this JOURNAL entry and the student MyProfile PARITY row.
+## 2026-09-05 — W3-v 成长页视觉对照修正
+
+- 工作树 `feat/w3v-growth`，base `feat/w3c-charts`。代码仅改 `src/features/history/{GrowthScreen,GrowthScreenHeader,GrowthE1RMCard}.tsx` 与现有 `__tests__/growth-screen.test.tsx`；另更新本日志和 PARITY。无依赖/token/model/统计计算/图表几何改动；iOS 仓只读，未 commit/push，未运行 code-review 或技能安装流程。
+- 已读 AGENTS、PLAN、growth-tab-v2、video-player-charts-v2 §4、RN 子组件与 design，以及 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。现场确认 `/Users/david/Projects/apps/MeetPR-release` HEAD = `202e95dbbf88baf5778f2329f206f34e117a4dd0`。下列 Swift 路径相对该仓 `Modules/StudentKit/Sources/StudentKit/Features/TrainingHistory/`，DesignSystem 路径相对 `Modules/DesignSystem/Sources/DesignSystem/`。
+
+### 完成清单与源码依据
+
+- [x] Header：`TrainingHistoryView.swift:313–335` 的 97×24 mark、44pt chat 圆按钮、display 34（默认 extraBold）、body 12 / textFaint 副标题、14 间距和副标题 −8 top。加载/失败也保留 header；页面横 20、顶 6、底 28，section 间距 14（同文件 65–78、131–178）。字标按 `Components/Brand/MeetPRMark.swift:13–62` 的 Archivo Black 16、负 tracking、R 负间距、八向 stroke + bgBase knockout 本地实现，无新图片依赖。
+- [x] Chat：`Components/Buttons/HeaderChatButton.swift:23–78` 的 21pt message 图标、surfaceCard 圆底、右上 18pt unread 胶囊、99+ 显示和完整 a11y count；label 使用 `trainingHistoryView.copy012`。复用 Dashboard 的 `selectUnreadFeedbackCount`，扣除本页已经打开详情的 locallyRead 项，读后角标消失。**临时跳转**复用 `DashboardScreen.tsx:110–113` 的 `bumpFeedbackJump()` → `/(student)/growth`，定位反馈段；当前 base 的 Dashboard header 本身还是通知铃铛，并无可导入的同名 HeaderChatButton。W3-a 落地后两处统一指向 `/(student)/feedback`，本卡未提前创建路由。
+- [x] e1RM 卡头：`GrowthE1RMCard.swift:18–83`：标题 mono 12 semibold / textSecondary；视觉胶囊高 22，外层触控高 44，左右 padding 10/5，mono 11，金色 10pt chevron；头行 top −9。数值 mono 38 bold，kg mono 15 semibold（空值同样有后缀），首次估算 mono 12，delta mono 13 bold / goldText。外壳零 gap、padding 16、radius 16、无阴影，chart 外围 top 8（同文件 107–114），没有修改图表组件或坐标。
+- [x] formingProgress：核对 `GrowthEmptyStates.swift:43–100`，保留 bgInset / radius 10、横 12 竖 9、行间 9、点间 4、点 7×7、gold500 实心/borderStrong 空心和 body 12 tertiary + mono 12 primary 富文本；显式尾部省略，最多两行。126 状态区和 68pt 图高沿 W3-c 保留。
+- [x] section：保留 `GrowthSectionLabel` 真正的 mono 13 / textSecondary（`TrainingHistoryView.swift:340–351`），没有使用 Eyebrow；不是任务概述猜测的 mono 12 / textTertiary。
+- [x] stats 三格：同文件 463–503，改为左对齐、上方 body 11 / textMuted 标签、下方 mono 30 bold 数值、同基线 mono 12 semibold kg、gap 4/2、padding 16、radius 16；零训练沿既有测试契约保留三个 “—”，使用 textDim。容量只改显示为分组整数，不改变 Σ weight×reps 或日/周去重。
+- [x] 历史/反馈入口：同文件 508–538，clock/message outline 19pt（金色）、40×40 surfaceRaised 图标底 / radius 12；body 15 bold 标题、body 12 muted 副标题、14pt textDim chevron；横 15 竖 14、minHeight 68、radius 16，保留禁用态 opacity 0.55。`VolumeIntensityChart.swift:11–47` 的现有外框与图例尺寸已核，无几何变更。
+
+### “以源码为准”的差异裁决
+
+- 任务文字所述“金边金字”与 pinned `GrowthE1RMCard.swift:35–47` 不一致：真实源码是 textSecondary 字、borderStrong 边、**仅箭头 gold500**。本次依源码修正尺寸/字体/箭头，不改成金边金字。
+- 任务文字所述 display 数值/body 首次估算与源码 67–77 不一致：依源码使用 mono 38 bold / mono 12。Header display 34 的默认字重是 extraBold（`Tokens/Typography.swift:80–90`），没有沿旧 LargeTitleBar 的 Black。
+- 任务文字所述单行省略与 `GrowthEmptyStates.swift:56` 的 `.lineLimit(2)` 不一致：依源码保留两行尾部省略。section mono 13 / textSecondary 同上。这些差异均在实施时告知，不把文字概述当作新视觉规范。
+
+### 验证
+
+- TDD 使用用户指定的 GrowthScreen 渲染 seam：header/mark/chat/副标题顺序/无 Eyebrow/反馈跳转测试先红（缺少 mark），后绿；扩充既有归档阅读测试，未读 a11y count/可见角标/读后清零先红后绿。现有 history、模型与图表测试保持通过。
+- `npm run lint` exit 0，`npx tsc --noEmit` exit 0，`npx jest --runInBand --silent` 33 suites / 240 tests 全绿，`git diff --check` exit 0。类型检查发现 RN 0.86 不再提供 absoluteFillObject，已使用 absoluteFill 并重跑全部检查。
+- 首轮 Jest 因临时盘 ENOSPC 未能完成，清理本次生成的 transform cache 后重跑成功，没有删除用户数据或其它工作树文件。
+- 按要求设置 PATH/JAVA_HOME/ANDROID_HOME 执行 `npx expo run:android --no-install --no-bundler`：prebuild 成功、package.json 无变化；ADB 在 `tcp:5037` 启动监听时被沙箱拒绝（`could not install *smartsocket* listener: Operation not permitted`，exit 255）。本次生成的 gitignored android 目录已清理。
+- **源码视觉对照 pass；Android AVD 亲眼走查和双端并排截图未完成。** PARITY 保留 🔨，未将源码/测试通过冒充截图验收；字标描边、Android 字体基线/两行截断和图标形状仍需 AVD 截图确认。
