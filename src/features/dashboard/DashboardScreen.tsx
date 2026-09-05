@@ -42,9 +42,11 @@ import {
   localCompetitionDays,
   relativeFeedbackTime,
 } from './model';
-import type { DashboardWeekDay } from './types';
+import { WeekCalendar } from './WeekCalendar';
 import { useDashboardViewModel } from './use-dashboard';
 import { MeetPRMark } from './MeetPRMark';
+
+export { WeekGrid } from './WeekCalendar';
 
 export function DashboardSkeleton() {
   const colors = useColors();
@@ -239,32 +241,15 @@ export function DashboardScreen() {
                   onPress={openFeedback}
                 />
               </DashboardAsyncSection>
-              <View style={{ gap: 10 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: 8,
-                  }}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-                    <Text style={{ ...font.mono(13), color: colors.textSecondary }}>{t('student.dashboardWeekCalendar.copy012')}</Text>
-                    <Text style={{ ...font.mono(11, 'bold'), color: colors.textSecondary }}>{vm.today.segments.filter((segment) => segment.state === 'done').length} / {vm.today.segments.length}</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <MaterialCommunityIcons name="calendar-blank-outline" size={11} color={colors.textDisabled} />
-                    <Text style={{ ...font.mono(11), color: colors.textMuted }}>{t('student.dashboardWeekCalendar.copy014')}</Text>
-                  </View>
-                </View>
-                <WeekGrid
-                  days={vm.week.status === 'loaded' ? vm.week.days : []}
-                  selectedDayID={vm.selectedDayID}
-                  onSelect={vm.selectDay}
-                />
-              </View>
+              <WeekCalendar
+                headerStyle="progress"
+                weekNumber={vm.week.status === 'loaded' ? vm.week.weekIndex : 1}
+                cells={vm.week.status === 'loaded' ? vm.week.days : []}
+                selectedDayID={vm.selectedDayID}
+                onSelect={vm.selectDay}
+              />
               {!vm.today.completedToday && selected && vm.activePlan ? (
-                <Card style={{ padding: 16, gap: 6 }}>
+                <View style={{ gap: 5 }}>
                   <Text
                     style={{
                       ...font.body(16, 'bold'),
@@ -283,7 +268,7 @@ export function DashboardScreen() {
                       ),
                     ])}
                   </Text>
-                </Card>
+                </View>
               ) : null}
             </>
           )}
@@ -459,52 +444,6 @@ export function DashboardScreen() {
         </View>
       ) : null}
     </Screen>
-  );
-}
-export function WeekGrid({
-  days,
-  selectedDayID,
-  onSelect,
-}: {
-  days: DashboardWeekDay[];
-  selectedDayID: string | null;
-  onSelect: (id: string) => void;
-}) {
-  const colors = useColors();
-  return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-      {days.map(({ day, status, date }) => (
-        <Pressable
-          key={day.id}
-          accessibilityRole="button"
-          accessibilityLabel={`${dayCode(day)} ${recommendedDateText(date)}`}
-          accessibilityState={{ selected: selectedDayID === day.id }}
-          onPress={() => onSelect(day.id)}
-          style={{
-            minWidth: 0,
-            flex: 1,
-            minHeight: 58,
-            borderRadius: 12,
-            alignItems: 'center',
-            padding: 6,
-            justifyContent: 'center',
-            gap: 5,
-            backgroundColor:
-              status === 'current'
-                ? `${colors.goldRGB}1F`
-                : status === 'done'
-                  ? colors.surfaceCard
-                  : colors.bgInset,
-            borderWidth: status === 'current' ? 1.5 : 0,
-            borderColor: colors.gold500,
-          }}
-        >
-          {status === 'done' ? <MaterialCommunityIcons name="check" size={11} color={colors.success} /> : <View style={{ width: 7, height: 7, borderRadius: 3.5, borderWidth: status === 'current' ? 0 : 1, borderColor: colors.textGhost, backgroundColor: status === 'current' ? colors.gold500 : 'transparent' }} />}
-          <Text style={{ color: status === 'current' ? colors.textPrimary : colors.textMuted, ...font.mono(10, status === 'current' ? 'bold' : 'semibold') }}>D{day.day_of_week}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ color: status === 'current' ? colors.textSecondary : colors.textMuted, ...font.mono(10) }}>{recommendedDateText(date)}</Text>
-        </Pressable>
-      ))}
-    </View>
   );
 }
 export function TrainingCTA({
