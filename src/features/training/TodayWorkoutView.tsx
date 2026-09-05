@@ -1,5 +1,8 @@
 import {
   cursorDay,
+  currentWeekDays,
+  progressSegments,
+  recommendedDate,
   sequenceDays,
   selectCurrentPlan,
   planLogRange,
@@ -19,6 +22,7 @@ import { HoldToCompleteButton } from './HoldToCompleteButton';
 import { completionError } from './completion-errors';
 import { replayE1RMSeries } from '@/features/dashboard/model';
 import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
+import { WeekCalendar } from '@/features/dashboard/WeekCalendar';
 import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
 import {
@@ -206,6 +210,17 @@ export function TodayWorkoutView() {
     editingPlan?.trainee_id === studentId ? editingPlan : planQuery.data;
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
+  const weekDays = currentWeekDays(plan?.days ?? []);
+  const weekNumber = weekDays[0]?.week_number;
+  const weekCells = plan
+    ? progressSegments(weekDays, cursor?.id).map(({ day, state }) => ({
+        day,
+        status: state,
+        date: recommendedDate(plan, day),
+        lift: null,
+        completion: state === 'done' ? 1 : 0,
+      }))
+    : [];
   const planDay =
     orderedDays.find((day) => day.id === requestedDayID) ??
     cursor ??
@@ -812,6 +827,15 @@ export function TodayWorkoutView() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
+        {state.kind !== 'loading' && plan && weekNumber !== undefined ? (
+          <WeekCalendar
+            headerStyle="currentWeek"
+            weekNumber={weekNumber}
+            cells={weekCells}
+            selectedDayID={selectedDayID}
+            onSelect={selectDay}
+          />
+        ) : null}
         {prEvent ? (
           <PRBanner
             event={prEvent}
@@ -1096,7 +1120,7 @@ const createStyles = (colors: Colors) =>
       backgroundColor: colors.dangerFill,
     },
     unreadCount: { color: '#FFFFFF', ...font.mono(9, 'bold') },
-    content: { gap: spacing.md, padding: spacing.base, paddingBottom: 120 },
+    content: { gap: 13, paddingHorizontal: spacing.base, paddingTop: 6, paddingBottom: 28 },
     center: { marginVertical: spacing.xxl },
     empty: { alignItems: 'center', gap: spacing.md, padding: spacing.xl },
     emptyTitle: { color: colors.textPrimary, ...typography.headline },

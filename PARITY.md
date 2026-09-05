@@ -61,7 +61,7 @@
 | Onboarding | ☐ | 悬空 worktree `feat/w1i-onboarding-bind`(旧基线,未 commit);Global 轨注册无手机号、角色固定 coached_student,需重对 |
 | Bind | ☐ | 同上 worktree;对照 #294 v3 浅色 |
 | Dashboard(含 e1RM 图) | ✅ | W1-f v2(#20):推进制游标日 W#D# 大字 + 周进度条/周历格(序数身份)+ 已完成/撤销/下一节/周期完成 action + 吸底 Start training 交棒 dayID;模拟器已走查完成→撤销闭环;旧注:定向返修收敛:e1RM 自 1970 且沿用 plan 默认 scope/catalog×profile 仅降级主项解析,不连坐周计划与资料区独立重试;GrowthCurve 入口暂为占位,待 W3 图表走查；W3-v(Dashboard/训练)：展示层按 202e95db 修正，视觉对照 pass 待 AVD 截图验收（ADB listener 被 sandbox 拒绝）；lint/tsc/65 suites·400 tests 通过 |
-| TodayWorkout | ✅ | W1-d v2(#20):选中态 dayID、completed/current/upcoming 三态与序列提示、hero list/recording 两态、六形态强度 + % 三锚、长按结算 HoldToComplete、DayCompletionBanner、页头 = MeetPR 标 + W#D#;模拟器已走查记组→结算→撤销;旧注:周/月日历、计划×日志草稿、组卡/录入、RPE 建议/RIR、休息计时、回顾/PR、视频 stub;定向返修已收 raw/competition metadata seam、未解析跳过 e1RM、per-day 回顾隔离、e1RM 活更新、04:00 切点重校验及 tab 埋点;待模拟器走查对齐；W3-v(Dashboard/训练)：展示层按 202e95db 修正，视觉对照 pass 待 AVD 截图验收（ADB listener 被 sandbox 拒绝）；lint/tsc/65 suites·400 tests 通过 |
+| TodayWorkout | ✅ | W1-d v2(#20):选中态 dayID、completed/current/upcoming 三态与序列提示、hero list/recording 两态、六形态强度 + % 三锚、长按结算 HoldToComplete、DayCompletionBanner、页头 = MeetPR 标 + W#D#;模拟器已走查记组→结算→撤销;旧注:周/月日历、计划×日志草稿、组卡/录入、RPE 建议/RIR、休息计时、回顾/PR、视频 stub;定向返修已收 raw/competition metadata seam、未解析跳过 e1RM、per-day 回顾隔离、e1RM 活更新、04:00 切点重校验及 tab 埋点;待模拟器走查对齐；W3-v(Dashboard/训练)：展示层按 202e95db 修正，视觉对照 pass 待 AVD 截图验收（ADB listener 被 sandbox 拒绝）；lint/tsc/65 suites·400 tests 通过；W3-v:顶部当前周周历条已对齐 iOS 顺序 |
 | WeekOverview → TrainingCalendarView | ✅ | W1-d v2(#20):周/月日历下线,改「计划汇总」周编排列表(Completed n / m sessions,本周默认展开,序数格子 + 教练推荐日期) |
 | TrainingHistory | ☐ | 悬空 worktree `feat/w1g-history`(旧基线实装,未 commit);收货前对照 #331 空态 |
 | Readiness | 🔨 | W1-d;训练 tab opt-in 两步 sheet、per-day skip、心形完成态(页头按钮组第二位);细节待 W3 像素对齐 |

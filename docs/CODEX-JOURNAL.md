@@ -835,3 +835,15 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - `npx expo run:android --device meetpr --no-install` 已执行：prebuild 生成被忽略的本 worktree android/，package.json 无改动；随后 ADB 5037 smartsocket listener 因 sandbox `Operation not permitted` 失败。日志 `/private/tmp/w3v-android.log`。未完成原生 build/install、未取得 AVD 截图，不绕过沙箱。
 - Android JS bundle：`npx expo export --platform android --output-dir /private/tmp/w3v-bundle` 成功，日志 `/private/tmp/w3v-bundle.log`；此结果不替代原生安装和视觉验收。
 - PARITY Dashboard/TodayWorkout 追加 **“视觉对照 pass 待 AVD 截图验收”**，保留历史收货状态；本卡视觉 pass 未签收。
+
+## W3-v — 训练 tab 顶部当前周周历条（2026-09-05）
+
+- 工作树 `feat/w3v-training-strip` / `meetpr-rn-wt-w3v-strip`；已读 AGENTS、PLAN、上段 W3-v 与 W1-h R4、`core-training-loop-v2.md` §训练 tab 和指定两屏。通过文档工具读取 [Expo v57.0.0 文档](https://docs.expo.dev/versions/v57.0.0/)；终端操作离线、不使用 ADB、不加依赖、不改 node_modules symlink、不 commit/push。
+- 新增 `dashboard/WeekCalendar.tsx`，提供 progress/currentWeek 两种头部，共用单行推荐日期标签，头部至格子 gap 10。progress 保留原头部样式；currentWeek 使用 W# display14、当前周胶囊 mono10 bold / tracking 0.6 / goldText / gold500@0.14，右侧计数、1×10 分隔线、推荐日期。空 cells 返回 null。
+- Dashboard 替换内联周历块。为避免新组件与 DashboardScreen 循环导入，额外将原 `WeekGrid` 完整迁入新文件并从旧入口兼容导出；已用源码逐字节比较确认格子函数未变，58 高、12 圆角、current 描边、字体与点击行为原样保留。这是“仅替换内联块”之外的组件归属调整，无额外展示变更。
+- 训练条以 `currentWeekDays(plan.days)` 决定周号，调用已导出的 `progressSegments(weekDays, cursor?.id)` 构造状态，与 Dashboard `todayModel().segments` / 周格子共用同一函数；仅映射为既有 WeekGrid 形状并用 `recommendedDate` 填推荐日期，不增加第二套状态算法、不改数据层。点击沿用 `selectDay(id)`；无计划、当前周为空或 loading 时不显示。
+- 顺序核对：现有页头 nav → ScrollView 首块当前周条 → 非 current 序列提示 → WorkoutBody（hero / 动作列表）→ 完成区 → TrainingCalendarView。原有条件 PRBanner 保留在条后、正文前。页头本身与 hero/动作列表/完成控件/底部周列表未改。ScrollView 块间距 **12 → 13**，顶部 **16 → 6**，底部 **120 → 28**，水平保持 `spacing.base = 16`。
+- TDD 使用用户指定 WeekCalendar seam：currentWeek 文案/计数、progress 文案/计数、两态推荐文案、两态空 cells 共 4 项，分片红绿；首项初始因缺组件红，修正测试 fixture 日期补零后绿。红绿证据 `/private/tmp/w3v-strip-{current,progress,empty}-{red,green}.log`。既有整屏渲染测试追加 list/recording 的条目顺序断言，接线前两态均因缺当前周条红，接线后绿；日志 `/private/tmp/w3v-strip-integration-{red,green}.log`。
+- 验证：全量 `npx jest --runInBand` **67 suites / 417 tests 通过**，包含 dashboard/training、两条 i18n 守卫与 tokens 守卫；`npx tsc --noEmit` 无诊断（本轮没有 hovered 错误）。lint 首次发现兼容导出位置导致的两条 import/first warning，移至 import 后重跑 `npm run lint` 无诊断；最终定向 2 suites / 8 tests 通过。日志 `/private/tmp/w3v-strip-{jest,tsc,lint}.log`。WeekGrid 原样迁移核对与 `git diff --check` 通过。
+- 本地 Standards 核对：新增样式使用 useColors/font、复用翻译 key，无依赖或数据层变更；Spec 核对：两种头部、共享推进状态、空/加载隐藏及正文顺序符合卡面，格子迁移如上单列。正式 code-review 技能因缺 `docs/agents/issue-tracker.md` 未启动，已告知用户需 `$setup-matt-pocock-skills`，未静默生成配置。
+- 本卡明确沙箱无 ADB，未运行 Android 安装、未获取截图；PARITY 仅追加顶部周历条顺序对齐说明，设备视觉验收仍待可用 AVD 环境完成。
