@@ -24,7 +24,7 @@ export function FeaturePlaceholderScreen({
       <View style={styles.content}>
         <Card style={styles.card}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.detail}>{/* TODO(i18n:missing) */}W1 实装</Text>
+          <Text style={styles.detail}>{t('student.rn.featurePlaceholder')}</Text>
           {showLogout ? (
             <Pressable
               accessibilityRole="button"

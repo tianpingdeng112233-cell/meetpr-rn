@@ -69,6 +69,18 @@ test('defaults standalone plural keys to the first parameter and keeps Chinese c
   expect(t('student.trainingCalendarView.copy002', [2, 1])).toBe('已完成 2 / 1 节');
 });
 
+test('pluralizes coach workspace summaries by weeks after the descriptive parameters', () => {
+  expect(t('coach.workspace.draftSummary %@ %@ %lld', ['Alex', 'Strength', 1])).toBe('Alex · Strength · 1 week');
+  expect(t('coach.workspace.draftSummary %@ %@ %lld', [1, 'Strength', 2])).toBe('1 · Strength · 2 weeks');
+  expect(t('coach.workspace.publishedSummary %@ %lld', ['Strength', 1])).toBe('Strength · 1 week');
+  expect(t('coach.workspace.publishedSummary %@ %lld', [1, 2])).toBe('1 · 2 weeks');
+  expect(t('coach.workspace.defaultDraftName %@ %lld', ['Alex', 1])).toBe("Alex's 1-Week Plan");
+  expect(t('coach.workspace.defaultDraftName %@ %lld', ['Alex', 2])).toBe("Alex's 2-Week Plan");
+  setLocaleOverride('zh');
+  expect(t('coach.workspace.draftSummary %@ %@ %lld', ['Alex', 'Strength', 1])).toBe('Alex · Strength · 1周');
+  expect(t('coach.workspace.publishedSummary %@ %lld', ['Strength', 2])).toBe('Strength · 2周');
+});
+
 test('returns an unknown runtime key without throwing, while rejecting it at compile time', () => {
   // @ts-expect-error Unknown catalog keys are rejected by TypeScript.
   expect(t('missing.key')).toBe('missing.key');

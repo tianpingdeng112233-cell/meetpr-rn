@@ -37,6 +37,7 @@ export const UserSchema = z.preprocess(
   z.object({
     id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
     phone: z.string(),
+    name: z.string().nullish(),
     role: UserRoleSchema,
     created_at: Iso8601DateTimeSchema,
   }),

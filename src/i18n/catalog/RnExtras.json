@@ -58,5 +58,50 @@
 "student.progression.undoWindowPassed": {
 "en": "Completion can only be undone today",
 "zh": "只能在当天撤销"
+},
+"student.rn.bind.incompleteRequest": {
+"en": "Your connection request is incomplete. Enter an invite code again.",
+"zh": "绑定申请尚未完成，请重新输入邀请码。",
+"source": "src/navigation/BindGate.tsx"
+},
+"student.rn.bind.wiringPlaceholder": {
+"en": "W1 integration",
+"zh": "W1 接线",
+"source": "src/navigation/BindGate.tsx"
+},
+"student.rn.bind.completeTrainingInfo": {
+"en": "Complete your training information",
+"zh": "完成训练信息",
+"source": "src/navigation/BindGate.tsx"
+},
+"student.rn.bind.onboardingPlaceholder": {
+"en": "Student onboarding will be integrated in W1.",
+"zh": "W1 接入学员 Onboarding。",
+"source": "src/navigation/BindGate.tsx"
+},
+"student.rn.bind.awaitingCoach": {
+"en": "Waiting for coach confirmation",
+"zh": "等待教练确认",
+"source": "src/navigation/BindGate.tsx"
+},
+"student.rn.featurePlaceholder": {
+"en": "W1 implementation",
+"zh": "W1 实装",
+"source": "src/navigation/FeaturePlaceholderScreen.tsx"
+},
+"student.rn.growthCurve.title": {
+"en": "Progress chart",
+"zh": "成长曲线",
+"source": "src/app/(student)/growth-curve.tsx"
+},
+"student.rn.growthCurve.liftTitle": {
+"en": "{0} progress chart",
+"zh": "{0}成长曲线",
+"source": "src/app/(student)/growth-curve.tsx"
+},
+"student.rn.growthCurve.placeholder": {
+"en": "The full chart will be integrated into the Progress page.",
+"zh": "完整曲线将在成长页图表卡接入",
+"source": "src/app/(student)/growth-curve.tsx"
 }
 }

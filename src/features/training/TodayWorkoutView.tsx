@@ -88,8 +88,6 @@ import {
   parseFiniteDecimal,
   resolveRestSeconds,
 } from './policy';
-import { readRestPreference } from '@/features/settings/storage';
-import { restSecondsForRPE } from '@/features/settings/rest-timer';
 import { ReadinessSheet } from './ReadinessSheet';
 import { RestTimer } from './RestTimer';
 import { saveErrorCopy } from './save-errors';
@@ -97,6 +95,7 @@ import { SerialTaskQueue } from './serial-task-queue';
 import { SetEntrySheet } from './SetEntrySheet';
 import {
   readBoolean,
+  readNumber,
   readReview,
   trainingE1RMRepository,
   writeBoolean,
@@ -140,7 +139,6 @@ export function TodayWorkoutView() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const { unreadCount } = useFeedbackInboxViewModel(studentId);
-  const bumpFeedback = useStudentTabsStore((state) => state.bumpFeedbackJump);
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
   const handoff = useStudentTabsStore((state) => state.trainingHandoff);
@@ -667,19 +665,14 @@ export function TodayWorkoutView() {
             draft.status !== 'complete' &&
             nextDrafts.some((candidate) => !isDraftTerminal(candidate))
           ) {
-            // Rest band follows the RPE just logged; fall back to the prescription when the set has none.
-            const restRPE = rpe ?? prescriptionRestRPE(draft.planSet);
-            const preference = restSecondsForRPE(
-              await readRestPreference(studentId).catch(
-                () => ({ mode: 'automatic' }) as const,
-              ),
-              restRPE,
+            const preference = await readNumber(
+              STORAGE_KEYS.restPreference(studentId),
             );
             setRestSeconds(
               resolveRestSeconds({
                 prescribed: draft.planSet.rest_seconds,
                 preference,
-                rpe: restRPE,
+                rpe: prescriptionRestRPE(draft.planSet),
               }),
             );
           }
@@ -778,8 +771,7 @@ export function TodayWorkoutView() {
               accessibilityRole="button"
               accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
               onPress={() => {
-                bumpFeedback();
-                router.navigate('/(student)/growth');
+                router.navigate('/(student)/feedback');
               }}
               style={styles.navButton}
             >

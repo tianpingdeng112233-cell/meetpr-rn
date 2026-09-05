@@ -46,7 +46,7 @@
 | 项 | 状态 | 备注 |
 |---|---|---|
 | 设计 tokens 主题包 | 🔨 | G0-a:按 design-tokens-v3 / iOS 202e95db 重移植浅色默认、品牌金、三族十字面、主题/基础组件/自绘 tab;lint+tsc+177 Jest 通过,Android bundle 导出通过;ADB sandbox 权限阻断,待模拟器截图走查(旧 W0-A 走查不代表 v3 已对齐);2026-09-04 模拟器亲验 v3 登录页/BindGate 占位页(浅色底、白卡、金杠、Archivo 字标);逐屏视觉对齐随各功能卡走查 |
-| i18n 字符串层 + 全仓英文化 | 🔨 | G0-b:八模块正典 JSON 原样入 catalog、typed t/设备语言/占位/复数、Intl 日期、动作 name_en 回退;CN login/onboarding 按卡排除;R1 标点归一化消除 17 行,33 drift/47 missing 残留逐行登记并分流 CODEX-JOURNAL;lint/tsc/29 suites·189 Jest 通过;ADB socket 被 sandbox 拒绝,待模拟器截图验收 |
+| i18n 字符串层 + 全仓英文化 | 🔨 | W3-i18n:剩余 15 missing/0 drift 清零；取消 login/onboarding 屏幕豁免并替换 login 10 处中文；新增全 src 标记守卫与 9 个带来源 RN key；补 CoachKit 3 个复数索引；lint/tsc/58 suites·379 Jest 通过。正典不改；已知 Sun 误译、历史 CoachKit runtime 差异和 Apple 格式限制见 JOURNAL。ADB socket 被 sandbox 拒绝，待模拟器截图验收 |
 | API client + auth 全链 | ✅ | W0-B;staging 真登录/登出冒烟通过;⚠️后端响应 camelCase 已勘误进参照包 |
 | 导航骨架 + BindGate(评估封存照抄) | ✅ | W0-C;教练 5 tab/学员 4 tab/登出模拟器实测 |
 | CI(ubuntu) | ✅ | lint+tsc+jest+assembleDebug,APK artifact 7 天 |
@@ -74,6 +74,8 @@
 | VideoUpload | ☐ | 悬空 worktree `feat/w1h-video`(旧基线「选片+压缩+分片」口径,未 commit);**与新基线视频链差距最大,收货前重对 063–078** |
 | MyProfile | 🔨 | W1-p：v2/v3 七块资料卡、三态防困死兜底、复用向导行编辑且结构性锁 1RM、外观/分 RPE 休息/本地周提醒、改密码/全量 CSV/注销；lint/tsc/Jest 与离线 Android bundle 验证见 CODEX-JOURNAL。ADB 5037 被 sandbox 拒绝，端点已核本地 backend origin/staging 源码，Global 在线与模拟器截图待验收 |
 | VideoUpload | 🔨 | W1-h v2:W1-d 入口接回、自建相机/回放确认/相册偏好、720p 码率直通/转码、静默上传/持久化分片与退避、当天留存/组内播放、失败聚合本地通知;lint/tsc/42 suites·279 Jest 通过、Android JS bundle 导出通过。ADB/Gradle socket 被 sandbox 拒绝,尚未完成 APK 编译与 AVD 截图验收。已知 v1 偏差:无原生前台服务,进程内上传+冷启/回前台续传;无烧录导出(W3-video 待决策) |
+| FeedbackInbox / FeedbackDetail | 🔨 | W3-a:归档列表/详情路由、相对时间/未读态/关联视频三态、行内短链失败;markRead → URL → 开播放器 → markers,回填有 id + 会话守卫;Dashboard/训练页消息按钮直达反馈。复用现有反馈与视频读口,不改 DTO;lint/tsc/64 suites·396 tests/Android JS bundle 通过;ADB socket 被 sandbox 拒绝,待 AVD 截图验收 |
+| VideoUpload | ✅ | W1-h v2(#22,R1–R3):W1-d 入口接回、自建相机(录制/回放确认/相册偏好)、720p 直通/转码、静默多分片上传(legacy uploadTask,无 Content-Type)+ 持久化分片/退避、当天留存/组内回放、失败聚合通知。模拟器已走查:选片→懒建日志→initiate→PUT→complete,服务端 `GET /students/:id/videos` 出现附件;**录像本身模拟器不可验(QEMU 相机开录挂死),待真机**。已知偏差:无前台服务真后台续传、无烧录导出、帧率随设备 |
 | MyProfile | ☐ | |
 | 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
 | Evaluation | — | 硬封存,不复刻 UI,仅 BindGate 跳过逻辑 |
@@ -82,20 +84,29 @@
 
 | 功能区 | 状态 | 备注 |
 |---|---|---|
+| Coach shell | ✅ | W2-a：today/messages/students/profile 四个常驻 tab，Stack 全屏目的地隐藏底栏；messages 数据由 W2-c 接线 (integration/w2 教练号模拟器已走查) |
+| Dashboard | ✅ | W2-a：六块布局、三态待办、接收横幅与自然周概况已接共享模型；待 Android 视觉验收 (integration/w2 教练号模拟器已走查) |
+| StudentRoster | ✅ | W2-a：搜索、申请段、四态名单、异常信号/进度和刷新已实装；待模拟器走查 (integration/w2 教练号模拟器已走查) |
+| BindQueue | ✅ | W2-a：Accept 恒跳过评估、静默拒绝、4xx 刷新与全屏申请资料页（空态保留操作）；待端到端走查 (integration/w2 教练号模拟器已走查) |
 | Dashboard | ☐ | |
 | StudentRoster | ☐ | |
-| StudentDetail | ☐ | |
+| StudentDetail | ✅ | W2-b:全屏 Header 四态 + 五段/训练日/视频角标纯回放;exercise-stats 服务端成长,只读反馈/资料;47 suites / 309 tests。AVD 安装受 ADB listener 权限阻断,截图/Global 实机验收待补;见 JOURNAL W2-b (integration/w2 教练号模拟器已走查) |
 | BindQueue | ☐ | |
-| Receiving | ☐ | |
+| Receiving | ✅ | W2-c:合并收件箱/同源 badge selector、学员日分组队列、反馈工作台/markers/组信息/身份跳转;W2-a 壳接 badge 待合并。播放器为同依赖独立封装(不改 training,组件复用例外见 JOURNAL);ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
+| Chat | ✅ | W2-c:现场核 snake_case DTO、文字发送/稳定 client_id 重试、seq 分页/read/30s 轮询、未知状态不画副标题;lint/tsc/47 suites·312 tests/Android bundle 通过;无 realtime,待 AVD 走查 (integration/w2 教练号模拟器已走查) |
 | InviteCodes | ☐ | |
-| Planning / PlanningWorkspace | ☐ | 范围=iOS 实际保留功能,开工前现场核实,不扩权 |
+| Planning / PlanningWorkspace | — | W2-a 按 coach-v2 §7 删除教练 planning tab/路由；v1 无 app 排计划入口 |
 | MyProfile | ☐ | |
+| InviteCodes | ✅ | W2-d:永久码显式生成/重生成、单次/时限 7·30·自定义 1–365、五态/复制/左滑撤销、写后重拉;lint/tsc/46 suites·322 Jest 通过。expo-clipboard 待 Claude 安装并接 adapter;ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
+| Planning / PlanningWorkspace | ☐ | 范围=iOS 实际保留功能,开工前现场核实,不扩权 |
+| MyProfile | ✅ | W2-d:姓名/邀请码卡三态、裸码复制+2 s toast、Help 四 FAQ/禁用联系、Privacy 三行日期、版本/登出确认与 session 接线;JS bundle 导出通过。剪贴板原生依赖与 AVD 验收待补 (integration/w2 教练号模拟器已走查) |
 | Evaluation | — | 同上封存 |
 
 ## 视频/图表/打磨(W3)
 
 | 项 | 状态 | 备注 |
 |---|---|---|
+| VideoPlayback / FeedbackVideoPlayer 全屏回放 | 🔨 | W3-a:自绘播放/暂停、四档会话倍速、250 ms 轮询、80 ms 拖拽 seek + generation、失败重试、打点三态面板/标注帧;组内薄封装 markers=null、本地优先/远端现取。单层 Modal 或 OverlayHost;平底材质;无刻度/级别色/角标/导出;静态验证通过,ADB 拒绝导致视觉验收待补;Android seek tolerance 限制见 JOURNAL |
 | CoachVideoPlayer 变速回放 | ☐ | 0.5/1.0/1.5/2.0x |
 | 成长 tab：e1RM / forming / 容量强度图表 | 🔨 | W3-c：react-native-svg 按 iOS 几何重画；纯函数红绿测试、lint/tsc/Jest 全绿；ADB 监听受沙箱限制，待 Android 截图与 iOS 并排验收；Dashboard 不在本卡范围 |
 | 学员端走查对齐(36 项) | ☐ | |

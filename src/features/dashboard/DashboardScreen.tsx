@@ -94,7 +94,6 @@ export function DashboardScreen() {
   const router = useRouter();
   const handoff = useStudentTabsStore((s) => s.handoffTraining);
   const bumpCompletion = useStudentTabsStore((s) => s.bumpCompletionRevision);
-  const bumpFeedback = useStudentTabsStore((s) => s.bumpFeedbackJump);
   const undo = useDayCompletion(vm.activePlan?.id ?? '', true);
   const resolve = useExerciseMetadataResolver(studentId);
   useFocusEffect(
@@ -112,8 +111,7 @@ export function DashboardScreen() {
     router.navigate('/(student)/training');
   };
   const openFeedback = () => {
-    bumpFeedback();
-    router.navigate('/(student)/growth');
+    router.navigate('/(student)/feedback');
   };
   const action = vm.today.action;
   const selected = vm.today.cursor ?? vm.today.completedToday;
@@ -315,7 +313,7 @@ export function DashboardScreen() {
                     <Pressable
                       onPress={() =>
                         router.push({
-                          pathname: '/(student)/growth',
+                          pathname: '/(student)/growth-curve',
                           params: { family: rail.family },
                         })
                       }

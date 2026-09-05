@@ -51,5 +51,12 @@ export async function selectPlaybackSource(
   exists: (uri: string) => boolean,
   remote: () => Promise<string>,
 ): Promise<string> {
-  return localUri && exists(localUri) ? localUri : remote();
+  const local = VideoAttachmentPlaybackSourceSelector.select(localUri, Boolean(localUri && exists(localUri)), null);
+  return local ?? remote();
 }
+
+export const VideoAttachmentPlaybackSourceSelector = {
+  select(localURL: string | null, localFileExists: boolean, remoteURL: string | null): string | null {
+    return localURL && localFileExists ? localURL : remoteURL;
+  },
+};

@@ -37,6 +37,7 @@ function StudentTabs() {
           title: t('student.studentRootView.copy004'),
         }}
       />
+      <Tabs.Screen name="feedback" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -856,3 +856,268 @@ Dependency declarations: expo-notifications `~57.0.17`, expo-sharing `~57.0.18`.
 - 验证：`npm run lint` exit 0；`npx tsc --noEmit` exit 0；`npx jest` 33 suites / 239 tests 全绿。
 - Android：执行 `CI=1 npx expo run:android --no-install --device meetpr --port 8081`，prebuild 成功且 package.json 无变化；随后 ADB 启动失败，`could not install *smartsocket* listener: Operation not permitted`，未能安装运行或取得本次模拟器截图。PARITY 保持 🔨，不能宣称像素验收完成。生成的 android 目录为 gitignored 本地构建产物。
 - 几何待人工核验/已知细节：① 本卡和 §4.2 明确写 Int(high/mid/low)，故 RN 使用 trunc；Swift 文件实际先 rounded() 再 Int，按本卡优先实现并记录差异。② viewBox 随容器等比缩放，轴字通过纯函数反向补偿维持 iOS 固定 9pt（容量日期 8pt）；轴题/当前日期随 mockup 缩放。文字 central baseline 逐个设在 SvgText 上，避免仅设置在 G 上被 Android 丢弃。③ 当前日期标签底板按 IBM Plex Mono 10pt 字符推进估算（每字 6pt + 横 padding 2pt），实际字体垂直度量与 Android baseline 需截图核。④ forming 的 126pt 按 iOS 调用点解释为整个状态区，画布为默认 68pt；几何中的控制点偏移、点直径保持绝对 pt，不随容器宽度缩放。
+
+### R2 — 相册附加后副本丢失 / 上传直接失败 — 2026-09-05
+
+仅修改 `feat/w1h-video` / `meetpr-rn-wt-w1h`;未 commit/push,未安装依赖/skills,未运行 code-review 或 tracker 流程。按 diagnosing-bugs 六阶段和用户指定 manager/File/AsyncStorage seam 做逐项红→绿;上传协议、DTO、onboarding/growth/dashboard 未改。
+
+1. **反馈环与最小复现**:先新增 `video-upload/__tests__/manager-attach.test.ts`,真实 manager/store/native/上传 runner,只替换原生文件系统、设备模块、存储与网络边界。File.copy 按 SDK 57 Android coroutine 异步完成,输入固定 350000 bytes、4 s、720p H.264;一次 attach 自带紧接的 sweep,ensureSetLog 暂停以检查尚未 prepared 的记录/磁盘。命令 `npx jest src/features/training/video-upload/__tests__/manager-attach.test.ts --runInBand` 实际红:记录是 documents/training-videos 新路径,但副本期望 `350000`,实际 `undefined`。去掉 UI/相册/真实网络后仍复现,无需第二次点击、第二次 attach 或启动监听。初次红测日志 `/private/tmp/w1h-r2-red.log`。
+2. **复现与探针**:同一用例再次运行仍红。临时 `[DEBUG-w1h-r2]` 操作记录只有 `copy:ImagePicker/sample.mp4` → `delete:ImagePicker/sample.mp4`,随后异步 copy 的 `NoSuchFileException`;没有对 documents 文件的 delete,也没有进入元数据读取。诊断期间在 File 替身观察 rejection 以保存证据,最终测试已移除此 catch,让任何脱离调用链的 rejection 直接导致 Jest 失败。探针日志 `/private/tmp/w1h-r2-probe.log`。
+3. **排序假设与证伪**:先向用户列出“未 await copy”“attach 后 sweep 清理”“重复 attach / hydrate 回滚”“prepare 后清源”四个预测,再逐项验证。现场最小复现中后面三项均非必要条件:350 KB 不触发容量淘汰、未上传不触发跨日清理;copy 只调用一次;prepare 尚未读取源。补充延迟 AsyncStorage hydrate 的交错用例确认已有 store 合并保护不回滚新 source,因此不改 store。
+4. **正确假设 / A、B 的答案**:Expo **v57.0.0** 总览已读;实际预装 expo-file-system 的 `src/internal/NativeFileSystem.types.ts` 声明 `copy(...): Promise<void>`,Android `FileSystemModule.kt` 注册 `AsyncFunction("copy") Coroutine`。旧 `retainVideoSource()` 把 copy 当同步调用:启动复制后立刻同步删除 ImagePicker 原文件,并返回尚未成功生成的目标 URI。**保留副本在此复现中没有被谁删掉,而是尚未复制成功;日志中的 copy rejection 是这一次调用的延迟失败,不是第二次 copy 的证据。**调用链为 `VideoAttachmentControls.attach` → manager.attach → retainVideoSource → 未等待的 File.copy;UI 的 attach.catch 接不到被丢弃的 native Promise。execute 只 prepare 记录中的 source;只有需要转码时才对 compressor 输出另做 retain,并非再次复制 ImagePicker。一次只改“等待复制完成”这个变量(函数返回 Promise,两个调用点 await),单次 attach 立即转绿,同一保留文件以 350000 bytes 进入 prepare 并完成 mock 上传(`/private/tmp/w1h-r2-await.log`)。
+5. **修复与回归切片**:
+   - `native.ts`:await copy 后验证目标存在且 size >0,再删原文件/返回 URI;失败包装成 deterministic `VideoNativeError`,回收未发布目标,不留下虚假 record。转码输出 retain 同样 await。`deleteLocalVideo` 保留 best-effort cleanup 语义,同步 delete 异常返回封装后的 VideoNativeError;所有权转移处检查并抛出该错误。所有现存 File.copy/delete 和分片目录 delete 均在 try/catch 内,本管线无 File.move 调用。
+   - `native-error.ts` 提取原错误类型并从 native 兼容 re-export;`multipart.ts` 的残片/目录删除错误同样封装,经 worker/manager catch 归为 deterministic,避免 native/multipart 循环依赖。
+   - `manager.ts`:同 identity、同选片 URI 的并发 attach 共用在途 Promise,防止排队的第二次 attach 再读已删除的原片;复制失败也经共同 Promise 返回,finally 清去重项。并发红测原为第二项 rejected,修改后两项 fulfilled、一次 copy、一份保留文件(`/private/tmp/w1h-r2-concurrent-{red,green}.log`)。
+   - **额外独立风险,不冒充现场主因**:异步 retain 扩大了“文件已复制、record 未发布”的窗口。人为让 manager.start 在此刻恢复,旧启动孤儿清理确实会删副本;新增交错用例先红(`Empty retained video`),再使 start 在有 attach 在途时跳过 orphan/残片清理后转绿(`/private/tmp/w1h-r2-startup-{red,green}.log`)。
+   - `local-retention.ts` / manager.sweep:显式传 prepared,未 prepared 的源不进入按日或容量淘汰;容量压力用例先红后绿,已 prepared 文件仍按旧的 500 MiB/最旧优先规则处理。未 prepared 的源总量过大时允许暂时超过上限,优先保住唯一可恢复副本;350 KB 现场不属于容量分支。
+   - **C**:仅在 ensureSetLog 边界把本地标记 `Set log unavailable`、当前 worktree 实际使用的 `Invalid set input`、`Selected day is no longer current` 转成带现有 i18n 文案的 deterministic VideoNativeError。网络/API 异常保留原分类;terminal 使用 `.copy` 而非覆盖成通用 processing。空重量用例原为 waiting,修改后立即 failed,保留文件,修正输入 Retry 能上传。附件行显示 `record.errorMessage`,本地 attach/remove/retry 异常显示 actionErrorMessage,Retry Promise 有 catch。没有增加翻译 key 或扩展 DTO。
+   - 指定新 manager seam 共 11 项:单次 attach/即时 sweep/非空 prepare/源落盘,并发选片去重,copy rejection,两种日志校验及修正重试,分片删除失败,原片删除失败,启动清理交错,转码输出留存,延迟 hydrate,网络分类。local-retention 增加 1 项未 prepared 压力测试,旧容量测试明确为 prepared 后的待上传文件。
+6. **清理与验证**:移除全部 `[DEBUG-w1h-r2]` 临时探针,未留下 throwaway 脚本。`npm run lint` 0 errors/0 warnings;`npx tsc --noEmit` 无诊断;`npx jest` **44 suites / 299 tests 全通过**,原有 43 套保留。最终日志 `/private/tmp/w1h-r2-{lint,tsc,jest}.log`;`git diff --check` 干净。PARITY 更新 R2 交付记录,仍标设备验收待补。
+
+**原生验收限制**:`npx expo run:android --device meetpr --no-install` 实际运行,ADB start-server 因不能建立 smartsocket listener (`Operation not permitted`) exit 255,CLI 未能安装本轮代码(`/private/tmp/w1h-r2-android.log`)。本轮未取得 AVD 截图,也未声称真实 Global 上传成功。仍需在可用 ADB 环境重走用户 100 kg/空重量两条选片路径,核验 documents 副本存在、没有 unhandled copy rejection、上传/可读校验错误和 Retry 行为。
+
+### R3 — Android 分片 PUT 的 NativeRequest headers 转换拒绝 — 2026-09-05
+
+仅修改本 worktree 的 `multipart.ts`、`manager.ts`、对应两份测试与本日志。未 commit/push、安装依赖/skills、执行 code-review 或修改协议/DTO;按本卡范围未改 PARITY。
+
+- **现场根因与对照证据（用户提供，本轮未重放真实预签名 URL）**：AVD integration/w1 dev bundle 已能 initiate 并写出第一片 350912 B，随后 `expo/fetch` 的 File body 在 `NativeRequest.start` 入参转换阶段立即被拒：`headers` 的数组元素无法转换为 Kotlin `Pair<String,String>`，含 null 值；即使完全省略 headers 仍复现。null 疑似来自 File body 的 Content-Type 推导，不能把 R2 的“去掉显式 header”当作完整修复。宿主机同一预签名 URL，`curl -X PUT --data-binary @file` 不带 Content-Type 得到 **200 + ETag**，加 `content-type: application/octet-stream` 得到 **403 SignatureDoesNotMatch**；AVD Chrome 能打开同域名并收到 AccessDenied XML。证据指向请求进入网络之前的原生参数转换失败，不能解释为域名不可达。
+- **SDK 核对与替换原因**：已读 Expo v57.0.0 总览及 [FileSystem legacy 文档](https://docs.expo.dev/versions/v57.0.0/sdk/filesystem-legacy/)。本轮开始时本地版本为 expo **57.0.7**、expo-modules-core **57.0.6**、expo-file-system **57.0.6**。legacy Android `createRequestBody` 的 BINARY_CONTENT 分支使用 `file.asRequestBody(null)`，仅从 `options.headers` 添加显式头。因此改为 `createUploadTask(part.url, temporary.uri, { httpMethod: 'PUT', uploadType: FileSystemUploadType.BINARY_CONTENT })`，完全不传 headers，绕开 expo/fetch File body 的 NativeRequest 参数组装。
+- **响应与取消**：按 status 的 `[200,300)` 判断成功，其余抛 `PartUploadError(status)`；ETag 名称大小写不敏感，值原样保留，缺失仍抛错。60 s 到期调用 `cancelAsync()` 并归为 `PartUploadError(408)`；外部 signal 和同批 worker 失败通过内部 abort 取消在途任务。取消 Promise 与 uploadAsync 竞争，避免 native 取消已完成但 uploadAsync 不结算时挂住；取消 rejection 有处理，finally 移除监听/定时器并回收临时片。5 MiB 切片、并发 3、逐片 ETag 持久化、跳过已完成片与 403 重新 initiate 保持原流程。
+- **错误诊断落盘**：`classify()` 分类规则不变；manager 在分类后的 catch 中把非 HTTP、非超时/取消的 network 类 Error（包括 native 调用拒绝和 TypeError）写入 `record.errorMessage`，随后沿用 waiting dispatch 一并持久化。使用不可变 store 更新，不制造瞬时 failed 状态、不扩展 model/DTO；确定性失败原有用户文案保持。旧 ensureSetLog 网络 TypeError 测试仅将 errorMessage 的 null 预期改为实际消息，仍断言 waiting/network。
+- **先红后绿**：首个 PUT 用例让旧 expo/fetch 替身抛现场 NativeRequest headers 拒绝，实际红；切到 legacy 后绿。ETag 小写/混合大小写先因缺 ETag 红，再绿；60 s 与 abort 用例先因 cancelAsync 调用数为 0 红，再绿；manager 两类错误先因 errorMessage 为 null 红，再验证 waiting/network 和冷 hydration 后消息保留。另覆盖无 headers 的 PUT 参数、200 + ETag/etag/eTaG、199/300/403/500 错误状态、缺 ETag、成功/失败/取消后临时片回收。最后一次依赖可用时 `npx jest src/features/training/video-upload --runInBand`：**5 suites / 59 tests 全通过**，原有 47 项全部保留。
+
+验证结果与环境阻断：
+- `npm run lint`：exit 0，无诊断。
+- `npx jest`：**43 suites 通过 / 1 suite 加载失败，310 tests 通过**；失败为未修改的 `src/analytics/__tests__/root-layout.test.tsx` 无法解析 `@expo-google-fonts/archivo/800ExtraBold`。日志 `/private/tmp/w1h-r3-jest.log`。
+- `npx tsc --noEmit`：exit 2，仅报未修改的 `src/app/_layout.tsx:4–5` 无法解析 Archivo `800ExtraBold` / `900Black`。日志 `/private/tmp/w1h-r3-tsc.log`。
+- 本 worktree `node_modules -> ../meetpr-rn/node_modules`。验证期间共享依赖发生外部变化：Archivo 于本机 05:52 变成目标含多个包参数的失效 symlink；随后定向 Jest 重跑又无法解析 expo-notifications / expo-localization（2 suites 无法加载、其余 3 suites / 26 tests 通过）。本轮没有执行任何安装或修改共享 node_modules；不能宣称最终全仓 Jest / tsc 绿，需共享依赖恢复后重新运行上述检查。
+- 使用指定 PATH/JAVA_HOME/ANDROID_HOME 运行 `EXPO_OFFLINE=1 CI=1 npx expo run:android --device meetpr --no-install --no-bundler`，ADB start-server 因 `could not install *smartsocket* listener: Operation not permitted` exit 255，未能安装/取得截图。日志 `/private/tmp/w1h-r3-android.log`。真实 Global 分片 PUT + ETag + complete 仍待 AVD 现场复验。
+
+### W1-h 补记(Claude,2026-09-05)— media3 版本冲突与播放器崩溃
+- 现象:打开任何 `react-native-video` 播放器(学员组内回放、教练工作台)进程即崩,`NoSuchMethodError: DefaultLoadControl.<init>(DefaultAllocator,IIIIIZIZ)`,表现为 App 闪退回上一个任务。
+- 根因:`expo-camera` → `androidx.camera:camera-video:1.6.0` → `androidx.media3:media3-container/muxer:1.9.0`,把 `media3-common/exoplayer` 约束到 1.9.0;`react-native-video 6.19.2` 按 1.8.0 编译,`RNVLoadControl` 调用的 protected 构造器在 1.9 变成 14 参签名。
+- 修法:`patches/react-native-video+6.19.2.patch`(patch-package,`postinstall`)把 `RNVLoadControl` 换成 `DefaultLoadControl.Builder`(跨 1.8/1.9 稳定);放弃 `DependingOnMemory/DisableBuffering` 两种缓冲策略的按内存限流(本 App 不用)。升级 RNV 到已适配 media3 1.9 的版本后可删补丁。
+- 顺带:共享 node_modules 用 `npm install --no-save` 预装 extras 时必须整份列表传入,否则会被 npm 剪掉;Gradle `--build-cache` 曾恢复出一份 7 月的旧 APK(缺新原生模块),排障时用 `--no-build-cache` + 删 `android/app/build`。
+## W2-a — 教练外壳、Dashboard、花名册与接收队列（2026-09-05）
+
+### 改动清单
+
+- `(coach)/_layout.tsx` 改为共享时钟/数据模型之上的 Stack；四 tab 路由迁入 `(coach)/(tabs)`，顺序 today / messages / students / profile。删除 planning 和旧 receiving 路由；profile 标题使用 `coach.shell.profile`。公开 URL 仍为 `/(coach)/today|messages|students|profile`。
+- 注册 `/(coach)/student/[studentId]`（仅占位，W2-b 接手）与 `/(coach)/application/[requestId]`（已实现）；两者在 Tabs 之外，因此隐藏底栏。申请操作完成用返回关闭目的地，保留原花名册搜索/滚动实例。
+- `CoachNowProvider` 是教练特性唯一的当前时间来源；AppState active、设备本地午夜推进。`CoachDataModel` 在日切/时区偏移变化时重拉花名册；在途请求结束后补取新窗口。异步结果发布时按最新 now 重算信号，避免旧请求恢复过期的 Awaiting Reply。
+- Dashboard 六块、待办三态、接收成功横幅、ISO 自然周概况、四种格子/图例/星期头/完成率、恒可见 View All Students 已实现。屏幕只消费共享模型，不发请求。
+- 花名册搜索/清除、新申请倒序段、四态与失败 overlay、异常分组、状态点/原因/活动/No Plan/分段进度/完成率色阶已实现。申请资料页直接复用 onboarding 读口，完整资料按八行展示；404/失败/无资料仍可 Accept/Ignore。
+- 接收 sheet 恒发 `{skip_evaluation:true}`；拒绝 confirm 恒发严格 `{}`。成功摘除申请，接收刷新花名册并回传姓名；4xx 刷新结束后报对应文案。代次保护避免旧队列快照重新插回已处理申请；接收发生在旧花名册刷新中时补拉操作后的真值。接收/拒绝埋点分别为 `accepted_skip` / `rejected`。
+- 新增 `api/domains/coach.ts`，zod 接受嵌套 profile / 旧 flat 学员摘要，队列 onboarding 复用现有 schema 的部分字段；`BIND_REQUEST_EXPIRED` 加入客户端已知错误码。plan/logs/feedback 复用既有 repositories；四学员滑动窗口、槽内串行，实际 HTTP 扇出也不超过四，按原序回填，单学员失败为空信号。plan/logs 复用 TanStack Query keys，先展示已有缓存再有界更新；feedback 与 bind queue 不做持久缓存。
+- 新增 `domain/coach/{calendar,triage,week-overview,todo-list,formatting}`。教练计划日期只读复用 `recommendedDate`，优先展示 `shifted_to_date`；日志上界用次日本地日期（HTTP `to` 开区间）。不使用学员 04:00 切点。
+- `TabBar` 增加可选教练颜色/圆点 badge 参数，现有学员默认参数保留。补齐 v3 所需细间距和申请/成功/漏练透明色 token；videoStage 色值核对 iOS `VideoColors.swift`，分别 `#1B2534` / `#2A3646`。
+
+### 文案 / 正典核对
+
+- 本卡新增界面未命中 key：**无**，没有新增 `TODO(i18n:missing)`。S/B/D、kg/cm、百分比和周号是正典中的数值记号；未知器械 token 原样展示。
+- `t(key, params)` 补充命名占位符支持（`{name}` / `{student}` / `{waiting}` 等），保留已有位置参数行为；增加教练参数索引，避免用姓名判断复数。
+- `coach.today.trainingDaysCompleted %lld %lld` 的提取 catalog 遗留 `%1$lld / %#@total@ completed`，现场核对 iOS xcstrings 的 `total` substitution 后转为 `{0} / {1} training days completed`，`.one` 为 `training day`，复数按第 2 参数。只改运行时 catalog，未动只读参照包。
+- 正典边界：video queue / chat inbox 保留空输入及 `selectMessagesBadge` selector；Dashboard 需发起学员会话的待办先带 `studentId` 到 messages。真正的 coach chat context 激活、会话打开/失败 alert、polling/push 路由由 W2-c 接入；本卡不建立聊天连接。Profile 内容仍为已有占位，由 W2-d 替换 `(tabs)/profile.tsx` 的导出。
+- §8 的“每学员三请求”指 plan/logs/feedback 三个 repository 读操作，其中 plan 实际包含 list + detail。本卡采用更严格的四 HTTP 并发上限，避免四学员各自再扇出时超过四。
+- 没有 Planning UI/外链，没有评估 UI/评估读请求，没有修改 `(student)`、training、video-upload，没有加依赖、commit 或 push，没有运行 code-review/skill 安装。
+
+### 验证与限制
+
+- 按用户指定 seam 逐片红绿：漏练 1/2 天、7 天首尾、待回复三个分支、周一起算/ISO 跨年/±36h/格子/图例/取整、四段待办/未读总数/申请单复数、名单四态/异常/色阶/真实序列化请求体/错误映射。补覆盖滑动窗口与失败退化、4xx 刷新先于 banner、队列与接收竞态、缓存先画后更新、时钟重算/日切。
+- `npm run lint` 通过；`npx tsc --noEmit` 通过；`npx jest --runInBand` **49 suites / 319 tests 通过**；`git diff --check` 通过。
+- 常驻行为已核对当前安装的 Expo Router `BottomTabView`：`lazy:false` 首次渲染所有路由，以稳定 route.key 保留组件；`detachInactiveScreens:false` + `freezeOnBlur:false` 下，react-native-screens 的回退 View 按 activityState 改 display，未卸载子树。仍需模拟器实际确认滚动位/搜索及全屏返回。
+- Android 静态 export 成功。共享 `node_modules -> ../meetpr-rn/node_modules` 的 Metro 转换缓存曾两次错误引用 W2-d 路由；**隔离 TMPDIR 后不再复现**，无仓库构建配置改动、无其他 worktree 改动。复现/验证命令：`mkdir -p /tmp/meetpr-w2a-metro` 后 `TMPDIR=/tmp/meetpr-w2a-metro npx expo export --platform android --output-dir /tmp/meetpr-w2a-export`。此构建问题以真实 CLI 打包作为回归检查，没有追加无法模拟跨进程缓存的单元测试。
+- 已运行 `npx expo run:android --no-install`（设置 JAVA_HOME/ANDROID_HOME）；Expo prebuild 完成，但 ADB 启动报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱禁止监听，不能连接/启动 AVD `meetpr`。**未取得模拟器截图，不宣称 Android 视觉/端到端验收**。生成的 android 目录为 gitignored 构建产物。
+## W2-b — Coach StudentDetail — 2026-09-05
+
+范围:仅 `feat/w2b-student-detail` / `meetpr-rn-wt-w2b-student-detail`。已读 AGENTS、PLAN/PARITY、`coach-v2.md` §3/8/9/10/11/12、CoachKit catalog、现有 API/design/VideoPlayback,并读 Expo **v57.0.0** 文档。日期投影、周窗、问卷、训练日序号/日志计数对照 iOS `release/1.0 @ 202e95db` 原文件。按用户指示未 commit/push,未跑 code-review、skills 安装或 tracker 流程;未加依赖,未修改 `(student)` / training / video-upload 内部。
+
+### 改动清单
+
+- 新路由 `(coach)/student/[studentId]` → `StudentDetailScreen`:隐藏整个 tab rail,保留来路 history;自定义返回、姓名/状态胶囊、计划四态、设备自然周号、禁用 Remind/Week Summary;五段 chip、主体三态、下拉刷新。训练日与视频共用一层 Modal,不重建 W1-h 已踩坑的嵌套 Modal。
+- `detail-week`:本地自然日(无 04:00 gym-day)、显式 `now`、周期前/中/后周窗、末周由最后实际计划日裁决(含 shifted date)、无计划今天前六天、7 天执行日、日志排序、完成统计(一组即可)、最近反馈/活动。
+- Overview:训练行只展示有动作日,标题沿 iOS 的当前计划游标周 + 可见训练日序号;Adjusted/总顺延胶囊只读;readiness loaded/notFiled/unavailable 分开;最近反馈有值切 Feedback,空值切 Videos。DayDetail 按动作列只读组,logged fraction 计所有日志,保留 free-log/rest 分支。
+- Videos:复用已有 `/students/:id/videos`,本地日倒序分组/行倒序,反馈状态兼容 video_id 与 legacy exercise 反馈。打开前短链校验失败有 wall banner;`CoachVideoPlayer` 包装 W1-h `VideoPlayback`,带动作/重量/次数/RPE/组序/教练名角标。缺少周窗外组信息时按视频日期附近补读日志,失败只让角标缺项显 `—`。短链不进缓存;播放 Retry 由原组件重新请求短链,无编辑/标记/导出入口。
+- Growth:新增 coach exercise-stats DTO/read,仅渲染后端 family 当前值、points 与 trend;合计/进度/0–1 位格式位于独立 `coach-e1rm`,不 import 学员 e1RM 引擎。总卡 + 三主项卡,现有 Sparkline 高 90;new/unknown 无箭头;失败可 Retry。
+- Feedback:只读归档与主题胶囊,`feedback.ts` 增加可空 video_id;无 composer、无 mark-read 写调用。Profile:1RM 禁用 Edit(含 hint),十行问卷,diet 恒 `—`,词汇映射来自正典,缺值明确留空占位。
+- `coach.ts` 本 worktree 原不存在:新增本卡所需 students 兼容读模型与 exercise-stats;videos/readiness/onboarding 沿用已有读口,onboarding 任意 404 → null/unavailable。auth UserSchema 仅补可选 name,让登录响应中的教练名不被 Zod 丢弃;无姓名时使用既有 Coach fallback。
+- 路由边界暂时拥有唯一时钟(首次/每分钟/本地午夜/AppState active 更新),所有详情函数/组件接必填 now;日切或时区 offset 改变重拉窗口与辅助资料。W2-a 共享 CoachNowProvider 合入时应将这一边界替换为共享时钟,不要保留两份来源。
+
+### 文案、已知口径与合并注意
+
+- 未命中 key: **0**(新增引用均通过 TranslationKey 类型检查)。规范化本卡既有 catalog 的 `coach.detail.feedbackMeta`、`coach.detail.weekProgress %lld %lld`、`coach.execution.loggedSetsFraction %lld %lld`、`coach.profile.age`、`coach.shared.readiness.fatigue`,将 Swift 命名/复数占位转为本仓 t(key, params) 支持的 `{0}/{1}`;未新增翻译 key。kg/S/B/D/W/D 为单位/记号。
+- 日期展示走设备 languageTag,DATE 字符串按本地日解读,不复制 zh_Hans_CN 的视频/归档/注册日期硬编码。自然周优先 Intl.Locale weekInfo;Hermes 不提供时使用 expo-localization 的设备 firstWeekday 与地区的 minimum-days 规则(含 GB 跨年四日周)。未新增日期库。
+- 未接聊天,右上聊天口不渲染,训练/readiness 提醒禁用;Week Summary 与 Edit 继续禁用并有 a11y hint。无计划旧文案按正典保留,没有发明 plan-web 入口。评估仅显示服务端已有状态胶囊,不请求评估、画横幅或开放适应周/顺延写口。
+- W2-a 尚不在此 worktree:本卡只为现有 Tabs 增加隐藏详情目的地和 history 返回,没有改它负责的四 tab 外壳/花名册/待办。合并 coach.ts **取字段/函数并集**,保留详情路由路径;W2-a 新壳应继续在本详情目的地隐藏整条 rail。
+- 设备 UI 与真实 Global 数据尚未验收。读取失败/空态由查询状态明确驱动;目前短链过期后走原播放器 Retry 重新取链,未修改 W1-h 播放器内部以自动续链。教练姓名是否由生产登录响应提供尚需现场核,不存在时明确显示既有 Coach fallback。
+
+### 验证
+
+- 指定三个 seam 先红后绿:周窗缺模块→绿,7 日/排序/完成统计缺函数→绿;合计缺模块→绿,进度超上限先得 2→clamp 后为 1,趋势/格式缺函数→绿;计划四态/readiness 缺模块或函数→绿。新增 **10 tests**。
+- `npm run lint`:exit 0,0 errors/0 warnings;`npx tsc --noEmit`:exit 0;`npx jest`:**47 suites / 309 tests 全通过**。日志 `/private/tmp/w2b-{lint,tsc,jest}.log`。`git diff --check` 干净。
+- `EXPO_PUBLIC_API_BASE_URL=https://api.meetpr.app npx expo export --platform android --output-dir /private/tmp/w2b-export`:Android Hermes bundle 成功,未新增依赖。日志 `/private/tmp/w2b-export.log`。
+- 已实际运行 `EXPO_PUBLIC_API_BASE_URL=https://api.meetpr.app npx expo run:android --device meetpr --no-install`;ADB start-server 无法安装 smartsocket listener(`Operation not permitted`,exit 255),CLI 未能安装到 AVD。日志 `/private/tmp/w2b-android.log`。**没有本卡 AVD 截图,不声称已亲眼验收**。待可用 ADB 环境补五段/训练日/纯回放角标、短链 Retry、返回隐藏底栏与错误/空态截图;PARITY StudentDetail 按本卡要求标 🔨。
+## W2-d — 教练 MyProfile / InviteCodes / Help / Privacy / 登出 — 2026-09-05
+
+- 仅修改 `meetpr-rn-wt-w2d-coach-profile` / `feat/w2d-coach-profile`;没有 commit/push,没有 code-review、技能安装或 tracker 流程。先读 AGENTS、PLAN、coach-v2 §6/§8/§9.11/§10/§12、CoachKit catalog、i18n/design/session 与现有占位页登出路径;本 worktree 无 `src/features/auth/`。已读 Expo v57.0.0 总览与 clipboard 版本文档。
+- 现场核 iOS HEAD `202e95dbbf88baf5778f2329f206f34e117a4dd0`: `RepositoryContracts/InviteCodeRepository.swift`、`CoreModels/Entities/Bind/InviteCode.swift`、`Domain/InviteCodeFormat.swift`、`Networking/DTO/BindDTOs.swift` / `APIClient+Bind.swift`。GET 响应 `{invite_codes:[...]}`,POST 返回单个 DTO;字段 `id/coach_id/code/type/max_uses/used_count/expires_at/revoked_at/label/created_at`。非时限码 **省略** `expires_in_days`(不能 null),时限要求整数 1–365;空白 label 省略,非空 trim 后上限 100。DELETE 204 不解 JSON,重复撤销仍可成功。无后端改动。
+- 实装 profile 姓名(保留 UserSchema 可选 name,trim/fallback)、邀请码卡 loading/failed/empty、有永久码用量/裸码复制、2 秒 toast、General 三行、Help 四条 FAQ/静态禁用联系、Privacy 三行文档日期/只有有效配置 URL 的隐私行可点、静态版本行、登出确认遮罩/取消/忙态。session.logout 与根 Protected 路由完成身份清理和跳登录;不另造登出端点。英文文案全部来自现有 `t(key)`;保留正典现有 logoutMessage 提及 phone number 的文案,未擅改 Global 文案。
+- 邀请码页:个人码 4-3-3 分组/用量/复制/重生成确认;无码只允许显式生成。次级单次/时限创建 sheet(7/30/自定义 Stepper 1–365,默认自定义 14),行内状态/复制,左滑撤销与 TalkBack 自定义撤销动作,失效段 opacity 0.5/不可复制。每次写尝试后重拉,无乐观补丁;刷新失败保留旧快照,旧 GET 不覆盖写后的列表。隐藏 invite-codes tab 项,保留 W2-a/b/c 屏及现有外壳结构;未加账号安全。两屏 focus/回前台刷新,当前屏统一注入时钟并每秒推进,未在领域规则或各行自取时钟;后续 W2-a 壳时钟可经 `clock` seam 接入。
+- **剪贴板待交接:让 Claude 装** `expo-clipboard`(本 worktree 的 node_modules 为共享符号链接,现场确认缺包,未执行依赖安装)。按本卡许可先提供 `InviteClipboard.setString(value)` 注入接口;`clipboard.ts` 默认 adapter 明确失败,不会空操作后假报 Copied。Claude 安装 SDK 57 对应 `expo-clipboard` 后将该 adapter 接到 `await Clipboard.setStringAsync(value)`,重建 Android 原生包。当前裸码写入与 2 s toast 在注入的剪贴板边界验证通过,**默认原生复制尚不可用**。
+- 按指定 seam 逐片红→绿:状态优先级/到期边界/ceil≥1、isDefunct、分组;profile 三副标题、真实 HTTP 加载后无 POST、显式生成 POST→GET、重复 DELETE 204→GET、裸码复制/失败无成功反馈。挂载真实 profile 验证加载和 toast;重复复制同一码的 2 秒计时新增红测发现旧 timer 被复用,用 copy revision 重启计时后转绿。补查时限 1/7/30/365、越界/小数不 POST、label trim/省略、刷新失败保留旧列表与写失败重拉。新增 2 suites / 23 tests。
+- 最终检查:`npm run lint` 0 errors/0 warnings,`npx tsc --noEmit` 无诊断,`npx jest` **46 suites / 322 tests 全绿**。日志 `/private/tmp/w2d-{lint,tsc,jest}.log`;红/绿证据 `/private/tmp/w2d-*-red.log`、`w2d-repeat-copy.log` / `w2d-repeat-copy-green.log`。`git diff --check` 干净。Android Hermes bundle 导出成功(`/private/tmp/w2d-export`,日志 `w2d-export.log`);首次导出误用共享 Metro 缓存内相邻 W2-b 路由,`--clear` 后在本 worktree 成功,未修改相邻 worktree。
+- **设备验收未完成**:`npx expo run:android --device meetpr --no-install` prebuild 成功,随后 ADB start-server 因监听 5037 的 `Operation not permitted` 失败(exit 255)。没有安装本轮 APK、没有取得 AVD 截图、没有以 Jest/bundle 替代原生验收。日志 `/private/tmp/w2d-android.log`。待依赖接线后现场补两屏/Help/Privacy/登出、剪贴板裸码、左滑撤销、键盘/Stepper 与截图。PARITY 仅教练 MyProfile/InviteCodes 行标 🔨。
+## 2026-09-05 — W2-c 教练消息 / 待反馈视频 / 视频反馈 / Chat
+
+- Worktree `feat/w2c-receiving`;仅本 worktree 改动,无 commit/push,未运行 code-review、skill 安装或新增依赖。
+- 已读 AGENTS、PLAN、coach-v2 §4/5/8/9/10/12、CoachKit/ChatUI catalog、design v3、现有 feedback/videos/uploads/plans 和 VideoPlayback。Expo SDK 57 文档已现场读取: https://docs.expo.dev/versions/v57.0.0/ 。iOS 只读仓 HEAD 核实为 `202e95dbbf88baf5778f2329f206f34e117a4dd0`。
+
+### Chat DTO 现场核结论
+
+现场文件(均相对 `apps/MeetPR-release`):
+
+- `Modules/RepositoryContracts/Sources/RepositoryContracts/ChatRepository.swift`
+- `Modules/Networking/Sources/Networking/DTO/ChatDTOs.swift`
+- `Modules/Networking/Sources/Networking/NetworkChatRepository.swift`
+- `Modules/Networking/Tests/NetworkingTests/ChatDTOTests.swift`(snake_case wire fixtures/编码断言)
+- `Modules/ChatUI/Sources/ChatUI/ConversationViewModel.swift`、`ChatInboxViewModel.swift`
+
+| HTTP | 实际 wire |
+|---|---|
+| `GET /conversations` | `{conversations:[{id,other_party:{id,display_name},last_message:{id,seq,kind,preview,created_at,sender_id}|null,last_message_at,unread_count,my_last_read,other_last_read}]}` |
+| `POST /conversations` | body **`{other_user_id}`**,不是 student_id/other_party_id;响应 **`{conversation}`** |
+| `GET /conversations/:id/messages` | `limit` 1–100(本卡 50);增量 **`since_seq`**,历史 **`before_seq`**;响应 `{messages,meta:{other_last_read,has_more}}` |
+| message | `{id,conversation_id,seq,sender_id,kind,body,client_id,created_at,attachment_id?,image_url?,image_expires_in?,set_ref?,video_url?,video_expires_in?}`;kind 为 `text/image/set_ref` |
+| `POST /conversations/:id/messages` | 文字 body **`{kind:"text",body,client_id}`**;响应 **`{message}`**;失败重试保留同一 client_id |
+| `POST /conversations/:id/read` | body **`{message_id}`**,不能空 POST;响应 `{my_last_read:{message_id,seq},unread_count}` |
+
+Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不能原样当 HTTP 字段。进入会话拉最新页后对最新消息 read,空会话无游标不发 read;新页到达推进 read。按 seq 升序、ID 稳定并列、跨页 ID 去重;30 s 轮询防重入、离屏停止、回前台节流;增量和历史分页均处理。发送后的本地消息不推进抓取游标,避免跳过尚未抓取的中间消息。realtime 不做。
+
+### 实装与接线
+
+- `(coach)/messages` → `CoachReceivingScreen`:eyebrow、四态、每学员一行、未读点、视频计数胶囊、姓名开会话、下拉并发刷新。旧 `(coach)/receiving` 仅留同屏兼容入口,使尚未合并 W2-a 的壳也可进入本卡。
+- W2-a 约定导出 `useCoachMessagesBadge` 位于 `features/coach/receiving/index.ts` 和 `use-coach-receiving.ts`。头部和 selector 共用 `inboxCount`,都按最新会话折叠后计数。未改 W2-a 的 `_layout`/Today/花名册/详情页;由 W2-a 将 tab 名换为 messages 并接 badge。
+- 列表按设备本地训练日倒序,日内按 uploadedAt 倒序;工作台打开期间不 dismiss,返回且学生队列空时退出。全屏路由使用随焦点显示的 Modal 覆盖旧底栏,不侵入独立负责的 W2-a 壳。
+- 队列聚合 students/videos/feedback/current plan,排除未挂计划、已答视频、legacy 已答动作;动作名只取当前计划槽位与 catalog。当前计划复用 `selectCurrentPlan`(published_at、created_at、id),计划失败只缺动作名;必要请求失败保留旧队列。每次至多 4 位学员聚合。
+- 反馈成功先取消在途旧队列查询再按 video ID 摘除,防止旧快照恢复已反馈条目。发送前保存后继 ID,成功后在最新队列按身份查找,缺失落 first,空则 dismiss。Skip 环形。
+- 工作台有短链失败/重试、播放进度、时间标记跳转、按时间排序的标记列表/删除/已有批注图、四格 set-info、反馈输入/发送/banner/Skip;三条请求链路各用 requestID + itemID 验证,切片清除播放位置/表单/批注状态。组数据拉近 5 年,按 plan exercise + set log ID 精确匹配。
+- 标记 note 硬截 500 字符,wire level 恒 info;404 隐藏可选标记区,其余失败显示对应失败行。不做批注绘制/导出/realtime。
+- Chat 为最小文字 composer(4000 字符、失败重试),显示文字与已有图片,结构化训练分享沿用 wire body 文本降级;未知学员状态返回 null,副标题整行不渲染。
+- `t()` 支持本卡命名占位符的按序参数,并补 `pendingVideosAccessibility` 第二参数的复数计数索引。
+- 现场发现现有 `StudentVideoSchema` 强制要求 iOS wire 中不存在的 exercise_name/set_index/weight_kg/reps;先用 pinned 最小响应跑红,再将这四个额外字段缺省归 null,保留原消费者类型和已有扩展响应兼容。
+
+### 播放器边界与验证限制
+
+- 卡同时要求复用 `training/video-upload/VideoPlayback.tsx` 与不改 training 内部。该组件只有独立全屏接口,没有进度、嵌入布局或 markers 插槽。已通过异步问题请求最小可选接口扩展;尚未收到答复,因此遵循不改 training 的明确边界,本卡 `VideoWorkbenchPlayer` 使用相同 `react-native-video` 依赖单独封装,**没有复用 VideoPlayback 组件本身**。若要求组件级复用,仍需确认允许该最小接口扩展。
+- 使用 tdd 的指定公共 seam 做逐片 red→green:会话折叠/排序/预览/同源计数,排除规则/日期分组/自动退出,Skip/itemAfterSend,三资源请求防串片,消息排序/read/轮询/离屏迟到结果/未知状态。未启动 code-review 工作流。
+- `npx expo run:android --no-install` 完成 prebuild 后被环境阻断:ADB 5037 listener `Operation not permitted`,未到 APK 编译/安装。未绕过沙箱,未取得 AVD `meetpr` 实机画面或截图,不可标记视觉验收通过。
+
+### 最终验证结果
+
+- `npm run lint`、`npx tsc --noEmit`、`git diff --check` 通过。
+- 全量 `npx jest --runInBand`: **47 suites / 312 tests 通过**;指定 W2-c 三个测试文件共 13 项,含 `itemAfterSend`、请求双校验、已读回包即时应用与旧游标拒收。
+- Android production JS/Hermes bundle 导出通过(1829 modules):`/tmp/meetpr-w2c-android-export`。使用本地 Expo CLI,`EXPO_OFFLINE=1`、Global API URL、显式本 worktree 的 `EXPO_ROUTER_APP_ROOT`、独立 `TMPDIR=/tmp/meetpr-w2c-metro`。首次 npx 导出遭 DNS 阻断;本地 CLI 初次读到共享缓存的另一 worktree 路由,隔离缓存后成功。未修改其它 worktree。
+- Android APK/AVD 仍未验证,原因见上方 ADB socket 拒绝;bundle 成功不代表模拟器视觉验收通过。PARITY Receiving/Chat 均为 🔨。
+
+
+## W3-i18n — 字面量收口 (2026-09-05)
+
+- 范围：仅 `meetpr-rn-wt-w3i` / `feat/w3-i18n-sweep`；无 commit/push、安装或 code-review 流程。先读 AGENTS、PLAN、G0-b/R1、i18n runtime/matcher、八份正典与 RnExtras；已读 Expo SDK v57.0.0 文档。
+- 实际基线：非测试源码 15 处 `TODO(i18n:missing)`、0 处 drift，另有旧 guard 内 2 个查找字符串。全部清零。旧 G0-b 的 80 行登记是历史记录，不是本次 checkout 残留数。
+- 使用现有 `punctuationMatches` 对剩余 15 处逐项重扫：逐字/标点匹配均无结果，再按语义复用正典。新 guard 递归扫描整个 `src/**`，包括测试、catalog 和自身；搜索词分段构造以避免自命中，不设置路径豁免。
+- `no-literal-zh` 删除 TODO/登记表放行机制及 login/onboarding 屏幕豁免；只排除翻译 catalog 和测试代码，不排除任何业务页面。收紧后另外检出旧 CN login 10 处中文调用，全部用 AppShell 正典替换；登录逻辑、布局与切轨行为未改。
+
+### 替换清单（文件 → key）
+
+| 文件 | 原文/位置 | 最终 key |
+|---|---|---|
+| `src/navigation/BindGate.tsx` | 绑定申请尚未完成，请重新输入邀请码。 | `student.rn.bind.incompleteRequest` |
+| 同上 | 绑定教练；请输入邀请码（2 处） | `student.bindEnterCodeSubviews.copy001` |
+| 同上 | 提交邀请码 | `student.bindEnterCodeSubviews.copy005` |
+| 同上 | W1 接线 | `student.rn.bind.wiringPlaceholder` |
+| 同上 | 完成训练信息 | `student.rn.bind.completeTrainingInfo` |
+| 同上 | W1 接入学员 Onboarding。 | `student.rn.bind.onboardingPlaceholder` |
+| 同上 | 等待教练确认 | `student.rn.bind.awaitingCoach` |
+| 同上 | 绑定申请处理中，请稍后查看。 | `student.pendingBindView.copy003`（采用正典的 24–48 小时响应/7 天过期说明） |
+| 同上 | 暂时无法检查绑定状态 | `student.bindGateView.copy002` |
+| 同上 | 请稍后再试。 | `coach.planning.step7.tryAgainLater`（通用稍后重试语义） |
+| `src/navigation/FeaturePlaceholderScreen.tsx` | W1 实装 | `student.rn.featurePlaceholder` |
+| `src/app/(student)/growth-curve.tsx` | 成长曲线（页头） | `student.rn.growthCurve.title` |
+| 同上 | 动作名 + 成长曲线 | `student.rn.growthCurve.liftTitle`；原 `student.growthCurveView.copy001` fallback 保留，使用整句插值保证英文间隔 |
+| 同上 | 完整曲线将在成长页图表卡接入 | `student.rn.growthCurve.placeholder` |
+| `src/app/login.tsx` | 登录失败，请稍后重试（2 处） | `appShell.auth.requestFailed` |
+| 同上 | 手机号或密码不正确 | `appShell.auth.invalidCredentials` |
+| 同上 | 尝试过于频繁，请稍后再试 | `appShell.auth.rateLimited` |
+| 同上 | 登录你的训练账户 | `appShell.login.instructions` |
+| 同上 | 手机号；请输入手机号 | `appShell.auth.phoneNumber`；`appShell.auth.phoneInputHint` |
+| 同上 | 密码；请输入密码 | `appShell.auth.password`；`appShell.auth.passwordInputHint` |
+| 同上 | 登录 | `appShell.login.signIn` |
+
+### 新增 RnExtras key（9 个）
+
+所有新增条目含 en/zh 与 `source` 来源文件；既有 15 个 `student.progression.*` key 不改。
+
+| key | 未采用近似正典的原因 |
+|---|---|
+| `student.rn.bind.incompleteRequest` | rejected/expired/cancelled 共用中性提示，不能套用仅过期或邀请码无效的错误原因 |
+| `student.rn.bind.wiringPlaceholder` | RN W1 接线占位，无 iOS 文案 |
+| `student.rn.bind.completeTrainingInfo` | RN 通用训练信息标题；iOS 完成资料文案附带评估条件，不适合此封存分支 |
+| `student.rn.bind.onboardingPlaceholder` | RN W1 onboarding 接入占位 |
+| `student.rn.bind.awaitingCoach` | iOS 等待接收标题需要 coach name，当前占位 gate 没有该参数，不伪造教练名或传空串 |
+| `student.rn.featurePlaceholder` | RN W1 实装占位 |
+| `student.rn.growthCurve.title` | 正典无通用成长曲线标题；带 e1RM/数据点的图表 accessibility key 不是同一语义 |
+| `student.rn.growthCurve.liftTitle` | 同上，含动作名的完整标题 |
+| `student.rn.growthCurve.placeholder` | RN 图表接入占位，不冒充已接入图表的无数据态 |
+
+### 复数核对与正典问题登记
+
+- 只读核对 `/Users/david/Projects/apps/MeetPR-release/Modules/StudentKit/Sources/StudentKit/StudentStrings.swift`：全部 8 个非默认 countIndex 已镜像，7 个 index 1、1 个 index 2，无漏项。
+- CoachKit 根目录没有直接匹配的 `*Strings*.swift`，实际文件位于 `Planning/` 与 `Features/**`。已递归核对 Strings、PlanningWorkspaceModels 与 Localizable.xcstrings，补齐 `PLURAL_COUNT_INDEX`：`coach.workspace.defaultDraftName %@ %lld` → 1、`coach.workspace.draftSummary %@ %@ %lld` → 2、`coach.workspace.publishedSummary %@ %lld` → 1。defaultDraftName 的 one/other 当前同文，但计数参数仍按 iOS weeks 镜像。其它可表示的多参数 one/other key 没有新增漏项。
+- **已知 iOS 误译**：`student.trainingCalendarLogic.copy011` 的 zh 为「日」、en 为 `Sun`。iOS `TrainingCalendarLogic.swift:100` 把它拼到训练日动作名后，语义应是 day，不是星期日。两份 StudentKit JSON 均保留正典原字节。本 checkout 没有该 key 的运行时调用或 drift 标记；已有 `src/domain/plan/presentation.ts` 使用此前收货的 `student.progression.dayName`，本卡未扩改这条无标记调用，也未新增绕过正典的翻译。
+- **既有 CoachKit runtime 差异**：开工时 `src/i18n/catalog/CoachKit.json` 已与 docs 正典有 7 项差异：`coach.shared.readiness.fatigue`、`coach.detail.feedbackMeta`、`coach.profile.age` 的具名占位符转位置占位符；`coach.detail.weekProgress %lld %lld`、`coach.execution.loggedSetsFraction %lld %lld`、`coach.today.trainingDaysCompleted %lld %lld` 的英文格式替换；另有 `coach.today.trainingDaysCompleted %lld %lld.one`。本卡不改该文件，不声称八份 runtime 与 docs 全部相同。
+- docs CoachKit 的 6 个英文 key 保留 Apple `%#@...@` / `%1$lld` substitution：`coach.detail.weekProgress %lld %lld`、`coach.evaluation.remaining %lld %lld`、`coach.execution.loggedSetsFraction %lld %lld`、`coach.execution.setFraction %lld %lld`、`coach.planning.count.setsAndReps %lld %@ %lld`、`coach.today.trainingDaysCompleted %lld %lld`。其中前述 3 项 runtime 已有历史替换；其余 3 项仍不受当前 t formatter 支持。多计数单位需要独立复数选择，单加 countIndex 不能修复；登记留后续 formatter/导出契约卡，不在本次文案调用收口中改正典或扩展运行逻辑。
+
+### 红绿与最终验证
+
+- 用户预先指定的 seam：两个源码守卫及 `t()` 复数行为；相关四个页面未有既存快照/直接文案断言，未新增额外屏幕测试 seam。
+- 新 guard 先红：`/private/tmp/w3-i18n-todo-red.log`，1 failed test，列出 17 行（15 处调用 + 旧 guard 2 处）。去豁免 guard 先红：`/private/tmp/w3-i18n-literal-red.log`，1 failed test，检出 25 处中文。替换后两守卫全绿：`/private/tmp/w3-i18n-guards-green.log`。
+- 复数先红：`/private/tmp/w3-i18n-plural-red.log`，公开 `t()` seam 实际得到 `Alex · Strength · 1 weeks`，预期 `Alex · Strength · 1 week`；补索引后英文变绿。随后把测试中误写的中文空格校正为正典 `%lld周`，没有改翻译来迎合测试。最终覆盖 1/2 周、前置参数为数字 1 的干扰场景及 zh 保持原文。
+- `npm run lint`：exit 0，0 errors / 0 warnings（`/private/tmp/w3-i18n-lint.log`）。
+- `npx tsc --noEmit`：exit 0（`/private/tmp/w3-i18n-tsc.log`）。
+- `npx jest`：exit 0，58 suites / 379 tests passed，0 snapshots（`/private/tmp/w3-i18n-jest.log`）。
+- `git diff --check` 通过；`rg -n 'TODO\(i18n' src` 零命中。八份 docs 正典 SHA-256 与开工记录、HEAD 一致；八份 runtime 正典与各自 HEAD 一致，只有 RnExtras 新增条目。
+- Android 视觉验证未完成：`adb devices` 启动 5037 smartsocket listener 被 sandbox 拒绝（`Operation not permitted`），没有可用模拟器连接。未运行依赖 ADB 的 `npx expo run:android`，未生成截图或 native 工程。PARITY 同步为已实装、待视觉走查。
+
+## W3-a — 学员共享全屏播放器、打点/标注帧、反馈收件箱与详情（2026-09-05）
+
+### 改动清单
+
+- 本卡以 `docs/w3-reference/video-player-charts-v2.md` §0/1/3/5/6 和 David 本卡裁决为正典；已读 Expo SDK 57 versioned docs。仅在 `meetpr-rn-wt-w3a-player` 修改；未 commit/push、未加依赖、未运行 code-review 或技能安装流程。
+- `features/video-player/FeedbackVideoPlayer.tsx`：共享 fullScreen surface，react-native-video `controls={false}`；自动播、中央自绘播放/暂停、末尾重播、36×36 关闭圆/eyebrow/四档 ASCII x 胶囊、rate 每次打开为 1、retry 换 item 保留会话 rate 并播放。失败换链静默留卡；成功关闭标注层；关闭键先暂停；卸载取消拖拽任务，Video 原生卸载释放播放。
+- `rate.ts` / `time.ts` / `scrub-state.ts`：两套速率文案、不进位小时的 floor 时间、秒/毫秒钳位；250 ms 读取 native position；拖拽显示位置使用独立 React state（兼容本仓 React Compiler），80 ms 合并 seek，松手终态提交，generation 丢弃过期任务/读取。原生同位置 seek 可能没有 onSeek，保留最多 1 s acknowledgement 窗后恢复轮询，避免时间轴永久冻结。
+- `FeedbackVideoScrubber` / `FeedbackVideoMarkerPanel`：gold500 轨道、videoStageBorder 底、mono 时间/a11y adjustable；面板黑 0.72、头行 count/失败、列表最高 190、空备注 fallback、pencil 标识与跳转。null/[] 隐藏，failed 显示空列表失败头；无进度刻度或 level 颜色。
+- `annotation-select.ts` / `FeedbackVideoAnnotationOverlay`：普通行只 seek；有标注先 pause+seek 再覆盖；整面关闭热区、黑底 contain/白 spinner；图片失败先关层再恰好一次 refresh，不自动重试图片或续播。每次选中独立 generation，旧图片错误不能关闭新图，旧 load 事件不能清掉新图 spinner。
+- `features/feedback` 与 `app/(student)/feedback/{index,[feedbackId],_layout}.tsx`：收件箱、详情、共享 playback session 与顶层单层 Modal。复用 Dashboard 反馈 VM 与 StudentVideos 查询关联元数据；详情 available/unavailable/none；反馈列表文本/相对时间/未读态/播放卡；短链失败按反馈行显示 copy002 / 详情 copy004。
+- 打开契约：先 await markRead（沿用 iOS best effort），再 uploads.url，发布 playbackItem 后才 list markers。markers 映射为 loaded/failed/hidden；404、传输失败、取消隐藏，其他 HTTP/DTO 错误失败。回填验证 video id + session generation + 请求 generation；关闭/失焦清会话，同一视频重开也不会串入上一次响应。
+- Dashboard 与训练页消息按钮跳反馈归档；路由不增加可见 tab。组内 `VideoPlayback` 变成源解析薄封装，继续走现有 OverlayHost；`markers={null}`，纯 selector 本地存在优先→远端→null，异步源入口只在需要远端时现取短链，初次和 retry 用同规则。
+- `badge?: VideoBadgeInfo | null` 仅保留类型位，未渲染角标/压暗/导出按钮。聊天路径与 `src/features/coach/**` 零改动；协议/DTO、i18n 正典、依赖清单零改动。
+
+### 与 iOS 的差异 / 拿不准处
+
+- AVKit transport 按裁决换 Android 自绘中央钮；ultraThinMaterial 按裁决换 `rgba(0,0,0,0.35)`，描边白 0.18。未引 blur；烧录/导出完全不渲染，角标归 W3-b，工作台归 W3-d。
+- iOS CoachFeedback 带内嵌 video，当前 RN FeedbackItem DTO 仅有 video_id。因此关联卡在展示边界 join 已有 `/students/:id/videos`，没有扩协议/DTO。视频查询未完成显示 loading，失败可重试，不把临时查询失败冒充已删除视频；实际生产关联与缺失卡仍需 AVD 走查。列表日期遵照本卡明确要求用相对时间（iOS 归档源码是 Today / 月日）。
+- iOS 固定 ±50 ms seek tolerance：JS 调用 `seek(seconds, 0.05)` 保留意图，但已核本地 react-native-video 6.19.2 Android `VideoManagerModule.kt:48-50` 不使用 tolerance 参数，只传毫秒给 ExoPlayer。没有改 native/加依赖；不能声称 Android 已验证 ±50 ms，拖拽精度待模拟器/真机核。
+- v3 token 守卫禁止 legacy `colors.amber`；失败卡图标使用已有语义 gold500。与 iOS amber 的色值差异待双端截图核，未绕过 token 守卫。
+- 全屏播放器的真实拖拽跟手、原生末尾/断网/短链过期重试、标注层触摸/黑底 contain、旋转与 Fabric 叠层均尚未完成视觉验收，不标记为已走查对齐。
+
+### 红绿及验证证据
+
+- 按用户指定 seam 分片先红后绿：rate、time、scrub-state、markers-outcome、annotation-select、feedback-inbox-open-order；另在既有 local-retention seam 补 selector 三态。新增 17 项测试；旧 379 项保持绿。
+- 红态日志：`/private/tmp/w3a-{rate,time,scrub,outcome,annotation,order,source,transport}-red.log`。scrub 还覆盖已进入队列的旧 callback；open-order 覆盖慢 markers、短链失败、取 URL 中关闭、同视频重开后的旧响应。
+- `npm run lint`：exit 0，0 errors / 0 warnings，`/private/tmp/w3a-lint.log`。
+- `npx tsc --noEmit`：exit 0，`/private/tmp/w3a-tsc.log`。
+- `npx jest`：exit 0，64 suites / 396 tests passed，`/private/tmp/w3a-jest.log`。
+- Android JS bundle：`npx expo export --platform android --output-dir /private/tmp/w3a-bundle` 成功，日志 `/private/tmp/w3a-bundle.log`。
+- `npx expo run:android --device meetpr --no-install` 已执行：prebuild 成功、生成本 worktree 被忽略的 `android/`，package.json 无变化；ADB 5037 smartsocket listener 被 sandbox 拒绝（`Operation not permitted`），命令 exit 1，日志 `/private/tmp/w3a-android.log`。未完成原生 build/install、未取得 AVD 截图；未绕过沙箱或申请新增权限。
+- PARITY 已更新 FeedbackInbox / FeedbackDetail 与 VideoPlayback / FeedbackVideoPlayer 行，保留 🔨（已实装、待视觉验收）。
