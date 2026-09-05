@@ -150,12 +150,7 @@ export function prescriptionSummary(
     resolution?: PctAnchorResolution;
   }[],
 ): string {
-  const count = t(
-    sets.length === 1
-      ? 'student.todayWorkoutScreen.copy019.one'
-      : 'student.todayWorkoutScreen.copy019',
-    [sets.length],
-  );
+  const count = t('student.todayWorkoutScreen.copy019', [sets.length]);
   const renderings = new Set(
     sets.map((set) => prescribed(set.prescription, set.resolution)),
   );

@@ -663,24 +663,34 @@ export function ProfileMetrics({
     profile?.is_competing && profile.competition_date
       ? localCompetitionDays(profile.competition_date, now)
       : null;
+  const bodyWeightText = profile?.weight_kg
+    ? `${formatKg(Number(profile.weight_kg))} KG`
+    : '—';
   return (
     <DashboardAsyncSection isError={profileError} onRetry={onRetry}>
       <View style={{ flexDirection: 'row', gap: 12 }}>
-        <Card style={{ flex: 1, padding: 16, gap: 8 }}>
+        <Card
+          accessible
+          accessibilityLabel={t('student.dashboardProfileMetricsView.copy002', [
+            bodyWeightText,
+          ])}
+          style={{ flex: 1, padding: 16, gap: 8 }}
+        >
           <Text style={{ color: colors.textMuted }}>
             {t('student.dashboardProfileMetricsView.copy001')}
           </Text>
           <Text style={{ color: colors.textPrimary, ...font.display(24) }}>
-            {profile?.weight_kg
-              ? `${formatKg(Number(profile.weight_kg))} KG`
-              : '—'}
-          </Text>
-          <Text style={{ color: colors.textMuted }}>
-            {t('student.dashboardProfileMetricsView.copy002')}
+            {bodyWeightText}
           </Text>
         </Card>
         {competitionDays !== null && competitionDays >= 0 ? (
-          <Card style={{ flex: 1, padding: 16, gap: 8 }}>
+          <Card
+            accessible
+            accessibilityLabel={t('student.dashboardProfileMetricsView.copy005', [
+              competitionDays,
+            ])}
+            style={{ flex: 1, padding: 16, gap: 8 }}
+          >
             <Text style={{ color: colors.textMuted }}>
               {t('student.dashboardProfileMetricsView.copy003')}
             </Text>
