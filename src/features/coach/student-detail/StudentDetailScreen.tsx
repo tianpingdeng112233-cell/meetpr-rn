@@ -100,7 +100,7 @@ export function StudentDetailScreen({ studentId, now, onBack, coachName = t('coa
           {playbackFailed && <SectionCard><Copy tone="danger">{t('coach.video.error.playback')}</Copy><Capsule label={t('coach.video.confirmation')} onPress={() => setPlaybackFailed(false)} /></SectionCard>}
           {model.videos.isPending ? <Loading /> : model.videos.isError ? <Empty title={t('coach.video.loadFailed')} subtitle={t('coach.video.pullToRetry')} icon="videocam-outline" /> : <VideosSection videos={model.videos.data.videos} feedback={feedback} now={now} title={videoTitle} loadingId={loadingVideo} onPlay={(video) => void play(video)} />}
         </>}
-        {section === 'growth' && (model.growth.isPending ? <Loading /> : model.growth.isError ? <SectionCard><Empty title={t('coach.growth.error.load')} danger /><Capsule label={t('coach.detail.retry')} onPress={() => void model.growth.refetch()} /></SectionCard> : <GrowthSection stats={model.growth.data} />)}
+        {section === 'growth' && <GrowthSection stats={model.growth.data} state={model.growth.isPending ? 'loading' : model.growth.isError ? 'failed' : 'loaded'} onRetry={() => void model.growth.refetch()} />}
         {section === 'feedback' && <FeedbackSection items={feedback} planExerciseName={planExerciseName} now={now} />}
         {section === 'profile' && (model.profile.isPending ? <Loading /> : model.profile.isError || !model.profile.data ? <Empty title={t('coach.detail.profileUnavailable')} /> : <ProfileSection profile={model.profile.data} now={now} />)}
       </>}
