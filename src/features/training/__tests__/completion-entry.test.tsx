@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { readReview } from '../storage';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { useSetRefStagingStore } from '@/features/chat/set-ref-staging';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Alert, Text, TextInput } from 'react-native';
@@ -123,4 +124,41 @@ test('failed settlement leaves the completion flow closed', async () => {
   expect(copy()).not.toContain(t('student.workoutCompletionFlowView.copy001'));
   expect(mockNavigate).not.toHaveBeenCalled();
   expect(await readReview(studentId, plan.days[0].id)).toBeNull();
+});
+
+test('Ask coach opens the picker before navigating, then enters chat with a staged current set', async () => {
+  const conversationId = '90000000-0000-4000-8000-000000000000';
+  const coachId = '80000000-0000-4000-8000-000000000000';
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: coachId, coach_display_name: 'Alex' } } as never;
+    if (path === '/conversations') return options?.method === 'POST'
+      ? { conversation: { id: conversationId, other_party: { id: coachId, display_name: 'Alex' }, unread_count: 0 } } as never
+      : { conversations: [] } as never;
+    if (path.endsWith('/videos')) return { videos: [] } as never;
+    if (path.includes('/sets?')) return { logs: [] } as never;
+    return original(path, options);
+  });
+  await mount();
+  expect(copy()).toContain(t('student.askCoach'));
+  await press(t('student.askCoach'));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(mockNavigate).not.toHaveBeenCalled();
+  expect(copy()).toContain(t('chat.shareTodayTraining'));
+  await press(t('chat.continueSelection'));
+  await press(t('chat.continueToChat'));
+  expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId, coachName: 'Alex' } });
+  expect(useSetRefStagingStore.getState().intents[conversationId]).toMatchObject({ setRef: { source: 'planned', planSetId: plan.days[0].exercises[0].sets[0].id } });
+});
+test('Ask coach conversation failure uses the training share alert and stays on Training', async () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: '80000000-0000-4000-8000-000000000000', coach_display_name: 'Alex' } } as never;
+    if (path === '/conversations') { if (options?.method === 'POST') throw new Error('offline'); return { conversations: [] } as never; }
+    if (path.endsWith('/videos')) return { videos: [] } as never;
+    return original(path, options);
+  });
+  await mount(); await press(t('student.askCoach'));
+  expect(Alert.alert).toHaveBeenCalledWith(t('student.trainingShareConversationFailed'));
+  expect(mockNavigate).not.toHaveBeenCalled();
 });
