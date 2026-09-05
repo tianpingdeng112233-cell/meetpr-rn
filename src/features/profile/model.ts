@@ -1,7 +1,7 @@
 import type { OnboardingProfile, OnboardingUpsertInput } from '@/api/domains/onboarding';
 import type { ReadinessCheckin } from '@/api/domains/readiness';
 import { onboardingPatchForStep, type OnboardingForm, type OnboardingStep } from '@/features/onboarding/model';
-import { BENCH_GRIP_LABELS, DEADLIFT_STYLE_LABELS, GYM_TIER_LABELS, MUSCLE_GROUP_LABELS, SQUAT_STANCE_LABELS, equipmentLabel } from '@/features/onboarding/catalog';
+import { BENCH_GRIP_LABELS, DEADLIFT_STYLE_LABELS, GYM_TIER_LABELS, INJURY_AREA_LABELS, MUSCLE_GROUP_LABELS, SQUAT_STANCE_LABELS, equipmentLabel } from '@/features/onboarding/catalog';
 import { getLocale, t, type TranslationKey } from '@/i18n';
 
 export type ProfileSection = 'basics' | 'background' | 'environment' | 'recovery' | 'muscles' | 'injuries' | 'competition';
@@ -39,6 +39,11 @@ export function injurySummary(areas: readonly string[] | null): string {
   const count = areas?.filter((area) => area !== 'other').length ?? 0;
   return count ? t(count === 1 ? 'student.myProfileV3Presentation.copy009.one' : 'student.myProfileV3Presentation.copy009', [count])
     : t(areas?.includes('other') ? 'student.myProfileV3Presentation.copy008' : 'student.myProfileV3Presentation.copy007');
+}
+export function injuryChips(areas: readonly string[] | null): string[] {
+  if (!areas?.length) return [t('student.myProfileV3Presentation.copy007')];
+  return areas.map((area) => area === 'other' ? t('student.myProfileV3Presentation.copy008')
+    : t('student.myProfileV3Presentation.copy009', [label(INJURY_AREA_LABELS, area)]));
 }
 export function oneRMValues(profile: Pick<OnboardingProfile, 'squat_1rm_kg' | 'bench_1rm_kg' | 'deadlift_1rm_kg'>) {
   const values = [profile.squat_1rm_kg, profile.bench_1rm_kg, profile.deadlift_1rm_kg].map((v) => v !== null && Number.isFinite(Number(v)) ? Number(v) : null);
