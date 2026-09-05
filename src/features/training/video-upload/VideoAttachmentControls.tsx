@@ -1,23 +1,24 @@
+import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { CameraRecorder } from './CameraRecorder';
+import { VideoPlayback } from './VideoPlayback';
+import { useCameraAvailability } from './use-camera-availability';
+import type { SelectedVideo } from './model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { t } from '@/i18n';
+import { Alert, Pressable, Text, View } from 'react-native';
 
-import { colors, radius, spacing, typography } from '@/design';
+import { useColors, radius, spacing, typography } from '@/design';
 
 import { requestVideoUploadConsent } from './consent';
 import { videoUploadManager } from './manager';
-import { pickTrainingVideo, VideoNativeError, type VideoSource } from './native';
+import { pickTrainingVideo, type VideoSource } from './native';
 import { selectVideoUpload, useVideoUploadStore } from './store';
 
 type Props = {
+  initialCamera?: boolean;
+  buildLogRequest: () => SetLogUpsertRequest;
   editable: boolean;
   ensureSetLog: () => Promise<string>;
   stableSetId: string;
@@ -41,7 +42,11 @@ function promptConsent(input: {
       input.title,
       input.message,
       [
-        { text: input.declineLabel, style: 'cancel', onPress: () => finish(false) },
+        {
+          text: input.declineLabel,
+          style: 'cancel',
+          onPress: () => finish(false),
+        },
         { text: input.acceptLabel, onPress: () => finish(true) },
       ],
       { cancelable: true, onDismiss: () => finish(false) },
@@ -49,176 +54,187 @@ function promptConsent(input: {
   });
 }
 
-function Chip({
-  disabled,
-  icon,
-  label,
-  onPress,
-}: {
-  disabled: boolean;
-  icon: 'camera-outline' | 'image-outline';
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.chip, pressed && styles.pressed, disabled && styles.disabled]}>
-      <MaterialCommunityIcons color={colors.brandRed} name={icon} size={17} />
-      <Text style={styles.chipText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function TextAction({
-  disabled = false,
-  label,
-  onPress,
-}: {
-  disabled?: boolean;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => [pressed && styles.pressed, disabled && styles.disabled]}>
-      <Text style={styles.actionText}>{label}</Text>
-    </Pressable>
-  );
-}
-
 export function VideoAttachmentControls({
   editable,
   ensureSetLog,
   stableSetId,
   studentId,
+  initialCamera,
+  buildLogRequest,
 }: Props) {
+  const colors = useColors();
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [choosing, setChoosing] = useState(false);
-  const [removing, setRemoving] = useState(false);
+  const hasCamera = useCameraAvailability();
+  const [cameraVisible, setCameraVisible] = useState(false);
+  const [playback, setPlayback] = useState(false);
   const identity = { studentId, stableSetId };
-
   const choose = async (source: VideoSource) => {
     if (!editable || choosing) return;
     setChoosing(true);
     try {
-      const consented = await requestVideoUploadConsent(AsyncStorage, promptConsent);
-      if (!consented) return;
-      const video = await pickTrainingVideo(source);
-      if (!video) return;
-      void videoUploadManager.attach(identity, video, ensureSetLog);
-    } catch (error) {
-      Alert.alert(
-        '视频处理失败',
-        error instanceof VideoNativeError ? error.copy : '视频处理失败,请重试',
-        [{ text: '知道了' }],
-      );
+      if (!(await requestVideoUploadConsent(AsyncStorage, promptConsent)))
+        return;
+      if (source === 'camera') {
+        setCameraVisible(true);
+        return;
+      }
+      const video = await pickTrainingVideo();
+      if (video) attach(video);
+    } catch {
+      Alert.alert(t('student.videoAttachmentViewModel.copy001'));
     } finally {
       setChoosing(false);
     }
   };
-
+  const attach = (video: SelectedVideo) => {
+    void videoUploadManager
+      .attach(identity, video, ensureSetLog, buildLogRequest)
+      .catch(() => Alert.alert(t('student.videoAttachmentViewModel.copy001')));
+  };
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (initialCamera && hasCamera && !autoOpened.current) {
+      autoOpened.current = true;
+      void choose('camera');
+    }
+  });
   const remove = async () => {
-    if (removing) return;
-    setRemoving(true);
     try {
       await videoUploadManager.remove(identity);
     } catch {
-      Alert.alert('删除失败', '视频未删除,请重试', [{ text: '知道了' }]);
-    } finally {
-      setRemoving(false);
+      Alert.alert(t('student.videoAttachmentViewModel.copy001'));
     }
   };
-
-  const replace = () => {
-    if (!editable || choosing) return;
-    Alert.alert('更换视频', undefined, [
-      { text: '拍摄', onPress: () => void choose('camera') },
-      { text: '相册', onPress: () => void choose('library') },
-      { text: '取消', style: 'cancel' },
-    ]);
-  };
-
+  const action = (label: string, onPress: () => void) => (
+    <Pressable
+      disabled={!editable || choosing}
+      onPress={onPress}
+      style={{
+        borderRadius: radius.pill,
+        padding: spacing.sm,
+        backgroundColor: colors.goldSoft,
+      }}
+    >
+      <Text style={{ color: colors.goldText, ...typography.footnote }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
   return (
-    <View style={styles.root}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.label}>视频</Text>
-          <Text style={styles.degradation}>Android 兼容模式：当前不支持 passthrough/remux，统一转码 1080p MP4</Text>
-        </View>
+    <View style={{ gap: spacing.sm }}>
+      <View
+        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+      >
+        <Pressable
+          disabled={record.status === 'none'}
+          onPress={() => setPlayback(true)}
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+          }}
+        >
+          {record.status !== 'none' ? (
+            <MaterialCommunityIcons
+              name="play-circle-outline"
+              size={22}
+              color={colors.gold500}
+            />
+          ) : null}
+          <Text style={{ color: colors.textSecondary }}>
+            {t('student.videoAttachmentSection.copy001')}
+          </Text>
+        </Pressable>
         {record.status === 'none' ? (
-          <View style={styles.actions}>
-            {choosing ? <ActivityIndicator color={colors.brandRed} /> : null}
-            <Chip disabled={!editable || choosing} icon="camera-outline" label="拍摄" onPress={() => void choose('camera')} />
-            <Chip disabled={!editable || choosing} icon="image-outline" label="相册" onPress={() => void choose('library')} />
-          </View>
-        ) : null}
+          <>
+            {hasCamera
+              ? action(
+                  t('student.videoAttachmentV3Controls.copy001'),
+                  () => void choose('camera'),
+                )
+              : null}
+            {action(
+              t('student.videoAttachmentV3Controls.copy002'),
+              () => void choose('library'),
+            )}
+          </>
+        ) : (
+          <>
+            {action(t('student.videoAttachmentV3Controls.copy004'), () =>
+              Alert.alert(
+                t('student.videoAttachmentV3Controls.copy004'),
+                undefined,
+                [
+                  ...(hasCamera
+                    ? [
+                        {
+                          text: t('student.videoAttachmentV3Controls.copy001'),
+                          onPress: () => void choose('camera'),
+                        },
+                      ]
+                    : []),
+                  {
+                    text: t('student.videoAttachmentV3Controls.copy002'),
+                    onPress: () => void choose('library'),
+                  },
+                  {
+                    text: t('student.cameraRecorderView.copy005'),
+                    style: 'cancel',
+                  },
+                ],
+              ),
+            )}
+            {action(
+              t('student.videoAttachmentV3Controls.copy005'),
+              () => void remove(),
+            )}
+          </>
+        )}
       </View>
-
-      {record.status === 'pending' ? (
-        <View style={styles.statusRow}>
-          <ActivityIndicator color={colors.brandRed} size="small" />
-          <Text style={styles.statusText}>处理中…</Text>
-          <TextAction label="取消" onPress={() => void videoUploadManager.cancel(identity)} />
-        </View>
-      ) : null}
-      {record.status === 'preparing' ? (
-        <View style={styles.statusRow}>
-          <ActivityIndicator color={colors.brandRed} size="small" />
-          <Text style={styles.statusText}>准备中…</Text>
-          <TextAction label="取消" onPress={() => void videoUploadManager.cancel(identity)} />
-        </View>
-      ) : null}
-      {record.status === 'uploading' ? (
-        <View style={styles.uploading}>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusText}>{Math.round(record.progress * 100)}%</Text>
-            <TextAction label="取消" onPress={() => void videoUploadManager.cancel(identity)} />
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.round(record.progress * 100)}%` }]} />
-          </View>
-        </View>
-      ) : null}
-      {record.status === 'uploaded' ? (
-        <View style={styles.statusRow}>
-          <Pressable accessibilityLabel="更换已上传视频" disabled={!editable} onPress={replace} style={styles.uploadedLabel}>
-            <MaterialCommunityIcons color={colors.green} name="check-circle" size={18} />
-            <Text style={styles.statusText}>已上传</Text>
-          </Pressable>
-          <TextAction disabled={removing} label="删除" onPress={() => void remove()} />
-        </View>
-      ) : null}
       {record.status === 'failed' ? (
-        <View style={styles.failedBlock}>
-          <View style={styles.statusRow}>
-            <MaterialCommunityIcons color={colors.brandRed} name="alert-circle-outline" size={18} />
-            <Text style={styles.failedText}>上传失败</Text>
-            <TextAction label="重试" onPress={() => void videoUploadManager.retry(identity, ensureSetLog)} />
-            <TextAction disabled={removing} label="删除" onPress={() => void remove()} />
-          </View>
-          {record.errorMessage ? <Text style={styles.errorCopy}>{record.errorMessage}</Text> : null}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+          }}
+        >
+          <Text style={{ color: colors.danger }}>
+            {t('student.videoAttachmentV3Controls.copy008')}
+          </Text>
+          {action(
+            t('student.videoAttachmentV3Controls.copy009'),
+            () => void videoUploadManager.retry(identity, ensureSetLog),
+          )}
         </View>
+      ) : null}
+      {cameraVisible ? (
+        <CameraRecorder
+          onClose={() => setCameraVisible(false)}
+          onUse={(uri) => {
+            setCameraVisible(false);
+            attach({
+              uri,
+              width: 720,
+              height: 1280,
+              durationMs: null,
+              mimeType: 'video/mp4',
+              fileName: null,
+              codec: null,
+              rotationDegrees: 0,
+            });
+          }}
+        />
+      ) : null}
+      {playback ? (
+        <VideoPlayback
+          localUri={record.localUri ?? record.source?.uri ?? null}
+          attachmentId={record.attachmentId}
+          onClose={() => setPlayback(false)}
+        />
       ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { gap: spacing.md },
-  header: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between' },
-  label: { color: colors.fgSecondary, ...typography.footnote },
-  degradation: { color: colors.fgTertiary, marginTop: spacing.xs, maxWidth: 210, ...typography.caption },
-  actions: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  chip: { alignItems: 'center', backgroundColor: colors.brandRedSoft, borderColor: 'rgba(229,34,30,0.3)', borderRadius: radius.pill, borderWidth: 1, flexDirection: 'row', gap: spacing.xs, minHeight: 36, paddingHorizontal: spacing.md },
-  chipText: { color: colors.brandRed, ...typography.footnote },
-  statusRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  statusText: { color: colors.fgPrimary, flex: 1, ...typography.footnote },
-  uploadedLabel: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.sm },
-  actionText: { color: colors.brandRed, ...typography.footnote },
-  uploading: { gap: spacing.sm },
-  progressTrack: { backgroundColor: colors.surface3, borderRadius: radius.pill, height: 5, overflow: 'hidden' },
-  progressFill: { backgroundColor: colors.brandRed, borderRadius: radius.pill, height: 5 },
-  failedBlock: { gap: spacing.xs },
-  failedText: { color: colors.brandRed, flex: 1, ...typography.footnote },
-  errorCopy: { color: colors.brandRed, ...typography.caption },
-  pressed: { opacity: 0.6 },
-  disabled: { opacity: 0.35 },
-});

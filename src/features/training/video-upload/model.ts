@@ -1,15 +1,24 @@
+import type { SetLogUpsertRequest } from '@/api/domains/sets';
+import type {
+  UploadInitiateResponse,
+  UploadCompleteRequest,
+} from '@/api/domains/uploads';
+import type { RetryState } from './retry-scheduler';
+import { t } from '@/i18n';
 export const VIDEO_UPLOAD_CONSENT_KEY = 'video_upload_consent_v1';
 export const VIDEO_MAX_DURATION_SECONDS = 120;
 export const VIDEO_PART_SIZE_BYTES = 5 * 1024 * 1024;
 export const VIDEO_UPLOAD_CONCURRENCY = 3;
-export const VIDEO_PART_RETRY_COUNT = 2;
-export const VIDEO_PART_RETRY_DELAY_MS = 1_000;
 
 export const VIDEO_UPLOAD_ERRORS = Object.freeze({
   tooLong: (seconds: number) =>
-    `视频超过 ${seconds} 秒上限,请截短后再上传`,
-  transcode: '视频转码失败,请重试',
-  processing: '视频处理失败,请重试',
+    t('student.videoAttachmentViewModel.copy003', [seconds]),
+  get transcode() {
+    return t('student.videoAttachmentViewModel.copy004');
+  },
+  get processing() {
+    return t('student.videoAttachmentViewModel.copy001');
+  },
 });
 
 export type SelectedVideo = {
@@ -29,9 +38,15 @@ export type VideoUploadStatus =
   | 'preparing'
   | 'uploading'
   | 'uploaded'
-  | 'failed';
+  | 'failed'
+  | 'waiting';
 
 export type VideoUploadRecord = {
+  logRequest: SetLogUpsertRequest | null;
+  createdAt: number;
+  retry: RetryState | null;
+  session: UploadInitiateResponse | null;
+  parts: UploadCompleteRequest['parts'];
   status: VideoUploadStatus;
   progress: number;
   source: SelectedVideo | null;
@@ -44,7 +59,17 @@ export type VideoUploadRecord = {
 };
 
 export type VideoUploadEvent =
-  | { type: 'attach'; source: SelectedVideo; previousAttachmentId?: string | null }
+  | { type: 'uploadSession'; session: UploadInitiateResponse }
+  | { type: 'partCompleted'; part: UploadCompleteRequest['parts'][number] }
+  | { type: 'sessionExpired' }
+  | { type: 'waiting'; retry: RetryState }
+  | { type: 'localCleared' }
+  | {
+      type: 'attach';
+      source: SelectedVideo;
+      logRequest?: SetLogUpsertRequest;
+      previousAttachmentId?: string | null;
+    }
   | { type: 'setLogReady'; setLogId: string }
   | { type: 'prepared'; localUri: string; sizeBytes: number }
   | { type: 'preparing' }
@@ -56,6 +81,11 @@ export type VideoUploadEvent =
   | { type: 'remove' };
 
 export const EMPTY_VIDEO_UPLOAD: VideoUploadRecord = Object.freeze({
+  logRequest: null,
+  createdAt: 0,
+  retry: null,
+  session: null,
+  parts: [],
   status: 'none',
   progress: 0,
   source: null,
@@ -76,11 +106,43 @@ export function videoUploadReducer(
   event: VideoUploadEvent,
 ): VideoUploadRecord {
   switch (event.type) {
+    case 'uploadSession':
+      return {
+        ...state,
+        status: 'uploading',
+        session: event.session,
+        attachmentId: event.session.attachment_id,
+        parts: [],
+      };
+    case 'partCompleted':
+      return {
+        ...state,
+        parts: [
+          ...state.parts.filter(
+            (part) => part.part_number !== event.part.part_number,
+          ),
+          event.part,
+        ].sort((a, b) => a.part_number - b.part_number),
+      };
+    case 'sessionExpired':
+      return { ...state, session: null, parts: [], attachmentId: null };
+    case 'waiting':
+      return { ...state, status: 'waiting', retry: event.retry };
+    case 'localCleared':
+      return {
+        ...state,
+        localUri: null,
+        source: null,
+        sizeBytes: null,
+        prepared: false,
+      };
     case 'attach':
       return {
         ...EMPTY_VIDEO_UPLOAD,
         status: 'pending',
+        createdAt: Date.now(),
         source: event.source,
+        logRequest: event.logRequest ?? null,
         attachmentId: event.previousAttachmentId ?? null,
       };
     case 'setLogReady':
@@ -90,6 +152,7 @@ export function videoUploadReducer(
         ...state,
         status: 'preparing',
         prepared: true,
+        source: null,
         localUri: event.localUri,
         sizeBytes: event.sizeBytes,
       };
@@ -112,11 +175,11 @@ export function videoUploadReducer(
         status: 'uploaded',
         progress: 1,
         source: null,
-        localUri: null,
-        sizeBytes: null,
-        prepared: false,
         attachmentId: event.attachmentId,
         errorMessage: null,
+        retry: null,
+        session: null,
+        parts: [],
       };
     case 'failed':
       return {
@@ -130,7 +193,7 @@ export function videoUploadReducer(
         ...state,
         status: state.prepared ? 'preparing' : 'pending',
         progress: 0,
-        attachmentId: null,
+        retry: null,
         errorMessage: null,
       };
     case 'remove':
@@ -138,72 +201,11 @@ export function videoUploadReducer(
   }
 }
 
+/** Interrupted records keep their session and retry window for automatic resumption. */
 export function recoverInterruptedVideoUploads(
   records: Record<string, VideoUploadRecord>,
 ): Record<string, VideoUploadRecord> {
-  return Object.fromEntries(
-    Object.entries(records).map(([key, record]) => {
-      if (
-        record.status === 'pending' ||
-        record.status === 'preparing' ||
-        record.status === 'uploading'
-      ) {
-        return [
-          key,
-          videoUploadReducer(record, {
-            type: 'failed',
-            message: VIDEO_UPLOAD_ERRORS.processing,
-          }),
-        ];
-      }
-      return [key, record];
-    }),
-  );
-}
-
-export type VideoMetadata = {
-  codec: string | null;
-  width: number;
-  height: number;
-  rotationDegrees?: number;
-};
-
-function isH264(codec: string | null): boolean {
-  if (!codec) return false;
-  const normalized = codec.toLowerCase().replace(/[._ -]/g, '');
-  return normalized === 'h264' || normalized === 'avc' || normalized.startsWith('avc1');
-}
-
-export function displayDimensions(metadata: VideoMetadata): {
-  width: number;
-  height: number;
-} {
-  const rotation = Math.abs(metadata.rotationDegrees ?? 0) % 180;
-  return rotation === 90
-    ? { width: metadata.height, height: metadata.width }
-    : { width: metadata.width, height: metadata.height };
-}
-
-export function shouldPassthroughVideo(metadata: VideoMetadata): boolean {
-  const dimensions = displayDimensions(metadata);
-  const longEdge = Math.max(dimensions.width, dimensions.height);
-  const shortEdge = Math.min(dimensions.width, dimensions.height);
-  return (
-    isH264(metadata.codec) &&
-    longEdge > 0 &&
-    shortEdge > 0 &&
-    longEdge <= 1920 &&
-    shortEdge <= 1080
-  );
-}
-
-/** react-native-compressor exposes only one maxSize edge. This value preserves
- * aspect ratio while satisfying both the 1920 long-edge and 1080 short-edge caps. */
-export function transcodeMaxSize(width: number, height: number): number {
-  const longEdge = Math.max(width, height);
-  const shortEdge = Math.min(width, height);
-  if (longEdge <= 0 || shortEdge <= 0) return 1080;
-  return Math.max(1, Math.round(Math.min(1920, (1080 * longEdge) / shortEdge)));
+  return records;
 }
 
 export function videoPartCount(sizeBytes: number): number {

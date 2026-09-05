@@ -1,6 +1,10 @@
+import { SerialTaskQueue } from '../serial-task-queue';
+import { setsRepository, type SetLogUpsertRequest } from '@/api/domains/sets';
+import { AppState } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { AnalyticsEvent, track } from '@/analytics';
+import { ApiError } from '@/api/client';
 import { uploadsRepository } from '@/api/domains/uploads';
-
 import type {
   SelectedVideo,
   VideoUploadEvent,
@@ -11,175 +15,426 @@ import {
   cancelVideoCompression,
   deleteLocalVideo,
   prepareTrainingVideo,
+  retainVideoSource,
+  localVideoSize,
+  cleanOrphanVideos,
   VideoNativeError,
 } from './native';
-import { UploadCancelledError } from './multipart';
+import {
+  PartUploadError,
+  UploadCancelledError,
+  cleanInterruptedParts,
+} from './multipart';
 import { runPreparedVideoUpload } from './upload-runner';
-import { useVideoUploadStore } from './store';
+import { useVideoUploadStore, flushVideoUploads } from './store';
+import {
+  UploadRetryScheduler,
+  UPLOAD_RETRY_WINDOW_MS,
+  type UploadFailure,
+} from './retry-scheduler';
+import { localRetentionRemovals, removedVideoUris } from './local-retention';
+import { notifyUploadFailures } from './failure-notifier';
 
 type UploadIdentity = { studentId: string; stableSetId: string };
 type EnsureSetLog = () => Promise<string>;
-
 type ActiveJob = {
-  abortController: AbortController;
-  compressionCancellationId: string | null;
+  controller: AbortController;
+  compressionId: string | null;
+  done: Promise<void>;
 };
-
+const mutations = new Map<string, SerialTaskQueue>();
 const jobs = new Map<string, ActiveJob>();
-
-function jobKey(identity: UploadIdentity): string {
-  return `${identity.studentId}:${identity.stableSetId}`;
-}
-
-function recordFor(identity: UploadIdentity): VideoUploadRecord | undefined {
-  return useVideoUploadStore.getState().records[jobKey(identity)];
-}
-
+const timers = new Map<string, ReturnType<typeof setTimeout>>();
+const ensureCallbacks = new Map<string, EnsureSetLog>();
+let activeStudent: string | null = null;
+let activeSession: symbol | null = null;
+const keyFor = (id: UploadIdentity) => `${id.studentId}:${id.stableSetId}`;
+const recordFor = (id: UploadIdentity) =>
+  useVideoUploadStore.getState().records[keyFor(id)];
 function dispatch(
-  identity: UploadIdentity,
+  id: UploadIdentity,
   event: VideoUploadEvent,
 ): VideoUploadRecord {
   return useVideoUploadStore
     .getState()
-    .dispatch(identity.studentId, identity.stableSetId, event);
+    .dispatch(id.studentId, id.stableSetId, event);
 }
-
-async function execute(
-  identity: UploadIdentity,
+function classify(error: unknown): UploadFailure {
+  if (error instanceof PartUploadError && error.status === 403)
+    return 'network';
+  if (
+    (error instanceof ApiError || error instanceof PartUploadError) &&
+    error.status &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    ![408, 429].includes(error.status)
+  )
+    return 'deterministic';
+  if (error instanceof VideoNativeError && error.deterministic)
+    return 'deterministic';
+  return 'network';
+}
+function notify(studentId: string) {
+  notifyUploadFailures(() =>
+    activeStudent === studentId
+      ? Object.entries(useVideoUploadStore.getState().records).filter(
+          ([key, record]) =>
+            key.startsWith(`${studentId}:`) && record.status === 'failed',
+        ).length
+      : 0,
+  );
+}
+function terminal(
+  id: UploadIdentity,
+  message = VIDEO_UPLOAD_ERRORS.processing,
+) {
+  dispatch(id, { type: 'failed', message });
+  notify(id.studentId);
+}
+function resume(id: UploadIdentity, networkRestored = false): void {
+  const key = keyFor(id);
+  clearTimeout(timers.get(key));
+  timers.delete(key);
+  const record = recordFor(id);
+  if (
+    !record ||
+    ['none', 'uploaded', 'failed'].includes(record.status) ||
+    id.studentId !== activeStudent ||
+    jobs.has(key)
+  )
+    return;
+  if (record.retry) {
+    const decision = UploadRetryScheduler({
+      ...record.retry,
+      now: Date.now(),
+      networkRestored,
+    });
+    if (decision.kind === 'terminal') {
+      terminal(id);
+      return;
+    }
+    if (decision.kind === 'scheduled') {
+      timers.set(
+        key,
+        setTimeout(
+          () => resume(id),
+          Math.max(0, decision.retryAt - Date.now()),
+        ),
+      );
+      return;
+    }
+  }
+  const ensure =
+    ensureCallbacks.get(key) ??
+    (async () => {
+      const setLogId = recordFor(id)?.setLogId;
+      if (setLogId) return setLogId;
+      const request = recordFor(id)?.logRequest;
+      if (!request)
+        throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
+          deterministic: true,
+        });
+      return (await setsRepository.upsert(request)).id;
+    });
+  void execute(id, ensure).catch(() => terminal(id));
+}
+async function run(
+  id: UploadIdentity,
   ensureSetLog: EnsureSetLog,
-  previousAttachmentId: string | null,
+  job: ActiveJob,
 ): Promise<void> {
-  const key = jobKey(identity);
-  const job: ActiveJob = {
-    abortController: new AbortController(),
-    compressionCancellationId: null,
+  const signal = job.controller.signal;
+  const check = () => {
+    if (signal.aborted) throw new UploadCancelledError();
   };
-  jobs.get(key)?.abortController.abort();
-  jobs.set(key, job);
-
   try {
-    let record = recordFor(identity);
-    if (!record) throw new Error('Video upload state is missing');
+    let record = recordFor(id);
+    if (!record) return;
     let setLogId = record.setLogId;
     if (!setLogId) {
-      setLogId = await ensureSetLog();
-      dispatch(identity, { type: 'setLogReady', setLogId });
+      try {
+        setLogId = await ensureSetLog();
+      } finally {
+        ensureCallbacks.delete(keyFor(id));
+      }
     }
-    if (job.abortController.signal.aborted) throw new UploadCancelledError();
-
-    record = recordFor(identity);
-    if (!record) throw new Error('Video upload state is missing');
-    let localUri = record.localUri;
-    let sizeBytes = record.sizeBytes;
-    if (!record.prepared || !localUri || !sizeBytes) {
-      if (!record.source) throw new Error('Video source is missing');
+    check();
+    dispatch(id, { type: 'setLogReady', setLogId });
+    await flushVideoUploads();
+    check();
+    record = recordFor(id)!;
+    if (!record.prepared || !record.localUri || !record.sizeBytes) {
+      if (!record.source)
+        throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
+          deterministic: true,
+        });
       const prepared = await prepareTrainingVideo(record.source, {
-        signal: job.abortController.signal,
-        setCompressionCancellationId: (id) => {
-          job.compressionCancellationId = id;
+        signal,
+        setCompressionCancellationId: (value) => {
+          job.compressionId = value;
+          if (signal.aborted) cancelVideoCompression(value);
         },
       });
-      localUri = prepared.localUri;
-      sizeBytes = prepared.sizeBytes;
-      dispatch(identity, { type: 'prepared', localUri, sizeBytes });
-    } else {
-      dispatch(identity, { type: 'preparing' });
+      if (signal.aborted) {
+        if (prepared.localUri !== record.source.uri)
+          deleteLocalVideo(prepared.localUri);
+        check();
+      }
+      const sourceUri = record.source.uri;
+      record = dispatch(id, { type: 'prepared', ...prepared });
+      await flushVideoUploads();
+      if (sourceUri !== prepared.localUri) deleteLocalVideo(sourceUri);
     }
-
-    let lastReportedPercent = -1;
+    check();
     const attachmentId = await runPreparedVideoUpload({
-      localUri,
+      localUri: record.localUri!,
       setLogId,
-      sizeBytes,
-      signal: job.abortController.signal,
-      onInitiated: (id) => dispatch(identity, { type: 'uploadStarted', attachmentId: id }),
-      onProgress: (progress) => {
-        const percent = Math.floor(progress * 100);
-        if (percent === lastReportedPercent) return;
-        lastReportedPercent = percent;
-        dispatch(identity, { type: 'progress', progress });
+      sizeBytes: record.sizeBytes!,
+      signal,
+      session: record.session,
+      parts: record.parts,
+      onSession: async (session) => {
+        dispatch(
+          id,
+          session
+            ? { type: 'uploadSession', session }
+            : { type: 'sessionExpired' },
+        );
+        await flushVideoUploads();
       },
+      onPart: async (part) => {
+        check();
+        dispatch(id, { type: 'partCompleted', part });
+        await flushVideoUploads();
+      },
+      onInitiated: () => {},
+      onProgress: () => {},
     });
-    deleteLocalVideo(localUri);
-    dispatch(identity, { type: 'succeeded', attachmentId });
-    if (previousAttachmentId && previousAttachmentId !== attachmentId) {
-      await uploadsRepository.remove(previousAttachmentId).catch(() => undefined);
-    }
-    await track(AnalyticsEvent.MediaUpload, {
+    check();
+    const original = recordFor(id)?.source?.uri;
+    dispatch(id, { type: 'succeeded', attachmentId });
+    await flushVideoUploads();
+    if (original && original !== record.localUri) deleteLocalVideo(original);
+    void track(AnalyticsEvent.MediaUpload, {
       status: 'succeeded',
       kind: 'set_video',
       attachment_id: attachmentId,
     });
   } catch (error) {
-    if (error instanceof UploadCancelledError || job.abortController.signal.aborted) {
-      return;
-    }
-    const message =
-      error instanceof VideoNativeError
-        ? error.copy
-        : VIDEO_UPLOAD_ERRORS.processing;
-    dispatch(identity, { type: 'failed', message });
-    await track(AnalyticsEvent.MediaUpload, {
+    if (signal.aborted || error instanceof UploadCancelledError) return;
+    const record = recordFor(id);
+    if (!record) return;
+    const now = Date.now();
+    const retry = {
+      firstFailureAt: record.retry?.firstFailureAt ?? now,
+      lastFailureAt: now,
+      failureCount: (record.retry?.failureCount ?? 0) + 1,
+      failure: classify(error),
+    };
+    dispatch(id, { type: 'waiting', retry });
+    if (UploadRetryScheduler({ ...retry, now }).kind === 'terminal')
+      terminal(id);
+    await flushVideoUploads();
+    void track(AnalyticsEvent.MediaUpload, {
       status: 'failed',
       kind: 'set_video',
-      reason: message,
     });
-  } finally {
-    if (jobs.get(key) === job) jobs.delete(key);
   }
 }
+async function execute(
+  id: UploadIdentity,
+  ensure: EnsureSetLog,
+): Promise<void> {
+  const key = keyFor(id);
+  if (jobs.has(key)) return jobs.get(key)!.done;
+  const job: ActiveJob = {
+    controller: new AbortController(),
+    compressionId: null,
+    done: Promise.resolve(),
+  };
+  jobs.set(key, job);
+  const firstFailure = recordFor(id)?.retry?.firstFailureAt;
+  const deadline =
+    firstFailure === undefined
+      ? undefined
+      : setTimeout(
+          () => {
+            job.controller.abort();
+            cancelVideoCompression(job.compressionId);
+            terminal(id);
+          },
+          Math.max(0, firstFailure + UPLOAD_RETRY_WINDOW_MS - Date.now()),
+        );
+  job.done = run(id, ensure, job);
+  try {
+    await job.done;
+  } finally {
+    clearTimeout(deadline);
+    if (jobs.get(key) === job) jobs.delete(key);
+    if (!job.controller.signal.aborted) resume(id);
+  }
+}
+async function stop(id: UploadIdentity): Promise<void> {
+  const key = keyFor(id);
+  clearTimeout(timers.get(key));
+  timers.delete(key);
+  const job = jobs.get(key);
+  job?.controller.abort();
+  cancelVideoCompression(job?.compressionId ?? null);
+  await job?.done;
+}
+async function removeRecord(id: UploadIdentity): Promise<void> {
+  await stop(id);
+  const record = recordFor(id);
+  if (!record) return;
+  if (record.attachmentId)
+    await uploadsRepository.remove(record.attachmentId).catch((error) => {
+      if (!(error instanceof ApiError && error.status === 404)) throw error;
+    });
+  removedVideoUris(record).forEach(deleteLocalVideo);
+  dispatch(id, { type: 'remove' });
+  ensureCallbacks.delete(keyFor(id));
+  await flushVideoUploads();
+}
+async function sweep(): Promise<void> {
+  const entries = Object.entries(useVideoUploadStore.getState().records);
+  const files = entries.map(([key, record]) => ({
+    key,
+    createdAt: record.createdAt,
+    sizeBytes: removedVideoUris(record).reduce(
+      (sum, uri) => sum + localVideoSize(uri),
+      0,
+    ),
+    uploaded: record.status === 'uploaded',
+  }));
+  for (const key of localRetentionRemovals(files, Date.now())) {
+    const separator = key.indexOf(':');
+    const id = {
+      studentId: key.slice(0, separator),
+      stableSetId: key.slice(separator + 1),
+    };
+    await stop(id);
+    const record = recordFor(id);
+    if (!record) continue;
+    removedVideoUris(record).forEach(deleteLocalVideo);
+    dispatch(id, { type: 'localCleared' });
+    if (record.status !== 'uploaded') terminal(id);
+  }
+  await flushVideoUploads();
+}
+function mutate<T>(
+  id: UploadIdentity,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const key = keyFor(id);
+  let queue = mutations.get(key);
+  if (!queue) {
+    queue = new SerialTaskQueue();
+    mutations.set(key, queue);
+  }
+  return queue.enqueue(operation);
+}
+const remove = (id: UploadIdentity) => mutate(id, () => removeRecord(id));
 
 export const videoUploadManager = {
   async attach(
-    identity: UploadIdentity,
+    id: UploadIdentity,
     source: SelectedVideo,
-    ensureSetLog: EnsureSetLog,
+    ensure: EnsureSetLog,
+    buildLogRequest?: () => SetLogUpsertRequest,
   ): Promise<void> {
-    const previousAttachmentId = recordFor(identity)?.attachmentId ?? null;
-    dispatch(identity, { type: 'attach', source, previousAttachmentId });
-    await track(AnalyticsEvent.MediaUpload, {
+    const retainedUri = await mutate(id, async () => {
+      await useVideoUploadStore.getState().hydrate();
+      const retained = retainVideoSource(source);
+      let logRequest: SetLogUpsertRequest | undefined;
+      try {
+        logRequest = buildLogRequest?.();
+        await removeRecord(id);
+      } catch (error) {
+        deleteLocalVideo(retained.uri);
+        throw error;
+      }
+      dispatch(id, { type: 'attach', source: retained, logRequest });
+      ensureCallbacks.set(keyFor(id), ensure);
+      await flushVideoUploads();
+      return retained.uri;
+    });
+    void track(AnalyticsEvent.MediaUpload, {
       status: 'started',
       kind: 'set_video',
     });
-    await execute(identity, ensureSetLog, previousAttachmentId);
+    await sweep();
+    if (
+      recordFor(id)?.source?.uri === retainedUri &&
+      recordFor(id)?.status !== 'failed'
+    )
+      await execute(id, ensure);
   },
-
-  async retry(
-    identity: UploadIdentity,
-    ensureSetLog: EnsureSetLog,
-  ): Promise<void> {
-    const record = recordFor(identity);
-    if (!record || record.status !== 'failed') return;
-    const previousAttachmentId = record.attachmentId;
-    dispatch(identity, { type: 'retry' });
-    await track(AnalyticsEvent.MediaUpload, {
-      status: 'started',
-      kind: 'set_video',
-      retry: true,
+  async retry(id: UploadIdentity, ensure: EnsureSetLog): Promise<void> {
+    if (recordFor(id)?.status !== 'failed') return;
+    dispatch(id, { type: 'retry' });
+    ensureCallbacks.set(keyFor(id), ensure);
+    await execute(id, ensure);
+  },
+  remove,
+  cancel: remove,
+  start(studentId: string): () => void {
+    const session = Symbol(studentId);
+    activeSession = session;
+    activeStudent = studentId;
+    let disposed = false;
+    let initialized = false;
+    const resumeAll = (restored = false) => {
+      if (disposed || !initialized || activeSession !== session) return;
+      for (const key of Object.keys(useVideoUploadStore.getState().records)) {
+        if (key.startsWith(`${studentId}:`))
+          resume(
+            { studentId, stableSetId: key.slice(studentId.length + 1) },
+            restored,
+          );
+      }
+    };
+    void (async () => {
+      await useVideoUploadStore.getState().hydrate();
+      if (disposed || activeSession !== session) return;
+      if (jobs.size === 0) {
+        cleanInterruptedParts();
+        cleanOrphanVideos(
+          Object.values(useVideoUploadStore.getState().records).flatMap(
+            removedVideoUris,
+          ),
+        );
+      }
+      await sweep();
+      initialized = true;
+      resumeAll();
+    })().catch(() => undefined);
+    let connected: boolean | null = null;
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const next =
+        state.isConnected === true && state.isInternetReachable !== false;
+      if (next && connected === false) resumeAll(true);
+      connected = next;
     });
-    await execute(identity, ensureSetLog, previousAttachmentId);
-  },
-
-  async cancel(identity: UploadIdentity): Promise<void> {
-    const key = jobKey(identity);
-    const record = recordFor(identity);
-    const job = jobs.get(key);
-    job?.abortController.abort();
-    cancelVideoCompression(job?.compressionCancellationId ?? null);
-    if (record?.attachmentId && record.status !== 'uploaded') {
-      await uploadsRepository.abort(record.attachmentId).catch(() => undefined);
-    }
-    deleteLocalVideo(record?.localUri ?? record?.source?.uri ?? null);
-    dispatch(identity, { type: 'remove' });
-  },
-
-  async remove(identity: UploadIdentity): Promise<void> {
-    const record = recordFor(identity);
-    if (!record) return;
-    if (record.attachmentId) {
-      await uploadsRepository.remove(record.attachmentId);
-    }
-    deleteLocalVideo(record.localUri ?? record.source?.uri ?? null);
-    dispatch(identity, { type: 'remove' });
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') resumeAll();
+    });
+    return () => {
+      disposed = true;
+      unsubscribe();
+      subscription.remove();
+      if (activeSession !== session) return;
+      activeSession = null;
+      activeStudent = null;
+      for (const [key, timer] of timers) {
+        clearTimeout(timer);
+        timers.delete(key);
+      }
+      for (const job of jobs.values()) {
+        job.controller.abort();
+        cancelVideoCompression(job.compressionId);
+      }
+      ensureCallbacks.clear();
+    };
   },
 };

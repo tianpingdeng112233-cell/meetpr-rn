@@ -104,9 +104,13 @@ function ThemedRoot() {
     ) {
       return;
     }
-    void import('@/features/training/video-upload/store')
-      .then(({ hydrateVideoUploads }) => hydrateVideoUploads())
+    let disposed = false;
+    let stop: (() => void) | undefined;
+    void import('@/features/training/video-upload/manager')
+      .then(({ videoUploadManager }) => disposed ? undefined : videoUploadManager.start(user.id))
+      .then(cleanup => { if (disposed) cleanup?.(); else stop = cleanup; })
       .catch(() => undefined);
+    return () => { disposed = true; stop?.(); };
   }, [user?.id, user?.role]);
 
   useEffect(() => {

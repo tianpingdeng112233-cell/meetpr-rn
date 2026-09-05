@@ -1,4 +1,5 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useCameraAvailability } from './video-upload/use-camera-availability';
+import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -48,6 +49,8 @@ export function WorkoutBody({
   suggestionForDraft,
   historyLogs,
   onRecord,
+  onVideo,
+  studentId,
   onToggleComplete,
   resolveExerciseMetadata,
 }: {
@@ -59,11 +62,14 @@ export function WorkoutBody({
   onStart: () => void;
   suggestionForDraft: (draft: WorkoutSetDraft) => SuggestionOutcome;
   historyLogs: readonly SetLog[];
+  studentId: string;
+  onVideo: (draft: WorkoutSetDraft) => void;
   onRecord: (draft: WorkoutSetDraft) => void;
   onToggleComplete: (draft: WorkoutSetDraft) => void;
   resolveExerciseMetadata: ExerciseMetadataResolver;
 }) {
   const colors = useColors();
+  const hasCamera = useCameraAvailability();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const active =
     drafts.find(
@@ -222,11 +228,11 @@ export function WorkoutBody({
                   label={t('student.todayWorkoutScreen.copy015')}
                   onPress={() => onRecord(active)}
                 />
-                <AppButton
-                  disabled
+                {hasCamera ? <AppButton
+                  onPress={() => onVideo(active)}
                   variant="secondary"
                   label={t('student.todayWorkoutScreen.copy016')}
-                />
+                /> : null}
               </>
             ) : null}
           </>
@@ -372,11 +378,7 @@ export function WorkoutBody({
                                   : '○'}
                             </Text>
                           </Pressable>
-                          <MaterialCommunityIcons
-                            name="video-outline"
-                            size={15}
-                            color={colors.textGhost}
-                          />
+                          <SetVideoUploadIndicator studentId={studentId} stableSetId={draft.stableSetId} />
                         </View>
                       </Pressable>
                       <Text
