@@ -246,6 +246,14 @@ export function SetEntrySheet({
                     placeholder={showsRPEPlaceholder ? t('student.todayWorkoutTypes.copy028') : undefined} />
                 </View>
                 <VideoAttachmentControls
+                  badge={{
+                    exerciseName,
+                    weightKg: parseFiniteDecimal(weightText),
+                    reps: /^\d+$/.test(repsText.trim()) ? parseFiniteDecimal(repsText) : null,
+                    rpe: parseFiniteDecimal(rpeText),
+                    setOrdinal: draft.setIndex + 1,
+                    coachName: null,
+                  }}
                   studentId={studentId}
                   stableSetId={draft.stableSetId}
                   editable={editable}

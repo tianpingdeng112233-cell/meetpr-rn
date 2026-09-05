@@ -1,3 +1,4 @@
+import type { VideoBadgeInfo } from '@/features/video-player/types';
 import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { CameraRecorder } from './CameraRecorder';
@@ -18,6 +19,7 @@ import { pickTrainingVideo, VideoNativeError, type VideoSource } from './native'
 import { selectVideoUpload, useVideoUploadStore } from './store';
 
 type Props = {
+  badge?: VideoBadgeInfo | null;
   initialCamera?: boolean;
   buildLogRequest: () => SetLogUpsertRequest;
   editable: boolean;
@@ -62,6 +64,7 @@ export function VideoAttachmentControls({
   studentId,
   initialCamera,
   buildLogRequest,
+  badge,
 }: Props) {
   const colors = useColors();
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
@@ -178,7 +181,7 @@ export function VideoAttachmentControls({
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {playable ? (
           <Pressable accessibilityRole="button" onPress={() => present(
-            <VideoPlayback localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={dismiss} />
+            <VideoPlayback badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={dismiss} />
           )} style={titleStyle}>{title}</Pressable>
         ) : <View style={titleStyle}>{title}</View>}
         <View style={{ flex: 1, alignItems: 'flex-end', gap: 7 }}>
