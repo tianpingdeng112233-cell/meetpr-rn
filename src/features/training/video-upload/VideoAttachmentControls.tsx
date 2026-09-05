@@ -2,12 +2,13 @@ import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { CameraRecorder } from './CameraRecorder';
 import { VideoPlayback } from './VideoPlayback';
+import { useOverlayHost } from '../OverlayHost';
 import { useCameraAvailability } from './use-camera-availability';
 import type { SelectedVideo } from './model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { t } from '@/i18n';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, Text, View } from 'react-native';
 
 import { useColors, radius, spacing, typography } from '@/design';
 
@@ -66,8 +67,16 @@ export function VideoAttachmentControls({
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [choosing, setChoosing] = useState(false);
   const hasCamera = useCameraAvailability();
-  const [cameraVisible, setCameraVisible] = useState(false);
-  const [playback, setPlayback] = useState(false);
+  const overlay = useOverlayHost();
+  const [fallbackNode, setFallbackNode] = useState<ReactNode>(null);
+  const dismiss = () => {
+    if (overlay.isFallback) setFallbackNode(null);
+    else overlay.dismiss();
+  };
+  const present = (node: ReactNode) => {
+    if (overlay.isFallback) setFallbackNode(node);
+    else overlay.present(node, dismiss);
+  };
   const identity = { studentId, stableSetId };
   const choose = async (source: VideoSource) => {
     if (!editable || choosing) return;
@@ -76,7 +85,24 @@ export function VideoAttachmentControls({
       if (!(await requestVideoUploadConsent(AsyncStorage, promptConsent)))
         return;
       if (source === 'camera') {
-        setCameraVisible(true);
+        present(
+          <CameraRecorder
+            onClose={dismiss}
+            onUse={(uri) => {
+              dismiss();
+              attach({
+                uri,
+                width: 720,
+                height: 1280,
+                durationMs: null,
+                mimeType: 'video/mp4',
+                fileName: null,
+                codec: null,
+                rotationDegrees: 0,
+              });
+            }}
+          />,
+        );
         return;
       }
       const video = await pickTrainingVideo();
@@ -128,7 +154,15 @@ export function VideoAttachmentControls({
       >
         <Pressable
           disabled={record.status === 'none'}
-          onPress={() => setPlayback(true)}
+          onPress={() =>
+            present(
+              <VideoPlayback
+                localUri={record.localUri ?? record.source?.uri ?? null}
+                attachmentId={record.attachmentId}
+                onClose={dismiss}
+              />,
+            )
+          }
           style={{
             flex: 1,
             flexDirection: 'row',
@@ -210,30 +244,10 @@ export function VideoAttachmentControls({
           )}
         </View>
       ) : null}
-      {cameraVisible ? (
-        <CameraRecorder
-          onClose={() => setCameraVisible(false)}
-          onUse={(uri) => {
-            setCameraVisible(false);
-            attach({
-              uri,
-              width: 720,
-              height: 1280,
-              durationMs: null,
-              mimeType: 'video/mp4',
-              fileName: null,
-              codec: null,
-              rotationDegrees: 0,
-            });
-          }}
-        />
-      ) : null}
-      {playback ? (
-        <VideoPlayback
-          localUri={record.localUri ?? record.source?.uri ?? null}
-          attachmentId={record.attachmentId}
-          onClose={() => setPlayback(false)}
-        />
+      {overlay.isFallback && fallbackNode !== null ? (
+        <Modal visible animationType="slide" onRequestClose={dismiss}>
+          {fallbackNode}
+        </Modal>
       ) : null}
     </View>
   );
