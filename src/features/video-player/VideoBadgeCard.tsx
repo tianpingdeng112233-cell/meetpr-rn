@@ -22,8 +22,13 @@ export function VideoBadgeCard({ info, width, includesCoachAttribution = false }
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 * s }}>
       <VideoBadgeLogoMark size={22 * s} />
       <Svg width={97 / 24 * 16 * s} height={16 * s} viewBox="0 0 97 24" accessibilityLabel="MEETPR">
+        {/* Knockout wordmark like MeetPRMark: ink outline with a dark counter-fill so the letters stay legible. */}
         <SvgText x={3} y={18} fontFamily={font.display(16, 'black').fontFamily} fontSize={16} fontWeight="900"
           letterSpacing={-1.76} stroke={palette.ink} strokeWidth={5.12} strokeLinejoin="round" fill={palette.ink}>
+          MEETP<TSpan dx={-2.08}>R</TSpan>
+        </SvgText>
+        <SvgText x={3} y={18} fontFamily={font.display(16, 'black').fontFamily} fontSize={16} fontWeight="900"
+          letterSpacing={-1.76} fill={palette.wordmarkCounter}>
           MEETP<TSpan dx={-2.08}>R</TSpan>
         </SvgText>
       </Svg>
