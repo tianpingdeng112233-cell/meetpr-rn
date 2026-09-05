@@ -6,11 +6,11 @@ import { useOverlayHost } from '../OverlayHost';
 import { useCameraAvailability } from './use-camera-availability';
 import type { SelectedVideo } from './model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { t } from '@/i18n';
-import { Alert, Modal, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, Text, View } from 'react-native';
 
-import { useColors, radius, spacing, typography } from '@/design';
+import { useColors, radius, spacing, font } from '@/design';
 
 import { requestVideoUploadConsent } from './consent';
 import { videoUploadManager } from './manager';
@@ -66,6 +66,11 @@ export function VideoAttachmentControls({
   const colors = useColors();
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [choosing, setChoosing] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
+  useEffect(() => useVideoUploadStore.subscribe((next, previous) => {
+    const select = selectVideoUpload(studentId, stableSetId);
+    if (select(next) !== select(previous)) setIsPreparing(false);
+  }), [studentId, stableSetId]);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const showActionError = (error: unknown) =>
     setActionErrorMessage(
@@ -86,7 +91,7 @@ export function VideoAttachmentControls({
   };
   const identity = { studentId, stableSetId };
   const choose = async (source: VideoSource) => {
-    if (!editable || choosing) return;
+    if (!editable || choosing || isPreparing) return;
     setChoosing(true);
     setActionErrorMessage(null);
     try {
@@ -123,9 +128,11 @@ export function VideoAttachmentControls({
   };
   const attach = (video: SelectedVideo) => {
     setActionErrorMessage(null);
+    setIsPreparing(true);
     void videoUploadManager
       .attach(identity, video, ensureSetLog, buildLogRequest)
-      .catch(showActionError);
+      .catch(showActionError)
+      .finally(() => setIsPreparing(false));
   };
   const autoOpened = useRef(false);
   useEffect(() => {
@@ -142,130 +149,80 @@ export function VideoAttachmentControls({
       showActionError(error);
     }
   };
-  const action = (label: string, onPress: () => void) => (
-    <Pressable
-      disabled={!editable || choosing}
-      onPress={onPress}
-      style={{
-        borderRadius: radius.pill,
-        padding: spacing.sm,
-        backgroundColor: colors.goldSoft,
-      }}
-    >
-      <Text style={{ color: colors.goldText, ...typography.footnote }}>
-        {label}
-      </Text>
-    </Pressable>
+  const action = (icon: ComponentProps<typeof MaterialCommunityIcons>['name'], label: string, onPress: () => void, unavailable = false) => {
+    const disabled = !editable || choosing || isPreparing || unavailable;
+    const color = `${colors.gold500}${disabled ? '4D' : 'B8'}`;
+    return (
+      <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
+        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 1,
+          borderRadius: radius.control, paddingHorizontal: 15, paddingVertical: 8, minHeight: 44,
+          borderWidth: 1, borderColor: `${colors.gold500}${disabled ? '1F' : '3D'}`, opacity: pressed ? 0.6 : 1 })}>
+        <MaterialCommunityIcons name={icon} size={20} color={color} />
+        <Text style={{ color, flexShrink: 1, ...font.body(15, 'semibold') }}>{label}</Text>
+      </Pressable>
+    );
+  };
+  const playable = Boolean(record.localUri || record.source?.uri || record.attachmentId);
+  const preparing = isPreparing || record.status === 'preparing';
+  const title = (
+    <>
+      {playable ? <MaterialCommunityIcons name="play-circle" size={20} color={colors.textPrimary} /> : null}
+      <Text style={{ color: colors.textPrimary, ...font.body(16, 'medium') }}>{t('student.videoAttachmentSection.copy001')}</Text>
+    </>
   );
+  const titleStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, minHeight: 44 };
+  const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'flex-end' as const, gap: 10 };
+  const errorMessage = actionErrorMessage ?? record.errorMessage;
   return (
-    <View style={{ gap: spacing.sm }}>
-      <View
-        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
-      >
-        <Pressable
-          disabled={record.status === 'none'}
-          onPress={() =>
-            present(
-              <VideoPlayback
-                localUri={record.localUri ?? record.source?.uri ?? null}
-                attachmentId={record.attachmentId}
-                onClose={dismiss}
-              />,
-            )
-          }
-          style={{
-            flex: 1,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.xs,
-          }}
-        >
-          {record.status !== 'none' ? (
-            <MaterialCommunityIcons
-              name="play-circle-outline"
-              size={22}
-              color={colors.gold500}
-            />
-          ) : null}
-          <Text style={{ color: colors.textSecondary }}>
-            {t('student.videoAttachmentSection.copy001')}
-          </Text>
-        </Pressable>
-        {record.status === 'none' ? (
-          <>
-            {hasCamera
-              ? action(
-                  t('student.videoAttachmentV3Controls.copy001'),
-                  () => void choose('camera'),
-                )
-              : null}
-            {action(
-              t('student.videoAttachmentV3Controls.copy002'),
-              () => void choose('library'),
-            )}
-          </>
-        ) : (
-          <>
-            {action(t('student.videoAttachmentV3Controls.copy004'), () =>
-              Alert.alert(
-                t('student.videoAttachmentV3Controls.copy004'),
-                undefined,
-                [
-                  ...(hasCamera
-                    ? [
-                        {
-                          text: t('student.videoAttachmentV3Controls.copy001'),
-                          onPress: () => void choose('camera'),
-                        },
-                      ]
-                    : []),
-                  {
-                    text: t('student.videoAttachmentV3Controls.copy002'),
-                    onPress: () => void choose('library'),
-                  },
-                  {
-                    text: t('student.cameraRecorderView.copy005'),
-                    style: 'cancel',
-                  },
-                ],
-              ),
-            )}
-            {action(
-              t('student.videoAttachmentV3Controls.copy005'),
-              () => void remove(),
-            )}
-          </>
-        )}
-      </View>
-      {record.status === 'failed' ? (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.sm,
-          }}
-        >
-          <Text style={{ color: colors.danger, flex: 1 }}>
-            {record.errorMessage ?? t('student.videoAttachmentV3Controls.copy008')}
-          </Text>
-          {action(
-            t('student.videoAttachmentV3Controls.copy009'),
-            () => {
-              setActionErrorMessage(null);
-              void videoUploadManager
-                .retry(identity, ensureSetLog)
-                .catch(showActionError);
-            },
+    <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 11, gap: spacing.space2 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        {playable ? (
+          <Pressable accessibilityRole="button" onPress={() => present(
+            <VideoPlayback localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={dismiss} />
+          )} style={titleStyle}>{title}</Pressable>
+        ) : <View style={titleStyle}>{title}</View>}
+        <View style={{ flex: 1, alignItems: 'flex-end', gap: 7 }}>
+          {preparing ? (
+            <View style={rowStyle}>
+              <ActivityIndicator color={`${colors.gold500}99`} />
+              <Text style={{ ...font.body(12, 'medium'), color: `${colors.gold500}99` }}>{t('student.videoAttachmentV3Controls.copy003')}</Text>
+            </View>
+          ) : record.status === 'none' ? (
+            <View style={rowStyle}>
+              {action('video', t('student.videoAttachmentV3Controls.copy001'), () => void choose('camera'), !hasCamera)}
+              {action('image', t('student.videoAttachmentV3Controls.copy002'), () => void choose('library'))}
+            </View>
+          ) : record.status === 'failed' ? (
+            <View style={rowStyle}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1 }}>
+                <MaterialCommunityIcons name="alert" size={14} color={colors.danger} />
+                <Text style={{ ...font.body(12, 'medium'), color: colors.danger, flexShrink: 1 }}>{t('student.videoAttachmentV3Controls.copy008')}</Text>
+              </View>
+              {action('refresh', t('student.videoAttachmentV3Controls.copy009'), () => {
+                setActionErrorMessage(null);
+                void videoUploadManager.retry(identity, ensureSetLog).catch(showActionError);
+              })}
+              {action('trash-can-outline', t('student.videoAttachmentV3Controls.copy005'), () => void remove())}
+            </View>
+          ) : (
+            <>
+              <View style={rowStyle}>
+                {action('image', t('student.videoAttachmentV3Controls.copy004'), () => void choose('library'))}
+                {action('trash-can-outline', t('student.videoAttachmentV3Controls.copy005'), () => void remove())}
+              </View>
+              <View style={rowStyle}>
+                <MaterialCommunityIcons name={record.status === 'uploaded' ? 'check-circle-outline' : 'arrow-up-circle-outline'} size={14} color={`${colors.gold500}73`} />
+                <Text style={{ ...font.body(12), color: `${colors.gold500}73` }}>
+                  {t(record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007')}
+                </Text>
+              </View>
+            </>
           )}
         </View>
-      ) : null}
-      {actionErrorMessage ? (
-        <Text style={{ color: colors.danger }}>{actionErrorMessage}</Text>
-      ) : null}
+      </View>
+      {errorMessage ? <Text style={{ ...font.body(11, 'medium'), color: colors.danger }}>{errorMessage}</Text> : null}
       {overlay.isFallback && fallbackNode !== null ? (
-        <Modal visible animationType="slide" onRequestClose={dismiss}>
-          {fallbackNode}
-        </Modal>
+        <Modal visible animationType="slide" onRequestClose={dismiss}>{fallbackNode}</Modal>
       ) : null}
     </View>
   );
