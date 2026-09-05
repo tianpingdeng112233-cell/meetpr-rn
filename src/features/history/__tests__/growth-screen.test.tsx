@@ -5,6 +5,8 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { exercisesRepository, feedbackRepository, onboardingRepository, plansRepository, setKeys, setsRepository, type SetLog } from '@/api/domains';
 import { t, setLocaleOverride } from '@/i18n';
+import { Eyebrow } from '@/design';
+import { useStudentTabsStore } from '@/features/student-tabs';
 
 import { GrowthScreen } from '../GrowthScreen';
 
@@ -84,6 +86,20 @@ test('header, sections, and feedback empty state use the selected catalog langua
   expect(button(t('student.trainingHistoryView.copy009')).props.disabled).toBe(true);
 });
 
+test('growth header shows the wordmark and chat action before the title and subtitle, without Eyebrow', async () => {
+  await render();
+  expect(renderer.root.findByProps({ testID: 'growth-header-mark' })).toBeDefined();
+  const chat = button(t('student.trainingHistoryView.copy012'));
+  expect(chat).toBeDefined();
+  expect(chat.props.accessibilityValue).toEqual({ text: '' });
+  expect(texts().indexOf(t('student.trainingHistoryView.copy014'))).toBeGreaterThan(texts().indexOf(t('student.trainingHistoryView.copy013')));
+  expect(renderer.root.findAllByType(Eyebrow)).toHaveLength(0);
+  const previousJump = useStudentTabsStore.getState().feedbackJumpToken;
+  act(() => chat.props.onPress());
+  expect(useStudentTabsStore.getState().feedbackJumpToken).toBe(previousJump + 1);
+  expect(mockNavigate).toHaveBeenCalledWith('/(student)/growth');
+});
+
 test('pending data shows the catalog skeleton and a failed request takes priority with retry recovery', async () => {
   jest.mocked(exercisesRepository.list).mockReturnValue(new Promise(() => {}));
   await render();
@@ -107,11 +123,15 @@ test('feedback entry opens the archive and reading a detail marks that item read
   jest.mocked(feedbackRepository.list).mockResolvedValue({ items: [item] });
   const markRead = jest.spyOn(feedbackRepository, 'markRead').mockResolvedValue(undefined);
   await render();
+  expect(button(t('student.trainingHistoryView.copy012')).props.accessibilityValue).toEqual({ text: '1' });
+  expect(textOf(renderer.root.findByProps({ testID: 'growth-header-unread' }))).toBe('1');
   expect(texts()).toContain(t('student.trainingHistoryView.copy010', [1]));
   expect(texts()).not.toContain(item.text);
   act(() => button(t('student.trainingHistoryView.copy009')).props.onPress());
   expect(texts()).toContain(item.text);
   await act(async () => { button(item.text).props.onPress(); });
   expect(markRead.mock.calls[0][0]).toBe(item.id);
+  expect(button(t('student.trainingHistoryView.copy012')).props.accessibilityValue).toEqual({ text: '' });
+  expect(renderer.root.findAllByProps({ testID: 'growth-header-unread' })).toHaveLength(0);
   expect(texts()).toContain(item.text);
 });

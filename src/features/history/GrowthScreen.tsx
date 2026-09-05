@@ -19,7 +19,6 @@ import {
   AppButton,
   Card,
   useColors,
-  LargeTitleBar,
   StatTile,
   font,
   radius,
@@ -28,9 +27,11 @@ import {
   typography,
 } from '@/design';
 import { formatKg } from '@/features/dashboard/model';
+import { selectUnreadFeedbackCount } from '@/features/dashboard/feedback-inbox';
 import { useStudentTabsStore } from '@/features/student-tabs';
 
 import { GrowthE1RMCard } from './GrowthE1RMCard';
+import { GrowthScreenHeader } from './GrowthScreenHeader';
 import { HistoryEntriesView } from './HistoryEntriesView';
 import {
   feedbackDate,
@@ -47,6 +48,7 @@ export function GrowthScreen() {
   const router = useRouter();
   const vm = useHistoryViewModel(studentId);
   const feedbackJumpToken = useStudentTabsStore((state) => state.feedbackJumpToken);
+  const bumpFeedbackJump = useStudentTabsStore((state) => state.bumpFeedbackJump);
   const markFeedbackRead = useMarkFeedbackRead();
   const scrollRef = useRef<ScrollView>(null);
   const feedbackY = useRef<number | null>(null);
@@ -76,14 +78,23 @@ export function GrowthScreen() {
     scrollRef.current?.scrollTo({ y: Math.max(0, feedbackY.current - spacing.base), animated: true });
   }, [feedbackJumpToken, vm.state.status]);
 
+  const unreadCount = vm.state.status === 'loaded'
+    ? selectUnreadFeedbackCount(vm.state.feedback.filter(item => !locallyRead.has(item.id)))
+    : 0;
+  const header = <GrowthScreenHeader unreadCount={unreadCount} onOpenChat={() => {
+    bumpFeedbackJump();
+    router.navigate('/(student)/growth');
+  }} />;
+
   if (vm.state.status === 'idle' || vm.state.status === 'loading') {
     return <Screen accessibilityLabel={t('student.trainingHistoryView.copy021')} style={styles.content}>
-      <LargeTitleBar title={t('student.trainingHistoryView.copy013')} />
+      {header}
       {[0, 1, 2].map(index => <View key={index} style={{ height: 220, backgroundColor: colors.surfaceElevated, borderRadius: radius.card }} />)}
     </Screen>;
   }
   if (vm.state.status === 'error') {
-    return <Screen style={styles.center}>
+    return <Screen style={styles.content}>
+      {header}
       <Card style={styles.failureCard}>
         <Text style={styles.errorTitle}>{t('student.trainingHistoryView.copy022')}</Text>
         {vm.state.error instanceof Error ? <Text style={styles.explainer}>{vm.state.error.message}</Text> : null}
@@ -114,7 +125,7 @@ export function GrowthScreen() {
           />
         }
         showsVerticalScrollIndicator={false}>
-        <LargeTitleBar title={t('student.trainingHistoryView.copy013')} subtitle={t('student.trainingHistoryView.copy014')} style={{ paddingHorizontal: 0 }} />
+        {header}
         <View style={styles.curveList}>
           {LIFT_FAMILIES.map(family => <GrowthE1RMCard key={family} curve={data.curves[family]} isZeroTraining={isZeroTraining} onToday={() => router.navigate('/(student)/today')} />)}
         </View>
@@ -145,17 +156,17 @@ export function GrowthScreen() {
           }}
           style={styles.section}>
           <Text style={styles.sectionTitle}>{t('student.trainingHistoryView.copy002')}</Text>
-          <GrowthNavigationCard title={t('student.trainingHistoryView.copy009')} subtitle={data.feedback.length ? t('student.trainingHistoryView.copy010', [data.feedback.length]) : t('student.trainingHistoryView.copy011')} icon="message-text-outline" disabled={data.feedback.length === 0} onPress={() => setArchiveOpen(true)} />
+          <GrowthNavigationCard title={t('student.trainingHistoryView.copy009')} subtitle={data.feedback.length ? t('student.trainingHistoryView.copy010', [data.feedback.length]) : t('student.trainingHistoryView.copy011')} icon="message-outline" disabled={data.feedback.length === 0} onPress={() => setArchiveOpen(true)} />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('student.trainingHistoryView.copy003')}</Text>
-          <Card style={styles.statsRow}>
-            <StatCard label={t('student.trainingHistoryView.copy018')} value={isZeroTraining ? '—' : String(data.stats.trainingSessionCount)} />
-            <StatCard label={t('student.trainingHistoryView.copy019')} value={isZeroTraining ? '—' : String(data.stats.trainingWeekCount)} />
-            <StatCard label={t('student.trainingHistoryView.copy020')} value={isZeroTraining ? '—' : data.stats.totalVolumeKg.toLocaleString(getLocale())} unit="kg" />
+          <Card style={[styles.statsRow, { paddingHorizontal: spacing.space4, paddingVertical: spacing.space4, elevation: 0, shadowOpacity: 0 }]}>
+            <StatCard label={t('student.trainingHistoryView.copy018')} value={isZeroTraining ? '—' : String(data.stats.trainingSessionCount)} dimmed={isZeroTraining} />
+            <StatCard label={t('student.trainingHistoryView.copy019')} value={isZeroTraining ? '—' : String(data.stats.trainingWeekCount)} dimmed={isZeroTraining} />
+            <StatCard label={t('student.trainingHistoryView.copy020')} value={isZeroTraining ? '—' : data.stats.totalVolumeKg.toLocaleString(getLocale(), { maximumFractionDigits: 0 })} unit="kg" dimmed={isZeroTraining} />
           </Card>
-          <GrowthNavigationCard title={t('student.trainingHistoryView.copy004')} subtitle={t(isZeroTraining ? 'student.trainingHistoryView.copy005' : 'student.trainingHistoryView.copy006')} icon="history" disabled={isZeroTraining} onPress={() => { void track(AnalyticsEvent.ProgressViewed, { tab: 'history' }); setHistoryOpen(true); }} />
+          <GrowthNavigationCard title={t('student.trainingHistoryView.copy004')} subtitle={t(isZeroTraining ? 'student.trainingHistoryView.copy005' : 'student.trainingHistoryView.copy006')} icon="clock-outline" disabled={isZeroTraining} onPress={() => { void track(AnalyticsEvent.ProgressViewed, { tab: 'history' }); setHistoryOpen(true); }} />
         </View>
 
         <View style={styles.section}>
@@ -188,13 +199,13 @@ export function GrowthScreen() {
   );
 }
 
-function GrowthNavigationCard({ title, subtitle, icon, disabled, onPress }: { title: string; subtitle: string; icon: 'history' | 'message-text-outline'; disabled: boolean; onPress: () => void }) {
+function GrowthNavigationCard({ title, subtitle, icon, disabled, onPress }: { title: string; subtitle: string; icon: 'clock-outline' | 'message-outline'; disabled: boolean; onPress: () => void }) {
   const { colors, styles } = useStyles();
   return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}>
     {({ pressed }) => <Card style={[styles.historyEntry, disabled && { opacity: 0.55 }, pressed && styles.pressed]}>
-      <View style={styles.historyIcon}><MaterialCommunityIcons color={colors.gold500} name={icon} size={23} /></View>
+      <View style={styles.historyIcon}><MaterialCommunityIcons color={colors.gold500} name={icon} size={19} /></View>
       <View style={styles.historyText}><Text style={styles.historyTitle}>{title}</Text><Text style={styles.historySubtitle}>{subtitle}</Text></View>
-      <MaterialCommunityIcons color={colors.textMuted} name="chevron-right" size={23} />
+      <MaterialCommunityIcons color={colors.textDim} name="chevron-right" size={14} />
     </Card>}
   </Pressable>;
 }
@@ -239,12 +250,14 @@ function FeedbackRow({
   );
 }
 
-function StatCard({ label, value, unit }: { label: string; value: string; unit?: string }) {
-  const { styles } = useStyles();
+function StatCard({ label, value, unit, dimmed }: { label: string; value: string; unit?: string; dimmed: boolean }) {
+  const { colors, styles } = useStyles();
   return <View style={styles.statCard}>
-    <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statValue}>{value}</Text>
-    {unit ? <Text style={styles.statLabel}>{unit}</Text> : null}
     <Text style={styles.statLabel}>{label}</Text>
+    <View style={styles.statValueRow}>
+      <Text adjustsFontSizeToFit minimumFontScale={0.65} numberOfLines={1} style={[styles.statValue, dimmed && { color: colors.textDim }]}>{value}</Text>
+      {unit ? <Text style={[styles.statUnit, dimmed && { color: colors.textDim }]}>{unit}</Text> : null}
+    </View>
   </View>;
 }
 
@@ -290,14 +303,13 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
   failureCard: { gap: 14, padding: 20 },
   comparisonTile: { flex: 1, padding: 12, gap: 8 },
   breakthrough: { color: colors.success, ...typography.footnote },
-  center: { alignItems: 'center', gap: spacing.base, justifyContent: 'center', padding: spacing.lg },
   errorTitle: { color: colors.textPrimary, ...typography.headline },
   retryButton: { minWidth: 128 },
-  content: { gap: 14, padding: 20, paddingBottom: spacing.xxl },
+  content: { gap: 14, paddingHorizontal: spacing.pageHorizontal, paddingTop: 6, paddingBottom: 28 },
   pressed: { opacity: 0.6 },
   explainer: { color: colors.textSecondary, ...typography.footnote },
   curveList: { gap: 14 },
-  section: { gap: spacing.md, marginTop: spacing.sm },
+  section: { gap: 14, marginTop: spacing.space2 },
   sectionTitle: { color: colors.textSecondary, ...font.mono(13) },
   feedbackList: { overflow: 'hidden', paddingHorizontal: spacing.base },
   feedbackRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, justifyContent: 'space-between', minHeight: 78, paddingVertical: spacing.md },
@@ -310,14 +322,16 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
   feedbackMeta: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   feedbackDate: { color: colors.textMuted, ...typography.caption },
   statsRow: { flexDirection: 'row', gap: spacing.sm },
-  statCard: { alignItems: 'center', flex: 1, gap: spacing.sm, minHeight: 88, justifyContent: 'center', padding: spacing.sm },
-  statValue: { color: colors.textPrimary, ...font.mono(20, 'bold') },
-  statLabel: { color: colors.textSecondary, textAlign: 'center', ...typography.caption },
-  historyEntry: { alignItems: 'center', flexDirection: 'row', gap: spacing.md, padding: spacing.base },
-  historyIcon: { alignItems: 'center', backgroundColor: colors.goldSoft, borderRadius: radius.md, height: 42, justifyContent: 'center', width: 42 },
-  historyText: { flex: 1, gap: spacing.xs },
-  historyTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-  historySubtitle: { color: colors.textSecondary, ...typography.footnote },
+  statCard: { alignItems: 'flex-start', flex: 1, gap: spacing.space1 },
+  statValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2, maxWidth: '100%' },
+  statValue: { color: colors.textPrimary, ...font.mono(30, 'bold'), flexShrink: 1 },
+  statUnit: { color: colors.textMuted, ...font.mono(12, 'semibold') },
+  statLabel: { color: colors.textMuted, ...font.body(11) },
+  historyEntry: { alignItems: 'center', flexDirection: 'row', gap: spacing.space3, paddingVertical: 14, paddingHorizontal: 15, minHeight: 68, elevation: 0, shadowOpacity: 0 },
+  historyIcon: { alignItems: 'center', backgroundColor: colors.surfaceRaised, borderRadius: radius.control, height: 40, justifyContent: 'center', width: 40 },
+  historyText: { flex: 1, gap: 2 },
+  historyTitle: { color: colors.textPrimary, ...font.body(15, 'bold') },
+  historySubtitle: { color: colors.textMuted, ...font.body(12) },
   volumeCard: { paddingHorizontal: 14, paddingTop: 15, paddingBottom: spacing.space3 },
   detailScreen: { paddingHorizontal: spacing.base },
   detailHeader: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.base },
