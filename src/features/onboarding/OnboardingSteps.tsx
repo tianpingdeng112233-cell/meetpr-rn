@@ -54,9 +54,6 @@ function metricStored(value: string, factor: number): string {
 function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const imperial = form.unitPreference === 'lb';
-  const [heightText, setHeightText] = useState(() => metricDisplay(form.heightCm, 0.3937007874));
-  const [weightText, setWeightText] = useState(() => metricDisplay(form.weightKg, 2.2046226218));
   return (
     <View style={styles.section}>
       <FieldLabel>{"单位" /* TODO(i18n:missing) */}</FieldLabel>
@@ -76,41 +73,53 @@ function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
       <View style={errorFields.has('birthDate') && styles.dateError}>
         <DateWheel {...onboardingDateBounds().birth} onChange={(birthDate) => update({ birthDate })} value={form.birthDate} />
       </View>
-      <View style={styles.twoColumns}>
-        <View style={styles.column}>
-          <FieldLabel>{t('student.step1BasicsSection.copy002')}({imperial ? 'in' : 'cm'})</FieldLabel>
-          <FormInput
-            error={errorFields.has('heightCm')}
-            keyboardType="decimal-pad"
-            onBlur={() => setHeightText(metricDisplay(form.heightCm, 0.3937007874))}
-            onChangeText={(value) => {
-              setHeightText(value);
-              update({ heightCm: imperial ? metricStored(value, 0.3937007874) : decimalInput(value) });
-            }}
-            placeholder={imperial ? '70' : '178'}
-            value={imperial ? heightText : form.heightCm}
-          />
-        </View>
-        <View style={styles.column}>
-          <FieldLabel>{t('student.step1BasicsSection.copy003')}({imperial ? 'lb' : 'kg'})</FieldLabel>
-          <FormInput
-            error={errorFields.has('weightKg')}
-            keyboardType="decimal-pad"
-            onBlur={() => setWeightText(metricDisplay(form.weightKg, 2.2046226218))}
-            onChangeText={(value) => {
-              setWeightText(value);
-              update({ weightKg: imperial ? metricStored(value, 2.2046226218) : decimalInput(value) });
-            }}
-            placeholder={imperial ? '183' : '83'}
-            value={imperial ? weightText : form.weightKg}
-          />
-        </View>
+      <BodyMeasurementsSection errorFields={errorFields} form={form} update={update} />
+    </View>
+  );
+}
+
+export function BodyMeasurementsSection({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const imperial = form.unitPreference === 'lb';
+  const [heightText, setHeightText] = useState(() => metricDisplay(form.heightCm, 0.3937007874));
+  const [weightText, setWeightText] = useState(() => metricDisplay(form.weightKg, 2.2046226218));
+  return (
+    <View style={styles.twoColumns}>
+      <View style={styles.column}>
+        <FieldLabel>{t('student.step1BasicsSection.copy002')}({imperial ? 'in' : 'cm'})</FieldLabel>
+        <FormInput
+          error={errorFields.has('heightCm')}
+          keyboardType="decimal-pad"
+          onBlur={() => setHeightText(metricDisplay(form.heightCm, 0.3937007874))}
+          onChangeText={(value) => {
+            setHeightText(value);
+            update({ heightCm: imperial ? metricStored(value, 0.3937007874) : decimalInput(value) });
+          }}
+          placeholder={imperial ? '70' : '178'}
+          value={imperial ? heightText : form.heightCm}
+        />
+      </View>
+      <View style={styles.column}>
+        <FieldLabel>{t('student.step1BasicsSection.copy003')}({imperial ? 'lb' : 'kg'})</FieldLabel>
+        <FormInput
+          error={errorFields.has('weightKg')}
+          keyboardType="decimal-pad"
+          onBlur={() => setWeightText(metricDisplay(form.weightKg, 2.2046226218))}
+          onChangeText={(value) => {
+            setWeightText(value);
+            update({ weightKg: imperial ? metricStored(value, 2.2046226218) : decimalInput(value) });
+          }}
+          placeholder={imperial ? '183' : '83'}
+          value={imperial ? weightText : form.weightKg}
+        />
       </View>
     </View>
   );
 }
 
-function BackgroundStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+
+export function BackgroundStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const yearsLabel =
@@ -262,7 +271,7 @@ function LiftsStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   );
 }
 
-function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+export function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const legacyEquipment = form.equipmentOverrides.filter((token) => !EQUIPMENT_CATALOG.some((item) => item.token === token));
@@ -338,24 +347,24 @@ function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   );
 }
 
-function RecoveryStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+export function RecoveryStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
       <Scale
         error={errorFields.has('dailyLifeIntensity')}
-        footnote={"按身体消耗选择 — 久坐 ≠ 低消耗,也请考虑通勤和站立时间。" /* TODO(i18n:missing) */}
-        labels={['轻松' /* TODO(i18n:missing) */, '很累' /* TODO(i18n:missing) */]}
+        footnote={t('student.step5RecoverySection.copy002')}
+        labels={[t('student.onboardingLabels.copy048'), t('student.onboardingLabels.copy052')]}
         onChange={(dailyLifeIntensity) => update({ dailyLifeIntensity })}
         title={t('student.step5RecoverySection.copy001')}
         value={form.dailyLifeIntensity}
       />
-      <Scale error={errorFields.has('lifeStress')} labels={[t('student.onboardingLabels.copy048'), '很高' /* TODO(i18n:missing) */]} onChange={(lifeStress) => update({ lifeStress })} title={t('student.step5RecoverySection.copy003')} value={form.lifeStress} />
+      <Scale error={errorFields.has('lifeStress')} labels={[t('student.onboardingLabels.copy048'), t('student.onboardingLabels.copy052')]} onChange={(lifeStress) => update({ lifeStress })} title={t('student.step5RecoverySection.copy003')} value={form.lifeStress} />
       <Scale
         error={errorFields.has('recoverySpeed')}
-        footnote={"按训练后恢复到正常状态所需时间选择,拿不准就选 3。" /* TODO(i18n:missing) */}
-        labels={['很快' /* TODO(i18n:missing) */, '很慢' /* TODO(i18n:missing) */]}
+        footnote={t('student.step5RecoverySection.copy005')}
+        labels={[t('student.onboardingLabels.copy054'), t('student.onboardingLabels.copy058')]}
         onChange={(recoverySpeed) => update({ recoverySpeed })}
         title={t('student.step5RecoverySection.copy004')}
         value={form.recoverySpeed}
@@ -376,17 +385,33 @@ function MaterialsStep({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
           <Text style={styles.disabledText}>{t('student.step6MaterialsSection.copy005')}</Text>
         </Card>
       ))}
-      <FieldLabel>{t('student.step6MaterialsSection.copy004')}</FieldLabel>
-      <MultiChoice choices={MUSCLE_GROUPS.map((value) => ({ value, label: MUSCLE_GROUP_LABELS[value] }))} max={3} onChange={(muscleGroupsToStrengthen) => update({ muscleGroupsToStrengthen })} selected={form.muscleGroupsToStrengthen} />
+      <MusclesSection form={form} update={update} />
     </View>
   );
+}
+
+export function MusclesSection({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
+  return <>
+      <FieldLabel>{t('student.step6MaterialsSection.copy004')}</FieldLabel>
+      <MultiChoice choices={MUSCLE_GROUPS.map((value) => ({ value, label: MUSCLE_GROUP_LABELS[value] }))} max={3} onChange={(muscleGroupsToStrengthen) => update({ muscleGroupsToStrengthen })} selected={form.muscleGroupsToStrengthen} />
+  </>;
 }
 
 function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <View style={styles.section}>
+  return <View style={styles.section}>
+    <InjuriesSection form={form} update={update} errorFields={errorFields} />
+    <CompetitionSection form={form} update={update} errorFields={errorFields} />
+      <FieldLabel>{t('student.step7ExtrasSection.copy009')}</FieldLabel>
+      <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder={t('student.step7ExtrasSection.copy010')} style={styles.textArea} value={form.noteToCoach} />
+  </View>;
+}
+
+export function InjuriesSection({ form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return <>
       <FieldLabel>{t('student.myProfileView.copy005')}</FieldLabel>
       <FormInput
         multiline
@@ -395,8 +420,15 @@ function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
         style={styles.textArea}
         value={form.injuryNotes}
       />
-      <FieldLabel>{"伤病部位" /* TODO(i18n:missing) */}</FieldLabel>
+      <FieldLabel>{t('student.step7ExtrasSection.copy003')}</FieldLabel>
       <MultiChoice choices={INJURY_AREAS.map((value) => ({ value, label: INJURY_AREA_LABELS[value] }))} max={8} onChange={(injuryAreas) => update({ injuryAreas })} selected={form.injuryAreas} />
+  </>;
+}
+
+export function CompetitionSection({ errorFields, form, update }: Omit<Props, 'step'>) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return <>
       <FieldLabel>{t('student.step7ExtrasSection.copy004')}</FieldLabel>
       <ChoiceGroup
         choices={[
@@ -417,14 +449,11 @@ function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
               value={form.competitionDate}
             />
           </View>
-          <FieldLabel>{"目标体重级别" /* TODO(i18n:missing) */}</FieldLabel>
+          <FieldLabel>{t('student.step7ExtrasSection.copy007')}</FieldLabel>
           <FormInput onChangeText={(targetWeightClass) => update({ targetWeightClass })} placeholder={t('student.step7ExtrasSection.copy008')} value={form.targetWeightClass} />
         </>
       ) : null}
-      <FieldLabel>{t('student.step7ExtrasSection.copy009')}</FieldLabel>
-      <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder={t('student.step7ExtrasSection.copy010')} style={styles.textArea} value={form.noteToCoach} />
-    </View>
-  );
+  </>;
 }
 
 export function OnboardingStepContent(props: Props) {

@@ -204,7 +204,7 @@ export function DiscreteSlider({
 
 const ROW_HEIGHT = 42;
 
-function Wheel({
+export function NumberWheel({
   onChange,
   options,
   value,
@@ -290,9 +290,9 @@ export function DateWheel({
   };
   return (
     <View style={styles.dateWheel}>
-      <Wheel onChange={(next) => setPart(next, month, day)} options={years} value={year} />
-      <Wheel onChange={(next) => setPart(year, next, day)} options={months} value={month} />
-      <Wheel onChange={(next) => setPart(year, month, next)} options={days} value={day} />
+      <NumberWheel onChange={(next) => setPart(next, month, day)} options={years} value={year} />
+      <NumberWheel onChange={(next) => setPart(year, next, day)} options={months} value={month} />
+      <NumberWheel onChange={(next) => setPart(year, month, next)} options={days} value={day} />
     </View>
   );
 }

@@ -67,7 +67,7 @@
 | Readiness | 🔨 | W1-d;训练 tab opt-in 两步 sheet、per-day skip、心形完成态;待模拟器走查对齐 |
 | FeedbackInbox | 🔨 | W1-f;共享 VM/未读计数+Today 内联卡/通知中心已接;成长列表消费接口已留 |
 | VideoUpload | ☐ | 悬空 worktree `feat/w1h-video`(旧基线「选片+压缩+分片」口径,未 commit);**与新基线视频链差距最大,收货前重对 063–078** |
-| MyProfile | ☐ | |
+| MyProfile | 🔨 | W1-p：v2/v3 七块资料卡、三态防困死兜底、复用向导行编辑且结构性锁 1RM、外观/分 RPE 休息/本地周提醒、改密码/全量 CSV/注销；lint/tsc/Jest 与离线 Android bundle 验证见 CODEX-JOURNAL。ADB 5037 被 sandbox 拒绝，端点已核本地 backend origin/staging 源码，Global 在线与模拟器截图待验收 |
 | 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
 | Evaluation | — | 硬封存,不复刻 UI,仅 BindGate 跳过逻辑 |
 
