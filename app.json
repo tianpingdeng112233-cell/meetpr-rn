@@ -30,6 +30,23 @@
       ],
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "cameraPermission": "允许 MeetPR 拍摄训练视频。",
+          "microphonePermission": "允许 MeetPR 录制训练视频声音。",
+          "photosPermission": "允许 MeetPR 选择训练视频。"
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "允许 MeetPR 读取训练视频。",
+          "savePhotosPermission": "允许 MeetPR 保存你拍摄的训练视频。",
+          "granularPermissions": ["video"]
+        }
+      ],
+      "react-native-compressor",
+      [
         "expo-build-properties",
         {
           "android": {

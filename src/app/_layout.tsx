@@ -90,11 +90,24 @@ function ThemedRoot() {
     },
   };
   const bootstrap = useSessionStore((state) => state.bootstrap);
+  const user = useSessionStore((state) => state.user);
   const [privacyNoticeVisible, setPrivacyNoticeVisible] = useState(false);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    if (
+      user?.role !== 'coached_student' &&
+      user?.role !== 'self_train_student'
+    ) {
+      return;
+    }
+    void import('@/features/training/video-upload/store')
+      .then(({ hydrateVideoUploads }) => hydrateVideoUploads())
+      .catch(() => undefined);
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     let mounted = true;
