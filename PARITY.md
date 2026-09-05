@@ -84,12 +84,12 @@
 | StudentRoster | ☐ | |
 | StudentDetail | ✅ | W2-b:全屏 Header 四态 + 五段/训练日/视频角标纯回放;exercise-stats 服务端成长,只读反馈/资料;47 suites / 309 tests。AVD 安装受 ADB listener 权限阻断,截图/Global 实机验收待补;见 JOURNAL W2-b (integration/w2 教练号模拟器已走查) |
 | BindQueue | ☐ | |
-| Receiving | ✅ | W2-c:合并收件箱/同源 badge selector、学员日分组队列、反馈工作台/markers/组信息/身份跳转;W2-a 壳接 badge 待合并。播放器为同依赖独立封装(不改 training,组件复用例外见 JOURNAL);ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
+| Receiving | 🔨 | W3-e：视频收件/待处理列表页头统一 CoachNavHeader、视频行与空/失败/加载态对齐；本轮 AVD 视觉待验收。W2-c:合并收件箱/同源 badge selector、学员日分组队列、反馈工作台/markers/组信息/身份跳转;W2-a 壳接 badge 待合并。播放器为同依赖独立封装(不改 training,组件复用例外见 JOURNAL);ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
 | Chat | 🔨 | W3-s3 教练会话对齐 ConversationView(.directional/.compactPill),组卡共用；页头/错误空态/定向气泡/图片全屏/pending 重试/自动历史分页/compactPill 已接；保留 read/cache/30s 轮询。badge 按裁决仅传参，待 W3-b 显示；79 suites·533 tests、lint/tsc 与 i18n/tokens 守卫通过，AVD 视觉待验收。W2-c 旧版已在 integration/w2 走查，详见 JOURNAL W3-s3 |
 | InviteCodes | ☐ | |
 | Planning / PlanningWorkspace | — | W2-a 按 coach-v2 §7 删除教练 planning tab/路由；v1 无 app 排计划入口 |
 | MyProfile | ☐ | |
-| InviteCodes | ✅ | W2-d:永久码显式生成/重生成、单次/时限 7·30·自定义 1–365、五态/复制/左滑撤销、写后重拉;lint/tsc/46 suites·322 Jest 通过。expo-clipboard 待 Claude 安装并接 adapter;ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
+| InviteCodes | 🔨 | W3-e：页头统一 CoachNavHeader（居中内联标题/chevron 返回），其余内容保留；本轮 AVD 视觉待验收。W2-d:永久码显式生成/重生成、单次/时限 7·30·自定义 1–365、五态/复制/左滑撤销、写后重拉;lint/tsc/46 suites·322 Jest 通过。expo-clipboard 待 Claude 安装并接 adapter;ADB socket 被拒,AVD 截图待补 (integration/w2 教练号模拟器已走查) |
 | Planning / PlanningWorkspace | ☐ | 范围=iOS 实际保留功能,开工前现场核实,不扩权 |
 | MyProfile | ✅ | W2-d:姓名/邀请码卡三态、裸码复制+2 s toast、Help 四 FAQ/禁用联系、Privacy 三行日期、版本/登出确认与 session 接线;JS bundle 导出通过。剪贴板原生依赖与 AVD 验收待补 (integration/w2 教练号模拟器已走查) |
 | Evaluation | — | 同上封存 |

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActivityIndicator, Pressable, Text, View, type PressableProps } from 'react-native';
-import { font, radius, useColors } from '@/design';
+import { font, radius, spacing, useColors } from '@/design';
 import { t, type TranslationKey } from '@/i18n';
 export function Pill({ label, mono = false, ...props }: PressableProps & { label: string; mono?: boolean }) {
   const colors = useColors();
@@ -10,6 +10,13 @@ export function Pill({ label, mono = false, ...props }: PressableProps & { label
 export function ReceivingState({ state, pending = false, retry }: { state: 'loading' | 'failed' | 'empty'; pending?: boolean; retry: () => void }) {
   const colors = useColors();
   const title: TranslationKey = state === 'loading' ? 'coach.inbox.loading' : state === 'failed' ? 'coach.inbox.loadFailed' : pending ? 'coach.videoFeedback.noPendingVideos' : 'coach.inbox.emptyTitle';
+  if (pending) return <View style={{ paddingVertical: state === 'loading' ? spacing.point32 : spacing.point18, gap: spacing.space4, alignItems: 'center' }}>
+    {state === 'loading' ? <ActivityIndicator testID="coach.inbox.loading" accessibilityLabel={t(title)} color={colors.gold500} /> : <>
+      <MaterialCommunityIcons name={state === 'failed' ? 'alert-outline' : 'check-circle-outline'} size={44} color={colors.textTertiary} />
+      <Text style={{ ...font.body(20, 'bold'), color: colors.textPrimary, textAlign: 'center' }}>{t(title)}</Text>
+      {state === 'empty' ? <Text style={{ ...font.body(15), color: colors.textSecondary, textAlign: 'center' }}>{t('coach.videoFeedback.noPendingVideosSubtitle')}</Text> : null}
+    </>}
+  </View>;
   return <View style={{ padding: 32, gap: 16, alignItems: 'center' }}>
     {state === 'loading' ? <ActivityIndicator testID="coach.inbox.loading" accessibilityLabel={t(title)} color={colors.gold500} /> : <View style={{ backgroundColor: colors.surfaceCard, borderRadius: 26, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name={state === 'failed' ? 'alert-outline' : pending ? 'check-circle-outline' : 'message-outline'} size={20} color={state === 'failed' ? colors.danger : colors.success} /></View>}
     <Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary, textAlign: 'center' }}>{t(title)}</Text>
