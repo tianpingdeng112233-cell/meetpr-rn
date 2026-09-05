@@ -35,7 +35,7 @@ function tolerateCamelCase(aliases: Record<string, string>) {
 export const UserSchema = z.preprocess(
   tolerateCamelCase({ created_at: 'createdAt' }),
   z.object({
-    id: z.string().uuid(),
+    id: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
     phone: z.string(),
     role: UserRoleSchema,
     created_at: Iso8601DateTimeSchema,
