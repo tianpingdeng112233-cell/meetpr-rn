@@ -1,0 +1,62 @@
+{
+"student.progression.backToTraining": {
+"en": "Back to training",
+"zh": "返回训练"
+},
+"student.progression.completedSets": {
+"en": "Sets completed",
+"zh": "完成组数"
+},
+"student.progression.dayName": {
+"en": "{0} day",
+"zh": "{0}日"
+},
+"student.progression.notLatestCompletion": {
+"en": "Only the latest completed day can be undone",
+"zh": "只能撤销最近完成的一天"
+},
+"student.progression.perSide": {
+"en": "{0}kg / side",
+"zh": "{0}kg / 侧"
+},
+"student.progression.prFirst": {
+"en": "First record",
+"zh": "第一个纪录点"
+},
+"student.progression.prPrevious": {
+"en": "Previously {0} kg",
+"zh": "此前 {0} kg"
+},
+"student.progression.prTitle": {
+"en": "Your {0} e1RM improved today!",
+"zh": "今天你的{0} e1RM 突破!"
+},
+"student.progression.privateNote": {
+"en": "Private training notes, saved on this device",
+"zh": "仅自己可见的训练笔记,保存在本机"
+},
+"student.progression.releaseToConfirm": {
+"en": "Release to confirm",
+"zh": "松开确认"
+},
+"student.progression.saving": {
+"en": "Saving…",
+"zh": "保存中…"
+},
+"student.progression.suggestionE1RM": {
+"en": "Suggested · Based on e1RM {0}",
+"zh": "建议 · 基于 e1RM {0}"
+},
+"student.progression.suggestionLast": {
+"en": "Suggested · Last weight",
+"zh": "建议 · 上次重量"
+},
+"student.progression.suggestionPrevious": {
+"en": "Suggested · Same as previous set",
+"zh": "建议 · 同上组"
+},
+"student.progression.undoWindowPassed": {
+"en": "Completion can only be undone today",
+"zh": "只能在当天撤销"
+}
+}

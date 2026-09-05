@@ -16,6 +16,7 @@ export const palette = {
   goldMuted: { light: '#B8935A', dark: '#B8935A' },
   goldGradientStart: { light: '#D97706', dark: '#E08F0F' },
   goldGradientEnd: { light: '#F5B93C', dark: '#FFC93C' },
+  holdTrack: { light: '#17120A', dark: '#17120A' },
   goldBarDeep: { light: '#A9731C', dark: '#A9731C' },
   bgBase: { light: '#F5F6F8', dark: '#0A0A0C' },
   bgInset: { light: '#FAFAFB', dark: '#101014' },

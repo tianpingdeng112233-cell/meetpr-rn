@@ -14,11 +14,11 @@ export function synthesizeDrafts(
       [...exercise.sets]
         .sort((a, b) => a.set_number - b.set_number)
         .map((planSet, setIndex) => {
-          const log = logs.find(
+          const log = logs.filter(
             (candidate) =>
               candidate.plan_exercise_id === exercise.id &&
               candidate.set_index === setIndex,
-          );
+          ).sort((a, b) => Number(a.assumed) - Number(b.assumed) || new Date(b.logged_at).getTime() - new Date(a.logged_at).getTime())[0];
           const prescription = planSetPrescription(planSet);
           return {
             stableSetId: planSet.id,

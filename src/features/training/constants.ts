@@ -5,7 +5,6 @@ export const TRAINING_LIMITS = Object.freeze({
   restStepSeconds: 30,
   prReplayDelayMs: 1_500,
   transientBannerMs: 3_000,
-  slideCompletionThreshold: 0.85,
   barWeightKg: 20,
   collarWeightPerSideKg: 2.5,
   weightStepKg: 2.5,

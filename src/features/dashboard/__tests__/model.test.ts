@@ -1,7 +1,6 @@
 import { beforeEach, afterEach, describe, expect, test } from '@jest/globals';
 
 import { setLocaleOverride } from '@/i18n';
-import { ApiError, type ApiErrorCode } from '@/api/client';
 import {
   buildExerciseIndex,
   type Exercise,
@@ -14,50 +13,11 @@ import type { E1RMSeries } from '@/domain/e1rm';
 import {
   chineseMonthDay,
   chineseWeekday,
-  dashboardCTA,
   dashboardE1RMRange,
   e1RMPeriodLabel,
-  mondayOffset,
-  planShiftErrorCopy,
   replayE1RMSeries,
   resolveDashboardLifts,
-  shouldOfferPlanShift,
-  unsupportedPlanShiftCopy,
 } from '../model';
-import type { DashboardWeekDay } from '../types';
-
-function dashboardDay(status: DashboardWeekDay['status']): DashboardWeekDay {
-  if (status === 'noPlan') {
-    return {
-      date: '2026-07-19',
-      day: null,
-      lift: null,
-      completion: 0,
-      status,
-    };
-  }
-  return {
-    date: '2026-07-19',
-    day: {
-      id: '10000000-0000-4000-8000-000000000001',
-      plan_id: '10000000-0000-4000-8000-000000000002',
-      day_of_week: 7,
-      week_number: 2,
-      sort_order: 3,
-      shifted_to_date: null,
-      exercises: [],
-    },
-    lift: {
-      exerciseId: '10000000-0000-4000-8000-000000000003',
-      family: 'squat',
-      initial: 'S',
-      name: '深蹲',
-    },
-    completion: status === 'complete' ? 1 : status === 'partial' ? 0.5 : 0,
-    status,
-  };
-}
-
 const plan = {
   id: '10000000-0000-4000-8000-000000000002',
   coach_id: '10000000-0000-4000-8000-000000000004',
@@ -75,120 +35,6 @@ const plan = {
   total_shift_days: 0,
   latest_shift_created_at: null,
 } satisfies PlanSummary;
-
-describe('Dashboard CTA', () => {
-  test('matches all four release states', () => {
-    expect(dashboardCTA(dashboardDay('complete'))).toEqual({
-      interactive: true,
-      label: '今日已完成 · 查看',
-    });
-    expect(dashboardCTA(dashboardDay('partial'))).toEqual({
-      interactive: true,
-      label: '继续 W2D3 · 深蹲',
-    });
-    expect(dashboardCTA(dashboardDay('notStarted'))).toEqual({
-      interactive: true,
-      label: '开始 W2D3 · 深蹲',
-    });
-    expect(dashboardCTA(dashboardDay('noPlan'))).toEqual({
-      interactive: false,
-      label: '今日休息',
-    });
-  });
-});
-
-describe('plan shift gate', () => {
-  test('uses the UTC calendar boundary exactly', () => {
-    const todayDay = dashboardDay('notStarted');
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay,
-        todayLogs: [],
-        now: new Date('2026-07-19T00:00:00.000Z'),
-      }),
-    ).toBe(true);
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay,
-        todayLogs: [],
-        now: new Date('2026-07-18T23:59:59.999Z'),
-      }),
-    ).toBe(false);
-  });
-
-  test('requires notStarted and no same-day log', () => {
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay: dashboardDay('partial'),
-        todayLogs: [],
-        now: new Date('2026-07-19T12:00:00Z'),
-      }),
-    ).toBe(false);
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay: dashboardDay('notStarted'),
-        todayLogs: [{} as never],
-        now: new Date('2026-07-19T12:00:00Z'),
-      }),
-    ).toBe(false);
-  });
-});
-
-describe('plan shift copy', () => {
-  const cases: [ApiErrorCode, string][] = [
-    ['PLAN_NOT_ACTIVE', '当前计划未生效,暂时不能顺延'],
-    ['SHIFT_ONLY_TODAY', '只能顺延今天的训练'],
-    ['ALREADY_STARTED', '今天的训练已经开始,不能顺延或撤销'],
-    ['NOT_PLAN_STUDENT', '只有计划所属学员可以顺延'],
-    ['NO_ACTIVE_SHIFT', '当前没有可撤销的顺延'],
-    ['UNDO_WINDOW_PASSED', '只能在顺延当天撤销,请联系教练调整计划'],
-  ];
-
-  test.each(cases)('maps %s to its exact message', (code, message) => {
-    const operation = code.startsWith('NO_') || code.startsWith('UNDO_') ? 'undo' : 'shift';
-    expect(
-      planShiftErrorCopy(
-        new ApiError('backend', code, { status: 409, code }),
-        operation,
-      ).message,
-    ).toBe(message);
-  });
-
-  test('covers unsupported plus both network fallbacks', () => {
-    expect(unsupportedPlanShiftCopy().message).toBe('当前计划暂不支持顺延');
-    expect(
-      planShiftErrorCopy(
-        new ApiError('backend', 'AUTHORIZATION_FORBIDDEN', {
-          status: 403,
-          code: 'AUTHORIZATION_FORBIDDEN',
-        }),
-        'shift',
-      ).message,
-    ).toBe('当前计划暂不支持顺延');
-    expect(planShiftErrorCopy(new Error('offline'), 'shift').message).toBe(
-      '顺延失败,请检查网络后重试',
-    );
-    expect(planShiftErrorCopy(new Error('offline'), 'undo').message).toBe(
-      '撤销顺延失败,请检查网络后重试',
-    );
-  });
-});
-
-describe('week grid calendar conversion', () => {
-  test('converts iOS Sunday-based weekday to Monday-first offset', () => {
-    expect([1, 2, 3, 4, 5, 6, 7].map(mondayOffset)).toEqual([
-      6, 0, 1, 2, 3, 4, 5,
-    ]);
-  });
-});
 
 describe('e1RM period label', () => {
   const now = new Date('2026-07-29T12:00:00.000Z');
