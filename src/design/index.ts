@@ -3,6 +3,7 @@ export * from './Card';
 export * from './ListRow';
 export * from './Screen';
 export * from './Sparkline';
+export * from './E1RMChart';
 export * from './tokens';
 export * from './fonts';
 export { ThemeProvider, useTheme, useColors, type Appearance } from './theme';

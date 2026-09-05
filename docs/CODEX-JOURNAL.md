@@ -910,3 +910,31 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - `git diff --check` 通过。按 Standards 自查：修改路径在白名单内，无依赖/DTO/API/i18n catalog/token 扩张；按 Spec 自查：工作台布局/交互/角标/标注与本卡对应，记录了白色 scrubber 的明确覆盖口径。
 - **正式 code-review 双子代理工作流未运行**：已读 `/Users/david/.codex/skills/code-review/SKILL.md`，其中要求 “If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.”；本仓缺失该配置，已提示用户调用 `$setup-matt-pocock-skills`，未擅自创建 tracker，也未把自查声称为独立双轴 review。
 - 沙箱无 ADB，本卡未重复尝试原生 build/install 或截图。270 舞台实际排版、Video/标注/scrim/logo 的 Fabric 叠层与触摸、TalkBack、长文案/横竖屏、原生缓冲与末尾状态仍待 AVD `meetpr` 截图验收。PARITY 的 CoachVideoPlayer 行标 🔨，注明「W3-d 工作台形态;⚖️无导出」。
+
+## W3-c — 教练详情成长卡 E1RMChart（2026-09-05）
+
+### 范围与依据
+
+- Worktree `meetpr-rn-wt-w3c-coach-chart` / `feat/w3c-coach-chart`，开工 HEAD `470e0a2d03b7be2ccf9a03e3a5f75b1a86507da5`，工作区 clean。已读 AGENTS、PLAN、PARITY、W2-b JOURNAL、`video-player-charts-v2.md` §4.1、`coach-v2.md` 110–125 行和指定本机 iOS E1RMChart / StudentGrowthView 正典；通过外部文档工具读取 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。开工时无 W3-c JOURNAL 段，指定的学员侧 `history/charts/{growth-geometry.ts,GrowthE1RMChart.tsx}` 在本 worktree 不存在，因此新增独立几何，没有修改或复制学员侧图表。
+- 未 commit/push，未加依赖，未修改 node_modules symlink、DTO/API、tokens 或翻译 catalog。所需语义色与翻译 key 全部已存在。`kg` 保留 iOS/原组件的单位记号，其他文案均调用 t(key)，无 i18n TODO。
+
+### 实装与数值
+
+- `design/e1rm-chart.ts` 提供 yDomain/yTicks/xTicks/monotonePath/lineSegments/symbolRadius。Y padding = max(range×0.15, 5)，空为 [0,100]；整数刻度优选 3–4 个，候选步长为十进数量级上的 1/2/3/4/5/10，全部落在 domain 内。X 从去重且排序后的实际日期中等索引间隔取最多四个，保留首尾，单日期不重复。
+- 新 `design/E1RMChart.tsx`，默认高 90，onLayout 获取实际宽度，不使用会缩放线宽/散点/字体的固定 viewBox。Y 标签区 `max(28, 最长整数字符数×6+8)` pt（常见 28–32），plot 左侧再留 4、右 4、顶 4；底部日期区 14，plot 与日期区间再留 4，90 高时 plot 的 y=4…72（高 68）。首尾 X 标签分别向内对齐，单日期散点/标签居中。
+- Y 横网格 borderSubtle/1pt；两轴 mono10 medium/textMuted，X 无网格，月日使用 `designSystem.date.monthDay %@ %@` 与本地日历。相邻点各一段；curve 用共享相邻切线的 monotone 三次 Hermite（同号斜率调和平均，拐点切线零，同日期竖线），step 为 H→V 的 stepEnd。logged 线 chartLine/0.8、1.2pt、round，圆点面积 36→r=3.3851pt，全宽下不拉伸。
+- 保留 points 与 smoothed/rawEligible 两种入参、origin/confidence/winnerPointID/marksRecord/lineInterpolation/onSelect 类型。imported 线按终点来源用 textTertiary/0.8、dash[5,3]，normal imported 散点 0.65；low diamond 面积24、0.35。教练映射只传 id/date/e1RMKg，默认 logged/normal，无虚线、标注、图例或点击行为。按本卡允许，记录点面积46/日期与 callout、imported 图例、nearest-point onSelect 行为仅留签名与普通 TODO，未启用。a11y 使用主线点数及单点专用 key，SVG 子树隐藏且不接触摸。
+- GrowthSection 已替换三主项卡 Sparkline，id=`family-date`，DATE 字串通过既有 localDate 按设备日历解析，值 Number 转换。总卡 padding16/gap7，标题 mono12 textDisabled，display34/白数值 + baseline body13 textDisabled kg，沿用 Progress 高5/radius.micro/白填充与白底约14%；底行 body11 textDisabled、右侧 mono11。主项卡两个方向显式 padding15（覆盖 Card 原来的14/16），gap6；标题 mono12 semibold textSecondary，display30 + baseline body13 kg，无值 body15 semibold textTertiary，趋势 mono16 bold 对应 success/textTertiary/danger，new/unknown 无箭头；卡间距10。
+- GrowthSection 新增 state/onRetry：loading 居中 spinner/top32；failed body15 semibold textTertiary 居中文案 + 现有主色 AppButton/coach.detail.retry；全空同字级与颜色、top32。StudentDetailScreen 成长段直接传 stats/state/onRetry，三态样式集中在 GrowthSection，重试沿用 model.growth.refetch()。
+
+### 接线授权与视觉验收
+
+- **⚖️David 本会话明确批准的白名单扩展**：`StudentDetailScreen.tsx` 仅修改成长段一处表达式（diff 1 行增/1 行删），将原三态条件替换为 GrowthSection 的 stats/state/onRetry 接线。没有修改其他屏幕段、全局 Loading/Empty 或 hook；加载/失败态现在已到达屏幕，接线无待确认事项。
+- 沙箱无 ADB，未尝试原生 build/install、截图或把组件测试当作视觉验收。Swift Charts 自动刻度与本实现的实际日期采样/整数步长可能不同；monotone 采用连续三次曲线，本机 Swift 以每两点一个 series 声明 LineMark。刻度分布、字体基线、极窄屏标签、TalkBack 与最终90pt观感需 AVD `meetpr` 对照 iOS 截图；PARITY 保留 🔨。
+
+### 红绿、检查与审查
+
+- 使用 tdd skill；测试 seam 由用户预先指定。逐片红→绿证据 `/private/tmp/w3c-{domain,yticks,xticks,path,radius,cards,failure,states,padding}-{red,green}.log`。新增3 suites/14 tests，覆盖 Y domain、整数刻度、四日期/稀疏日期、单/双/三点路径与拐点、重复日期、分段曲线/stepEnd、面积换半径，三卡接线/无点隐藏、重试/加载/空态、Card padding，真实 SVG 轴/线/散点/单数 a11y/en-zh 日期。
+- 接线完成后重跑：`npm run lint` exit0，无 errors/warnings，`/private/tmp/w3c-final-lint.log`；`npx tsc --noEmit` exit0，`/private/tmp/w3c-final-tsc.log`，没有忽略 hovered/typed-routes 错误。全量 `npx jest --runInBand` **77 suites / 455 tests passed**，包括 coach、两条 i18n 守卫、tokens 守卫，`/private/tmp/w3c-final-jest.log`。此前负时区 `TZ=America/Los_Angeles` 两个 UI suites/8 tests 通过，`/private/tmp/w3c-timezone.log`。`git diff --check` 通过。
+- Standards 自查：原白名单及用户明确批准的 Screen 单处接线、语义 token/font/t(key)、无新依赖或 DTO 改动；修正了 Card 的 padding 简写无法覆盖既有轴向 padding 的问题。Spec 自查：图表、卡片及加载/失败/空态均已接；记录点/图例/选择行为按用户允许预留；视觉未验收。
+- 正式 code-review 双代理工作流未启动：已读 `/Users/david/.codex/skills/code-review/SKILL.md`，要求 “If `docs/agents/issue-tracker.md` is missing, tell the user to run `/setup-matt-pocock-skills`.”；本仓缺失该配置，已提示用户调用 `$setup-matt-pocock-skills`，未静默创建 tracker。上述自查不冒充独立双轴审查。
