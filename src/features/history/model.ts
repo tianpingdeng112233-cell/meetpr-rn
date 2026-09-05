@@ -13,15 +13,19 @@ import {
   ninetyDayRecordTrajectory,
   type LiftFamily,
 } from '@/domain/e1rm';
+import { recommendedDate } from '@/domain/plan/sequence';
 import {
   addUtcDays,
   chineseMonthDay,
   e1RMPeriodLabel,
-  effectivePlanEnd,
   replayE1RMSeries,
-  scheduledDate,
   utcDayDistance,
 } from '@/features/dashboard/model';
+
+// Progression model (spec 071): plan end is the coach's end_date; shift offsets are no longer applied.
+const effectivePlanEnd = (plan: { end_date: string }): string => plan.end_date;
+// Recommended date is the anchor_weekday-aware position projection (spec 072 §E3).
+const scheduledDate = recommendedDate;
 
 import type {
   GrowthCurve,
