@@ -11,6 +11,7 @@ import { gymDayText } from '@/features/training/policy';
 import { AccountSecuritySection } from '@/features/account/AccountSecuritySection';
 import { MyProfileAppearanceRow } from './MyProfileAppearanceRow';
 import { MyProfileHeader } from './MyProfileHeader';
+import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { MyProfileOneRMCard, MyProfileRecoveryRow } from './MyProfileCards';
 import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
 import { TrainingReminderSettingsScreen } from '@/features/settings/TrainingReminderSettingsScreen';
@@ -65,9 +66,10 @@ function LoadedProfile({ studentId, profile }: { studentId: string; profile: Onb
 export function MyProfileScreen() {
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const profile = useOnboardingProfile(studentId);
+  const chat = useOpenCoachChat(studentId);
   const colors = useColors();
   return <Screen edges={['top']}><ScrollView contentContainerStyle={{ padding: 20, gap: 14, paddingBottom: 32 }} refreshControl={<RefreshControl tintColor={colors.gold500} refreshing={profile.isRefetching} onRefresh={() => void profile.refetch()} />}>
-    <MyProfileHeader />
+    <MyProfileHeader unreadCount={chat.totalUnread} onOpenChat={() => void chat.openCoachChat()} />
     {profile.data ? <LoadedProfile key={studentId} studentId={studentId} profile={profile.data} /> : <>
       {profile.isPending ? <View accessibilityLabel={t('student.myProfileView.copy024')} accessibilityState={{ busy: true }} style={{ gap: 14 }}><ActivityIndicator color={colors.gold500} />{[150, 90, 130].map((height, index) => <Card key={index} style={{ height, backgroundColor: colors.surfaceRaised }} />)}</View> : <Pressable accessibilityRole={profile.isError ? 'button' : undefined} onPress={profile.isError ? () => void profile.refetch() : undefined}><Card><ProfileText>{t(profile.isError ? 'student.myProfileView.copy002' : 'student.myProfileView.copy001')}</ProfileText></Card></Pressable>}
       <MyProfileFallbackRows key={studentId} studentId={studentId} />
