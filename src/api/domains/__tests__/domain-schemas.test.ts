@@ -175,11 +175,11 @@ describe('readiness snake_case schemas', () => {
         sleep_quality: 4,
         mood: 5,
         stress: 3,
-        muscle_fatigue: [{ muscle_group: 'quads', severity: 2 }],
+        muscle_fatigue: [{ muscle_group: 'quad', severity: 2 }],
         submitted_at: NOW,
         updated_at: NOW,
       }).muscle_fatigue,
-    ).toEqual([{ muscle_group: 'quads', severity: 2 }]);
+    ).toEqual([{ muscle_group: 'quad', severity: 2 }]);
   });
 });
 
