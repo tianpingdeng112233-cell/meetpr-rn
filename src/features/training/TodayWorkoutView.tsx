@@ -18,6 +18,8 @@ import { completionAvailability } from './hold-to-complete';
 import { HoldToCompleteButton } from './HoldToCompleteButton';
 import { completionError } from './completion-errors';
 import { replayE1RMSeries } from '@/features/dashboard/model';
+import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
+import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
@@ -50,6 +52,7 @@ import {
   AppButton,
   Card,
   Eyebrow,
+  font,
   useColors,
   type Colors,
   Screen,
@@ -136,6 +139,8 @@ export function TodayWorkoutView() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
+  const { unreadCount } = useFeedbackInboxViewModel(studentId);
+  const bumpFeedback = useStudentTabsStore((state) => state.bumpFeedbackJump);
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
   const handoff = useStudentTabsStore((state) => state.trainingHandoff);
@@ -721,42 +726,76 @@ export function TodayWorkoutView() {
   return (
     <Screen style={styles.screen}>
       <View style={styles.nav}>
-        <View>
+        <MeetPRMark />
+        <View style={styles.navRow}>
           <Text style={styles.navTitle}>
             {planDay
-              ? `${dayCode(planDay)} · ${dayName(planDay, resolveExerciseMetadata)}`
-              : t('student.todayWorkoutView.copy011')}
+              ? dayCode(planDay)
+              : plan
+                ? t('student.todayWorkoutView.copy011')
+                : 'W—'}
           </Text>
-          <Text style={styles.navDate}>{today}</Text>
-        </View>
-        <View style={styles.navActions}>
-          {cursor && selectedDayID !== cursor.id ? (
-            <AppButton
-              variant="link"
-              label={t('student.todayWorkoutView.copy010')}
-              onPress={() => selectDay(cursor.id)}
-            />
-          ) : null}
-          <Pressable
-            accessibilityLabel={readinessLabel}
-            onPress={() => setReadinessVisible(true)}
-          >
-            <MaterialCommunityIcons
-              color={readinessDone ? colors.success : colors.textSecondary}
-              name={readinessDone ? 'heart' : 'heart-outline'}
-              size={25}
-            />
-          </Pressable>
-          <Pressable
-            accessibilityLabel={t('student.todayWorkoutScreen.copy005')}
-            onPress={() => void refresh()}
-          >
-            <MaterialCommunityIcons
-              color={colors.textSecondary}
-              name="refresh"
-              size={25}
-            />
-          </Pressable>
+          <View style={styles.navActions}>
+            {cursor && selectedDayID !== cursor.id ? (
+              <AppButton
+                variant="link"
+                label={t('student.todayWorkoutView.copy010')}
+                onPress={() => selectDay(cursor.id)}
+              />
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('student.todayWorkoutScreen.copy005')}
+              onPress={() => void refresh()}
+              style={styles.navButton}
+            >
+              <View style={styles.navButtonFace}>
+                <MaterialCommunityIcons
+                  color={colors.textSecondary}
+                  name="refresh"
+                  size={18}
+                />
+              </View>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={readinessLabel}
+              onPress={() => setReadinessVisible(true)}
+              style={styles.navButton}
+            >
+              <View style={styles.navButtonFace}>
+                <MaterialCommunityIcons
+                  color={readinessDone ? colors.success : colors.textSecondary}
+                  name={readinessDone ? 'heart' : 'heart-outline'}
+                  size={18}
+                />
+              </View>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
+              onPress={() => {
+                bumpFeedback();
+                router.navigate('/(student)/growth');
+              }}
+              style={styles.navButton}
+            >
+              <View style={styles.navButtonFace}>
+                <MaterialCommunityIcons
+                  color={colors.textPrimary}
+                  name="message-outline"
+                  size={18}
+                />
+              </View>
+              {unreadCount > 0 ? (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadCount}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+          </View>
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
@@ -997,21 +1036,45 @@ const createStyles = (colors: Colors) =>
   StyleSheet.create({
     screen: { flex: 1 },
     nav: {
-      alignItems: 'center',
       borderBottomColor: colors.borderDefault,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      minHeight: 64,
+      gap: 1,
       paddingHorizontal: spacing.base,
     },
-    navTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-    navDate: {
-      color: colors.textTertiary,
-      marginTop: 2,
-      ...typography.caption,
+    navRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
     },
-    navActions: { flexDirection: 'row', gap: spacing.base },
+    navTitle: { color: colors.textPrimary, ...font.display(20), flexShrink: 1 },
+    navActions: { alignItems: 'center', flexDirection: 'row', gap: 9 },
+    navButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 44,
+      height: 44,
+    },
+    navButtonFace: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surfaceCard,
+    },
+    unreadBadge: {
+      position: 'absolute',
+      right: -2,
+      top: -2,
+      minWidth: 16,
+      minHeight: 16,
+      paddingHorizontal: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 999,
+      backgroundColor: colors.dangerFill,
+    },
+    unreadCount: { color: '#FFFFFF', ...font.mono(9, 'bold') },
     content: { gap: spacing.md, padding: spacing.base, paddingBottom: 120 },
     center: { marginVertical: spacing.xxl },
     empty: { alignItems: 'center', gap: spacing.md, padding: spacing.xl },

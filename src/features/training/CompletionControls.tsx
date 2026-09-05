@@ -4,7 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
-import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
+import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
 import type { SessionReflection, WorkoutSetDraft } from './model';
 import { isDraftTerminal } from './drafts';
@@ -14,13 +14,18 @@ export function DayCompletionBanner({ count, onPress }: { count: number; onPress
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <Card style={styles.banner}>
-      <View style={styles.bannerCopy}>
-        <MaterialCommunityIcons color={colors.success} name="check-decagram" size={22} />
-        <Text style={styles.bannerTitle}>{t(count === 1 ? 'student.dayCompletionBanner.copy001.one' : 'student.dayCompletionBanner.copy001', [count])}</Text>
-      </View>
-      <Pressable onPress={onPress}><Text style={styles.reviewLink}>{t('student.dayCompletionBanner.copy002')}</Text></Pressable>
-    </Card>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('student.dayCompletionBanner.copy003', [count])}
+      onPress={onPress}
+      style={styles.banner}
+    >
+      <MaterialCommunityIcons color={colors.success} name="check-decagram" size={22} />
+      <Text style={styles.bannerTitle}>{t('student.dayCompletionBanner.copy001', [count])}</Text>
+      <View style={styles.bannerSpacer} />
+      <Text style={styles.reviewLink}>{t('student.dayCompletionBanner.copy002')}</Text>
+      <MaterialCommunityIcons color={colors.textSecondary} name="chevron-right" size={11} />
+    </Pressable>
   );
 }
 
@@ -85,10 +90,10 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   slider: { backgroundColor: colors.success, borderColor: colors.success, borderRadius: radius.pill, borderWidth: 1, height: 58, justifyContent: 'center', overflow: 'hidden' },
   sliderLabel: { color: '#FFFFFF', textAlign: 'center', ...typography.bodyEmphasis },
   sliderThumb: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: radius.pill, height: 50, justifyContent: 'center', position: 'absolute', width: 50 },
-  banner: { alignItems: 'center', backgroundColor: colors.successTint, borderColor: `${colors.success}66`, borderWidth: 1, flexDirection: 'row', justifyContent: 'space-between', padding: spacing.base },
-  bannerCopy: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
-  bannerTitle: { color: colors.success, ...typography.bodyEmphasis },
-  reviewLink: { color: colors.textPrimary, ...typography.footnote },
+  banner: { alignItems: 'center', backgroundColor: `${colors.success}24`, borderColor: `${colors.success}66`, borderWidth: 1, borderRadius: radius.control, flexDirection: 'row', gap: 10, padding: 16 },
+  bannerSpacer: { flexGrow: 1 },
+  bannerTitle: { color: colors.textPrimary, ...font.body(16, 'bold'), flexShrink: 1 },
+  reviewLink: { color: colors.textSecondary, ...font.body(13) },
   summaryRoot: { backgroundColor: colors.bgBase, flex: 1 },
   summaryNav: { alignItems: 'center', borderBottomColor: colors.borderDefault, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'space-between', minHeight: 52, paddingHorizontal: spacing.base },
   summaryNavTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },

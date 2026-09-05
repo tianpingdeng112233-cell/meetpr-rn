@@ -52,6 +52,23 @@ test('selects English one/other and the Chinese plural copy', () => {
   expect(t('coach.bind.card.age %lld', [2])).toBe('2 岁');
 });
 
+test('pluralizes completed sessions by the total session count', () => {
+  expect(t('student.trainingCalendarView.copy002', [1, 2])).toBe('Completed 1 / 2 sessions');
+  expect(t('student.trainingCalendarView.copy002', [2, 1])).toBe('Completed 2 / 1 session');
+});
+
+test('pluralizes prescription summaries by the third parameter', () => {
+  expect(t('student.todayWorkoutScreen.copy020', ['80 kg', 5, 1])).toBe('80 kg × 5 · 1 set');
+  expect(t('student.todayWorkoutScreen.copy020', [1, 5, 2])).toBe('1 × 5 · 2 sets');
+});
+
+test('defaults standalone plural keys to the first parameter and keeps Chinese copy', () => {
+  expect(t('student.dayCompletionBanner.copy001', [1])).toBe("Today's workout completed · 1 set");
+  expect(t('student.dayCompletionBanner.copy001', [2])).toBe("Today's workout completed · 2 sets");
+  setLocaleOverride('zh');
+  expect(t('student.trainingCalendarView.copy002', [2, 1])).toBe('已完成 2 / 1 节');
+});
+
 test('returns an unknown runtime key without throwing, while rejecting it at compile time', () => {
   // @ts-expect-error Unknown catalog keys are rejected by TypeScript.
   expect(t('missing.key')).toBe('missing.key');
