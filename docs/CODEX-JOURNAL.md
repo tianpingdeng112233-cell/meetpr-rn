@@ -847,3 +847,25 @@ Swift CodingKeys 中的 `messageId`/`otherUserId` 经 codec 转 snake_case,不�
 - 验证：全量 `npx jest --runInBand` **67 suites / 417 tests 通过**，包含 dashboard/training、两条 i18n 守卫与 tokens 守卫；`npx tsc --noEmit` 无诊断（本轮没有 hovered 错误）。lint 首次发现兼容导出位置导致的两条 import/first warning，移至 import 后重跑 `npm run lint` 无诊断；最终定向 2 suites / 8 tests 通过。日志 `/private/tmp/w3v-strip-{jest,tsc,lint}.log`。WeekGrid 原样迁移核对与 `git diff --check` 通过。
 - 本地 Standards 核对：新增样式使用 useColors/font、复用翻译 key，无依赖或数据层变更；Spec 核对：两种头部、共享推进状态、空/加载隐藏及正文顺序符合卡面，格子迁移如上单列。正式 code-review 技能因缺 `docs/agents/issue-tracker.md` 未启动，已告知用户需 `$setup-matt-pocock-skills`，未静默生成配置。
 - 本卡明确沙箱无 ADB，未运行 Android 安装、未获取截图；PARITY 仅追加顶部周历条顺序对齐说明，设备视觉验收仍待可用 AVD 环境完成。
+
+## W3-v — 训练完成流（庆祝页 / 训练回顾）与组间休息条（2026-09-05）
+
+- 范围：`feat/w3v-completion` / `meetpr-rn-wt-w3v-completion`；开工 clean。已读 AGENTS、PLAN、最近三条日志与指定 RN/iOS 源码；iOS HEAD 核实 `202e95dbbf88baf5778f2329f206f34e117a4dd0`，只读。已读取 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。不 commit/push、不加依赖、不动 node_modules symlink、API/DTO、hold-to-complete、SetEntrySheet、WeekCalendar。
+- `completion-presentation.ts` 移植 `WorkoutCompletionPresentation`：完成/失败口径、总次数/容量、主项与整体 RPE、处方 ±0.5 比较、(重量, 次数) 最佳组与严格 PR、教练/周日/日期/增幅/meta 文案。失败组计入完成总数、容量、RPE 和最佳组，庆祝成功数才排除失败；无历史基线 PR=false。RN PlanDay 不含 scheduledDate 或动作名称，增加纯展示输入 `date`、`exerciseNames`，调用端复用 recommendedDate / exerciseTitle / 已有 metadata resolver，日期星期复用现有 formatter。历史基线从已有 historyQuery 日志取成功且非 assumed 的最佳重量/次数，排除当前 planDay 动作日志；不把 e1RM 数字误当实际重量。
+- 精度：已保存日志优先取原始 decimal；synthesizeDrafts 的显示字符串只留一位小数，不能用其重算回顾。未提供实际 RPE 时使用未舍入处方。无 sourceLog 的 draft 仍取录入字符串再回退处方；容量 en-US 千分位 0–2 位，主项整数平均不补小数，非整数与总体平均按一位小数四舍五入。
+- `WorkoutCelebrationView`：静态奖章 SVG、底部椭圆 gold 渐变、教练回执、双列终值、meta、详细报告/完成两入口；streak 分支保留，v1 传 null。按 **spec 082：装饰动效全删**，无 rise-in/fade/ticker/光晕动画，阶段与 Modal 切换也不做动画。只保留按钮按压反馈和休息结束轻震动。`CelebrationEffects.swift` 终态 bloom 与 18 个 sparks 均透明，仅转写 96×104 奖章的两条 ribbon、58/44 圆和 checkmark 到 110×110 效果区。
+- `CompletionControls`：单个 fullScreen Modal 内 celebration/review 两阶段；回顾改页头+教练胶囊、纵向渐变总容量卡与四格、条件 PR 行、逐动作表现与状态、三栏私密反思、固定底部 CTA。删旧 Done 右上按钮、大标题、独立最重组卡和旧统计卡。反思字段继续 goal/achieved/improve，输入即用现有 writeReview 保存，串行写入避免旧保存覆盖新内容；尚未完成回顾时保留已有 completedAt 或空字符串，finish 才写新时间戳，等待之前的保存后关闭并 navigate Today。Android 系统返回也走同一 finish，失败可重试，重复 finish 忽略。RnExtras 仅删除已无引用的 completedSets / privateNote 两 key。
+- TodayWorkout 接线仅变完成阶段 state/props、结算成功进入 celebration、横幅进入 review、回顾保存和 finish；`WorkoutLogSave` 沿用原 date/sets。失败结算不展示完成流、undo 不开启庆祝；完成日保持 pinned dayID，避免服务端推进 cursor 后展示下一天。横幅改用 successRGB 的 14% / 40% 底/边，保留 16 padding、body16/13、11 chevron。
+- RestTimer：surfaceElevated / radius md、左右 16 底 4、h16/v8、mono22 倒计时、金色图标、三颗描边小钮、remaining/total 高4金色条；Skip 改 `restTimerOverlay.copy001` 并按 iOS 立即关闭；无 Rest 标签或 💪，数字无过渡。自然结束轻震动一次、3s 后收起。新增卸载清理延迟关闭，避免旧计时器清掉后续实例；首次说明弹层 JSX 与样式不变。倒计时单独带完整 a11y label，操作钮仍可独立聚焦。
+
+### 红绿与验证
+
+- 使用 tdd 技能，用户指定 seam 已确认，无重复询问。分片红绿日志 `/private/tmp/w3v-completion-{presentation,exercises,copy,flow,rest,rest-expiry,precision,rpe-fallback}-*.log`；flow 首次绿跑修正 test-renderer 查找（AppButton 的 native button 按 accessibilityRole/Label 查，不假定 Pressable wrapper）。新增纯计算 12、两阶段 flow 3、休息条 4；真实 TodayWorkout 入口另外 3 个集成测试，网络/native/router 边界替换，组件/Query/store 保留。
+- 集成覆盖成功结算→庆祝→完成→writeReview/Today 导航，横幅直进 review、反思即时持久化并重开读取、失败结算不打开流；flow 覆盖 review 完成、失败行 danger、等待反思写入、庆祝直接完成/防重复。休息条覆盖 Skip/a11y、±30/进度、震动一次/3秒关闭、卸载取消。
+- `npm run lint` 通过、0 errors / warnings；`npx tsc --noEmit` 通过，本轮无 hovered 诊断；全量 `npx jest --runInBand` **71 suites / 439 tests 通过**，包括 training、两条 i18n 守卫与 tokens 守卫。日志 `/private/tmp/w3v-completion-{lint,tsc,jest}.log`。最后收敛休息条 progress 复用/a11y/小钮间距后，定向 4 tests、lint、tsc 与 git diff --check 再次通过（`/private/tmp/w3v-completion-rest-final.log`）。入口测试 mutation cache 使用 gcTime Infinity 并随 QueryClient 清理，避免测试结束后的默认 GC timeout 挂住进程。
+
+### 本地核对与未验项
+
+- Standards：限定文件、useColors/font、已有 svg/GradientFill、翻译 key、存储契约与不提交约束核对通过；无新增依赖和 DTO 变更。正式 code-review 技能要求 `docs/agents/issue-tracker.md`，仓内缺失；已告知需用户调用 `$setup-matt-pocock-skills`，未运行正式双 agent 审查、未静默配置。本段是本地核对，不冒充该技能结果。
+- Spec：计算/两阶段/触发收尾/回顾布局/休息条按卡面接线；静态奖励终态按正典源码转写。**色彩限制**：RN 没有 iOS celebrationRibbonStart、celebrationMedalBottom；在不改 tokens 的范围内分别复用 gold500、gold700；medalInset 与 ring 使用已有 holdTrack、gold200（暗色与正典对应），阴影用静态 radial fill。上述专用渐变色及原生阴影不声明像素相等；待 AVD 对照。
+- 本卡明确沙箱无 ADB，未运行 expo run:android、未获取模拟器截图、未做原生视觉验收。PARITY TodayWorkout 追加“W3-v:庆祝页/回顾页/休息条对齐 iOS;动效按 082 静态”，保留待截图标识。

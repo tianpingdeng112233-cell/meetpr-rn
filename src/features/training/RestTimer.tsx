@@ -27,6 +27,11 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
     () => Date.now() + (durationSeconds ?? 0) * 1_000,
   );
   const finished = useRef(false);
+  const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
+  }, []);
 
   useEffect(() => {
     if (durationSeconds === null) return;
@@ -43,7 +48,7 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
       if (next === 0 && !finished.current) {
         finished.current = true;
         Vibration.vibrate(80);
-        setTimeout(onClose, TRAINING_LIMITS.transientBannerMs);
+        dismissTimer.current = setTimeout(onClose, TRAINING_LIMITS.transientBannerMs);
       }
     };
     update();
@@ -52,8 +57,10 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
   }, [durationSeconds, endAt, onClose, showExplanation]);
 
   if (durationSeconds === null) return null;
+  const progress = Math.max(0, Math.min(1, remaining / Math.max(1, durationSeconds)));
 
   const adjust = (delta: number) => {
+    if (dismissTimer.current) clearTimeout(dismissTimer.current);
     const current = Math.max(0, Math.ceil((endAt - Date.now()) / 1_000));
     const next = Math.max(
       0,
@@ -66,20 +73,25 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
 
   return (
     <>
-      <Card style={styles.overlay}>
-        <View style={styles.timerCopy}>
-          <MaterialCommunityIcons color={colors.success} name="timer-outline" size={22} />
-          <View>
-            <Text style={styles.label}>{remaining === 0 ? `${t('student.restTimerOverlay.copy003')} 💪` : t('student.restTimerPreferenceRow.copy001')}</Text>
-            {remaining > 0 ? <Text style={styles.clock}>{formatClock(remaining)}</Text> : null}
+      <View style={styles.overlay}>
+        {remaining > 0 ? (
+          <View accessibilityLabel={t('student.restTimerOverlay.copy002', [formatClock(remaining)])}>
+            <View style={styles.timerRow}>
+              <MaterialCommunityIcons color={colors.gold500} name="timer-outline" size={22} />
+              <Text style={styles.clock} accessibilityLabel={t('student.restTimerOverlay.copy002', [formatClock(remaining)])}>{formatClock(remaining)}</Text>
+              <View style={styles.spacer} />
+              <View style={styles.actions}>
+                <Pressable accessibilityRole="button" accessibilityLabel="-30s" onPress={() => adjust(-30)} style={styles.action}><Text style={styles.actionText}>-30s</Text></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel={t('student.restTimerOverlay.copy001')} onPress={onClose} style={styles.action}><Text style={styles.skipText}>{t('student.restTimerOverlay.copy001')}</Text></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="+30s" onPress={() => adjust(30)} style={styles.action}><Text style={styles.actionText}>+30s</Text></Pressable>
+              </View>
+            </View>
+            <View style={styles.progressTrack} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 1, now: progress }}>
+              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+            </View>
           </View>
-        </View>
-        <View style={styles.actions}>
-          <Pressable onPress={() => adjust(-30)} style={styles.action}><Text style={styles.actionText}>-30s</Text></Pressable>
-          <Pressable onPress={() => adjust(-remaining)} style={styles.action}><Text style={styles.actionText}>{t('student.readinessCheckinSheet.copy002')}</Text></Pressable>
-          <Pressable onPress={() => adjust(30)} style={styles.action}><Text style={styles.actionText}>+30s</Text></Pressable>
-        </View>
-      </Card>
+        ) : <Text style={styles.finished}>{t('student.restTimerOverlay.copy003')}</Text>}
+      </View>
       <Modal
         animationType="slide"
         onRequestClose={() => undefined}
@@ -107,23 +119,31 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
 
 const createStyles = (colors: Colors) => StyleSheet.create({
   overlay: {
-    alignItems: 'center',
-    bottom: spacing.base,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.md,
+    bottom: 4,
     elevation: 12,
-    flexDirection: 'row',
-    gap: spacing.md,
-    left: spacing.base,
-    padding: spacing.md,
+    shadowColor: colors.modalShadow,
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    left: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     position: 'absolute',
-    right: spacing.base,
+    right: 16,
     zIndex: 20,
   },
-  timerCopy: { alignItems: 'center', flex: 1, flexDirection: 'row', gap: spacing.sm },
-  label: { color: colors.textSecondary, ...typography.footnote },
-  clock: { color: colors.textPrimary, ...font.mono(24, 'bold') },
-  actions: { flexDirection: 'row', gap: spacing.xs },
-  action: { backgroundColor: colors.bgStack, borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.md },
-  actionText: { color: colors.textPrimary, ...typography.footnote },
+  timerRow: { alignItems: 'center', flexDirection: 'row', gap: 16 },
+  spacer: { flex: 1 },
+  clock: { color: colors.textPrimary, ...font.mono(22, 'bold') },
+  finished: { color: colors.success, ...font.body(17, 'semibold') },
+  actions: { flexDirection: 'row', gap: 6 },
+  action: { borderColor: colors.borderDefault, borderWidth: 1, borderRadius: radius.control, paddingHorizontal: 6, paddingVertical: 6 },
+  actionText: { color: colors.textSecondary, ...font.body(13) },
+  skipText: { color: colors.goldText, ...font.body(13) },
+  progressTrack: { backgroundColor: colors.borderDefault, height: 4, borderRadius: radius.pill, overflow: 'hidden', marginTop: 4 },
+  progressFill: { backgroundColor: colors.gold500, height: 4, borderRadius: radius.pill },
   modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'center', padding: spacing.lg },
   explanation: { gap: spacing.base, padding: spacing.lg },
   explanationTitle: { color: colors.textPrimary, ...typography.headline },

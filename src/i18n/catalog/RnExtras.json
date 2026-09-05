@@ -3,10 +3,6 @@
 "en": "Back to training",
 "zh": "返回训练"
 },
-"student.progression.completedSets": {
-"en": "Sets completed",
-"zh": "完成组数"
-},
 "student.progression.dayName": {
 "en": "{0} day",
 "zh": "{0}日"
@@ -30,10 +26,6 @@
 "student.progression.prTitle": {
 "en": "Your {0} e1RM improved today!",
 "zh": "今天你的{0} e1RM 突破!"
-},
-"student.progression.privateNote": {
-"en": "Private training notes, saved on this device",
-"zh": "仅自己可见的训练笔记,保存在本机"
 },
 "student.progression.releaseToConfirm": {
 "en": "Release to confirm",
