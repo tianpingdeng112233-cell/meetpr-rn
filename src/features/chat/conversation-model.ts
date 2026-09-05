@@ -1,3 +1,6 @@
+import type { ChatSetRef } from '@/api/domains/chat';
+import type { VideoBadgeInfo } from '@/features/video-player/types';
+
 export function mergeMessages<T extends { id: string; seq: number }>(existing: readonly T[], incoming: readonly T[]): T[] {
   return [...new Map([...existing, ...incoming].map(message => [message.id, message])).values()].sort((a, b) => a.seq - b.seq || a.id.localeCompare(b.id));
 }
@@ -36,4 +39,17 @@ export function conversationSubtitle(status: string | undefined) {
 type ReadState = { unread_count: number; my_last_read: { message_id: string; seq: number } };
 export function applyReadState<T extends { id: string; unread_count: number; my_last_read?: { message_id: string; seq: number } | null }>(conversations: readonly T[], conversationID: string, read: ReadState): T[] {
   return conversations.map(conversation => conversation.id === conversationID && (conversation.my_last_read?.seq ?? 0) <= read.my_last_read.seq ? { ...conversation, ...read } : conversation);
+}
+
+/** Only snapshot metrics belong to a shared-set badge; coach attribution is opt-in. */
+export function feedbackVideoBadge(reference: ChatSetRef | null | undefined, includesCoachAttribution: boolean, coachName?: string): VideoBadgeInfo | null {
+  if (!reference) return null;
+  return {
+    exerciseName: reference.exerciseName,
+    weightKg: reference.weightKg == null ? null : Number(reference.weightKg),
+    reps: reference.reps ?? null,
+    rpe: reference.rpe == null ? null : Number(reference.rpe),
+    setOrdinal: reference.setNumber,
+    coachName: includesCoachAttribution ? coachName ?? null : null,
+  };
 }
