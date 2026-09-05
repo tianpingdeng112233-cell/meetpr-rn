@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSessionStore } from '@/api/session';
+import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { useMineBindRequest } from '@/api/domains/bind';
 import {
   useDayCompletion,
@@ -87,6 +88,7 @@ export function DashboardScreen() {
   const colors = useColors();
   const studentId = useSessionStore((s) => s.user?.id ?? '');
   const vm = useDashboardViewModel(studentId);
+  const chat = useOpenCoachChat(studentId);
   const binding = useMineBindRequest();
   const coachName =
     binding.data?.bind_request?.coach_display_name ??
@@ -184,7 +186,8 @@ export function DashboardScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
-              onPress={openFeedback}
+              disabled={chat.isOpening}
+              onPress={() => void chat.openCoachChat()}
               style={{
                 width: 44,
                 height: 44,
@@ -199,9 +202,9 @@ export function DashboardScreen() {
                 size={21}
                 color={colors.textPrimary}
               />
-              {vm.feedback.unreadCount > 0 ? (
+              {chat.totalUnread > 0 ? (
                 <View style={{ position: 'absolute', top: 0, right: 0, minWidth: 18, minHeight: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: colors.unread, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: colors.ctaTopHighlight, ...font.mono(10, 'bold') }}>{vm.feedback.unreadCount > 99 ? '99+' : vm.feedback.unreadCount}</Text>
+                  <Text style={{ color: colors.ctaTopHighlight, ...font.mono(10, 'bold') }}>{chat.totalUnread > 99 ? '99+' : chat.totalUnread}</Text>
                 </View>
               ) : null}
             </Pressable>

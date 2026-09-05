@@ -18,7 +18,8 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 jest.mock('@react-native-community/netinfo', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@react-native-community/netinfo/jest/netinfo-mock'));
-jest.mock('expo-router', () => ({ useRouter: () => ({}), useFocusEffect: () => {} }));
+const mockNavigate = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }), useFocusEffect: () => {} }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -46,18 +47,20 @@ let client: QueryClient;
 let servedPlan: PlanDetail;
 
 beforeEach(() => {
+  mockNavigate.mockClear();
   setLocaleOverride('en');
   servedPlan = plan;
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
-  jest.mocked(authenticatedRequest).mockImplementation(async (path) => {
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
     if (path.endsWith('/plans')) return { plans: [servedPlan] } as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: [] } as never;
     if (path.endsWith('/onboarding')) return null as never;
     if (path.endsWith('/feedback')) return { items: [] } as never;
     if (path.includes('/sets')) return { logs: [] } as never;
-    if (path === '/bind-requests/mine') return { bind_request: null } as never;
+    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: '20000000-0000-4000-8000-000000000000', coach_display_name: 'Alex' } } as never;
+    if (path === '/conversations') return (options?.method === 'POST' ? { conversation: { id: '80000000-0000-4000-8000-000000000000', other_party: { id: '20000000-0000-4000-8000-000000000000', display_name: 'Alex' }, unread_count: 0 } } : { conversations: [] }) as never;
     if (path.includes('/readiness')) return { checkin: null } as never;
     throw new Error(`Unexpected request: ${path}`);
   });
@@ -111,4 +114,12 @@ test('the loaded Dashboard renders section copy without ornamental eyebrows', as
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
   expect(renderer.root.findAllByType(Text).map((node) => node.props.children).join(' ').toLowerCase()).toContain('weekly progress');
   expect(queryAllByTestId('eyebrow')).toHaveLength(0);
+});
+
+test.each([{ name: 'Dashboard', Component: DashboardScreen }, { name: 'Training', Component: TodayWorkoutView }])('$name header opens the bound coach chat', async ({ Component }) => {
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><Component /></QueryClientProvider>); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy007') })[0].props.onPress(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
 });

@@ -23,7 +23,7 @@ import { completionError } from './completion-errors';
 import { replayE1RMSeries } from '@/features/dashboard/model';
 import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 import { WeekCalendar } from '@/features/dashboard/WeekCalendar';
-import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
+import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
 import {
   hydrateRemoteVideoAttachments,
@@ -146,7 +146,7 @@ export function TodayWorkoutView() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
-  const { unreadCount } = useFeedbackInboxViewModel(studentId);
+  const { totalUnread: unreadCount, openCoachChat, isOpening } = useOpenCoachChat(studentId);
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
   const handoff = useStudentTabsStore((state) => state.trainingHandoff);
@@ -807,9 +807,8 @@ export function TodayWorkoutView() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
-              onPress={() => {
-                router.navigate('/(student)/feedback');
-              }}
+              disabled={isOpening}
+              onPress={() => void openCoachChat()}
               style={styles.navButton}
             >
               <View style={styles.navButtonFace}>
