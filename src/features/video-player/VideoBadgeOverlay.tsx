@@ -13,7 +13,7 @@ export function VideoBadgeOverlay({ info, expanded, onToggle, allowsExpansion = 
 }) {
   const [width, setWidth] = useState(0);
   const isExpanded = allowsExpansion && expanded;
-  const content = isExpanded ? <VideoBadgeCard info={info} width={width * 468 / 540} includesCoachAttribution={false} />
+  const content = isExpanded ? (width > 0 ? <VideoBadgeCard info={info} width={width * 468 / 540} includesCoachAttribution={false} /> : null)
     : <View style={styles.shadow}><VideoBadgeLogoMark size={44} /></View>;
   const testID = isExpanded ? 'feedback.video.badge.expanded' : 'feedback.video.badge.collapsed';
   return <View pointerEvents="box-none" onLayout={event => setWidth(event.nativeEvent.layout.width)} style={styles.region}>
