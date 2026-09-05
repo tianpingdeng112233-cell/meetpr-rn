@@ -92,12 +92,21 @@ export function CameraRecorder({
         if (live) setPreferenceLoaded(true);
       });
     const subscription = AppState.addEventListener('change', (state) => {
+      // An interruption drops any in-flight recording or review and returns to the clean preview.
+      // Android also reports a transient 'background' while the camera / permission activity attaches,
+      // so closing the recorder here would dismiss it before the user ever sees it.
       if (state === 'background') {
         generation.current++;
         cameraRefStop();
         deleteLocalVideo(ownedUri.current);
         ownedUri.current = null;
-        closeRef.current();
+        recordingActive.current = false;
+        if (live) {
+          setRecording(false);
+          setReview(null);
+          setError(false);
+          setElapsed(0);
+        }
       }
     });
     const cameraRefStop = () => cameraRef.current?.stopRecording();
