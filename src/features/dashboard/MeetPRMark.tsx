@@ -2,10 +2,10 @@ import Svg, { Text as SvgText, TSpan } from 'react-native-svg';
 import { font, useColors } from '@/design';
 
 /** Pinned 16pt stroked wordmark, in the dashboard's 97×24 header slot. */
-export function MeetPRMark() {
+export function MeetPRMark({ testID }: { testID?: string }) {
   const colors = useColors();
   return (
-    <Svg width={97} height={24} viewBox="0 0 97 24" accessible={false}>
+    <Svg testID={testID} width={97} height={24} viewBox="0 0 97 24" accessible={false}>
       <SvgText
         x={3}
         y={18}

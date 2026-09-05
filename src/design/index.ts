@@ -15,3 +15,4 @@ export * from './GoldProgressBar';
 export * from './DayChip';
 export * from './IconButton';
 export * from './TabBar';
+export { GradientFill } from './GradientFill';
