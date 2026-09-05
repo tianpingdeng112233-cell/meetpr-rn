@@ -3112,7 +3112,7 @@
 "zh": "待办"
 },
 "coach.today.trainingDaysCompleted %lld %lld": {
-"en": "%1$lld / %#@total@ completed",
+"en": "{0} / {1} training days completed",
 "zh": "%lld / %lld 训练日已完成"
 },
 "coach.today.unread": {
@@ -3568,5 +3568,9 @@
 "coach.workspace.title": {
 "en": "Planning",
 "zh": "编排"
+},
+"coach.today.trainingDaysCompleted %lld %lld.one": {
+"en": "{0} / {1} training day completed",
+"zh": "%lld / %lld 训练日已完成"
 }
 }

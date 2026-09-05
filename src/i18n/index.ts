@@ -22,6 +22,9 @@ export type Locale = 'en' | 'zh';
 type Translation = string | { one?: string; other: string };
 // Mirrors StudentStrings.Key.countIndex; unlisted keys count their first parameter.
 const PLURAL_COUNT_INDEX: Record<string, number> = {
+  'coach.roster.sectionCount %@ %lld': 1,
+  'coach.today.notTrainedTitle %@ %lld': 1,
+  'coach.today.trainingDaysCompleted %lld %lld': 1,
   'student.dashboardPrimaryAction.copy007': 1,
   'student.feedbackVideoPresentation.copy002': 1,
   'student.growthE1Rmcard.copy005': 1,
@@ -52,8 +55,10 @@ export function t(key: TranslationKey, params: readonly (string | number)[] = []
     copy = isOne ? copy.one ?? copy.other : copy.other;
   }
   let sequentialIndex = 0;
-  return copy.replace(/\{(\d+)\}|%@|%lld/g, (placeholder, position: string | undefined) => {
-    const value = params[position === undefined ? sequentialIndex++ : Number(position)];
+  const namedIndexes = new Map<string, number>();
+  return copy.replace(/\{(\d+)\}|\{([a-zA-Z]\w*)\}|%@|%lld/g, (placeholder, position: string | undefined, name: string | undefined) => {
+    if (name && !namedIndexes.has(name)) namedIndexes.set(name, sequentialIndex++);
+    const value = params[name ? namedIndexes.get(name)! : position === undefined ? sequentialIndex++ : Number(position)];
     return value === undefined ? placeholder : String(value);
   });
 }

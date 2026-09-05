@@ -1,43 +1,12 @@
-import { Tabs } from 'expo-router';
-
-import { t } from '@/i18n';
-import { TabBar } from '@/design';
-
-export default function CoachTabLayout() {
-  return (
-    <Tabs
-      tabBar={(props) => <TabBar {...props} icons={{ today: 'house', students: 'students', planning: 'training', receiving: 'message', profile: 'profile' }} />}
-      screenOptions={{ headerShown: false }}>
-      <Tabs.Screen
-        name="today"
-        options={{
-          title: t('coach.shell.today'),
-        }}
-      />
-      <Tabs.Screen
-        name="students"
-        options={{
-          title: t('coach.shell.students'),
-        }}
-      />
-      <Tabs.Screen
-        name="planning"
-        options={{
-          title: t('coach.workspace.title'),
-        }}
-      />
-      <Tabs.Screen
-        name="receiving"
-        options={{
-          title: t('coach.applicationProfile.accept'),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t('student.studentRootView.copy004'),
-        }}
-      />
-    </Tabs>
-  );
+import { Stack } from 'expo-router';
+import { useSessionStore } from '@/api/session';
+import { CoachDataProvider } from '@/features/coach/CoachDataProvider';
+import { CoachNowProvider } from '@/features/coach/CoachNowProvider';
+export default function CoachLayout() {
+  const userId = useSessionStore(state => state.user?.id);
+  return <CoachNowProvider key={userId}><CoachDataProvider><Stack screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="(tabs)" />
+    <Stack.Screen name="student/[studentId]" />
+    <Stack.Screen name="application/[requestId]" />
+  </Stack></CoachDataProvider></CoachNowProvider>;
 }
