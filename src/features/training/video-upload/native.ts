@@ -9,6 +9,7 @@ import {
 } from './model';
 import { passthroughEligibility, type TrackMetadata } from './passthrough';
 import { UploadCancelledError } from './multipart';
+import * as ImagePicker from 'expo-image-picker';
 export type VideoSource = 'camera' | 'library';
 export class VideoNativeError extends Error {
   readonly deterministic: boolean;
@@ -94,9 +95,8 @@ export async function hasTrainingCamera(): Promise<boolean> {
 export async function pickTrainingVideo(
   _source: VideoSource = 'library',
 ): Promise<SelectedVideo | null> {
-  const picker = await import('expo-image-picker');
   // Android's system photo picker grants access only to the selected item.
-  const result = await picker.launchImageLibraryAsync({
+  const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['videos'],
     allowsEditing: false,
     quality: 1,
