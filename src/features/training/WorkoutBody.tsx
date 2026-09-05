@@ -1,7 +1,7 @@
 import { useCameraAvailability } from './video-upload/use-camera-availability';
 import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { t } from '@/i18n';
 import type { PlanExercise } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
@@ -52,7 +52,11 @@ export function WorkoutBody({
   studentId,
   onToggleComplete,
   resolveExerciseMetadata,
+  onAskCoach,
+  preparingShare = false,
 }: {
+  onAskCoach?: (draft: WorkoutSetDraft) => void;
+  preparingShare?: boolean;
   exercises: readonly PlanExercise[];
   drafts: readonly WorkoutSetDraft[];
   editable: boolean;
@@ -119,9 +123,16 @@ export function WorkoutBody({
         >
           <GradientFill direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
         </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017')}</Text>
+          {editable && active && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
+            <View style={{ minHeight: 36, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard }}>
+              {preparingShare ? <ActivityIndicator size="small" color={colors.textTertiary} /> : <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.askCoach')}</Text>}
+            </View>
+          </Pressable> : null}
+        </View>
         {!recording ? (
           <>
-            <Text style={{ color: colors.textPrimary, ...font.display(22) }}>{t('student.todayWorkoutScreen.copy017')}</Text>
             <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
               {t('student.todayWorkoutScreen.copy018', [groups.length])}
               {t('student.todayWorkoutScreen.copy019', [drafts.length])}
@@ -160,11 +171,6 @@ export function WorkoutBody({
           </>
         ) : active && p ? (
           <>
-            <Text style={{ color: colors.textPrimary, ...font.display(22) }}>
-              {exerciseTitle(
-                resolveExerciseMetadata(active.exercise.exercise_id),
-              )}
-            </Text>
             <View
               style={{
                 flexDirection: 'row',

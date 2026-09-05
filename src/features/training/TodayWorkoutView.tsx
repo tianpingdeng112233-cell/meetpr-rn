@@ -1,3 +1,6 @@
+import { chatRepository, type Conversation } from '@/api/domains/chat';
+import { SetRefEntryVisibility } from '@/features/chat/set-ref';
+import { SetRefSharePicker, loadTodaySetRefCandidates } from '@/features/chat/SetRefSharePicker';
 import {
   cursorDay,
   currentWeekDays,
@@ -23,7 +26,7 @@ import { completionError } from './completion-errors';
 import { replayE1RMSeries } from '@/features/dashboard/model';
 import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 import { WeekCalendar } from '@/features/dashboard/WeekCalendar';
-import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
+import { studentChatKeys, useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
 import {
   hydrateRemoteVideoAttachments,
@@ -147,6 +150,12 @@ export function TodayWorkoutView() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const { totalUnread: unreadCount, openCoachChat, isOpening } = useOpenCoachChat(studentId);
+  const [shareRoute, setShareRoute] = useState<{ conversationId: string; initialSetLogID?: string; coachName: string } | null>(null);
+  const [preparingShare, setPreparingShare] = useState(false);
+  const preparingShareRef = useRef(false);
+  const shareGeneration = useRef(0);
+  useFocusEffect(useCallback(() => () => { shareGeneration.current += 1; setShareRoute(null); }, []));
+  const loadShareCandidates = useCallback(() => loadTodaySetRefCandidates(studentId), [studentId]);
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
   const handoff = useStudentTabsStore((state) => state.trainingHandoff);
@@ -724,6 +733,24 @@ export function TodayWorkoutView() {
     return saveQueue.current.enqueue(operation);
   };
 
+  const showsSetRefEntry = SetRefEntryVisibility.shouldShow({ isEditable: editable, hasAvailableSet: liveDrafts.length > 0,
+    hasActiveCoach: binding.data?.bind_request?.status === 'accepted', hasSharingContext: Boolean(studentId) });
+  async function openSetRefPicker(draft: WorkoutSetDraft) {
+    const bound = binding.data?.bind_request;
+    if (preparingShareRef.current || !showsSetRefEntry || bound?.status !== 'accepted') return;
+    preparingShareRef.current = true; setPreparingShare(true);
+    const generation = shareGeneration.current;
+    try {
+      const { conversation } = await chatRepository.open(bound.coach_id);
+      if (generation !== shareGeneration.current) return;
+      const queryKey = studentChatKeys.conversations(studentId);
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData<{ conversations: Conversation[] }>(queryKey, previous => ({ conversations: [...(previous?.conversations ?? []).filter(item => item.id !== conversation.id), conversation] }));
+      if (generation === shareGeneration.current) setShareRoute({ conversationId: conversation.id, initialSetLogID: draft.sourceLog?.id, coachName: bound.coach_display_name ?? conversation.other_party.display_name });
+    } catch {
+      if (generation === shareGeneration.current) Alert.alert(t('student.trainingShareConversationFailed'));
+    } finally { preparingShareRef.current = false; setPreparingShare(false); }
+  }
   const realDrafts = liveDrafts.filter(
     (draft) => draft.sourceLog && !draft.sourceLog.assumed,
   );
@@ -931,6 +958,8 @@ export function TodayWorkoutView() {
               </View>
             ) : null}
             <WorkoutBody
+              onAskCoach={showsSetRefEntry ? draft => void openSetRefPicker(draft) : undefined}
+              preparingShare={preparingShare}
               exercises={state.planDay.exercises}
               drafts={state.drafts}
               editable={editable}
@@ -1009,6 +1038,7 @@ export function TodayWorkoutView() {
           />
         ) : null}
       </ScrollView>
+      {shareRoute ? <SetRefSharePicker conversationId={shareRoute.conversationId} initialSetLogID={shareRoute.initialSetLogID} loadCandidates={loadShareCandidates} onClose={() => setShareRoute(null)} onStaged={() => router.navigate({ pathname: '/(student)/chat', params: { conversationId: shareRoute.conversationId, coachName: shareRoute.coachName } })} /> : null}
       {selectedDraft ? (
         <SetEntrySheet
           key={selectedDraft.stableSetId}
