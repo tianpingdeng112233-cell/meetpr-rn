@@ -15,6 +15,7 @@ import {
   chineseWeekday,
   dashboardE1RMRange,
   e1RMPeriodLabel,
+  feedbackLabel,
   replayE1RMSeries,
   resolveDashboardLifts,
 } from '../model';
@@ -207,4 +208,22 @@ test('formats calendar labels in the selected locale without moving the UTC date
   setLocaleOverride('zh');
   expect(chineseMonthDay('2026-07-19')).toBe('7月19日');
   expect(chineseWeekday('2026-07-19')).toBe('周日');
+});
+
+test('feedback without an associated video is labelled Training feedback', () => {
+  setLocaleOverride('en');
+  expect(feedbackLabel({ video_id: null })).toBe('Training feedback');
+});
+
+test('video feedback without a set uses its exercise display name or the video fallback', () => {
+  setLocaleOverride('en');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: 'Competition squat', set_index: null } })).toBe('Competition squat');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: '  ', set_index: null } })).toBe('Training video');
+  expect(feedbackLabel({ video_id: 'video', video: null })).toBe('Training video');
+});
+
+test('video feedback displays zero-based set index 1 as Set 2', () => {
+  setLocaleOverride('en');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: 'Competition squat', set_index: 1 } })).toBe('Competition squat · Set 2');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: null, set_index: 0 } })).toBe('Training video · Set 1');
 });
