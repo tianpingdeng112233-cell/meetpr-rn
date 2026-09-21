@@ -23,6 +23,8 @@
 
 - `npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。
 - 全量 Jest：**128 suites / 883 tests 通过**，覆盖补录日期/重试/重复提交、早期历史、持久来源/图表点选、按压/Reduce Motion、奖励生命周期和通知消费。
+- 补录/时区/Repository 三组测试在 America/New_York、Asia/Shanghai、Pacific/Auckland 分别 15/15 通过。
+- 庆祝页英文 Coach 圆标截断修正后，类型、lint、completion/reward 定向 2 suites / 15 tests 通过，QA release 再构建并安装成功。
 - Toast 2 秒修正后 design/quick-log 定向回归 **12 suites / 38 tests 通过**，类型与 lint 再次通过。
 - `EXPO_PUBLIC_BUILD_TRACK=global EXPO_PUBLIC_API_BASE_URL=https://api.meetpr.app npx expo export --platform android` 通过；导出 bundle 含 Global API 地址且不含 fixture `localhost:39022`。仅证明 JS 构建配置，不证明生产登录或原生 manifest 已满足发布要求。
 - Android `assembleDebug` 和 bundled `app:assembleRelease` 均构建成功；后者是 **debug 签名、localhost fixture API 的 QA 包**，不作为海外发布包。
@@ -43,6 +45,8 @@ Android 使用本地合成 API `http://localhost:39022`；学员、计划、日�
 | Growth → 点 9/14 历史节点 | 来源保留 184.6kg、144kg ×5 @8，RTS 复算信息；节点选中金色 | [浅色曲线](evidence/build22-20260921/android-growth-light.png)、[浅色来源](evidence/build22-20260921/android-source-light.png) |
 | 冷启 → Profile 切 Dark → Growth | 补录日期点仍在；深色曲线与来源层级正常 | [深色曲线](evidence/build22-20260921/android-growth-dark.png)、[深色来源](evidence/build22-20260921/android-source-dark.png)、[iOS 曲线](evidence/build22-20260921/ios-growth-dark.jpg)、[iOS 来源](evidence/build22-20260921/ios-source-dark.jpg) |
 | W3D4 普通记一组 → 休息 → 历史 → 系统返回 | W3D4/Set 2 保留；倒计时从 0:58 继续到 0:10，没有重置；历史全屏无 tab | [前](evidence/build22-20260921/android-rest-before-history.png)、[历史](evidence/build22-20260921/android-history-from-training.png)、[返回](evidence/build22-20260921/android-rest-after-history.png) |
+
+正常训练另完成 W3D4、W4D1 两次各 9 组，长按进入庆祝页；英文 Coach 圆标原先截断，增加单行自动适配后复验完整显示。[最终庆祝页](evidence/build22-20260921/android-celebration-dark.png)。过程录像留本机 scratch，真机触感与精确动效节拍仍待验收。
 
 本轮定向页面肉眼检查完成。没有运行完学员 36 项、教练 20 项全部状态，也没有把模拟器震动调用当作真机触感验收。
 

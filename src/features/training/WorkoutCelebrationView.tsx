@@ -73,7 +73,7 @@ export function WorkoutCelebrationView({ presentation, streak = null, onOpenRevi
         <RewardEntrance delay={240} style={styles.receipt}>
           <View style={styles.coachMark}>
             <GradientFill direction="diagonal" stops={[{ color: colors.textGhost, offset: 0 }, { color: colors.surfaceKey, offset: 1 }]} />
-            <Text style={styles.coachInitial}>{t('student.workoutCompletionFlowView.copy004')}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.coachInitial}>{t('student.workoutCompletionFlowView.copy004')}</Text>
           </View>
           <Text style={styles.receiptText}>{presentation.coachReceiptText}</Text>
         </RewardEntrance>
