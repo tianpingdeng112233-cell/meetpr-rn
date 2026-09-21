@@ -1644,3 +1644,7 @@ Final checks after all source/test edits:
 ## 2026-09-21 — Build 22 parity acceptance
 
 从 W3 `6429d50` 追齐 iOS `beta/1.0-22@0748931`。080–083 增量、独立双轴审查与 Android 定向视觉证据已落地；128 suites / 883 tests 通过，类型、lint、Android 构建通过。详细实现、复现步骤、截图与未完成的 Global/真机/分发门禁统一记录于 [验收报告](verification-build22-2026-09-21.md)。本轮没有认定 W3 全量通过。
+
+## 2026-09-21 · W3 主干走查与 Global 教练文案
+
+基于 2565c6e 补 ADB 教练/学员聊天、视频播放/倍速/seek/打点/反馈闭环。P-30 标题换行与 P-32 Global 退出提示已修复，6 suites / 30 tests、tsc/lint、QA Release、最终 ADB 截图通过。独立 Standards/Spec 收敛。P-31 字符串预览替换因无法区分同名用户文本撤回，仍开放 backend 契约小卡。原增量 PR #55 CI 全绿、可审未合。Global 方案 A 已获授权，但 Bitwarden 通道待就绪，生产未写入。详见 verification-w3-2026-09-21.md。

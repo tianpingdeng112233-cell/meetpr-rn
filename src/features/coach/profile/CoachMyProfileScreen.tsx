@@ -8,6 +8,7 @@ import { PRIVACY_POLICY_URL } from '@/analytics/PrivacyNoticeSheet';
 import { useSessionStore } from '@/api/session';
 import { Card, Screen, font, radius, useColors } from '@/design';
 import { t } from '@/i18n';
+import { BUILD_TRACK } from '@/config/build-track';
 import { CoachHelpFeedbackSheet, CoachPrivacyTermsSheet } from './CoachProfileSheets';
 import { Capsule, Confirmation, ProfileText, profileStyles } from './ProfileComponents';
 import { inviteCardState } from './invite-card-state';
@@ -68,7 +69,7 @@ export function CoachMyProfileScreen(dependencies: InviteDependencies = {}) {
     </View> : null}
     {overlay === 'help' ? <CoachHelpFeedbackSheet onClose={() => setOverlay(null)} /> : null}
     {overlay === 'privacy' ? <CoachPrivacyTermsSheet privacyPolicyURL={PRIVACY_POLICY_URL} onClose={() => setOverlay(null)} /> : null}
-    {overlay === 'logout' ? <Confirmation testID="coach.profile.logout" title={t('coach.profile.logoutTitle')} message={t('coach.profile.logoutMessage')}
+    {overlay === 'logout' ? <Confirmation testID="coach.profile.logout" title={t('coach.profile.logoutTitle')} message={t(BUILD_TRACK === 'global' ? 'coach.rn.profile.globalLogoutMessage' : 'coach.profile.logoutMessage')}
       cancelLabel={t('coach.profile.cancel')} confirmLabel={t(loggingOut ? 'coach.profile.loggingOut' : 'coach.profile.confirmLogout')} busy={loggingOut}
       onCancel={() => setOverlay(null)} onConfirm={() => void signOut()} /> : null}
   </Screen>;

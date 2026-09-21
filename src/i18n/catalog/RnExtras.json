@@ -1,4 +1,8 @@
 {
+"coach.rn.profile.globalLogoutMessage": {
+"en": "You will need to sign in again to access your account.",
+"zh": "退出后需重新登录才能访问账号。"
+},
 "student.progression.backToTraining": {
 "en": "Back to training",
 "zh": "返回训练"

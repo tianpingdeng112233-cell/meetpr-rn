@@ -9,6 +9,8 @@
 - [验收范围与测试 seam](../specs/build22-parity/SPEC.md)。保留四个 tab；训练历史使用 stack；未改 e1RM 公式/资格阈值；仅增兼容旧数据的可选来源元数据，无破坏性迁移。
 - 远端 `integration/w3@8e6e037` 落后本地基线 22 个提交。本轮以新建冻结分支 `integration/build22-base@6429d50` 为 PR base，保留共享远端分支现状。该 PR 只审本轮增量；合入正式集成线仍须一并处理原有 W3 集成提交。
 
+- `2565c6e` 的 [CI run 35578606303](https://github.com/tianpingdeng112233-cell/meetpr-rn/actions/runs/35578606303) 已全绿（check + android-build）；PR #55 已转为可审，尚未合并。后续教练修复及新增走查证据见 [W3 补充](verification-w3-2026-09-21.md)。
+
 ## 实现结果
 
 | 范围 | 结果 |
