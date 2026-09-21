@@ -1,5 +1,5 @@
 import type { PlanDay, PlanDetail, PlanSummary } from '@/api/domains/plans';
-import { gymDayRange } from './workout-date-policy';
+import { gymDayRange, localDateText } from './workout-date-policy';
 
 export function sequenceDays<
   T extends Pick<PlanDay, 'week_number' | 'day_of_week' | 'sort_order' | 'id'>,
@@ -67,7 +67,7 @@ export function canUndoCompletion(
     .pop();
   return latest?.id === dayId && completedToday(days, now)?.id === dayId;
 }
-export function recommendedDate(
+export function scheduledDate(
   plan: Pick<PlanSummary, 'start_date' | 'anchor_weekday'>,
   day: Pick<PlanDay, 'week_number' | 'day_of_week'>,
 ): string {
@@ -83,6 +83,12 @@ export function recommendedDate(
       1,
   );
   return date.toISOString().slice(0, 10);
+}
+export function recommendedDate(
+  plan: Pick<PlanSummary, 'start_date' | 'anchor_weekday'>,
+  day: Pick<PlanDay, 'week_number' | 'day_of_week'> & Partial<Pick<PlanDay, 'shifted_to_date'>>,
+): string {
+  return day.shifted_to_date ?? scheduledDate(plan, day);
 }
 export function selectCurrentPlan<T extends PlanSummary>(
   plans: readonly T[],
@@ -101,16 +107,21 @@ export function selectCurrentPlan<T extends PlanSummary>(
       )[0] ?? null
   );
 }
-export function planLogRange(plan: PlanDetail) {
+export function planLogRange(plan: PlanDetail, now = new Date()) {
+  const today = localDateText(now);
   const dates = plan.days.map((day) => recommendedDate(plan, day)).sort();
+  const first = plan.days.map((day) => scheduledDate(plan, day)).sort()[0] ?? plan.start_date;
+  const published = plan.published_at ? localDateText(new Date(plan.published_at)) : plan.start_date;
+  const lower = [first, published, today].sort()[0];
+  const upper = [dates.at(-1) ?? plan.end_date, today].sort().at(-1)!;
   const pad = (date: string, offset: number) => {
     const value = new Date(`${date}T00:00:00Z`);
     value.setUTCDate(value.getUTCDate() + offset);
     return value.toISOString().slice(0, 10);
   };
   return {
-    from: pad(dates[0] ?? plan.start_date, -1),
-    to: pad(dates[dates.length - 1] ?? plan.end_date, 1),
+    from: pad(lower, -1),
+    to: pad(upper, 1),
     scope: 'plan' as const,
   };
 }

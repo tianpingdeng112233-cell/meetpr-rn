@@ -1,12 +1,14 @@
 import { exerciseDisplayName, t } from '@/i18n';
 import {
   displayPoint,
+  buildE1RMSeries,
   E1RM_MATH,
   E1RM_POLICY,
   ninetyDayRecordTrajectory,
   type LiftFamily,
+  type E1RMHistoryPoint,
 } from '@/domain/e1rm';
-import { recommendedDate } from '@/domain/plan/sequence';
+import { scheduledDate } from '@/domain/plan/sequence';
 import {
   addUtcDays,
   chineseMonthDay,
@@ -34,8 +36,7 @@ import type {
 
 // Progression model (spec 071): plan end is the coach's end_date; shift offsets are no longer applied.
 const effectivePlanEnd = (plan: { end_date: string }): string => plan.end_date;
-// Recommended date is the anchor_weekday-aware position projection (spec 072 §E3).
-const scheduledDate = recommendedDate;
+// History retains original plan positions; actual recorded dates are added below.
 
 
 export const LIFT_PRESENTATION: Record<
@@ -76,9 +77,12 @@ export function buildGrowthCurves(
   logs: readonly SetLog[],
   familyByExerciseId: ReadonlyMap<string, LiftFamily>,
   now: Date,
+  sourcePoints?: readonly E1RMHistoryPoint[],
 ): Record<LiftFamily, GrowthCurve> {
   const build = (family: LiftFamily): GrowthCurve => {
-    const series = replayE1RMSeries(logs, familyByExerciseId, family);
+    const series = sourcePoints
+      ? buildE1RMSeries(sourcePoints.filter(point => familyByExerciseId.get(point.exerciseId) === family), family)
+      : replayE1RMSeries(logs, familyByExerciseId, family);
     let projectionIndex = 0;
     const trajectory = ninetyDayRecordTrajectory(
       series,
@@ -238,7 +242,6 @@ export function buildHistoryWeeks(
 ): HistoryWeek[] {
   const weeks: HistoryWeek[] = [];
   for (const plan of plans) {
-    if (plan.start_date > today) continue;
     const planExerciseIds = new Set(
       plan.days.flatMap((day) => day.exercises.map((exercise) => exercise.id)),
     );
@@ -246,6 +249,8 @@ export function buildHistoryWeeks(
       (log) =>
         log.plan_exercise_id !== null && planExerciseIds.has(log.plan_exercise_id),
     );
+    const firstDate = [plan.start_date, ...planLogs.map(log => log.logged_date)].sort()[0];
+    if (firstDate > today) continue;
     const lastDate = [
       plan.start_date,
       effectivePlanEnd(plan) < today ? effectivePlanEnd(plan) : today,
@@ -255,16 +260,21 @@ export function buildHistoryWeeks(
 
     for (let weekNumber = 1; weekNumber <= lastWeek; weekNumber += 1) {
       const startDate = addUtcDays(plan.start_date, (weekNumber - 1) * 7);
-      const days: HistoryDay[] = Array.from({ length: 7 }, (_, offset) => {
-        const date = addUtcDays(startDate, offset);
+      // Earlier actual records belong to W1; keep every subsequent plan week anchored.
+      const displayStart = weekNumber === 1 ? firstDate : startDate;
+      const dayCount = 7 + (weekNumber === 1 ? utcDayDistance(firstDate, startDate) : 0);
+      const days: HistoryDay[] = Array.from({ length: dayCount }, (_, offset) => {
+        const date = addUtcDays(displayStart, offset);
+        const recordedExerciseIds = new Set(planLogs.filter(log => log.logged_date === date).map(log => log.plan_exercise_id));
         const planned = plan.days.filter(
-          (day) => scheduledDate(plan, day) === date,
+          (day) => scheduledDate(plan, day) === date || day.exercises.some(exercise => recordedExerciseIds.has(exercise.id)),
         );
         const dayExerciseMap = new Map<string, HistoryExercise>();
         for (const day of planned) {
           for (const exercise of [...day.exercises].sort(
             (left, right) => left.sort_order - right.sort_order,
           )) {
+            if (scheduledDate(plan, day) !== date && !recordedExerciseIds.has(exercise.id)) continue;
             dayExerciseMap.set(exercise.id, {
               planExercise: exercise,
               name: exerciseName(exercise.exercise_id, exerciseIndex),

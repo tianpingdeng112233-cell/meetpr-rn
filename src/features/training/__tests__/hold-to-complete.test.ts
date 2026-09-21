@@ -129,3 +129,9 @@ test('moving outside cancels until release, and unmount never completes a pendin
     jest.useRealTimers();
   }
 });
+
+test('the seven hold feedback steps grow from light through medium to heavy', () => {
+  const { holdFeedback } = jest.requireActual<typeof import('../hold-to-complete')>('../hold-to-complete');
+  expect(Array.from({ length: 7 }, (_, index) => holdFeedback(index + 1).weight)).toEqual(['light', 'light', 'medium', 'medium', 'medium', 'heavy', 'heavy']);
+  expect(Array.from({ length: 7 }, (_, index) => holdFeedback(index + 1).intensity)).toEqual([0.5, 0.5, 0.7, 0.775, 0.85, 1, 1]);
+});

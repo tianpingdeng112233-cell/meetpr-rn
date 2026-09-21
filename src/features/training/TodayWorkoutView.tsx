@@ -1,3 +1,4 @@
+import { localDateText } from '@/domain/plan/workout-date-policy';
 import { chatRepository, type Conversation } from '@/api/domains/chat';
 import { SetRefEntryVisibility } from '@/features/chat/set-ref';
 import { SetRefSharePicker, loadTodaySetRefCandidates } from '@/features/chat/SetRefSharePicker';
@@ -36,18 +37,14 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  AppState,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
+import { showToast } from '@/design/Toast';
+import { QuickLogSheet } from './QuickLogSheet';
+import { QuickLogAttempt, makeQuickLogPlan, localNoon, type QuickLogPlan } from './quick-log';
+import { training22 } from './build22-strings';
 import { AnalyticsEvent, track } from '@/analytics';
 import {
   usePlan,
@@ -162,6 +159,9 @@ export function TodayWorkoutView() {
   const [requestedDayID, setRequestedDayID] = useState<string | null>(() =>
     handoff?.plan.trainee_id === studentId ? handoff.dayID : null,
   );
+  const [quickLogPlan, setQuickLogPlan] = useState<QuickLogPlan | null>(null);
+  const quickLogAttempt = useRef<QuickLogAttempt | null>(null);
+  const [quickLogContext, setQuickLogContext] = useState({ dayCode: '', subtitle: '' });
   const [startedDays, setStartedDays] = useState<Record<string, boolean>>({});
   const [startedLoaded, setStartedLoaded] = useState<string | null>(null);
   const router = useRouter();
@@ -258,7 +258,7 @@ export function TodayWorkoutView() {
   const logsQuery = useSetLogs(studentId, range, Boolean(plan));
   const historyQuery = useSetLogs(
     studentId,
-    { from: '1970-01-01', to: today },
+    { from: '1970-01-01', to: localDateText(clockNow) },
     Boolean(plan),
   );
   const readinessQuery = useReadiness(studentId, today);
@@ -579,12 +579,14 @@ export function TodayWorkoutView() {
     failed: boolean;
     completed?: boolean;
     attachmentOnly?: boolean;
+    quickLogDate?: string;
   }): Promise<string | undefined> => {
     const operation = async () => {
       const draft = liveDrafts.find(
         (candidate) => candidate.stableSetId === input.stableSetId,
       );
       if (!draft) return;
+      if (useSessionStore.getState().user?.id !== studentId) throw new Error('Session changed');
       const latestPlan = queryClient.getQueryData<PlanDetail>(
         planKeys.detail(plan?.id ?? ''),
       );
@@ -594,13 +596,13 @@ export function TodayWorkoutView() {
           (latestPlan.status !== 'published' ||
             cursorDay(latestPlan.days)?.id !== selectedDayID))
       ) {
-        if (!input.attachmentOnly) Alert.alert(
+        if (!input.attachmentOnly && !input.quickLogDate) Alert.alert(
           t('student.setEntrySheet.copy010'),
           t('student.todayWorkoutScreen.copy024'),
         );
         throw new Error('Selected day is no longer current');
       }
-      const logDate = gymDayText(new Date());
+      const logDate = input.quickLogDate ?? gymDayText(new Date());
       const completed = input.completed ?? true;
       const weight = parseFiniteDecimal(input.weightText);
       const reps = Number(input.repsText);
@@ -613,7 +615,7 @@ export function TodayWorkoutView() {
         reps > 99 ||
         (rpe !== null && (rpe < 0 || rpe > 10))
       ) {
-        if (!input.attachmentOnly) Alert.alert(
+        if (!input.attachmentOnly && !input.quickLogDate) Alert.alert(
           t('student.setEntrySheet.copy010'),
           t('student.todayWorkoutViewModelRecordingError.copy004'),
           [{ text: t('student.restTimerExplanationView.copy005') }],
@@ -623,7 +625,7 @@ export function TodayWorkoutView() {
       try {
         const response = await upsert.mutateAsync({
           plan_exercise_id: draft.exercise.id,
-          logged_date: logDate,
+          ...(input.quickLogDate ? { logged_date: input.quickLogDate } : {}),
           set_index: draft.setIndex,
           weight_kg: String(weight),
           reps,
@@ -658,7 +660,7 @@ export function TodayWorkoutView() {
                   assumed: false,
                   adhoc: false,
                   logged_date: logDate,
-                  logged_at: response.logged_at,
+                  logged_at: input.quickLogDate ? localNoon(input.quickLogDate).toISOString() : response.logged_at,
                 },
               } satisfies WorkoutSetDraft)
             : candidate,
@@ -678,12 +680,12 @@ export function TodayWorkoutView() {
         void track(AnalyticsEvent.SetLogged, {
           failed: input.failed,
           set_index: draft.setIndex,
-          date: today,
+          date: logDate,
         });
 
         if (!input.failed && completed) {
           const e1rm = await recordTrainingSetE1RM({
-            recorder,
+            recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!) }) : recorder,
             repository: trainingE1RMRepository,
             resolveExerciseMetadata,
             input: {
@@ -706,9 +708,9 @@ export function TodayWorkoutView() {
               },
             }));
           }
-          if (e1rm.pr) setPREvent(e1rm.pr);
+          if (e1rm.pr && !input.quickLogDate) setPREvent(e1rm.pr);
           if (
-            draft.status !== 'complete' &&
+            !input.quickLogDate && draft.status !== 'complete' &&
             nextDrafts.some((candidate) => !isDraftTerminal(candidate))
           ) {
             const preference = await readNumber(
@@ -723,14 +725,33 @@ export function TodayWorkoutView() {
             );
           }
         }
+        return response.id;
       } catch (error) {
-        if (!input.attachmentOnly) Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error), [
+        if (!input.attachmentOnly && !input.quickLogDate) Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error), [
           { text: t('student.restTimerExplanationView.copy005') },
         ]);
         throw error;
       }
     };
     return saveQueue.current.enqueue(operation);
+  };
+
+  const openQuickLog = () => {
+    if (!plan || !planDay || !editable) return;
+    const initial = makeQuickLogPlan({ plan, day: planDay, drafts: liveDrafts, logs: logsQuery.data?.logs ?? [], suggestedWeight: draft => outcomeForDraft(draft).suggestion?.weightKg ?? null });
+    setQuickLogContext({ dayCode: dayCode(planDay), subtitle: dayName(planDay, resolveExerciseMetadata) });
+    quickLogAttempt.current = new QuickLogAttempt({
+      persist: async (row, date) => {
+        const id = await commit({ stableSetId: row.draft.stableSetId, weightText: row.draft.weightText, repsText: row.draft.repsText, rpeText: row.draft.rpeText, failed: false, quickLogDate: date });
+        if (!id) throw new Error('Set unavailable');
+      },
+      complete: async dayId => {
+        if (useSessionStore.getState().user?.id !== studentId) throw new Error('Session changed');
+        await completion.mutateAsync(dayId);
+        bumpCompletion();
+      },
+    });
+    setQuickLogPlan(initial);
   };
 
   const showsSetRefEntry = SetRefEntryVisibility.shouldShow({ isEditable: editable, hasAvailableSet: liveDrafts.length > 0,
@@ -796,6 +817,9 @@ export function TodayWorkoutView() {
                 : 'W—'}
           </Text>
           <View style={styles.navActions}>
+            <Pressable accessibilityRole="button" accessibilityLabel={training22.history} onPress={() => router.push('/training-history')} style={styles.navButton}>
+              <MaterialCommunityIcons name="history" size={18} color={colors.textSecondary} />
+            </Pressable>
             {cursor && selectedDayID !== cursor.id ? (
               <AppButton
                 variant="link"
@@ -906,7 +930,7 @@ export function TodayWorkoutView() {
             <Text style={styles.emptySub}>
               {t('student.todayWorkoutScreen.copy003', [coachName])}
             </Text>
-            <AppButton
+            <AppButton haptic="none"
               variant="secondary"
               label={t('student.todayWorkoutScreen.copy004')}
               onPress={() => router.navigate('/(student)/growth')}
@@ -965,6 +989,7 @@ export function TodayWorkoutView() {
               editable={editable}
               recording={recording}
               startLoading={startedLoaded !== startKey}
+              onQuickLog={editable && !recording && realDrafts.length === 0 ? openQuickLog : undefined}
               onStart={() => {
                 setStartedDays((current) => ({ ...current, [startKey]: true }));
                 void writeBoolean(`training.started.${startKey}`, true);
@@ -1038,6 +1063,19 @@ export function TodayWorkoutView() {
           />
         ) : null}
       </ScrollView>
+      {quickLogPlan ? <QuickLogSheet initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
+        const outcome = await quickLogAttempt.current!.submit(input);
+        if (outcome.kind === 'completed') {
+          const completed = plan?.days.find(day => day.id === input.dayId);
+          setQuickLogPlan(null); quickLogAttempt.current = null;
+          setRestSeconds(null); setRecordingSetId(null); setCompletionPhase(null);
+          const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan?.id ?? ''));
+          setRequestedDayID(latest ? cursorDay(latest.days)?.id ?? input.dayId : null);
+          showToast(training22.saved(completed ? dayCode(completed) : ''), true);
+          await refresh();
+        }
+        return outcome;
+      }} /> : null}
       {shareRoute ? <SetRefSharePicker conversationId={shareRoute.conversationId} initialSetLogID={shareRoute.initialSetLogID} loadCandidates={loadShareCandidates} onClose={() => setShareRoute(null)} onStaged={() => router.navigate({ pathname: '/(student)/chat', params: { conversationId: shareRoute.conversationId, coachName: shareRoute.coachName } })} /> : null}
       {selectedDraft ? (
         <SetEntrySheet

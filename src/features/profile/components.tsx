@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, ScrollView, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppButton, font, Screen, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
@@ -8,7 +9,7 @@ export function ProfileModal({ children, title, onClose, busy = false, sheet = f
   return <Modal visible animationType="slide" transparent={sheet} onRequestClose={busy ? () => undefined : onClose}>
     <View style={{ flex: 1, backgroundColor: sheet ? colors.modalShadow : colors.bgBase, paddingTop: sheet ? 72 : 0 }}>
       <Screen style={sheet ? { borderTopLeftRadius: 24, borderTopRightRadius: 24 } : undefined}>
-        <View style={{ padding: spacing.base, gap: spacing.sm }}><AppButton variant="link" label={t('student.accountSecuritySheets.copy013')} disabled={busy} onPress={onClose} /><Text accessibilityRole="header" style={{ ...font.body(20, 'bold'), color: colors.textPrimary }}>{title}</Text></View>
+        <View style={{ padding: spacing.base, gap: spacing.sm }}><AppButton haptic="none" variant="link" label={t('student.accountSecuritySheets.copy013')} disabled={busy} onPress={onClose} /><Text accessibilityRole="header" style={{ ...font.body(20, 'bold'), color: colors.textPrimary }}>{title}</Text></View>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.base, gap: spacing.base }}>{children}</ScrollView>
       </Screen>
     </View>

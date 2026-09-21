@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Text, TextInput, View, type TextInputProps } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { font, typography, useColors } from '@/design';

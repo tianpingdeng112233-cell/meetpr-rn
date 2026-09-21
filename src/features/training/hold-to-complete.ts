@@ -29,3 +29,8 @@ export function completionAvailability({
   const button = editable && recording && realCount > 0;
   return { button, pill: button && remainingSets > 0 };
 }
+
+export function holdFeedback(step: number): { weight: 'light' | 'medium' | 'heavy'; intensity: number; pulseMs: number } {
+  const index = Math.max(0, Math.min(6, Math.floor(step) - 1));
+  return { weight: index < 2 ? 'light' : index < 5 ? 'medium' : 'heavy', intensity: [0.5, 0.5, 0.7, 0.775, 0.85, 1, 1][index], pulseMs: [8, 10, 16, 20, 24, 32, 38][index] };
+}

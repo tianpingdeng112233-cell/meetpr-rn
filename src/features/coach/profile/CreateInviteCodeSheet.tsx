@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, ScrollView, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CreateInviteCodeRequest } from '@/api/domains/invite-codes';

@@ -1,4 +1,5 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { Ionicons } from '@expo/vector-icons';
 import type { PlanDetail } from '@/api/domains/plans';
 import type { FeedbackItem } from '@/api/domains/feedback';

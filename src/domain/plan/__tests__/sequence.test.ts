@@ -79,7 +79,7 @@ test.each([
     expect(
       recommendedDate(
         plan([], { anchor_weekday: anchor }),
-        day('a', { shifted_to_date: '2030-01-01' }),
+        day('a'),
       ),
     ).toBe(expected);
   },
@@ -87,8 +87,8 @@ test.each([
 test('recommended dates advance by week/day and logs cover the full cycle padded one day', () => {
   const p = plan([day('a'), day('b', { week_number: 2, day_of_week: 3 })]);
   expect(recommendedDate(p, p.days[1])).toBe('2026-09-16');
-  expect(planLogRange(p)).toEqual({
-    from: '2026-09-06',
+  expect(planLogRange(p, new Date(2026, 8, 7, 12))).toEqual({
+    from: '2026-09-01',
     to: '2026-09-17',
     scope: 'plan',
   });
@@ -151,4 +151,11 @@ test('progress segments show only the cursor week after crossing a week boundary
     ['b', 'current'],
     ['c', 'upcoming'],
   ]);
+});
+
+test('coach shifts change recommendation without moving the cursor and log windows retain backfills and late training', () => {
+  const p = plan([day('a', { shifted_to_date: '2026-09-10' }), day('b', { day_of_week: 2 })]);
+  expect(recommendedDate(p, p.days[0])).toBe('2026-09-10');
+  expect(cursorDay(p.days)?.id).toBe('a');
+  expect(planLogRange(p, new Date(2026, 8, 21, 12))).toEqual({ from: '2026-09-01', to: '2026-09-22', scope: 'plan' });
 });

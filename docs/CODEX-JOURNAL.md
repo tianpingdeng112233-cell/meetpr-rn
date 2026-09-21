@@ -1,5 +1,7 @@
 # CODEX-JOURNAL
 
+> 历史施工记录；当前集成状态以 [PARITY](../PARITY.md) 和 [2026-09-21 build 22 验收](verification-build22-2026-09-21.md) 为准。下文旧角色分工和 ADB 受限描述只代表记录当时。
+
 ## 2026-09-04 — G0-a tokens v3
 
 - 卡: `card-g0a-tokens-v3.md`;只改当前 worktree,无 commit/push。视觉正典 `docs/w0-reference/design-tokens-v3.md` 为开工前已存在的 untracked 输入,未修改。
@@ -1638,3 +1640,7 @@ Final checks after all source/test edits:
 - `npm run lint` 通过，无 errors/warnings；`npx tsc --noEmit` 通过，无 hovered／typed-routes 生成文件诊断。日志 `/private/tmp/w3r-final-{lint,tsc}.log`。`git diff --check` 通过。
 - Standards 本地核对：仅白名单源码／测试／台账，复用现有 token/API 配置，无依赖、文案、颜色字体、后端或 DTO 改动。Spec 本地核对：双端共享连接、事件筛选、串行合并、已读游标和两档回落轮询均有覆盖；无 typing／FCM／客户端业务帧。
 - 用户明确沙箱无 ADB：未运行 `npx expo run:android`、未做真实 WebSocket 联调、无 AVD meetpr 截图，不声明原生验收通过。PARITY StudentChat／Receiving 已追加「W3-r 实时通道接入,断线回落轮询」，保持 🔨 待走查。
+
+## 2026-09-21 — Build 22 parity acceptance
+
+从 W3 `6429d50` 追齐 iOS `beta/1.0-22@0748931`。080–083 增量、独立双轴审查与 Android 定向视觉证据已落地；128 suites / 883 tests 通过，类型、lint、Android 构建通过。详细实现、复现步骤、截图与未完成的 Global/真机/分发门禁统一记录于 [验收报告](verification-build22-2026-09-21.md)。本轮没有认定 W3 全量通过。

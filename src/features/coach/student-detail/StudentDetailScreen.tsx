@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Modal, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen, font, useColors } from '@/design';
 import { t, exerciseDisplayName } from '@/i18n';

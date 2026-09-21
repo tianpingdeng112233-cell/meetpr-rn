@@ -1,16 +1,8 @@
 import { t } from '@/i18n';
 
 import { useEffect, useState, useMemo } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnalyticsEvent, AnalyticsScreen, screen, track } from '@/analytics';
@@ -239,7 +231,7 @@ export function OnboardingWizard({
               {completionError ? <Text style={styles.error}>{completionError}</Text> : null}
             </ScrollView>
             <View style={styles.footer}>
-              <AppButton
+              <AppButton haptic="none"
                 disabled={editing || step === 1}
                 label={t('student.onboardingWizardView.copy012')}
                 onPress={() => setStep((step - 1) as OnboardingStep)}

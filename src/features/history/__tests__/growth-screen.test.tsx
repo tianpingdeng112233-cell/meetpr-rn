@@ -10,6 +10,7 @@ import { useStudentTabsStore } from '@/features/student-tabs';
 
 import { GrowthScreen } from '../GrowthScreen';
 
+jest.mock('react-native-safe-area-context', () => (jest.requireActual('react-native-safe-area-context/jest/mock') as { default: unknown }).default);
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('@/api/session', () => ({ useSessionStore: (selector: (state: { user: { id: string } }) => unknown) => selector({ user: { id: 'student' } }) }));
 const mockNavigate = jest.fn();

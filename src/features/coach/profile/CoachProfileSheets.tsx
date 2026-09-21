@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Linking, Pressable, View } from 'react-native';
+import { Linking, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { Card, font, radius, useColors } from '@/design';
 import { t } from '@/i18n';

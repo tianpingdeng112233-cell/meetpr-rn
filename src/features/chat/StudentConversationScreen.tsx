@@ -13,7 +13,8 @@ import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { chatRepository, type ChatMessage, type Conversation } from '@/api/domains/chat';
 import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
 import { feedbackKeys, feedbackRepository, type FeedbackResponse, type FeedbackItem } from '@/api/domains/feedback';

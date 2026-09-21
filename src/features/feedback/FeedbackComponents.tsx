@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import type { StudentVideo } from '@/api/domains/videos';
 import { AppButton, font, IconButton, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
@@ -10,7 +11,7 @@ export function FeedbackHeader({ detail = false }: { detail?: boolean }) {
   const colors = useColors();
   const router = useRouter();
   return <View style={[styles.header, { borderBottomColor: colors.borderHairline }]}>
-    <IconButton accessibilityLabel={t('student.feedbackInboxView.copy005')} onPress={() => router.canGoBack() ? router.back() : router.replace('/(student)/today')}
+    <IconButton haptic="none" accessibilityLabel={t('student.feedbackInboxView.copy005')} onPress={() => router.canGoBack() ? router.back() : router.replace('/(student)/today')}
       icon={props => <MaterialCommunityIcons name="arrow-left" {...props} />} />
     <View style={{ flex: 1, gap: spacing.point2 }}>
       <Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>{t(detail ? 'student.feedbackDetailView.copy003' : 'student.feedbackInboxView.copy006')}</Text>

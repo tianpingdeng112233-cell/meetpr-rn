@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { font, radius, spacing, useColors } from '@/design';
 export function Copy({ children, size = 14, tone = 'textPrimary', weight = 'regular', mono = false, display = false, style, lines }: PropsWithChildren<{ size?: number; tone?: keyof ReturnType<typeof useColors>; weight?: 'regular' | 'medium' | 'semibold' | 'bold'; mono?: boolean; display?: boolean; style?: StyleProp<TextStyle>; lines?: number }>) {
@@ -10,9 +11,9 @@ export function Icon({ name, tone = 'textTertiary', size = 20 }: { name: Compone
   const colors = useColors();
   return <Ionicons name={name} color={colors[tone]} size={size} />;
 }
-export function Action({ label, onPress, filled = false, disabled = false, icon, style, testID }: { label: string; onPress(): void; filled?: boolean; disabled?: boolean; icon?: ComponentProps<typeof Ionicons>['name']; style?: StyleProp<ViewStyle>; testID?: string }) {
+export function Action({ label, onPress, filled = false, disabled = false, icon, style, testID, haptic }: { haptic?: 'light' | 'warning'; label: string; onPress(): void; filled?: boolean; disabled?: boolean; icon?: ComponentProps<typeof Ionicons>['name']; style?: StyleProp<ViewStyle>; testID?: string }) {
   const colors = useColors();
-  return <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.space4, paddingVertical: spacing.point10, borderRadius: radius.pill, borderWidth: filled ? 0 : 1, borderColor: colors.borderStrong, backgroundColor: filled ? colors.textPrimary : undefined, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : 1 }, style, pressed && { transform: [{ scale: 0.97 }] }]}>
+  return <Pressable haptic={haptic} testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.space4, paddingVertical: spacing.point10, borderRadius: radius.pill, borderWidth: filled ? 0 : 1, borderColor: colors.borderStrong, backgroundColor: filled ? colors.textPrimary : undefined, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : 1 }, style, pressed && { transform: [{ scale: 0.97 }] }]}>
     {icon ? <Icon name={icon} /> : <Copy size={14} weight={filled ? 'bold' : 'semibold'} tone={filled ? 'inkOnCTAFill' : 'textTertiary'}>{label}</Copy>}
   </Pressable>;
 }

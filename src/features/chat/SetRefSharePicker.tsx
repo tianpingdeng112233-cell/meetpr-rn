@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, Switch, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { font, radius, Screen, useColors } from '@/design';
 import { exerciseDisplayName, t } from '@/i18n';

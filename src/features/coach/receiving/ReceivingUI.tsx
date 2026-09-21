@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { ActivityIndicator, Pressable, Text, View, type PressableProps } from 'react-native';
+import { ActivityIndicator, Text, View, type PressableProps } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { font, radius, spacing, useColors } from '@/design';
 import { t, type TranslationKey } from '@/i18n';
-export function Pill({ label, mono = false, ...props }: PressableProps & { label: string; mono?: boolean }) {
+export function Pill({ label, mono = false, haptic, ...props }: PressableProps & { label: string; mono?: boolean; haptic?: 'light' | 'warning' }) {
   const colors = useColors();
-  return <Pressable {...props} accessibilityRole="button" accessibilityLabel={props.accessibilityLabel ?? label} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.textPrimary, opacity: props.disabled ? 0.35 : pressed ? 0.7 : 1 })}><Text style={{ ...(mono ? font.mono(11, 'bold') : font.body(13, 'bold')), color: colors.bgBase }}>{label}</Text></Pressable>;
+  return <Pressable haptic={haptic} {...props} accessibilityRole="button" accessibilityLabel={props.accessibilityLabel ?? label} style={({ pressed }) => ({ minHeight: 44, paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, backgroundColor: colors.textPrimary, opacity: props.disabled ? 0.35 : pressed ? 0.7 : 1 })}><Text style={{ ...(mono ? font.mono(11, 'bold') : font.body(13, 'bold')), color: colors.bgBase }}>{label}</Text></Pressable>;
 }
 export function ReceivingState({ state, pending = false, retry }: { state: 'loading' | 'failed' | 'empty'; pending?: boolean; retry: () => void }) {
   const colors = useColors();
@@ -21,7 +22,7 @@ export function ReceivingState({ state, pending = false, retry }: { state: 'load
     {state === 'loading' ? <ActivityIndicator testID="coach.inbox.loading" accessibilityLabel={t(title)} color={colors.gold500} /> : <View style={{ backgroundColor: colors.surfaceCard, borderRadius: 26, width: 52, height: 52, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name={state === 'failed' ? 'alert-outline' : pending ? 'check-circle-outline' : 'message-outline'} size={20} color={state === 'failed' ? colors.danger : colors.success} /></View>}
     <Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary, textAlign: 'center' }}>{t(title)}</Text>
     {state === 'empty' ? <Text style={{ ...font.body(12), color: colors.textDisabled, textAlign: 'center' }}>{t(pending ? 'coach.videoFeedback.noPendingVideosSubtitle' : 'coach.inbox.emptySubtitle')}</Text> : null}
-    {state === 'failed' ? <Pill label={t('chat.retry')} onPress={retry} /> : null}
+    {state === 'failed' ? <Pill haptic="light" label={t('chat.retry')} onPress={retry} /> : null}
   </View>;
 }
 

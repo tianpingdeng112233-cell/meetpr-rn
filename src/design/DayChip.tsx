@@ -1,4 +1,5 @@
-import { Pressable, Text, View, type PressableProps } from 'react-native';
+import { Text, View, type PressableProps } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { cardShadow } from './Card';
 import { useTheme } from './theme';

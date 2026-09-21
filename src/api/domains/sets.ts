@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
+import { gymDayToday } from '@/domain/plan/workout-date-policy';
+
 import { authenticatedRequest } from '../session';
 import {
   DateTextSchema,
@@ -61,6 +63,7 @@ export const SetLogSchema = z.object({
   reps: z.number().int(),
   /** Nullable Decimal wire value; kept as a string when present. */
   rpe: DecimalStringSchema.nullable(),
+  coach_rpe: DecimalStringSchema.nullish(),
   completed: z.boolean(),
   failed: z.boolean(),
   assumed: z.boolean(),
@@ -103,10 +106,12 @@ async function range(
 ): Promise<SetLogsResponse> {
   const id = UuidSchema.parse(studentId);
   const params = SetLogRangeSchema.parse(input);
-  return authenticatedRequest(
+  const response = await authenticatedRequest(
     `/students/${id}/sets${encodeQuery(params)}`,
     { schema: SetLogsResponseSchema },
   );
+  return { logs: response.logs.map(log => ({ ...log, logged_at: resolvedLoggedAt(log.logged_at, log.logged_date) })) };
+
 }
 
 export const setsRepository = { range, upsert };
@@ -141,4 +146,11 @@ export function useUpsertSetLog() {
     mutationFn: setsRepository.upsert,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: setKeys.all }),
   });
+}
+
+/** Keep live instants exact; a DATE differing from its write gym-day is a backfill. */
+export function resolvedLoggedAt(serverTimestamp: string, loggedDate: string): string {
+  if (gymDayToday(new Date(serverTimestamp)) === loggedDate) return serverTimestamp;
+  const [year, month, day] = loggedDate.split('-').map(Number);
+  return new Date(year, month - 1, day, 12).toISOString();
 }

@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Modal, StyleSheet, Text, Vibration, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
 import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';

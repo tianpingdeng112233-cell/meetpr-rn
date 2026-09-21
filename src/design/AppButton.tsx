@@ -1,10 +1,12 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type PressableProps, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Path } from 'react-native-svg';
 
 import { useColors } from './theme';
 import { font, radius } from './tokens';
 
 export type AppButtonProps = Omit<PressableProps, 'children' | 'style'> & {
+  haptic?: 'none' | 'light' | 'warning';
   label: string;
   sub?: string;
   icon?: 'none' | 'play' | 'logout';
@@ -14,7 +16,7 @@ export type AppButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   variant?: 'primary' | 'secondary' | 'danger' | 'link';
 };
 
-export function AppButton({ disabled = false, label, sub, icon = 'none', loading = false, fullWidth = true, style, variant = 'primary', accessibilityState, onPress, ...props }: AppButtonProps) {
+export function AppButton({ disabled = false, label, sub, icon = 'none', loading = false, fullWidth = true, style, variant = 'primary', accessibilityState, onPress, haptic, ...props }: AppButtonProps) {
   const colors = useColors();
   const blocked = disabled || loading;
   const foreground = { primary: colors.ctaText, secondary: colors.textSecondary, danger: colors.dangerMuted, link: colors.textMuted }[variant];
@@ -22,6 +24,7 @@ export function AppButton({ disabled = false, label, sub, icon = 'none', loading
   return (
     <Pressable
       {...props}
+      haptic={haptic ?? (variant === 'link' ? undefined : variant === 'danger' ? 'warning' : 'light')}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={props.accessibilityLabel ?? label}
@@ -36,7 +39,7 @@ export function AppButton({ disabled = false, label, sub, icon = 'none', loading
       }, (variant === 'secondary' || variant === 'danger') && { borderWidth: 1, borderColor: variant === 'danger' ? colors.borderStrong : colors.borderDefault },
       blocked && { opacity: 0.35 },
       typeof style === 'function' ? style(state) : style,
-      state.pressed && !blocked && { transform: [{ scale: 0.97 }] }] }>
+      state.pressed && !blocked && { opacity: 0.85, transform: [{ scale: 0.97 }] }] }>
       {loading && variant === 'secondary' ? <View style={[styles.loadingLine, { backgroundColor: colors.gold500 }]} /> : null}
       <View style={styles.row}>
         {loading && variant !== 'secondary' ? <ActivityIndicator color={foreground} /> : null}

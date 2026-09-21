@@ -1,0 +1,32 @@
+import { afterEach, expect, jest, test } from '@jest/globals';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { AccessibilityInfo, StyleSheet, Text, Vibration } from 'react-native';
+import { FeedbackPressable } from '../FeedbackPressable';
+jest.mock('react-native/Libraries/Components/Pressable/Pressable', () => ({ __esModule: true, default: 'NativePressable' }));
+let tree: ReactTestRenderer;
+afterEach(() => { if (tree) act(() => tree.unmount()); jest.restoreAllMocks(); });
+test.each([false, true])('all buttons press consistently with Reduce Motion = %s', async reduced => {
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(reduced);
+  await act(async () => { tree = create(<FeedbackPressable style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.9 : 1 }] })}><Text>Open</Text></FeedbackPressable>); });
+  const button = tree.root.findByType('NativePressable' as never);
+  const held = StyleSheet.flatten(button.props.style({ pressed: true }));
+  expect(held.opacity).toBe(0.85);
+  expect(held.transform).toContainEqual({ scale: reduced ? 1 : 0.97 });
+  expect(held.transform).not.toContainEqual({ scale: 0.9 });
+  expect(StyleSheet.flatten(button.props.style({ pressed: false })).opacity).toBe(1);
+});
+test('only explicitly classified actions vibrate, disabled and navigation do not', async () => {
+  const vibrate = jest.spyOn(Vibration, 'vibrate').mockImplementation(() => {});
+  const press = jest.fn();
+  await act(async () => { tree = create(<FeedbackPressable onPress={press}><Text>Back</Text></FeedbackPressable>); });
+  act(() => tree.root.findByType('NativePressable' as never).props.onPress({}));
+  expect(vibrate).not.toHaveBeenCalled();
+  await act(async () => tree.update(<FeedbackPressable haptic="light" onPress={press}><Text>Save</Text></FeedbackPressable>));
+  act(() => tree.root.findByType('NativePressable' as never).props.onPress({}));
+  expect(vibrate).toHaveBeenLastCalledWith(10);
+  await act(async () => tree.update(<FeedbackPressable haptic="warning" disabled onPress={press}><Text>Delete</Text></FeedbackPressable>));
+  act(() => tree.root.findByType('NativePressable' as never).props.onPress({}));
+  expect(press).toHaveBeenCalledTimes(2);
+  expect(vibrate).toHaveBeenCalledTimes(1);
+  expect(StyleSheet.flatten(tree.root.findByType('NativePressable' as never).props.style({ pressed: true })).opacity).toBe(0.35);
+});

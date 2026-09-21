@@ -1,13 +1,6 @@
 import { type ReactNode, useEffect, useMemo } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  type TextInputProps,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { Card, useColors, type Colors, radius, spacing, typography } from '@/design';
 

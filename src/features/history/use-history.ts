@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -9,13 +9,11 @@ import {
   useOnboardingProfile,
   usePlans,
   useSetLogs,
-  type SetLog,
 } from '@/api/domains';
-import type { E1RMHistoryPoint, LiftFamily, PRBreakthroughEvent } from '@/domain/e1rm';
+import type { LiftFamily, PRBreakthroughEvent } from '@/domain/e1rm';
 import {
   buildResolvedExerciseFamilies,
   dashboardE1RMRange,
-  replayE1RMHistoryPoints,
   utcDateText,
 } from '@/features/dashboard/model';
 import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
@@ -28,40 +26,9 @@ import {
   buildGrowthStats,
   buildHistoryWeeks,
   chartBuckets,
-  LIFT_FAMILIES,
 } from './model';
 import type { GrowthState } from './types';
-
-async function backfillImportedHistory(
-  studentId: string,
-  logs: readonly SetLog[],
-  familyByExerciseId: ReadonlyMap<string, LiftFamily>,
-): Promise<void> {
-  const projected = LIFT_FAMILIES.flatMap((family) =>
-    replayE1RMHistoryPoints(logs, familyByExerciseId, family).map(
-      (point): E1RMHistoryPoint => ({
-        ...point,
-        id: `imported-${point.setLogId}`,
-        origin: 'imported',
-      }),
-    ),
-  );
-  const histories = await trainingE1RMRepository.fetchHistories(
-    studentId,
-    [...new Set(projected.map((point) => point.exerciseId))],
-  );
-  const existingSetLogs = new Set(
-    [...histories.values()].flatMap((points) =>
-      points.map((point) => point.setLogId),
-    ),
-  );
-  for (const point of projected) {
-    if (!existingSetLogs.has(point.setLogId)) {
-      await trainingE1RMRepository.upsertPoint(point);
-      existingSetLogs.add(point.setLogId);
-    }
-  }
-}
+import { loadGrowthHistory } from './history-points';
 
 export type HistoryViewModel = {
   state: GrowthState;
@@ -114,6 +81,12 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
     [exerciseIndex, profileQuery.data],
   );
 
+  const pointsQuery = useQuery({
+    queryKey: ['growth-source-points', studentId, logsQuery.dataUpdatedAt, exerciseQuery.dataUpdatedAt, profileQuery.dataUpdatedAt],
+    queryFn: () => loadGrowthHistory(trainingE1RMRepository, studentId, logsQuery.data?.logs ?? [], familyByExerciseId),
+    enabled: Boolean(studentId) && logsQuery.isSuccess && exerciseQuery.isSuccess && profileQuery.isSuccess,
+  });
+
   const loadPRs = useCallback(async () => {
     if (!studentId) return;
     setPREvents(await trainingE1RMRepository.unacknowledgedPRs(studentId));
@@ -139,6 +112,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
       feedback.reload(),
       ...detailQueries.map((query) => query.refetch()),
       loadPRs(),
+      pointsQuery.refetch(),
     ]);
   }, [
     detailQueries,
@@ -147,6 +121,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
     loadPRs,
     logsQuery,
     plansQuery,
+    pointsQuery,
     profileQuery,
   ]);
 
@@ -168,7 +143,8 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
         freshExerciseIndex,
         profileResult.data ?? profileQuery.data ?? null,
       );
-      await backfillImportedHistory(
+      await loadGrowthHistory(
+        trainingE1RMRepository,
         studentId,
         logsResult.data?.logs ?? logsQuery.data?.logs ?? [],
         freshFamilies,
@@ -198,6 +174,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
   const state = useMemo<GrowthState>(() => {
     if (!studentId) return { status: 'idle' };
     const loading =
+      pointsQuery.isPending ||
       plansQuery.isPending ||
       logsQuery.isPending ||
       exerciseQuery.isPending ||
@@ -206,6 +183,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
       detailQueries.some((query) => query.isPending);
     const errorQuery = detailQueries.find((query) => query.isError);
     if (
+      pointsQuery.isError ||
       plansQuery.isError ||
       logsQuery.isError ||
       exerciseQuery.isError ||
@@ -216,6 +194,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
       return {
         status: 'error',
         error:
+          pointsQuery.error ??
           plansQuery.error ??
           logsQuery.error ??
           exerciseQuery.error ??
@@ -226,7 +205,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
     }
     if (loading) return { status: 'loading' };
     const logs = logsQuery.data?.logs ?? [];
-    const curves = buildGrowthCurves(logs, familyByExerciseId, now);
+    const curves = buildGrowthCurves(logs, familyByExerciseId, now, pointsQuery.data);
     const familyByPlanExerciseId = new Map<string, LiftFamily>();
     for (const plan of planDetails) {
       for (const day of plan.days) {
@@ -243,6 +222,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
       logs,
       feedback: feedback.items,
       curves,
+      sourcePoints: new Map((pointsQuery.data ?? []).map(point => [point.id, point])),
       stats: buildGrowthStats(logs, curves, profileQuery.data ?? null),
       volumeIntensity: chartBuckets(logs),
       familyByExerciseId,
@@ -267,6 +247,10 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
     logsQuery.isError,
     logsQuery.isPending,
     now,
+    pointsQuery.data,
+    pointsQuery.isPending,
+    pointsQuery.isError,
+    pointsQuery.error,
     planDetails,
     plansQuery.error,
     plansQuery.isError,

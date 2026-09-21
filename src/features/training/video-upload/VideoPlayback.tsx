@@ -41,7 +41,7 @@ function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge }: { loc
   if (uri) return <FeedbackVideoPlayer videoId={attachmentId ?? localUri ?? ''} url={uri} markers={null} badge={badge} refreshURL={refreshURL} onClose={onClose} />;
   return <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
     <View style={{ padding: spacing.base, gap: spacing.md }}>
-      <AppButton variant="secondary" label={t('chat.closePlayback')} onPress={onClose} />
+      <AppButton haptic="none" variant="secondary" label={t('chat.closePlayback')} onPress={onClose} />
       {failed ? <>
         <Text style={{ color: colors.textSecondary }}>{t('student.videoAttachmentSection.copy004')}</Text>
         <AppButton label={t('student.videoAttachmentSection.copy002')} onPress={() => { setFailed(false); setAttempt(value => value + 1); }} />

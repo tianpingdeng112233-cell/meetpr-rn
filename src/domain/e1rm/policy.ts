@@ -37,7 +37,7 @@ export function isE1RMPointEligible(
   point: E1RMHistoryPoint,
   family: LiftFamily | null,
 ): boolean {
-  return isE1RMEligible({ reps: point.sourceReps, rpe: point.sourceRPE, family });
+  return isE1RMEligible({ reps: point.sourceReps, rpe: point.sourceCoachRPE ?? point.sourceRPE, family });
 }
 
 export function prNoiseBand(previousBestKg: number): number {

@@ -1,4 +1,5 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { Card, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { relativeText } from '@/domain/coach/formatting';

@@ -9,7 +9,8 @@ import type { SelectedVideo } from './model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { t } from '@/i18n';
-import { ActivityIndicator, Alert, Modal, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { useColors, radius, spacing, font } from '@/design';
 

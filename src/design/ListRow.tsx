@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Pressable, Text, View, type AccessibilityProps, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, View, type AccessibilityProps, type StyleProp, type ViewStyle } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Path } from 'react-native-svg';
 
 import { useColors } from './theme';

@@ -26,6 +26,7 @@ import {
   PrivacyNoticeSheet,
   track,
 } from '@/analytics';
+import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
 import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
@@ -80,6 +81,7 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={isStudent}>
         <Stack.Screen name="(student)" />
+        <Stack.Screen name="training-history" />
       </Stack.Protected>
     </Stack>
   );
@@ -156,6 +158,7 @@ function ThemedRoot() {
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
         <RootNavigator />
         <TrainingReminderSession />
+        <PlanNotificationSession />
         <Toast />
         <PrivacyNoticeSheet
           onConfirmed={() => setPrivacyNoticeVisible(false)}
