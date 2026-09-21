@@ -378,3 +378,13 @@ test('poll acknowledgement clears a staged send whose HTTP response was lost', a
   expect(useSetRefStagingStore.getState().intents[conversationId]).toBeUndefined();
   expect(copy()).not.toContain(t('student.studentBlackGoldChatView.copy026'));
 });
+
+test.each(['', '   '])('a coach without a display name renders a localized fallback (%j)', async coachName => {
+  jest.mocked(chatRepository.list).mockResolvedValue({ conversations: [
+    { id: conversationId, other_party: { id: coachId, display_name: '   ' }, unread_count: 0 },
+  ] });
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen conversationId={conversationId} coachName={coachName} /></QueryClientProvider>); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain(t('student.studentBlackGoldChatView.copy014', [t('student.dashboardView.copy003')]));
+  expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.dashboardView.copy003'))).toBe(true);
+});

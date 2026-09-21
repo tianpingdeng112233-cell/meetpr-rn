@@ -124,3 +124,7 @@
 | app 内自更新检查 | ☐ | 无商店必做 |
 | 分发通道 | ☐ | ⚖️待拍:Google Play(内测轨 closed testing)vs 海外 APK 下载页;PLAN §7 有推荐 |
 | 隐私清单初版 | ☐ | |
+
+### 2026-09-21 Global 实际账号补验
+
+已创建专用 Global 教练/学员并完成登录、绑定和真实聊天收发；Dashboard 等待计划的 Message coach 入口与空教练姓名回退已修复。最终证据与仍未过的计划/视频/视觉矩阵统一见 [W3 补充记录](docs/verification-w3-2026-09-21.md)。此定向补验不改变 W3 整体未完成的结论。

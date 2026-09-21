@@ -228,7 +228,7 @@ export function DashboardScreen() {
             <DashboardPlanWaitingState
               coachName={coachName}
               week={1}
-              onMessage={openFeedback}
+              onMessage={() => void chat.openCoachChat()}
             />
           ) : (
             <>

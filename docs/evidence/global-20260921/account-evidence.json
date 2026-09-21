@@ -1,0 +1,62 @@
+[
+  {
+    "method": "POST",
+    "path": "/auth/email/login",
+    "status": 200,
+    "at": "2026-09-21T10:27:13.697361+00:00"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/email/register",
+    "status": 201,
+    "at": "2026-09-21T10:27:15.498359+00:00"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/email/login",
+    "status": 200,
+    "at": "2026-09-21T10:27:16.721693+00:00"
+  },
+  {
+    "method": "GET",
+    "path": "/coach/students",
+    "status": 200,
+    "at": "2026-09-21T10:27:17.900385+00:00"
+  },
+  {
+    "method": "GET",
+    "path": "/coach/invite-codes",
+    "status": 200,
+    "at": "2026-09-21T10:27:21.680688+00:00"
+  },
+  {
+    "method": "POST",
+    "path": "/coach/invite-codes",
+    "status": 201,
+    "at": "2026-09-21T10:27:22.805666+00:00"
+  },
+  {
+    "method": "POST",
+    "path": "/bind-requests",
+    "status": 201,
+    "at": "2026-09-21T10:27:24.462716+00:00"
+  },
+  {
+    "method": "GET",
+    "path": "/coach/bind-requests",
+    "status": 200,
+    "at": "2026-09-21T10:27:25.564153+00:00"
+  },
+  {
+    "method": "POST",
+    "path": "/coach/bind-requests/68bfb809-973d-461d-b049-856722b1678a/accept",
+    "status": 200,
+    "at": "2026-09-21T10:27:26.803218+00:00"
+  },
+  {
+    "method": "GET",
+    "path": "/coach/students",
+    "status": 200,
+    "at": "2026-09-21T10:27:27.825651+00:00"
+  }
+]

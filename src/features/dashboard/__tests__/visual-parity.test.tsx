@@ -45,7 +45,7 @@ const plan: PlanDetail = {
 };
 let renderer: ReactTestRenderer;
 let client: QueryClient;
-let servedPlan: PlanDetail;
+let servedPlan: PlanDetail | null;
 let feedbackItems: import('@/api/domains').FeedbackItem[];
 
 beforeEach(() => {
@@ -58,7 +58,7 @@ beforeEach(() => {
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path.endsWith('/plans')) return { plans: [servedPlan] } as never;
+    if (path.endsWith('/plans')) return { plans: servedPlan ? [servedPlan] : [] } as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: [] } as never;
     if (path.endsWith('/onboarding')) return null as never;
@@ -152,4 +152,23 @@ test.each([{ name: 'Dashboard', Component: DashboardScreen }, { name: 'Training'
   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy007') })[0].props.onPress(); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
   expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
+});
+
+
+test('a bound student with no plan can message the coach from the Dashboard waiting card', async () => {
+  servedPlan = null;
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+  const messageLabel = () => renderer.root.findAllByType(Text).find(node => node.props.children === 'Message coach');
+  for (let attempt = 0; attempt < 100 && !messageLabel(); attempt += 1) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  }
+  let button = messageLabel();
+  expect(button).toBeDefined();
+  while (button && typeof button.props.onPress !== 'function') button = button.parent ?? undefined;
+  if (!button) throw new Error('Message coach must be actionable');
+  const press = button.props.onPress;
+  await act(async () => { await press(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
+  expect(mockNavigate).not.toHaveBeenCalledWith('/(student)/feedback');
 });

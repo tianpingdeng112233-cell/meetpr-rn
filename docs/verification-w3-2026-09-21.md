@@ -32,8 +32,34 @@ Android API 35，1080×2400，ADB；本地合成教练/学员、8 秒生成视�
 
 David 已明确授权现有 Global 正式环境方案 A：仅新增 1 个专用教练 + 1 个学员，教练后台预置，重名立即停止，绝不修改既有账号；仅这两个账号内进行绑定、计划、日志、聊天、视频验收。
 
-本机尚未就绪的 Bitwarden 凭证通道阻止安全建号和交付；接入方式待 David 回复。未生成真实账号密码、未创建生产账号、未修改生产数据。后续需核对生产部署版本与精确 API schema，教练 provision 禁止调用脚本的“重名换密码”分支。
+2026-09-21 David 明确改为本地保存这对测试账号，无需 Bitwarden。已在仓库外 `/Users/david/.local/share/meetpr/global-qa-20260921/accounts.json` 保存邮箱/密码（目录 0700、文件 0600），不含 token；未提交凭证。
+
+教练预置来自 backend 独立操作分支的 create-only 脚本 `f8db2a1`，大小写无关重名保护经测试和双轴审查；[Global 工作流 35588654243](https://github.com/tianpingdeng112233-cell/MeetPR-backend/actions/runs/35588654243) 成功返回 COACH_CREATED。独立临时密码 secret 已删除，原 shared secret 不变，无部署/迁移/合并。后端基线与最终门禁分别为 1163 / 1166 tests，最终 typecheck/lint/format/build 通过。
+
+教练登录 200，学员注册 201 / 登录 200；专用 single_use 邀请码 201，绑定申请 201 / 接受 200，跳过评估期。首次教练名单与邀请码均为空。Android Global QA 包实际登录两种角色，教练名单仅见 RN22 QA Student，学员进入无计划 Today。详见 [HTTP 证据](evidence/global-20260921/account-evidence.json)、[教练名单](evidence/global-20260921/global-coach-roster.png)、[学员 Today](evidence/global-20260921/global-student-login.png)。
+
+本轮未部署后端；历史最后成功 Global deploy run 32652429117 指向 7ce7245，当前 health 返回 ok，此信息不等同于直接确认运行镜像 SHA。API 契约以本次真实响应验证。
 
 ## W3 后续
 
 继续完成剩余角色/状态矩阵、iOS 并排、大字体/小屏、真实 Global 端到端与 P-31 契约卡。历史“学员 36 项/教练 20 项”来自早期走查发现清单，不等于 56 个屏幕；教练历史已续到 P-29，本次续到 P-32。当前资料不得用于宣布完整 W3 验收通过。
+
+## Global 空账号导航回归卡 W3-G01
+
+在真实 Global 新学员无计划时，Today 的 Message coach 错接到反馈列表；截图 global-student-chat-empty。根因为 DashboardPlanWaitingState 的 onMessage 传入 openFeedback。目标为复用已有 useOpenCoachChat：点击后建立/打开当前绑定教练会话，与 Today 页头保持一致。iOS build 22 的 onMessageCoach 同样打开包含教练会话的通知入口。
+
+测试 seam：现有 DashboardScreen 渲染交互及 API/路由边界，空计划列表、已接受的师生绑定；点击 Message coach 必须到当前教练聊天，不能到反馈列表。Out of Scope：导航结构、消息协议、反馈列表行为、未绑定状态产品改版。走查观察已完成，本卡进入独立返修。
+
+### W3-G02：无教练姓名的会话标题
+
+真实预置教练尚无 coach_profiles 姓名，服务返回空 display_name，聊天页标题为空且显示 Say hello to。目标为名称优先级：传入非空姓名 → 服务查询非空姓名 → 既有本地化 Coach。测试 seam 为 StudentConversationScreen 渲染的标题/空态；覆盖空串及空白，保留具名教练。Out of Scope：教练资料编辑、新文案、在线状态语义、后端数据修改。
+
+
+## Global 复验结果
+
+- W3-G01 / W3-G02 已修复。等待计划卡进入当前教练会话，姓名为空时显示本地化 Coach；原反馈入口不变。两张卡的 Standards / Spec 均独立 CLEAN。
+- 导航 red 明确收到错误的 feedback 路径；姓名空串/空白两项 red 后 green。定向 2 suites / 38 tests，全量 128 suites / 886 tests、tsc、lint、Android assembleRelease 均通过。
+- 学员通过 Android 发送 `RN22 Global QA student message 20260921`，教练 API 读取到该消息并回复，学员 App 接收后重启仍能回读。只发生于专用账号对。[HTTP 证据](evidence/global-20260921/chat-evidence.json)、[最终聊天与重启回读](evidence/global-20260921/global-chat-final-reloaded.png)。此观察证明服务端写入与 App 重启回读，不证明后端服务重启，也未单独区分 WebSocket 与轮询。
+- 最终 APK 在本地 scratch/global/meetpr-global-qa-final.apk；SHA256 `ddbbfbcd71b9402e6c9ba53fde5166c581f81ea7e1dd90f381829ce64fb5e262`。实际 JS bundle 含 Global API 且无 localhost:39022，仍为 debug 签名的 QA 产物。切换 env 时 Gradle 曾跳过 bundle，必须强制重打 createBundleReleaseJsAndAssets 并检查产物，不能仅看 assembleRelease 成功。
+- PR #56 原 dd78e47 的 check + android-build 已全绿（35586984062）；新修复提交的 CI 须另查，不能继承旧结果。
+- 已解除真实测试账号入口阻塞。真实计划/日志/视频上传与持久化、剩余视觉矩阵、P-31、W4 分发门禁仍未完成；不声明 W3 收尾。

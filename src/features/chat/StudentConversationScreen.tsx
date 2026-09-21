@@ -40,9 +40,9 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const playback = useStudentChatPlayback();
   // The route param can arrive empty (blank coach display name); fall back to the conversation's other party.
   const [fetchedName, setFetchedName] = useState('');
-  const resolvedName = coachName || fetchedName;
+  const resolvedName = coachName.trim() || fetchedName.trim() || t('student.dashboardView.copy003');
   useEffect(() => {
-    if (coachName) return;
+    if (coachName.trim()) return;
     let live = true;
     void chatRepository.list().then(result => { if (live) setFetchedName(result.conversations.find(item => item.id === conversationId)?.other_party.display_name ?? ''); }).catch(() => {});
     return () => { live = false; };
