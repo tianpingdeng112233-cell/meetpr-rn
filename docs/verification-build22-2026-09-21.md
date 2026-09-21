@@ -6,7 +6,7 @@
 
 - RN：本地 `integration/w3@6429d50687e6942f6fac768b2a2b582bfa3a4a3a`，工作分支 `feat/build22-parity-acceptance`。
 - iOS：`beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea`；080 顺延、081 补录、082 反馈、083 来源点按 shipped 代码复刻。
-- [验收范围与测试 seam](../specs/build22-parity/SPEC.md)。保留四个 tab；训练历史使用 stack；未改变 e1RM 公式、资格口径或数据模型。
+- [验收范围与测试 seam](../specs/build22-parity/SPEC.md)。保留四个 tab；训练历史使用 stack；未改 e1RM 公式/资格阈值；仅增兼容旧数据的可选来源元数据，无破坏性迁移。
 - 远端 `integration/w3@8e6e037` 落后本地基线 22 个提交。本轮以新建冻结分支 `integration/build22-base@6429d50` 为 PR base，保留共享远端分支现状。该 PR 只审本轮增量；合入正式集成线仍须一并处理原有 W3 集成提交。
 
 ## 实现结果
@@ -24,6 +24,7 @@
 - `npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。
 - 全量 Jest：**128 suites / 883 tests 通过**，覆盖补录日期/重试/重复提交、早期历史、持久来源/图表点选、按压/Reduce Motion、奖励生命周期和通知消费。
 - Toast 2 秒修正后 design/quick-log 定向回归 **12 suites / 38 tests 通过**，类型与 lint 再次通过。
+- `EXPO_PUBLIC_BUILD_TRACK=global EXPO_PUBLIC_API_BASE_URL=https://api.meetpr.app npx expo export --platform android` 通过；导出 bundle 含 Global API 地址且不含 fixture `localhost:39022`。仅证明 JS 构建配置，不证明生产登录或原生 manifest 已满足发布要求。
 - Android `assembleDebug` 和 bundled `app:assembleRelease` 均构建成功；后者是 **debug 签名、localhost fixture API 的 QA 包**，不作为海外发布包。
 - Standards：两轮收敛，提前补录历史消失、Android Back 丢草稿和导航误震已修；通知消费增量 CLEAN。
 - Spec：两轮收敛，全 app 按压反馈、历史点金色选中与早期记录已修；通知消费和最终 2 秒 toast 增量通过。
