@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type TextProps } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View, type TextProps } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { Card, Screen, font, radius, useColors } from '@/design';
 import { t } from '@/i18n';
@@ -51,7 +52,7 @@ export function Confirmation({ title, message, confirmLabel, cancelLabel, busy, 
   const colors = useColors();
   return <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={() => { if (!busy) onCancel(); }}>
     <View style={{ flex: 1, justifyContent: 'center', padding: 24 }}>
-      <Pressable testID={`${testID}.backdrop`} accessibilityLabel={cancelLabel} accessibilityRole="button" disabled={busy} onPress={onCancel}
+      <Pressable feedback="none" testID={`${testID}.backdrop`} accessibilityLabel={cancelLabel} accessibilityRole="button" disabled={busy} onPress={onCancel}
         style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.textPrimary}99` }]} />
       <Card elevation="modal" style={{ gap: 16, padding: 24 }} accessibilityViewIsModal>
         <ProfileText accessibilityRole="header" style={font.display(21)}>{title}</ProfileText>

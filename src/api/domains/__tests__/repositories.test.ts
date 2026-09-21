@@ -115,6 +115,14 @@ describe('domain repositories through authenticatedRequest', () => {
     expect(parsed.searchParams.has('scope')).toBe(false);
   });
 
+  test('refetched backfills retain their actual date at local noon while live timestamps remain exact', async () => {
+    const serverTime = new Date(2026, 8, 21, 10, 30).toISOString();
+    const base = { id: SET_ID, student_id: STUDENT_ID, plan_exercise_id: PLAN_EXERCISE_ID, exercise_id: PLAN_EXERCISE_ID, set_index: 0, weight_kg: '100', reps: 5, rpe: '8', completed: true, failed: false, assumed: false, adhoc: false, logged_at: serverTime };
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(200, { logs: [{ ...base, logged_date: '2026-09-19' }, { ...base, logged_date: '2026-09-21' }] }));
+    const result = await setsRepository.range(STUDENT_ID, { from: '2026-09-01', to: '2026-09-22' });
+    expect(result.logs.map(log => log.logged_at)).toEqual([new Date(2026, 8, 19, 12).toISOString(), serverTime]);
+  });
+
   test('maps onboarding 404 to the null query empty state', async () => {
     jest.mocked(fetch).mockResolvedValueOnce(
       mockResponse(404, { error: 'ONBOARDING_NOT_FOUND' }),

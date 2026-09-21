@@ -1,8 +1,11 @@
 import { useCameraAvailability } from './video-upload/use-camera-availability';
 import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { RollUpBody, RollUpCard } from '@/design/TrainingRewardMotion';
 import { t } from '@/i18n';
+import { training22 } from './build22-strings';
 import type { PlanExercise } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 import { AppButton, Card, GradientFill, font, useColors } from '@/design';
@@ -45,6 +48,7 @@ export function WorkoutBody({
   recording,
   startLoading,
   onStart,
+  onQuickLog,
   suggestionForDraft,
   historyLogs,
   onRecord,
@@ -63,6 +67,7 @@ export function WorkoutBody({
   recording: boolean;
   startLoading: boolean;
   onStart: () => void;
+  onQuickLog?: () => void;
   suggestionForDraft: (draft: WorkoutSetDraft) => SuggestionOutcome;
   historyLogs: readonly SetLog[];
   studentId: string;
@@ -73,7 +78,19 @@ export function WorkoutBody({
 }) {
   const colors = useColors();
   const hasCamera = useCameraAvailability();
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const initiallyCompleted = exercises.filter(exercise => {
+    const rows = drafts.filter(draft => draft.exercise.id === exercise.id);
+    return rows.length > 0 && rows.every(isDraftTerminal);
+  }).map(exercise => exercise.id);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => Object.fromEntries(initiallyCompleted.map(id => [id, true])));
+  const [previousCompleted, setPreviousCompleted] = useState(initiallyCompleted.join('|'));
+  const completedKey = initiallyCompleted.join('|');
+  if (previousCompleted !== completedKey) {
+    const previous = new Set(previousCompleted.split('|'));
+    const newlyCompleted = initiallyCompleted.filter(id => !previous.has(id));
+    setPreviousCompleted(completedKey);
+    if (newlyCompleted.length) setCollapsed(current => ({ ...current, ...Object.fromEntries(newlyCompleted.map(id => [id, true])) }));
+  }
   const active =
     drafts.find(
       (draft) => !isDraftTerminal(draft) || draft.sourceLog?.assumed,
@@ -168,6 +185,7 @@ export function WorkoutBody({
                 onPress={onStart}
               />
             ) : null}
+            {onQuickLog ? <AppButton variant="link" label={training22.entry} onPress={onQuickLog} disabled={startLoading} /> : null}
           </>
         ) : active && p ? (
           <>
@@ -243,7 +261,7 @@ export function WorkoutBody({
       </Card>
       {recording
         ? groups.map(({ exercise, drafts: rows }) => (
-            <Card key={exercise.id} style={{ padding: 16, gap: 10 }}>
+            <RollUpCard key={exercise.id} collapsed={Boolean(collapsed[exercise.id])}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ expanded: !collapsed[exercise.id] }}
@@ -253,10 +271,7 @@ export function WorkoutBody({
                     [exercise.id]: !current[exercise.id],
                   }))
                 }
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}
+                style={({ pressed }) => ({ minHeight: 48, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}
               >
                 <Text
                   style={{
@@ -271,12 +286,12 @@ export function WorkoutBody({
                   {collapsed[exercise.id] ? '›' : '⌄'}
                 </Text>
               </Pressable>
+              <RollUpBody collapsed={Boolean(collapsed[exercise.id])}>
               {exercise.notes ? (
                 <Text style={{ color: colors.textMuted }}>
                   {t('student.todayWorkoutScreen.copy014')} · {exercise.notes}
                 </Text>
               ) : null}
-              {!collapsed[exercise.id] ? (
                 <>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     {[
@@ -353,7 +368,7 @@ export function WorkoutBody({
                             gap: 4,
                           }}
                         >
-                          <Pressable
+                          <Pressable feedback="none"
                             disabled={!editable}
                             accessibilityRole="button"
                             accessibilityLabel={t(
@@ -405,8 +420,8 @@ export function WorkoutBody({
                     </Text>
                   ) : null}
                 </>
-              ) : null}
-            </Card>
+              </RollUpBody>
+            </RollUpCard>
           ))
         : null}
     </>

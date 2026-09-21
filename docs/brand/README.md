@@ -42,6 +42,6 @@ magick /tmp/app-icon.png -background '#F5F6F8' -alpha remove -alpha off -colorsp
 
 ## 还没做
 
-- **启动页**：`assets/images/splash-icon.png` 现在是个 1×1 占位，`app.json` 里 splash 底色还是
-  `#000000`。定稿附带的图标动效（圆盘淡入 → 折线画出 → 圆点弹入 → 上弧扫出）也没实装。
+- **启动页**：`assets/images/splash-icon.png` 现在是个 1×1 占位，`app.json` 里 splash 底色为
+  `#F5F6F8`。定稿附带的图标动效（圆盘淡入 → 折线画出 → 圆点弹入 → 上弧扫出）也没实装。
   两件都不在这波里。

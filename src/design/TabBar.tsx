@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react';
 import type { Tabs } from 'expo-router';
 
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { useColors } from './theme';

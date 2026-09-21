@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type TextProps } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type TextProps } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, font, radius, useColors } from '@/design';
 import { t } from '@/i18n';

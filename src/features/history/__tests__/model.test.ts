@@ -15,6 +15,7 @@ import {
   chartBuckets,
 } from '../model';
 import type { GrowthCurve } from '../types';
+import { day as makeDay, plan as makePlan, set as makeSet } from '@/domain/plan/test-fixtures';
 
 function log(
   id: string,
@@ -107,6 +108,21 @@ describe('growth summary statistics', () => {
 });
 
 describe('plan-relative week buckets', () => {
+  test('a set backfilled on another date remains visible on that actual day', () => {
+    const plan = makePlan([makeDay('day', { exercises: [{ id: 'plan-exercise', plan_day_id: 'day', exercise_id: 'squat', is_main_lift: true, sort_order: 0, notes: null, sets: [makeSet()] }] })]);
+    const recorded = log('backfill', '2026-09-09', 'squat');
+    const actualDay = buildHistoryWeeks([plan], [recorded], new Map(), '2026-09-21').flatMap(week => week.days).find(day => day.date === '2026-09-09');
+    expect(actualDay?.exercises.flatMap(exercise => exercise.logs).map(log => log.id)).toEqual(['backfill']);
+    expect(actualDay?.done).toBe(1);
+  });
+  test.each(['2026-09-05', '2026-09-21'])('keeps pre-start recordings visible when today is %s', today => {
+    const plan = { ...makePlan([makeDay('day', { exercises: [{ id: 'plan-exercise', plan_day_id: 'day', exercise_id: 'squat', is_main_lift: true, sort_order: 0, notes: null, sets: [makeSet()] }] })]), start_date: '2026-09-07' };
+    const recorded = log('early', '2026-09-05', 'squat');
+    const days = buildHistoryWeeks([plan], [recorded], new Map(), today).flatMap(week => week.days);
+    expect(days.find(day => day.date === '2026-09-05')?.exercises.flatMap(exercise => exercise.logs).map(log => log.id)).toEqual(['early']);
+    expect(days.every(day => day.date <= today)).toBe(true);
+    expect(days.find(day => day.date === '2026-09-07')?.exercises.length ?? 0).toBe(today < plan.start_date ? 0 : 1);
+  });
   test('uses elapsed whole seven-day windows from startDate', () => {
     expect(historyWeekNumber('2026-07-01', '2026-07-01')).toBe(1);
     expect(historyWeekNumber('2026-07-01', '2026-07-07')).toBe(1);

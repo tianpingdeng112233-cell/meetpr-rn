@@ -10,7 +10,7 @@ let renderer: ReactTestRenderer;
 afterEach(() => { act(() => renderer?.unmount()); });
 const props = { videoId: 'video', url: 'https://video', refreshURL: async () => 'https://video', onClose: () => {} };
 const badge = { exerciseName: 'Squat', weightKg: 100, reps: 5, rpe: 8, setOrdinal: 2 };
-const buttons = (id: string) => renderer.root.findAll(node => node.props.testID === id && typeof node.props.onPress === 'function');
+const buttons = (id: string) => renderer.root.findAll(node => node.props.testID === id && typeof node.props.onPress === 'function', { deep: false });
 
 test('a playback session starts expanded and the card toggles in both directions', async () => {
   await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} badge={badge} />); });

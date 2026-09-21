@@ -8,6 +8,7 @@ import {
 } from '@/analytics';
 import RootLayout from '@/app/_layout';
 
+jest.mock('@/features/notifications/PlanNotificationSession', () => ({ PlanNotificationSession: () => null }));
 jest.mock('@/analytics', () => {
   // Jest hoists this factory before React imports are initialized.
   // eslint-disable-next-line @typescript-eslint/no-require-imports

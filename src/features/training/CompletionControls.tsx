@@ -1,10 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
 import { AppButton, useColors, type Colors, font, radius } from '@/design';
+import { RewardShimmer } from '@/design/TrainingRewardMotion';
 import { GradientFill } from '@/design/GradientFill';
 import type { SessionReflection } from './model';
 import type { WorkoutCompletionPresentation } from './completion-presentation';
@@ -19,8 +21,9 @@ export function DayCompletionBanner({ count, onPress }: { count: number; onPress
       accessibilityRole="button"
       accessibilityLabel={t('student.dayCompletionBanner.copy003', [count])}
       onPress={onPress}
-      style={styles.banner}
+      style={({ pressed }) => [styles.banner, { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
     >
+      <RewardShimmer />
       <MaterialCommunityIcons color={colors.success} name="check-decagram" size={22} />
       <Text style={styles.bannerTitle}>{t('student.dayCompletionBanner.copy001', [count])}</Text>
       <View style={styles.bannerSpacer} />
@@ -138,7 +141,7 @@ export function SessionSummaryView({ presentation, reflection, onReflectionChang
 }
 
 const createStyles = (colors: Colors) => StyleSheet.create({
-  banner: { alignItems: 'center', backgroundColor: `${colors.successRGB}24`, borderColor: `${colors.successRGB}66`, borderWidth: 1, borderRadius: radius.control, flexDirection: 'row', gap: 10, padding: 16 },
+  banner: { overflow: 'hidden', alignItems: 'center', backgroundColor: `${colors.successRGB}24`, borderColor: `${colors.successRGB}66`, borderWidth: 1, borderRadius: radius.control, flexDirection: 'row', gap: 10, padding: 16 },
   bannerSpacer: { flexGrow: 1 },
   bannerTitle: { color: colors.textPrimary, ...font.body(16, 'bold'), flexShrink: 1 },
   reviewLink: { color: colors.textSecondary, ...font.body(13) },

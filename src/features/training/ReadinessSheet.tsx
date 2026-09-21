@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
@@ -145,11 +146,11 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
         </ScrollView>
         <View style={styles.footer}>
           {step === 2 ? (
-            <AppButton fullWidth={false} label={t('student.readinessCheckinSheet.copy015')} onPress={() => setStep(1)} variant="secondary" />
+            <AppButton haptic="none" fullWidth={false} label={t('student.readinessCheckinSheet.copy015')} onPress={() => setStep(1)} variant="secondary" />
           ) : null}
           <View style={styles.footerSpacer} />
           {step === 1 ? (
-            <AppButton
+            <AppButton haptic="none"
               disabled={Object.values(scores).some((value) => value === null)}
               fullWidth={false}
               label={t('student.readinessCheckinSheet.copy016')}

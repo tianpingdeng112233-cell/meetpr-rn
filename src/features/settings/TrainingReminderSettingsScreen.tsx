@@ -57,7 +57,7 @@ export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: 
       <NumberWheel options={Array.from({ length: 24 }, (_, n) => n)} value={settings.hour} onChange={(hour) => void change({ ...settings, hour })} />
       <NumberWheel options={Array.from({ length: 60 }, (_, n) => n)} value={settings.minute} onChange={(minute) => void change({ ...settings, minute })} />
     </View>
-    {denied ? <><ProfileText error>{t('student.trainingReminderSettingsView.copy006')}</ProfileText><AppButton variant="link" label={t('student.trainingReminderSettingsView.copy007')} onPress={() => void Linking.openSettings().catch(() => setError(true))} /></> : null}
+    {denied ? <><ProfileText error>{t('student.trainingReminderSettingsView.copy006')}</ProfileText><AppButton haptic="none" variant="link" label={t('student.trainingReminderSettingsView.copy007')} onPress={() => void Linking.openSettings().catch(() => setError(true))} /></> : null}
     {error ? <ProfileText error>{t('student.trainingReminderSettingsView.copy008')}</ProfileText> : null}
   </ProfileModal>;
 }

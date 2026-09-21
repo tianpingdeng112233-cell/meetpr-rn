@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { font, radius, Screen, spacing, useColors } from '@/design';
 import { getLocale, t } from '@/i18n';
 import { daySections, shouldDismissStudentList } from '@/domain/coach/pending-videos';

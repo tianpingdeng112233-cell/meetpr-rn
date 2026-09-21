@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { OnboardingProfile } from '@/api/domains/onboarding';
 import { font, useColors } from '@/design';

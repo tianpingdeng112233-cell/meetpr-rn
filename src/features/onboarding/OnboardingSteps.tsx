@@ -1,7 +1,8 @@
 import { t } from '@/i18n';
 
 import { useState, useMemo } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';

@@ -1,13 +1,15 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useId, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 import { AppButton, font, radius, useColors, type Colors } from '@/design';
+import { RewardEntrance, RewardMedalMotion, RewardShimmer, useRewardCount } from '@/design/TrainingRewardMotion';
 import { GradientFill } from '@/design/GradientFill';
 import { t } from '@/i18n';
 import type { WorkoutCompletionPresentation } from './completion-presentation';
 
-/** CelebrationEffects terminal geometry: bloom and all 18 sparks have faded out. */
+/** Medal geometry is shared by the animated and reduced-motion terminal frame. */
 function CelebrationMedal() {
   const colors = useColors();
   const id = useId();
@@ -52,6 +54,7 @@ export function WorkoutCelebrationView({ presentation, streak = null, onOpenRevi
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { width, height } = useWindowDimensions();
   const glowId = useId();
+  const completedCount = useRewardCount(presentation.completedSuccessfulSets);
   return (
     <View style={styles.root}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none" accessible={false}>
@@ -65,29 +68,29 @@ export function WorkoutCelebrationView({ presentation, streak = null, onOpenRevi
         </Svg>
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <CelebrationMedal />
-        <Text style={styles.title}>{t('student.workoutCompletionFlowView.copy001')}</Text>
-        <View style={styles.receipt}>
+        <RewardMedalMotion><CelebrationMedal /></RewardMedalMotion>
+        <RewardEntrance delay={140}><Text style={styles.title}>{t('student.workoutCompletionFlowView.copy001')}</Text></RewardEntrance>
+        <RewardEntrance delay={240} style={styles.receipt}>
           <View style={styles.coachMark}>
             <GradientFill direction="diagonal" stops={[{ color: colors.textGhost, offset: 0 }, { color: colors.surfaceKey, offset: 1 }]} />
-            <Text style={styles.coachInitial}>{t('student.workoutCompletionFlowView.copy004')}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.coachInitial}>{t('student.workoutCompletionFlowView.copy004')}</Text>
           </View>
           <Text style={styles.receiptText}>{presentation.coachReceiptText}</Text>
-        </View>
+        </RewardEntrance>
         <View style={styles.stats}>
-          <View style={styles.stat}><Text style={styles.value}>{presentation.weekCode}</Text><Text style={styles.label}>{presentation.weekDayLabel}</Text></View>
+          <RewardEntrance delay={340} slide style={styles.stat}><Text style={styles.value}>{presentation.weekCode}</Text><Text style={styles.label}>{presentation.weekDayLabel}</Text></RewardEntrance>
           <View style={styles.divider} />
-          <View style={styles.stat}>
-            <View style={styles.statValue}><Text style={styles.value}>{presentation.completedSuccessfulSets}</Text><Text style={styles.suffix}>{t('student.workoutCompletionFlowView.copy005', [presentation.totalPlannedSets])}</Text></View>
+          <RewardEntrance delay={470} slide style={styles.stat}>
+            <View style={styles.statValue}><Text accessibilityLabel={String(presentation.completedSuccessfulSets)} style={styles.value}>{completedCount}</Text><Text style={styles.suffix}>{t('student.workoutCompletionFlowView.copy005', [presentation.totalPlannedSets])}</Text></View>
             <Text style={styles.label}>{presentation.setCompletionLabel}</Text>
-          </View>
+          </RewardEntrance>
         </View>
-        <Text style={styles.meta}>{presentation.metaText}</Text>
-        {streak !== null ? <View style={styles.streak}><MaterialCommunityIcons name="fire" size={14} color={colors.gold500} /><Text style={styles.streakText}>{t('student.workoutCompletionFlowView.copy007', [streak])}</Text></View> : null}
-        <View style={styles.buttons}>
-          <AppButton variant="primary" fullWidth={false} label={t('student.workoutCompletionFlowView.copy002')} onPress={onOpenReview} disabled={saving} />
-          <Pressable accessibilityRole="button" accessibilityLabel={t('student.workoutCompletionFlowView.copy003')} disabled={saving} onPress={onFinish} style={styles.finish}><Text style={styles.finishText}>{t('student.workoutCompletionFlowView.copy003')}</Text></Pressable>
-        </View>
+        <RewardEntrance delay={600} slide><Text style={styles.meta}>{presentation.metaText}</Text></RewardEntrance>
+        {streak !== null ? <RewardEntrance delay={730} slide style={styles.streak}><MaterialCommunityIcons name="fire" size={14} color={colors.gold500} /><Text style={styles.streakText}>{t('student.workoutCompletionFlowView.copy007', [streak])}</Text></RewardEntrance> : null}
+        <RewardEntrance delay={820} style={styles.buttons}>
+          <View style={{ borderRadius: radius.control, overflow: 'hidden' }}><AppButton haptic="none" variant="primary" fullWidth={false} label={t('student.workoutCompletionFlowView.copy002')} onPress={onOpenReview} disabled={saving} /><RewardShimmer /></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('student.workoutCompletionFlowView.copy003')} disabled={saving} onPress={onFinish} style={({ pressed }) => [styles.finish, { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}><Text style={styles.finishText}>{t('student.workoutCompletionFlowView.copy003')}</Text></Pressable>
+        </RewardEntrance>
       </ScrollView>
     </View>
   );
@@ -112,6 +115,6 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   streak: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 13, paddingHorizontal: 14, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: `${colors.goldRGB}1A`, borderColor: `${colors.goldRGB}4D`, borderWidth: 1 },
   streakText: { ...font.body(12, 'bold'), color: colors.goldText },
   buttons: { alignItems: 'center', gap: 14, marginTop: 34, paddingHorizontal: 24 },
-  finish: { minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' },
+  finish: { minHeight: 48, minWidth: 48, justifyContent: 'center', alignItems: 'center' },
   finishText: { ...font.body(13), color: colors.textMuted },
 });

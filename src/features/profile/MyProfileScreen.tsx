@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOnboardingProfile, type OnboardingProfile } from '@/api/domains/onboarding';
 import { useReadiness } from '@/api/domains/readiness';

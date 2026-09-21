@@ -1,15 +1,8 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { getLocale, t } from '@/i18n';
 import { useMarkFeedbackRead, type FeedbackItem } from '@/api/domains';
@@ -32,7 +25,8 @@ import { useStudentTabsStore } from '@/features/student-tabs';
 
 import { GrowthE1RMCard } from './GrowthE1RMCard';
 import { GrowthScreenHeader } from './GrowthScreenHeader';
-import { HistoryEntriesView } from './HistoryEntriesView';
+import { GrowthSourceSheet } from './GrowthSourceSheet';
+import { growthSourceDetail } from './source-detail';
 import {
   feedbackDate,
   feedbackTitle,
@@ -54,7 +48,7 @@ export function GrowthScreen() {
   const feedbackY = useRef<number | null>(null);
   const previousFeedbackToken = useRef(0);
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null);
   const [locallyRead, setLocallyRead] = useState<ReadonlySet<string>>(new Set());
 
@@ -98,6 +92,8 @@ export function GrowthScreen() {
     </Screen>;
   }
   const data = vm.state;
+  const selectedPoint = selectedPointId ? data.sourcePoints.get(selectedPointId) : null;
+  const selectedDetail = selectedPoint ? growthSourceDetail(selectedPoint, data.logs, data.exerciseNames) : null;
   const isZeroTraining = data.stats.trainingSessionCount === 0;
   const openFeedback = (item: FeedbackItem) => {
     setSelectedFeedback(item);
@@ -122,7 +118,7 @@ export function GrowthScreen() {
         showsVerticalScrollIndicator={false}>
         {header}
         <View style={styles.curveList}>
-          {LIFT_FAMILIES.map(family => <GrowthE1RMCard key={family} curve={data.curves[family]} isZeroTraining={isZeroTraining} onToday={() => router.navigate('/(student)/today')} />)}
+          {LIFT_FAMILIES.map(family => <GrowthE1RMCard key={family} selectedPointId={selectedPointId} curve={data.curves[family]} onSelect={sample => setSelectedPointId(sample.winnerPointId)} onRangeChange={() => setSelectedPointId(null)} isZeroTraining={isZeroTraining} onToday={() => router.navigate('/(student)/today')} />)}
         </View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('student.trainingHistoryView.copy001')}</Text>
@@ -161,7 +157,7 @@ export function GrowthScreen() {
             <StatCard label={t('student.trainingHistoryView.copy019')} value={isZeroTraining ? '—' : String(data.stats.trainingWeekCount)} dimmed={isZeroTraining} />
             <StatCard label={t('student.trainingHistoryView.copy020')} value={isZeroTraining ? '—' : data.stats.totalVolumeKg.toLocaleString(getLocale(), { maximumFractionDigits: 0 })} unit="kg" dimmed={isZeroTraining} />
           </Card>
-          <GrowthNavigationCard title={t('student.trainingHistoryView.copy004')} subtitle={t(isZeroTraining ? 'student.trainingHistoryView.copy005' : 'student.trainingHistoryView.copy006')} icon="clock-outline" disabled={isZeroTraining} onPress={() => { void track(AnalyticsEvent.ProgressViewed, { tab: 'history' }); setHistoryOpen(true); }} />
+          <GrowthNavigationCard title={t('student.trainingHistoryView.copy004')} subtitle={t(isZeroTraining ? 'student.trainingHistoryView.copy005' : 'student.trainingHistoryView.copy006')} icon="clock-outline" disabled={isZeroTraining} onPress={() => { void track(AnalyticsEvent.ProgressViewed, { tab: 'history' }); router.push('/training-history'); }} />
         </View>
 
         <View style={styles.section}>
@@ -181,11 +177,7 @@ export function GrowthScreen() {
           <ScrollView><Card style={styles.feedbackList}>{data.feedback.map((item, index) => <FeedbackRow data={data} item={item} key={item.id} last={index === data.feedback.length - 1} locallyRead={locallyRead.has(item.id)} onPress={() => openFeedback(item)} />)}</Card></ScrollView>
         </Screen>
       </Modal>
-      <HistoryEntriesView
-        onClose={() => setHistoryOpen(false)}
-        visible={historyOpen}
-        weeks={data.weeks}
-      />
+      <GrowthSourceSheet detail={selectedDetail} onClose={() => setSelectedPointId(null)} />
       <FeedbackDetail
         item={selectedFeedback}
         onClose={() => setSelectedFeedback(null)}
@@ -197,11 +189,11 @@ export function GrowthScreen() {
 function GrowthNavigationCard({ title, subtitle, icon, disabled, onPress }: { title: string; subtitle: string; icon: 'clock-outline' | 'message-outline'; disabled: boolean; onPress: () => void }) {
   const { colors, styles } = useStyles();
   return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}>
-    {({ pressed }) => <Card style={[styles.historyEntry, disabled && { opacity: 0.55 }, pressed && styles.pressed]}>
+    <Card style={styles.historyEntry}>
       <View style={styles.historyIcon}><MaterialCommunityIcons color={colors.gold500} name={icon} size={19} /></View>
       <View style={styles.historyText}><Text style={styles.historyTitle}>{title}</Text><Text style={styles.historySubtitle}>{subtitle}</Text></View>
       <MaterialCommunityIcons color={colors.textDim} name="chevron-right" size={14} />
-    </Card>}
+    </Card>
   </Pressable>;
 }
 

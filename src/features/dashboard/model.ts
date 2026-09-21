@@ -209,10 +209,11 @@ export function replayE1RMHistoryPoints(
     .sort((left, right) => left.logged_at.localeCompare(right.logged_at));
 
   for (const log of sorted) {
+    const effectiveRPE = log.coach_rpe ?? log.rpe;
     const value = calculateE1RM(
       Number(log.weight_kg),
       log.reps,
-      log.rpe === null ? null : Number(log.rpe),
+      effectiveRPE === null ? null : Number(effectiveRPE),
     );
     if (value === null) {
       continue;
@@ -232,6 +233,7 @@ export function replayE1RMHistoryPoints(
       sourceWeightKg: Number(log.weight_kg),
       sourceReps: log.reps,
       sourceRPE: log.rpe === null ? null : Number(log.rpe),
+      sourceCoachRPE: log.coach_rpe == null ? null : Number(log.coach_rpe),
       confidence,
       origin: 'logged',
     });

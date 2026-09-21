@@ -64,6 +64,7 @@ export type VolumeIntensitySeries = {
 };
 
 export type GrowthLoaded = {
+  sourcePoints: ReadonlyMap<string, import('@/domain/e1rm').E1RMHistoryPoint>;
   plans: PlanDetail[];
   weeks: HistoryWeek[];
   logs: SetLog[];

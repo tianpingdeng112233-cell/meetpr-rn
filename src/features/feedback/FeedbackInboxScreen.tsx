@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { useSessionStore } from '@/api/session';
 import { useStudentVideos } from '@/api/domains/videos';
 import { font, radius, Screen, spacing, useColors } from '@/design';

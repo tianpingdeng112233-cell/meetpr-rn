@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { t } from '@/i18n';
 import { VideoBadgeCard } from './VideoBadgeCard';
 import { VideoBadgeLogoMark } from './VideoBadgeLogoMark';

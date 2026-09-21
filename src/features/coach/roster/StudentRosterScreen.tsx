@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { useRouter } from 'expo-router';
 import { font, radius, Screen, spacing, useColors } from '@/design';
 import { t } from '@/i18n';

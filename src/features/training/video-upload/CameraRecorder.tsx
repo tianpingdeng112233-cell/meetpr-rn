@@ -2,16 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, Camera } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useRef, useState } from 'react';
-import {
-  AppState,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  ToastAndroid,
-  View,
-} from 'react-native';
+import { AppState, Linking, StyleSheet, Switch, Text, ToastAndroid, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Video from 'react-native-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton, font, spacing, useColors } from '@/design';
@@ -190,7 +182,7 @@ export function CameraRecorder({
     <View style={{ flex: 1, backgroundColor: colors.bgBase }}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
         <View style={{ padding: spacing.base }}>
-          <AppButton
+          <AppButton haptic="none"
             variant="secondary"
             label={t('student.cameraRecorderComponents.copy011')}
             onPress={onClose}
@@ -204,7 +196,7 @@ export function CameraRecorder({
             <Text style={{ color: colors.textSecondary }}>
               {t('student.cameraRecorderView.copy003')}
             </Text>
-            <AppButton
+            <AppButton haptic="none"
               label={t('student.cameraRecorderView.copy004')}
               onPress={() => void Linking.openSettings()}
             />

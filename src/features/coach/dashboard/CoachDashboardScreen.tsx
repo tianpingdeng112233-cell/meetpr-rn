@@ -1,4 +1,5 @@
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { useRouter } from 'expo-router';
 import { Card, Screen, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';

@@ -1,14 +1,8 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
-import {
-  Alert,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { useSessionStore } from '@/api/session';
 import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { useMineBindRequest } from '@/api/domains/bind';
@@ -301,7 +295,7 @@ export function DashboardScreen() {
                     <Pressable
                       onPress={() =>
                         router.push({
-                          pathname: '/(student)/growth-curve',
+                          pathname: '/(student)/growth',
                           params: { family: rail.family },
                         })
                       }

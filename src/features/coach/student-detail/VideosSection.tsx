@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { Ionicons } from '@expo/vector-icons';
 import type { StudentVideo } from '@/api/domains/videos';
 import type { FeedbackItem } from '@/api/domains/feedback';

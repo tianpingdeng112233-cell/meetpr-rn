@@ -4,8 +4,8 @@
 
 ## 0. 复刻基线(对齐点)
 
-- 基线 = **发版线 `release/1.0` 现头**。首 pin `3799f67`(1.0(13),2026-07-19);**⚖️2026-09-04 重 pin 为 `202e95db`**(2026-09-02,1.0(22) 进行中),并把目标轨改为 Global,见 §7。漂移明细在 PARITY.md「基线漂移清单」。main 上「降级待分诊」的内容**不进**复刻范围。
-- 照抄的裁决:评估期硬封存(BindGate 直进 5 tab、接收弹窗恒跳过)→ 安卓端同样封存,不做评估 UI;iOS xlsx 导入已封存 → 不复刻(导入正典在 plan-web)。
+- 当前复刻基线 = **`beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea`**(David 2026-09-21 授权)。历史 pin 为 `3799f67` → `202e95db`；本轮按已交付 specs 080–083 追齐，范围与证据见 `specs/build22-parity/SPEC.md` 和 `docs/verification-build22-2026-09-21.md`。Global 轨保持不变，main 上降级待分诊内容不自动纳入。
+- 照抄的裁决:评估期硬封存(BindGate 直进 tabs;学员与教练均为 4 个常驻 tab、接收弹窗恒跳过)→ 安卓端同样封存,不做评估 UI;iOS xlsx 导入已封存 → 不复刻(导入正典在 plan-web)。
 - 「1:1」的定义:**信息架构、屏清单、交互流程、视觉 token 一比一**;但遵守安卓系统惯例(系统返回键/手势、Material 状态栏、无 iOS 左滑返回),不做 iOS 拟物。此条为 UI 闸门口径。
 
 ## 1. 技术底座(工程细节,已定)
@@ -17,24 +17,24 @@
 | 网络 | 自写 fetch 封装,按域拆文件 1:1 移植 12 个域(Plans/Sets/Feedback/Uploads/StudentVideos…),DTO 从 Swift 机械转译成 zod schema | APIClient + DTO/Mapping |
 | OSS 上传 | JS 实现分片直传(对齐 OSSPartUploader 协议) | OSSPartUploader.swift |
 | 凭证 | expo-secure-store | Keychain TokenStore |
-| 本地持久化 | MMKV/AsyncStorage + zod(仅计划草稿三模型) | SwiftData 3 @Model |
-| 视频选片 | expo-image-picker(相册选片,app 不自录,与 iOS 同口径) | PhotosPicker |
-| 视频压缩 | react-native-compressor(系统编解码器;对齐 iOS「1080p 能 passthrough 则免重编码」口径;**禁用 FFmpegKit 路线,已死**) | AVFoundationVideoExporter(64 行) |
+| 本地持久化 | AsyncStorage + zod(草稿、偏好、持久 e1RM 点及上传状态) | SwiftData 3 @Model |
+| 视频选片 | expo-image-picker 相册选片 + expo-camera 自建录制(现有 spec 068 实装) | PhotosPicker + 自定义录制 |
+| 视频压缩 | react-native-compressor(系统编解码器;对齐 iOS「720p 能 passthrough 则免重编码」口径;**禁用 FFmpegKit 路线,已死**) | AVFoundationVideoExporter(64 行) |
 | 视频播放 | react-native-video(0.5/1.0/1.5/2.0x 变速) | CoachVideoPlayerView(165 行) |
-| 图表 | victory-native(Skia)两张:e1RM 曲线、容量/强度 | Swift Charts 2 处 |
+| 图表 | react-native-svg 手绘:e1RM 曲线、容量/强度 | Swift Charts 2 处 |
 | 设计系统 | DesignSystem tokens(色/字/距)先行移植成 RN 主题包 | Modules/DesignSystem(2.7k 行) |
 
 ## 2. 仓库与流水线
 
-- 新 repo `~/Projects/apps/meetpr-rn/`(GitHub private;包名占位 `com.meetpr.app`,可改)。
+- 新 repo `~/Projects/apps/meetpr-rn/`(GitHub private;包名 `com.meetpr.app`;对外发包后不可换)。
 - CI:GitHub Actions **ubuntu runner**(lint + tsc + jest + android debug assemble)——不占 macOS runner,不加剧 iOS CI 账单。
-- 协作:老流水线不变——Claude 拆卡 → Codex 实装(一卡一原子 diff)→ review-loop 互审 → Claude build/verify + PR。安卓验证 = Android 模拟器亲眼看 + 截图为证(证据纪律同 iOS 模拟器)。
+- 协作:老流水线不变——Codex 主代理拆卡/实装 → review-loop 独立双轴审查 → build/verify + PR;被委派的实现子任务不 commit/push;T2 等 David 合并。安卓验证 = Android 模拟器亲眼看 + 截图为证(证据纪律同 iOS 模拟器)。
 - **PARITY.md 复刻台账**(1:1 的账本):从 iOS 屏清单(约 40-50 屏,学员 11 功能区 + 教练 10 功能区)生成逐屏三态表:未开工 / 已实装 / 已走查对齐。每张卡收货必须更新台账。走查对齐以走查 hub 两份报告(学员 36 + 教练 20)为镜像检查单——iOS 修过的坑安卓不许重犯。
 - W0 脚手架卡内置国内镜像:npm→npmmirror、Gradle→阿里云 Maven。
 
 ## 3. 分波(W0–W4)
 
-**W0 地基(约 5-7 卡)**:脚手架/CI/设计 tokens/fetch 客户端+auth 全链(登录→token 刷新→登出,对 staging 冒烟)/5-tab 导航骨架 + BindGate(评估封存照抄)。
+**W0 地基(约 5-7 卡)**:脚手架/CI/设计 tokens/fetch 客户端+auth 全链(登录→token 刷新→登出,对 staging 冒烟)/导航骨架 + BindGate(评估封存照抄)。
 出口验收:安卓模拟器用 staging 测试账号登录,看到 Dashboard 骨架。⚠️ W0 同时做**后端兼容冒烟**:核实 auth/UA/平台字段无 iOS 假设;`POST /events` 埋点的 platform 维度是否接受 android 值。
 
 **W1 学员端(约 10-12 卡,内测主流程优先)**:TodayWorkout(组卡/RPE 建议重量/RIR 白话/教练备注)→ TrainingHistory / WeekOverview / Readiness → Bind / Onboarding → FeedbackInbox / VideoUpload(选片+压缩+OSS 分片)→ MyProfile / Dashboard(含 e1RM 图,口径按 spec 050,别硬编码阈值)。
@@ -77,8 +77,8 @@
 ## 7. 海外优先改向(⚖️2026-09-04 David 拍板:①优先开发海外版本 ②先重 pin 基线再开工)
 
 - **目标形态**:安卓 v1 = iOS **Global 轨**的 1:1 复刻(英文 UI、`https://api.meetpr.app`、邮箱密码 + Google 登录、注册角色固定 coached_student、设备时区契约)。CN 轨(手机号登录、121.40.160.241、中文)**v1 不做**,只保留 build variant 切轨口,不删已写的手机号登录代码。§6 的三级国内分发路径整体后移到 CN 轨启动时再议,备案/软著/国内商店零动作。
-- **基线纪律**:每波开工前 `git -C apps/MeetPR-release log -1 origin/release/1.0` 现场核实;基线只在波边界重 pin,波内不追。已按旧基线实装的三张悬空卡(w1g/w1h/w1i)不重派,先对照 PARITY 漂移清单逐卡复核再收货。
-- **登录**:SiwA 安卓不做(Apple 的 Android 方案是 web JS 流,内测形态不值当,⚖️待拍确认);Google 走 Android Credential Manager,id_token 的 aud = Web client id,**backend `GOOGLE_CLIENT_ID` 需放行多 audience**(小卡,零迁移)。Google Cloud 里建 Android/Web OAuth client 与 SHA-1 指纹登记 = David 亲手项。
+- **基线纪律**:每波开工前按 iOS RELEASES/NEXT-RELEASE 现场核实实际发版线与候选 SHA;基线只在波边界重 pin,波内不追。w1g/w1h/w1i 已进入本地 W3 集成基线,继续按 PARITY 复核;不要重复派旧悬空卡。
+- **登录**:SiwA 安卓不做(Apple 的 Android 方案是 web JS 流,内测形态不值当,⚖️待拍确认);当前 RN 实装为 Google OAuth PKCE;原 Credential Manager 方案尚未落地,需按当前实现核验 client/audience,**backend `GOOGLE_CLIENT_ID` 需放行多 audience**(小卡,零迁移)。Google Cloud 里建 Android/Web OAuth client 与 SHA-1 指纹登记 = David 亲手项。
 - **i18n**:英文为主语言,per-feature strings enum 镜像 iOS xcstrings 形制;译文先查 iOS `docs/i18n-glossary.md`,动作名直出 `name_en`。zh 作为第二语言保留键位但不在 v1 验收。
 - **推送**:Global iOS 用 APNs;安卓需 FCM 通道,backend 现状待核(可能是第二张 backend 小卡)。推送不阻塞 W1/W2。
 - **分发(⚖️待拍)**:推荐 **A. Google Play closed testing**(海外受众零「未知来源」摩擦、Play App Signing 托管 keystore、自更新由 Play 接管,W4 的「app 内自更新检查」可删);B. 沿用 §6 一级 APK 下载页(最快,但海外用户对 sideload 接受度差)。A 的人工前置:Google Play 开发者账号(25 USD,身份验证以周计),越早启动越好。

@@ -1,14 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { getLocale, t } from '@/i18n';
 import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
@@ -22,7 +15,9 @@ export function HistoryEntriesView({
   visible,
   weeks,
   onClose,
+  presentation = 'modal',
 }: {
+  presentation?: 'modal' | 'stack';
   visible: boolean;
   weeks: HistoryWeek[];
   onClose: () => void;
@@ -50,13 +45,7 @@ export function HistoryEntriesView({
   const filteredChoices = choices.filter(choice => !query.trim() || (choice.id !== null && choice.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
   const selection = choices.find((choice) => choice.id === exerciseId) ?? choices[0];
 
-  return (
-    <Modal
-      animationType="slide"
-      onRequestClose={onClose}
-      presentationStyle="fullScreen"
-      visible={visible}>
-      <Screen edges={['top', 'left', 'right']}>
+  const content = <Screen edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Pressable
             accessibilityLabel={t('student.feedbackInboxView.copy005')}
@@ -71,6 +60,7 @@ export function HistoryEntriesView({
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}>
+          {weeks.length === 0 ? <Text style={styles.pickerLabel}>{t('student.e1rmSourceHistoryEmpty')}</Text> : null}
           <Text style={styles.pickerLabel}>{t('student.filter.title')}</Text>
           <Pressable
             accessibilityRole="button"
@@ -102,11 +92,11 @@ export function HistoryEntriesView({
           onRequestClose={() => setPickerOpen(false)}
           transparent
           visible={pickerOpen}>
-          <Pressable
+          <Pressable feedback="none"
             accessibilityRole="button"
             onPress={() => setPickerOpen(false)}
             style={styles.scrim}>
-            <Pressable onPress={(event) => event.stopPropagation()} style={styles.choiceSheet}>
+            <Pressable feedback="none" onPress={(event) => event.stopPropagation()} style={styles.choiceSheet}>
               <Text style={styles.choiceTitle}>{t('student.filter.title')}</Text>
               <View style={styles.searchRow}>
                 <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('student.filter.searchPlaceholder')} accessibilityLabel={t('student.filter.searchPlaceholder')} placeholderTextColor={colors.textMuted} style={styles.searchInput} />
@@ -134,9 +124,8 @@ export function HistoryEntriesView({
             </Pressable>
           </Pressable>
         </Modal>
-      </Screen>
-    </Modal>
-  );
+      </Screen>;
+  return presentation === 'stack' ? content : <Modal animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen" visible={visible}>{content}</Modal>;
 }
 
 function HistoryDayCard({ day }: { day: HistoryDay }) {
