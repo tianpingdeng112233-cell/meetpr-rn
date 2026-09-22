@@ -16,4 +16,4 @@ npm test
 
 App icon 与 adaptive icon 已有品牌资产；启动屏图片仍为 1×1 占位。
 
-当前处于 W3 集成验收，build 22 增量已实现并有定向模拟器证据；完整走查与 W4 真机、签名、分发仍待完成。测试、截图、复现步骤及发布门禁见 [build 22 验收记录](docs/verification-build22-2026-09-21.md)。
+当前处于 W3 集成验收，build 22 增量已实现并有定向模拟器证据；真实 Global 训练、视频和反馈链路见 [9/22 验收记录](docs/verification-global-2026-09-22.md)。完整走查与 W4 真机、签名、分发仍待完成；发布门禁见 [build 22 验收记录](docs/verification-build22-2026-09-21.md)。

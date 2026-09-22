@@ -282,6 +282,25 @@ test('a feedback video opens the shared player with W3-a markers and unknown dur
   expect(player.props.badge).toBeUndefined();
 });
 
+test('a Global feedback chat card and its player keep the embedded English exercise name', async () => {
+  feedbackItems = [{ id: coachId, student_id: studentId, coach_id: coachId, video_id: studentId,
+    text: 'QA feedback', posted_at: '2026-09-22T06:22:45Z', read_at: null,
+    video: { id: studentId, exercise_name: '竞技深蹲', exercise_name_en: 'Competition Squat', set_index: 0, weight_kg: '80.00', reps: 5, rpe: '7.0' } }];
+  await renderScreen();
+  expect(copy()).toContain('My Competition Squat · Set 1');
+  await act(async () => { await renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') })[0].props.onPress(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  expect(renderer.root.findByType(FeedbackVideoPlayer).props.badge).toMatchObject({ exerciseName: 'Competition Squat', setOrdinal: 1 });
+});
+
+test.each([null, { id: coachId, exercise_name: 'Other clip', set_index: 0 }])('explicit unavailable feedback metadata does not offer another playback: %p', async video => {
+  feedbackItems = [{ id: coachId, student_id: studentId, coach_id: coachId, video_id: studentId,
+    text: 'QA feedback', posted_at: '2026-09-22T06:22:45Z', read_at: null, video }];
+  await renderScreen();
+  expect(renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') })).toHaveLength(0);
+  expect(copy()).toContain(t('student.feedbackDetailView.copy009'));
+});
+
 const staged: SetRefSendIntent = { conversationId, clientId: 'staged-id', setRef: { v: 1, source: 'logged', exerciseName: 'Squat', setNumber: 1, weightKg: '80', reps: 5, rpe: '8', dayDate: '2026-09-05', setLogId: studentId }, body: '', video: null };
 test('staged composer accepts an optional note, sends the canonical body and clears on success', async () => {
   useSetRefStagingStore.getState().stage(staged);
@@ -377,4 +396,14 @@ test('poll acknowledgement clears a staged send whose HTTP response was lost', a
   await act(async () => { listeners.forEach(listener => listener('active')); });
   expect(useSetRefStagingStore.getState().intents[conversationId]).toBeUndefined();
   expect(copy()).not.toContain(t('student.studentBlackGoldChatView.copy026'));
+});
+
+test.each(['', '   '])('a coach without a display name renders a localized fallback (%j)', async coachName => {
+  jest.mocked(chatRepository.list).mockResolvedValue({ conversations: [
+    { id: conversationId, other_party: { id: coachId, display_name: '   ' }, unread_count: 0 },
+  ] });
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen conversationId={conversationId} coachName={coachName} /></QueryClientProvider>); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain(t('student.studentBlackGoldChatView.copy014', [t('student.dashboardView.copy003')]));
+  expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.dashboardView.copy003'))).toBe(true);
 });

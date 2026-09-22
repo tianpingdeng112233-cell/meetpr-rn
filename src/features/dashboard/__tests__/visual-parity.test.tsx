@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { StyleSheet, Text } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
+import { FeedbackResponseSchema } from '@/api/domains/feedback';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
 import { DashboardScreen } from '../DashboardScreen';
@@ -45,7 +46,7 @@ const plan: PlanDetail = {
 };
 let renderer: ReactTestRenderer;
 let client: QueryClient;
-let servedPlan: PlanDetail;
+let servedPlan: PlanDetail | null;
 let feedbackItems: import('@/api/domains').FeedbackItem[];
 
 beforeEach(() => {
@@ -58,7 +59,7 @@ beforeEach(() => {
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path.endsWith('/plans')) return { plans: [servedPlan] } as never;
+    if (path.endsWith('/plans')) return { plans: servedPlan ? [servedPlan] : [] } as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: [] } as never;
     if (path.endsWith('/onboarding')) return null as never;
@@ -99,6 +100,35 @@ afterEach(() => {
   client.clear();
   useSessionStore.setState({ user: null });
   setLocaleOverride(null);
+  jest.useRealTimers();
+});
+
+test('Dashboard history includes calendar-today quick logs before the 04:00 gym-day boundary', async () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date(2026, 8, 22, 2, 0));
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+  await act(async () => { await jest.advanceTimersByTimeAsync(100); });
+  const paths = jest.mocked(authenticatedRequest).mock.calls.map(([path]) => path);
+  expect(paths).toContain(`/students/${studentId}/sets?from=1970-01-01&to=2026-09-23`);
+});
+
+test('Dashboard uses the embedded Global feedback English name rather than the legacy video list', async () => {
+  feedbackItems = FeedbackResponseSchema.parse({ items: [{
+    id: studentId, coach_id: studentId, student_id: studentId,
+    day_date: '2026-09-22', plan_exercise_id: null, video_id: studentId,
+    text: 'QA feedback', posted_at: '2026-09-22T06:22:45Z', read_at: null,
+    video: { id: studentId, exercise_name: '竞技深蹲', exercise_name_en: 'Competition Squat', set_index: 0 },
+  }] }).items;
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    if (renderer.root.findAll(node => typeof node.type === 'string' && node.props.accessibilityLabel === 'Coach feedback, show all 1').length) break;
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  }
+  const button = renderer.root.findAll(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === 'Coach feedback, show all 1')[0];
+  await act(async () => button.props.onPress());
+  const copy = renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
+  expect(copy).toContain('Competition Squat · Set 1');
+  expect(copy).not.toContain('竞技深蹲 · Set 1');
 });
 
 test('Dashboard places the date immediately after the mark in one left-aligned row', async () => {
@@ -152,4 +182,23 @@ test.each([{ name: 'Dashboard', Component: DashboardScreen }, { name: 'Training'
   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy007') })[0].props.onPress(); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
   expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
+});
+
+
+test('a bound student with no plan can message the coach from the Dashboard waiting card', async () => {
+  servedPlan = null;
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+  const messageLabel = () => renderer.root.findAllByType(Text).find(node => node.props.children === 'Message coach');
+  for (let attempt = 0; attempt < 100 && !messageLabel(); attempt += 1) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  }
+  let button = messageLabel();
+  expect(button).toBeDefined();
+  while (button && typeof button.props.onPress !== 'function') button = button.parent ?? undefined;
+  if (!button) throw new Error('Message coach must be actionable');
+  const press = button.props.onPress;
+  await act(async () => { await press(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
+  expect(mockNavigate).not.toHaveBeenCalledWith('/(student)/feedback');
 });

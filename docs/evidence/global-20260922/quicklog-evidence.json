@@ -1,0 +1,46 @@
+{
+  "student": {
+    "logs": [
+      {
+        "id": "dd7b3d2e-2319-43cd-93f9-642ef0e4f9ef",
+        "student_id": "7a6256ae-93d3-4509-a03f-a676731a2986",
+        "plan_exercise_id": "42ffe94f-5c9c-41b0-88f6-ce7d3d252dc0",
+        "exercise_id": "8b75a1d2-15d1-4dea-93c6-eca114994ef1",
+        "set_index": 0,
+        "weight_kg": "60.00",
+        "reps": 5,
+        "rpe": "8.0",
+        "coach_rpe": null,
+        "completed": true,
+        "failed": false,
+        "assumed": false,
+        "adhoc": false,
+        "logged_date": "2026-09-22",
+        "logged_at": "2026-09-22T07:13:14.085Z"
+      }
+    ],
+    "all_day_log_count": 3
+  },
+  "coach": {
+    "logs": [
+      {
+        "id": "dd7b3d2e-2319-43cd-93f9-642ef0e4f9ef",
+        "student_id": "7a6256ae-93d3-4509-a03f-a676731a2986",
+        "plan_exercise_id": "42ffe94f-5c9c-41b0-88f6-ce7d3d252dc0",
+        "exercise_id": "8b75a1d2-15d1-4dea-93c6-eca114994ef1",
+        "set_index": 0,
+        "weight_kg": "60.00",
+        "reps": 5,
+        "rpe": "8.0",
+        "coach_rpe": null,
+        "completed": true,
+        "failed": false,
+        "assumed": false,
+        "adhoc": false,
+        "logged_date": "2026-09-22",
+        "logged_at": "2026-09-22T07:13:14.085Z"
+      }
+    ],
+    "all_day_log_count": 3
+  }
+}

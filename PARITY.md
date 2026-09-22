@@ -108,9 +108,11 @@
 | CoachVideoPlayer 变速回放 | 🔨 | W3-d 工作台形态;⚖️无导出。共享播放器内嵌 270 舞台/56 圆钮/四段倍速/白色进度条/可选 Add marker/教练恒收起角标;有标注行 pause+seek+舞台覆盖层,刷新按 id 换实例。静态验证通过,沙箱无 ADB,待 AVD 截图验收 |
 | e1RM + 容量/强度图表 | 🔨 | W3-c 教练详情成长卡 E1RMChart 已接,svg 手绘,不用 victory-native。加载/失败/空态已接,三态样式集中在 GrowthSection;lint/tsc/Jest 全绿;沙箱无 ADB,视觉待验收;学员侧图表未改 |
 | 成长 tab：e1RM / forming / 容量强度图表 | 🔨 | W3-c：react-native-svg 按 iOS 几何重画；W3-v 卡头与进度行源码视觉对照 pass，未改图表几何；lint/tsc/Jest 全绿；ADB 监听受沙箱限制，待 Android 截图与 iOS 并排验收；Dashboard 不在本卡范围 |
-| 学员端走查对齐(36 项) | ☐ | |
-| 教练端走查对齐(20 项) | ☐ | |
+| 学员端历史走查清单对齐 | ☐ | 早期 36 项为发现清单；2026-09-21 已补聊天组卡/反馈回读/视频定位与角标证据，完整状态矩阵未完成。见 W3 补充记录。 |
+| 教练端历史走查清单对齐 | ☐ | 历史编号至 P-29；2026-09-21 补教练主干及视频工作台，修复 P-30/P-32，P-31 预览语义需 backend 小卡。见 W3 补充记录。 |
 | 双端并排截图 pass | ☐ | |
+
+[W3 新增证据、修复与开放项](docs/verification-w3-2026-09-21.md)。
 
 ## 真机与分发一级(W4)
 
@@ -122,3 +124,7 @@
 | app 内自更新检查 | ☐ | 无商店必做 |
 | 分发通道 | ☐ | ⚖️待拍:Google Play(内测轨 closed testing)vs 海外 APK 下载页;PLAN §7 有推荐 |
 | 隐私清单初版 | ☐ | |
+
+### 2026-09-22 Global 实际账号补验
+
+已创建专用 Global 教练/学员并完成登录、绑定和真实聊天收发；Dashboard 等待计划的 Message coach 入口与空教练姓名回退已修复。真实计划发布、Android 普通/quick-log 记组完成、Photos 视频上传、教练打点/反馈、学员关联回放与重启回读已通过；G03 反馈英文名和 G04 当日 e1RM 查询已修复；V01 小屏外观行/聊天标签排版经深浅色、1.3 倍字体复验。128 suites / 897 tests、类型/lint/Global QA 构建通过，双轴 CLEAN。证据与剩余视觉/弱网门禁见 [Global 验收记录](docs/verification-global-2026-09-22.md)。Global 教练改期返回403、计划未改变，真实改期验收仍被阻塞。此定向补验不改变 W3 整体未完成的结论。

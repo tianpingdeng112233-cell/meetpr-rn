@@ -12,7 +12,7 @@ import {
 import { AnalyticsEvent, track } from '@/analytics';
 import { t } from '@/i18n';
 import { cursorDay, currentWeekDays, dayCode, sequenceDays } from '@/domain/plan/sequence';
-import { gymDayToday } from '@/domain/plan/workout-date-policy';
+import { localDateText } from '@/domain/plan/workout-date-policy';
 import { todayModel } from './today-model';
 import {
   displayPoint,
@@ -98,7 +98,6 @@ export type DashboardViewModel = {
 export function useDashboardViewModel(studentId: string): DashboardViewModel {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(timer); }, []);
-  const today = gymDayToday(now);
   const todayReloadToken = useStudentTabsStore((state) => state.todayReloadToken);
   const planRevision = useStudentTabsStore((state) => state.planRevision);
   const plansQuery = usePlans(studentId);
@@ -133,7 +132,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
   const feedback = useFeedbackInboxViewModel(studentId);
   const historyQuery = useSetLogs(
     studentId,
-    dashboardE1RMRange(today),
+    dashboardE1RMRange(localDateText(now)),
     Boolean(activePlan),
   );
   const [requestedDayID, setRequestedDayID] = useState<string | null>(null);

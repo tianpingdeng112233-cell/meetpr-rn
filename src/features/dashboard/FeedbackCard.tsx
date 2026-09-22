@@ -2,7 +2,6 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import type { FeedbackItem } from '@/api/domains';
 import { Card, font, useColors } from '@/design';
 import { getLocale, t } from '@/i18n';
 import { feedbackLabel, type DashboardFeedbackItem } from './model';
@@ -13,7 +12,7 @@ type FeedbackCardProps = {
   pending: number;
   now: Date;
   onPress: () => void;
-  onOpenItem: (item: FeedbackItem) => void;
+  onOpenItem: (item: DashboardFeedbackItem) => void;
 };
 
 export function FeedbackCard({ items, pending, onOpenItem }: FeedbackCardProps) {
