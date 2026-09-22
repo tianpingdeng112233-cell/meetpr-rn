@@ -85,7 +85,7 @@ export function DashboardScreen() {
   const vm = useDashboardViewModel(studentId);
   const videos = useStudentVideos(studentId);
   const feedbackItems = vm.feedback.items.map(item => {
-    const association = feedbackVideoAssociation(item.video_id, videos.data?.videos ?? []);
+    const association = feedbackVideoAssociation(item.video_id, videos.data?.videos ?? [], item.video);
     return { ...item, video: association.kind === 'available' ? association.video : null };
   });
   const chat = useOpenCoachChat(studentId);

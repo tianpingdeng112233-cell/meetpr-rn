@@ -174,13 +174,21 @@ describe('Dashboard all-time e1RM replay', () => {
     };
   }
 
-  test('uses the iOS migration lower bound and omits the default plan scope', () => {
+  test('includes today through the exclusive wire end date and omits the default plan scope', () => {
     const range = dashboardE1RMRange('2026-07-19');
     expect(range).toEqual({
       from: '1970-01-01',
-      to: '2026-07-19',
+      to: '2026-07-20',
     });
     expect(range).not.toHaveProperty('scope');
+  });
+
+  test.each([
+    ['2026-09-30', '2026-10-01'],
+    ['2026-12-31', '2027-01-01'],
+    ['2028-02-29', '2028-03-01'],
+  ])('includes the complete final day at calendar boundaries: %s', (today, exclusiveEnd) => {
+    expect(dashboardE1RMRange(today).to).toBe(exclusiveEnd);
   });
 
   test('keeps a best log recorded before the current plan started', () => {

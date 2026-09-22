@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import type { StudentVideo } from '@/api/domains/videos';
+import type { FeedbackVideo } from '@/api/domains/feedback';
 import { AppButton, font, IconButton, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { feedbackVideoSummary } from './video-presentation';
@@ -45,7 +45,7 @@ export function PlaybackLinkError({ detail = false }: { detail?: boolean }) {
   </View>;
 }
 export function FeedbackVideoCard({ video, resolving, disabled, play, detail = false }: {
-  video: StudentVideo; resolving: boolean; disabled: boolean; play: () => void; detail?: boolean;
+  video: FeedbackVideo; resolving: boolean; disabled: boolean; play: () => void; detail?: boolean;
 }) {
   const colors = useColors();
   const summary = feedbackVideoSummary(video) || t('student.feedbackDetailView.copy005');

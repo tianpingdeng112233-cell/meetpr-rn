@@ -10,7 +10,7 @@ import { relativeFeedbackTime } from '@/features/dashboard/model';
 import { FeedbackEmpty, FeedbackHeader, FeedbackLoadError, FeedbackLoading, FeedbackVideoCard, PlaybackLinkError } from './FeedbackComponents';
 import { FeedbackPlaybackModal } from './FeedbackPlaybackModal';
 import { useFeedbackPlayback } from './use-feedback-playback';
-import { feedbackVideoAssociation } from './video-presentation';
+import { feedbackVideoAssociation, feedbackVideoName } from './video-presentation';
 
 export function FeedbackInboxScreen() {
   const colors = useColors();
@@ -31,12 +31,12 @@ export function FeedbackInboxScreen() {
         </View>}
         ListEmptyComponent={<FeedbackEmpty />}
         renderItem={({ item }) => {
-          const association = feedbackVideoAssociation(item.video_id, videos.data?.videos ?? []);
+          const association = feedbackVideoAssociation(item.video_id, videos.data?.videos ?? [], item.video);
           return <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderLeftColor: item.read_at ? colors.borderStrong : colors.gold500 }]}>
             <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/(student)/feedback/[feedbackId]', params: { feedbackId: item.id } })} style={{ gap: spacing.sm }}>
               <View style={styles.row}>
                 {!item.read_at ? <View style={[styles.unread, { backgroundColor: colors.gold500 }]} /> : null}
-                <Text style={{ ...font.body(14, 'bold'), color: colors.textPrimary, flex: 1 }}>{association.kind === 'available' ? association.video.exercise_name || t('student.feedbackInboxView.copy003') : t('student.feedbackInboxView.copy003')}</Text>
+                <Text style={{ ...font.body(14, 'bold'), color: colors.textPrimary, flex: 1 }}>{association.kind === 'available' ? feedbackVideoName(association.video) || t('student.feedbackInboxView.copy003') : t('student.feedbackInboxView.copy003')}</Text>
                 <Text style={{ ...font.mono(11), color: colors.textFaint }}>{relativeFeedbackTime(item.posted_at, new Date())}</Text>
               </View>
               <Text style={{ ...font.body(14), lineHeight: 21, color: colors.textPrimary }}>{item.text}</Text>

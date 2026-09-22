@@ -2,7 +2,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { authenticatedRequest } from '../session';
-import { DateTextSchema, TimestampSchema, UuidSchema } from './shared';
+import { DateTextSchema, DecimalStringSchema, TimestampSchema, UuidSchema } from './shared';
+
+/** Metadata embedded by the feedback endpoint; no upload or signed-URL fields. */
+export const FeedbackVideoSchema = z.object({
+  id: UuidSchema,
+  exercise_name: z.string().nullable().default(null),
+  exercise_name_en: z.string().nullish(),
+  set_index: z.number().int().nullable().default(null),
+  weight_kg: DecimalStringSchema.nullable().default(null),
+  reps: z.number().int().nullable().default(null),
+  rpe: z.string().nullish(),
+});
+export type FeedbackVideo = z.infer<typeof FeedbackVideoSchema>;
 
 export const FeedbackItemSchema = z.object({
   id: UuidSchema,
@@ -12,6 +24,7 @@ export const FeedbackItemSchema = z.object({
   day_date: DateTextSchema.nullable(),
   plan_exercise_id: UuidSchema.nullable(),
   video_id: UuidSchema.nullish(),
+  video: FeedbackVideoSchema.nullish(),
   text: z.string(),
   posted_at: TimestampSchema,
   read_at: TimestampSchema.nullable(),

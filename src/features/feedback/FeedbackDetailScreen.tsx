@@ -23,7 +23,7 @@ export function FeedbackDetailScreen() {
   const id = item?.id;
   const markRead = playback.markRead;
   useEffect(() => { if (id) void markRead(id).catch(() => {}); }, [id, markRead]);
-  const association = feedbackVideoAssociation(item?.video_id, videos.data?.videos ?? []);
+  const association = feedbackVideoAssociation(item?.video_id, videos.data?.videos ?? [], item?.video);
   const dateText = (timestamp: string) => new Intl.DateTimeFormat(getLocale(), { day: 'numeric', month: 'short' }).format(new Date(timestamp));
   return <Screen edges={['top', 'left', 'right']}>
     <FeedbackHeader detail />

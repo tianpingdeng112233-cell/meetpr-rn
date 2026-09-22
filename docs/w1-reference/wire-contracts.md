@@ -51,6 +51,7 @@ iOS 靠 `convertFromSnakeCase` 解码策略两头兼容(camel 无下划线时 no
 
 ### 3.2 `GET /students/:id/sets?from=&to=&scope=`
 - 本人或名下 coach;from/to 必填 DATE;scope=`plan`(默认,iOS 只用这个)|`all`。
+- 日期窗口是 `[from,to)`，`to` 不包含当天；查询截至某日须传次日。2026-09-22 Global 专用账号实测确认。
 - 响应 `{logs:[]}`:id/student_id/**plan_exercise_id(uuid|null——adhoc 为 null,安卓必须 nullable!)**/exercise_id/set_index/weight_kg(dec-str)/reps/rpe(dec-str|null)/completed/failed/assumed(bool)/adhoc(bool)/logged_date(DATE)/logged_at(ts)。
 - ⚠️ iOS 只在 scope=plan 下安全(其 DTO 假设 plan_exercise_id 非空);安卓建 schema 直接 nullable。
 - `POST /student/sets` 是 501 stub 勿用。
@@ -68,6 +69,7 @@ iOS 靠 `convertFromSnakeCase` 解码策略两头兼容(camel 无下划线时 no
 
 ### 5.1 `GET /students/:id/feedback`
 - 200 `{items:[]}` posted_at desc:id/coach_id/student_id/day_date(DATE|null)/plan_exercise_id?/text/posted_at/read_at(ts|**null=未读**)。
+- build 22 / Global 实测补充：`video_id?` 和 `video?` 内嵌关联（id/exercise_name?/exercise_name_en?/set_index?/weight_kg?/reps?/rpe?/logged_at?）。反馈展示与徽章使用内嵌英文名；RN 对旧响应缺字段保留 videos fallback，明确 null 或 ID 不匹配保持不可用。`set_index` 在显示层只加一。
 
 ### 5.2 `PATCH /feedback/:id/read`
 - 学员角色;无 body;204;404 FEEDBACK_NOT_FOUND。

@@ -61,5 +61,5 @@ David 已明确授权现有 Global 正式环境方案 A：仅新增 1 个专用�
 - 导航 red 明确收到错误的 feedback 路径；姓名空串/空白两项 red 后 green。定向 2 suites / 38 tests，全量 128 suites / 886 tests、tsc、lint、Android assembleRelease 均通过。
 - 学员通过 Android 发送 `RN22 Global QA student message 20260921`，教练 API 读取到该消息并回复，学员 App 接收后重启仍能回读。只发生于专用账号对。[HTTP 证据](evidence/global-20260921/chat-evidence.json)、[最终聊天与重启回读](evidence/global-20260921/global-chat-final-reloaded.png)。此观察证明服务端写入与 App 重启回读，不证明后端服务重启，也未单独区分 WebSocket 与轮询。
 - 最终 APK 在本地 scratch/global/meetpr-global-qa-final.apk；SHA256 `ddbbfbcd71b9402e6c9ba53fde5166c581f81ea7e1dd90f381829ce64fb5e262`。实际 JS bundle 含 Global API 且无 localhost:39022，仍为 debug 签名的 QA 产物。切换 env 时 Gradle 曾跳过 bundle，必须强制重打 createBundleReleaseJsAndAssets 并检查产物，不能仅看 assembleRelease 成功。
-- PR #56 原 dd78e47 的 check + android-build 已全绿（35586984062）；新修复提交的 CI 须另查，不能继承旧结果。
-- 已解除真实测试账号入口阻塞。真实计划/日志/视频上传与持久化、剩余视觉矩阵、P-31、W4 分发门禁仍未完成；不声明 W3 收尾。
+- PR #56 原 dd78e47 的 check + android-build 已全绿（35586984062）；后续 474381a 的 check + android-build 同样全绿（35591513393）；9/22 新增修复仍须核对新 HEAD 的 CI。
+- 已解除真实测试账号入口阻塞。9/22 已补真实计划/日志/视频上传、反馈与 App 重启持久化，修复 G03/G04，详见 [Global 记录](verification-global-2026-09-22.md)。剩余全量视觉、弱网/多分片、P-31、W4 门禁未完成；不声明 W3 收尾。

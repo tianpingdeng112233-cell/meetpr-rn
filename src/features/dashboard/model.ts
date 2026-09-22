@@ -9,7 +9,8 @@ import type {
   SetLogRange,
 } from '@/api/domains';
 import { cursorDay, progressSegments, recommendedDate, selectCurrentPlan } from '@/domain/plan/sequence';
-import type { StudentVideo } from '@/api/domains/videos';
+import type { FeedbackVideo } from '@/api/domains/feedback';
+import { feedbackVideoName } from '@/features/feedback/video-presentation';
 import {
   buildE1RMSeries,
   calculateE1RM,
@@ -38,10 +39,11 @@ const FAMILY_INITIAL: Record<LiftFamily, DashboardLift['initial']> = {
 
 export const DASHBOARD_E1RM_HISTORY_FROM = '1970-01-01';
 
-export function dashboardE1RMRange(to: string): SetLogRange {
+export function dashboardE1RMRange(today: string): SetLogRange {
   // Parity ruling: iOS sends only from/to. Omitting scope deliberately keeps
   // the backend's plan-scoped default; `all` would admit ad-hoc DTOs iOS rejects.
-  return { from: DASHBOARD_E1RM_HISTORY_FROM, to };
+  // iOS converts its closed date range to an exclusive end day on the wire.
+  return { from: DASHBOARD_E1RM_HISTORY_FROM, to: addUtcDays(today, 1) };
 }
 
 export function parseDateTextUTC(value: string): Date {
@@ -278,15 +280,14 @@ export function unreadFeedbackCount(items: readonly FeedbackItem[]): number {
   return items.filter((item) => item.read_at === null).length;
 }
 
-/** Dashboard-only video association; the feedback wire DTO stays unchanged. */
-export type DashboardFeedbackItem = FeedbackItem & {
-  video?: Pick<StudentVideo, 'exercise_name' | 'set_index'> | null;
+/** Dashboard labels only need names and set ordinals from the association. */
+export type DashboardFeedbackItem = Omit<FeedbackItem, 'video'> & {
+  video?: Pick<FeedbackVideo, 'exercise_name' | 'exercise_name_en' | 'set_index'> | null;
 };
 
 export function feedbackLabel(item: Pick<DashboardFeedbackItem, 'video_id' | 'video'>): string {
   if (!item.video_id && !item.video) return t('student.dashboardFeedbackText.copy001');
-  const name = item.video?.exercise_name?.trim();
-  const exercise = name ? exerciseDisplayName({ name, name_en: null }) : t('student.dashboardFeedbackText.copy002');
+  const exercise = (item.video && feedbackVideoName(item.video)) || t('student.dashboardFeedbackText.copy002');
   const setIndex = item.video?.set_index;
   return setIndex == null ? exercise : t('student.dashboardFeedbackText.copy003', [exercise, setIndex + 1]);
 }

@@ -79,7 +79,7 @@ export const SetLogRangeSchema = z
   .object({
     /** DATE-text lower bound. */
     from: DateTextSchema,
-    /** DATE-text upper bound. */
+    /** Exclusive DATE-text upper bound: [from, to). */
     to: DateTextSchema,
     scope: z.enum(['plan', 'all']).optional(),
   })

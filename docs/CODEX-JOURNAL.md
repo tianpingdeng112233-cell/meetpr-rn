@@ -1652,3 +1652,7 @@ Final checks after all source/test edits:
 ## 2026-09-21 · Global 专用账号与空账号聊天复验
 
 真实建号、权限受限的本地凭证、双角色 Android 登录/绑定及聊天收发已取证。修复等待计划的聊天导航和空教练姓名回退；两卡均独立双轴 CLEAN，全量 128 suites / 886 tests、tsc/lint/Global QA Release 通过。完整记录和未过门禁仅维护于 [W3 记录](verification-w3-2026-09-21.md)。W3 未整体完成。
+
+## 2026-09-22 · Global 训练、视频与反馈验收
+
+专用账号真实计划、记组完成、Photos 上传、教练播放/打点/反馈、学员关联回放及 App 重启回读通过。G03 保留反馈内嵌英文动作名并统一所有入口，G04 修复 Today 排他查询上界漏当日及凌晨边界。128 suites / 897 tests、tsc/lint/Global QA Release、最终 ADB 复验与 Standards/Spec 独立审查通过。小屏/大字体/深色定向证据及开放项统一见 [Global 记录](verification-global-2026-09-22.md)；W3 未整体完成。

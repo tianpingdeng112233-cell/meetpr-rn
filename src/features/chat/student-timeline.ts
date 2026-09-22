@@ -1,6 +1,7 @@
 import { t } from '@/i18n';
 import type { ChatMessage } from '@/api/domains/chat';
-import type { FeedbackItem } from '@/api/domains/feedback';
+import { feedbackVideoName } from '@/features/feedback/video-presentation';
+import type { FeedbackItem, FeedbackVideo } from '@/api/domains/feedback';
 import type { DashboardPlanSignature } from '@/features/dashboard/plan-seen';
 
 export type StudentPlanNotice = { signature: DashboardPlanSignature; weekIndex: number };
@@ -25,9 +26,9 @@ export function visibleFraction(card: VerticalFrame, viewport: VerticalFrame): n
   return Math.min(1, Math.max(0, Math.min(card.y + card.height, viewport.y + viewport.height) - Math.max(card.y, viewport.y)) / card.height);
 }
 
-export function videoLabel(video: { exercise_name: string | null; set_index: number | null } | null | undefined): string {
+export function videoLabel(video: Pick<FeedbackVideo, 'exercise_name' | 'exercise_name_en' | 'set_index'> | null | undefined): string {
   if (!video) return t('student.studentChatTimeline.copy001');
-  return [t('student.studentChatTimeline.copy002', [video.exercise_name?.trim() || t('student.studentChatTimeline.copy001')]),
+  return [t('student.studentChatTimeline.copy002', [feedbackVideoName(video) || t('student.studentChatTimeline.copy001')]),
     video.set_index == null ? null : t('student.studentChatTimeline.copy003', [video.set_index + 1])].filter(Boolean).join(' · ');
 }
 export function videoDuration(seconds: number | null | undefined): string {

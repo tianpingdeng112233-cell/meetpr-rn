@@ -1,0 +1,140 @@
+{
+  "student": {
+    "logs": [
+      {
+        "id": "2ec423b2-197d-4283-9c15-b6611a6ac454",
+        "student_id": "7a6256ae-93d3-4509-a03f-a676731a2986",
+        "plan_exercise_id": "daea022c-fe2b-4567-b027-9c3f7b71b82b",
+        "exercise_id": "cb56d0a6-ee6b-42aa-98b2-c880b6571e1f",
+        "set_index": 1,
+        "weight_kg": "82.50",
+        "reps": 5,
+        "rpe": "8.0",
+        "coach_rpe": null,
+        "completed": true,
+        "failed": false,
+        "assumed": false,
+        "adhoc": false,
+        "logged_date": "2026-09-22",
+        "logged_at": "2026-09-22T06:17:21.400Z"
+      },
+      {
+        "id": "593d78eb-a19c-4305-9160-4e2231f41eb3",
+        "student_id": "7a6256ae-93d3-4509-a03f-a676731a2986",
+        "plan_exercise_id": "daea022c-fe2b-4567-b027-9c3f7b71b82b",
+        "exercise_id": "cb56d0a6-ee6b-42aa-98b2-c880b6571e1f",
+        "set_index": 0,
+        "weight_kg": "80.00",
+        "reps": 5,
+        "rpe": "7.0",
+        "coach_rpe": null,
+        "completed": true,
+        "failed": false,
+        "assumed": false,
+        "adhoc": false,
+        "logged_date": "2026-09-22",
+        "logged_at": "2026-09-22T06:15:53.850Z"
+      }
+    ]
+  },
+  "coach": {
+    "logs": [
+      {
+        "id": "2ec423b2-197d-4283-9c15-b6611a6ac454",
+        "student_id": "7a6256ae-93d3-4509-a03f-a676731a2986",
+        "plan_exercise_id": "daea022c-fe2b-4567-b027-9c3f7b71b82b",
+        "exercise_id": "cb56d0a6-ee6b-42aa-98b2-c880b6571e1f",
+        "set_index": 1,
+        "weight_kg": "82.50",
+        "reps": 5,
+        "rpe": "8.0",
+        "coach_rpe": null,
+        "completed": true,
+        "failed": false,
+        "assumed": false,
+        "adhoc": false,
+        "logged_date": "2026-09-22",
+        "logged_at": "2026-09-22T06:17:21.400Z"
+      },
+      {
+        "id": "593d78eb-a19c-4305-9160-4e2231f41eb3",
+        "student_id": "7a6256ae-93d3-4509-a03f-a676731a2986",
+        "plan_exercise_id": "daea022c-fe2b-4567-b027-9c3f7b71b82b",
+        "exercise_id": "cb56d0a6-ee6b-42aa-98b2-c880b6571e1f",
+        "set_index": 0,
+        "weight_kg": "80.00",
+        "reps": 5,
+        "rpe": "7.0",
+        "coach_rpe": null,
+        "completed": true,
+        "failed": false,
+        "assumed": false,
+        "adhoc": false,
+        "logged_date": "2026-09-22",
+        "logged_at": "2026-09-22T06:15:53.850Z"
+      }
+    ]
+  },
+  "videos": {
+    "videos": [
+      {
+        "id": "d23c6090-01e4-4859-84f0-8b6b5eec82a7",
+        "set_log_id": "593d78eb-a19c-4305-9160-4e2231f41eb3",
+        "plan_exercise_id": "daea022c-fe2b-4567-b027-9c3f7b71b82b",
+        "exercise_name": "\u7ade\u6280\u6df1\u8e72",
+        "set_index": 0,
+        "weight_kg": "80.00",
+        "reps": 5,
+        "rpe": "7.0",
+        "coach_rpe": null,
+        "content_type": "video/mp4",
+        "size_bytes": 2759517,
+        "filename": "setlog-593d78eb-a19c-4305-9160-4e2231f41eb3-fe369245-cf11-4b67-8b8e-594f2be2be65.mp4",
+        "viewed_at": null,
+        "created_at": "2026-09-22T06:15:34.057Z",
+        "logged_at": "2026-09-22T06:15:53.850Z"
+      }
+    ]
+  },
+  "feedback": {
+    "items": [
+      {
+        "id": "40a2722c-766c-4bf7-910a-e05d3cf8fc8e",
+        "coach_id": "abc2b31f-0ec3-400b-aff7-7e03c7984f13",
+        "student_id": "7a6256ae-93d3-4509-a03f-a676731a2986",
+        "day_date": "2026-09-22",
+        "plan_exercise_id": "daea022c-fe2b-4567-b027-9c3f7b71b82b",
+        "video_id": "d23c6090-01e4-4859-84f0-8b6b5eec82a7",
+        "text": "RN22-QA-Global-feedback-20260922",
+        "posted_at": "2026-09-22T06:22:45.011Z",
+        "read_at": "2026-09-22T06:24:58.871Z",
+        "video": {
+          "id": "d23c6090-01e4-4859-84f0-8b6b5eec82a7",
+          "exercise_name": "\u7ade\u6280\u6df1\u8e72",
+          "exercise_name_en": "Competition Squat",
+          "set_index": 0,
+          "weight_kg": "80.00",
+          "reps": 5,
+          "rpe": "7.0",
+          "logged_at": "2026-09-22T06:15:53.850Z"
+        }
+      }
+    ]
+  },
+  "markers": {
+    "markers": [
+      {
+        "id": "3adda38d-3e74-482d-8dd9-d3a3aee3fc23",
+        "video_id": "d23c6090-01e4-4859-84f0-8b6b5eec82a7",
+        "coach_id": "abc2b31f-0ec3-400b-aff7-7e03c7984f13",
+        "attachment_id": null,
+        "annotation_url": null,
+        "annotation_expires_in": null,
+        "time_ms": 3068,
+        "level": "info",
+        "note": "RN22-QA-marker-03s",
+        "created_at": "2026-09-22T06:22:17.340Z"
+      }
+    ]
+  }
+}
