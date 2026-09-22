@@ -347,7 +347,9 @@ function StudentFeedbackChatCard({ feedback, videos, onPlay }: { feedback: Feedb
     {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={onPlay} style={{ height: 150, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
       <GradientFill direction="diagonal" stops={[{ color: colors.borderStrong, offset: 0 }, { color: colors.surfaceCard, offset: 1 }]} />
       <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.modalShadow.replace(/,[^,]+\)$/, ',0.45)'), borderWidth: 1.5, borderColor: `${colors.ctaTopHighlight}BF`, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="play" size={15} color={colors.ctaTopHighlight} /></View>
-      <Text style={{ position: 'absolute', top: 8, left: 9, ...font.mono(11), color: colors.textPrimary, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>{videoLabel(video)}</Text>
+      <View style={{ position: 'absolute', top: 8, left: 9, right: 9, alignItems: 'flex-start' }}>
+        <Text style={{ ...font.mono(11), color: colors.textPrimary, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>{videoLabel(video)}</Text>
+      </View>
       <Text style={{ position: 'absolute', bottom: 8, right: 9, ...font.mono(10), color: colors.ctaTopHighlight, backgroundColor: colors.modalShadow.replace(/,[^,]+\)$/, ',0.6)'), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 }}>{videoDuration(null)}</Text>
     </Pressable> : null}
     <Text style={{ ...font.body(14), color: colors.textPrimary, lineHeight: 21 }}>{feedback.text}</Text>

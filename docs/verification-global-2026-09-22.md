@@ -49,10 +49,19 @@
 | 1.3 倍字体 | [Today](evidence/global-20260922/large-today.png)、[聊天](evidence/global-20260922/large-chat.png) |
 | 小屏 360×640 dp、1.3 倍字体 | [浅色顶部](evidence/global-20260922/small-large-today.png)、[滚动至 e1RM](evidence/global-20260922/small-large-today-bottom.png)、[深色 e1RM](evidence/global-20260922/small-dark-today.png)、[深色聊天](evidence/global-20260922/small-dark-chat.png)、[深色回放定位 0:03](evidence/global-20260922/small-dark-marker.png) |
 
-这些是定向布局与交互检查，尚非同条件 iOS 并排全量验收。小屏 Profile 的 Appearance 在词中折行，聊天视频标签贴近右边缘，截图已留存；下一张视觉返修卡应修复容器收缩/换行，保留现有导航、字号缩放与选择行为。Profile 证据见 [深色小屏](evidence/global-20260922/small-dark-profile.png)。检查后恢复模拟器 1080×2400、420 dpi、font_scale=1.0 与 Light。
+这些是定向布局与交互检查，尚非同条件 iOS 并排全量验收。小屏 Profile 的 Appearance 在词中折行，聊天视频标签贴近右边缘，截图已留存；随后由独立 T0 卡 W3-V01 修复容器收缩/换行，保留现有导航、字号缩放与选择行为。Profile 证据见 [深色小屏](evidence/global-20260922/small-dark-profile.png)。检查后恢复模拟器 1080×2400、420 dpi、font_scale=1.0 与 Light。
 
 ## 接续顺序
 
-1. 修复上述小屏排版，继续完整角色/状态矩阵及同条件 iOS 并排，覆盖权限、失败态、Reduce Motion。
+1. 继续完整角色/状态矩阵及同条件 iOS 并排，覆盖权限、失败态、Reduce Motion；本页两处小屏排版已修复。
 2. 专用账号内补教练改期、quick-log 真实持久化、大文件多分片、弱网/重启续传与聊天断线恢复；本轮 2.76 MB 视频不能代表多分片验收。
 3. P-31 另开兼容 backend `preview_kind` 契约卡，部署按既有生产门禁；Google/FCM、真机、签名、启动屏与分发属于 W4。PR #55/#56 未合并，仍等 David。
+
+### W3-V01：小屏放大字体的局部排版
+
+读取已有 CONTEXT（若存在）及固定 iOS 参照。范围仅 Profile 外观行与聊天反馈视频标签：容器不足时外观选项换到下一行，动作标签在卡片内自然换行。验收为 360×640 dp、1.3 倍字体下文字完整、三种外观仍可切换、视频入口仍可用，默认屏幕保持原层级。公开验证 seam 为两张实际 Android 屏幕和既有交互测试；不以样式属性断言替代截图。Out of Scope：文案、配色、导航、字体缩放上限、视频/主题业务逻辑。此卡是已完成 G03/G04 之后独立的 T0 视觉补丁。
+
+
+W3-V01 已完成：小屏外观行转为两行，文字完整，Light/Dark/System 均已实际切换；聊天视频标签完整换行，播放入口可用；默认尺寸仍为原单行外观布局。证据：[小屏 Light](evidence/global-20260922/layout-small-profile-light.png)、[Dark](evidence/global-20260922/layout-small-profile-dark.png)、[System](evidence/global-20260922/layout-small-profile-system.png)、[聊天](evidence/global-20260922/layout-small-chat.png)、[播放](evidence/global-20260922/layout-small-player.png)、[默认外观行](evidence/global-20260922/layout-default-profile.png)、[默认聊天](evidence/global-20260922/layout-default-chat.png)。定向 3 suites / 47 tests 和全量 128 suites / 897 tests、tsc/lint/Android 构建通过；Standards / Spec 增量 CLEAN。最终补丁 APK `meetpr-global-qa-layout.apk` SHA256 `6f4a44e4200cc17d2ff5c024f3f20c0a4b78f59c6bbf05b401714a874d04718f`，Global/debug 签名并重装复验。
+
+远端门禁：`f10fa3a` CI 35697575908 首轮 check 中旧教练聊天首例超过 5 秒，896/897 通过；本机并发全量 897/897 通过。已发起一次远端失败任务重跑，最终交付仍须核对最新补丁 HEAD 的 CI，不沿用旧结果。
