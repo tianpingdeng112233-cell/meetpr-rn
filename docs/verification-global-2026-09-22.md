@@ -54,7 +54,7 @@
 ## 接续顺序
 
 1. 继续完整角色/状态矩阵及同条件 iOS 并排，覆盖权限、失败态、Reduce Motion；本页两处小屏排版已修复。
-2. 专用账号内补教练改期、quick-log 真实持久化、大文件多分片、弱网/重启续传与聊天断线恢复；本轮 2.76 MB 视频不能代表多分片验收。
+2. 教练改期在 Global 返回 403，待核对生产服务能力后按既有门禁推进。quick-log 当日真实持久化已通过；仍需跨日、失败重试、大文件多分片、弱网/重启续传与聊天断线恢复。本轮 2.76 MB 视频不能代表多分片验收。
 3. P-31 另开兼容 backend `preview_kind` 契约卡，部署按既有生产门禁；Google/FCM、真机、签名、启动屏与分发属于 W4。PR #55/#56 未合并，仍等 David。
 
 ### W3-V01：小屏放大字体的局部排版
@@ -65,3 +65,9 @@
 W3-V01 已完成：小屏外观行转为两行，文字完整，Light/Dark/System 均已实际切换；聊天视频标签完整换行，播放入口可用；默认尺寸仍为原单行外观布局。证据：[小屏 Light](evidence/global-20260922/layout-small-profile-light.png)、[Dark](evidence/global-20260922/layout-small-profile-dark.png)、[System](evidence/global-20260922/layout-small-profile-system.png)、[聊天](evidence/global-20260922/layout-small-chat.png)、[播放](evidence/global-20260922/layout-small-player.png)、[默认外观行](evidence/global-20260922/layout-default-profile.png)、[默认聊天](evidence/global-20260922/layout-default-chat.png)。定向 3 suites / 47 tests 和全量 128 suites / 897 tests、tsc/lint/Android 构建通过；Standards / Spec 增量 CLEAN。最终补丁 APK `meetpr-global-qa-layout.apk` SHA256 `6f4a44e4200cc17d2ff5c024f3f20c0a4b78f59c6bbf05b401714a874d04718f`，Global/debug 签名并重装复验。
 
 远端门禁：`f10fa3a` CI 35697575908 首轮 check 中旧教练聊天首例超过 5 秒，896/897 通过；本机并发全量 897/897 通过。已发起一次远端失败任务重跑，最终交付仍须核对最新补丁 HEAD 的 CI，不沿用旧结果。
+
+## 追加：quick-log 与教练改期
+
+同一最终补丁 APK、同一专用账号对：学员在尚未 Start first set 的 W1D4 点击 Already trained? Log this session，按实际日期 2026-09-22 补录 60 kg × 5 @8，长按确认完成。建议日期仍为 9/25。App 重启后进度 2/2、Bench e1RM 76.9 kg；师生分别查询 `[9/22,9/23)` 均只回读该 D4 组一条，加此前深蹲共三条唯一日志，无重复。证据：[提交前](evidence/global-20260922/quicklog-ready.png)、[完成](evidence/global-20260922/quicklog-completed.png)、[重启](evidence/global-20260922/quicklog-relaunch.png)、[HTTP 回读](evidence/global-20260922/quicklog-evidence.json)。本轮验证当日补记，不代表跨日/部分失败重试通过；计划开始于9/22，当前可选范围只有当日。
+
+在补记前，以专用教练对该 QA 计划调用 `POST /plans/:id/shift`（anchor_date 9/22、offset_days 1），Global 返回 **403 AUTHORIZATION_FORBIDDEN**。停止写入重试；再次 GET 确认所有天及 total_shift_days 均未改变。[响应证据](evidence/global-20260922/shift-result.json)。本地 backend 代码允许教练且另有功能开关，但线上当前拒绝；尚不能确认运行镜像 SHA 或仅靠开关解决。此项是阻塞真实改期验收的 Global 能力差距，需单独核对部署版本/权限/开关，并准备具体上线方案后遵守生产授权门禁。未部署或修改生产配置。

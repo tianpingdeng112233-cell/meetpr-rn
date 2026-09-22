@@ -1658,3 +1658,5 @@ Final checks after all source/test edits:
 专用账号真实计划、记组完成、Photos 上传、教练播放/打点/反馈、学员关联回放及 App 重启回读通过。G03 保留反馈内嵌英文动作名并统一所有入口，G04 修复 Today 排他查询上界漏当日及凌晨边界。128 suites / 897 tests、tsc/lint/Global QA Release、最终 ADB 复验与 Standards/Spec 独立审查通过。小屏/大字体/深色定向证据及开放项统一见 [Global 记录](verification-global-2026-09-22.md)；W3 未整体完成。
 
 W3-V01 独立 T0 补丁收掉小屏 Appearance 词中折行及聊天标签溢出；实际三种外观切换和播放通过，默认层级保持。定向47/全量897 tests、tsc/lint/build、双轴增量 CLEAN，证据见同一 Global 记录。
+
+追加 Global quick-log 当日补记：W1D4 60×5@8 于9/22提交，师生回读唯一记录、重启2/2及Bench e1RM76.9通过。教练改期POST返回403 AUTHORIZATION_FORBIDDEN，计划回读未改变；停止写重试，需核对Global部署能力，不据本地源码宣称线上已支持。
