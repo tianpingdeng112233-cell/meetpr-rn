@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Switch, ToastAndroid, View } from 'react-native';
+import { AppState, Linking, Switch, Text, ToastAndroid, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
-import { AppButton, useColors } from '@/design';
+import { AppButton, font, useColors } from '@/design';
 import { t } from '@/i18n';
 import { NumberWheel } from '@/features/onboarding/controls';
 import { useSessionStore } from '@/api/session';
-import { ProfileModal, ProfileText, PreferenceChip } from '@/features/profile/components';
+import { ProfileText, MyProfileGroupCard, MyProfileDivider } from '@/features/profile/components';
 import { reminderWeekdays, replaceReminders, requestReminderPermission, type ReminderSettings } from './training-reminder';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { SettingsPage, SettingsSectionTitle } from './SettingsPage';
 import { preferenceKeys, writeReminderPreference } from './storage';
 export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: { studentId: string; initial: ReminderSettings; onClose: () => void }) {
+  const [editingTime, setEditingTime] = useState(false);
   const [settings, setSettings] = useState(initial);
   const [denied, setDenied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -47,17 +50,35 @@ export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: 
       setError(true); ToastAndroid.show(t('student.trainingReminderSettingsView.copy008'), ToastAndroid.LONG);
     } finally { changing.current = false; setBusy(false); }
   };
-  return <ProfileModal title={t('student.trainingReminderSettingsView.copy001')} onClose={onClose} busy={busy}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><View style={{ flex: 1 }}><ProfileText>{t('student.trainingReminderSettingsView.copy002')}</ProfileText></View><Switch accessibilityLabel={t('student.trainingReminderSettingsView.copy002')} value={settings.enabled} disabled={busy} trackColor={{ true: colors.gold500 }} onValueChange={(enabled) => void change({ ...settings, enabled })} /></View>
-    <ProfileText>{t('student.trainingReminderSettingsView.copy003')}</ProfileText>
-    <ProfileText>{t('student.trainingReminderSettingsView.copy004')}</ProfileText>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{reminderWeekdays.map(({ weekday, key }) => <PreferenceChip key={weekday} label={t(key)} disabled={!settings.enabled || busy} selected={settings.weekdays.includes(weekday)} onPress={() => void change({ ...settings, weekdays: settings.weekdays.includes(weekday) ? settings.weekdays.filter((day) => day !== weekday) : [...settings.weekdays, weekday] })} />)}</View>
-    <ProfileText>{t('student.trainingReminderSettingsView.copy005')} · {String(settings.hour).padStart(2, '0')}:{String(settings.minute).padStart(2, '0')}</ProfileText>
-    <View pointerEvents={!settings.enabled || busy ? 'none' : 'auto'} accessibilityElementsHidden={!settings.enabled} importantForAccessibility={!settings.enabled ? 'no-hide-descendants' : 'auto'} style={{ flexDirection: 'row', gap: 12, opacity: settings.enabled ? 1 : 0.4 }}>
-      <NumberWheel options={Array.from({ length: 24 }, (_, n) => n)} value={settings.hour} onChange={(hour) => void change({ ...settings, hour })} />
-      <NumberWheel options={Array.from({ length: 60 }, (_, n) => n)} value={settings.minute} onChange={(minute) => void change({ ...settings, minute })} />
+  return <SettingsPage title={t('student.trainingReminderSettingsView.copy001')} onClose={onClose} busy={busy}>
+    <MyProfileGroupCard><View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <Text style={{ flex: 1, ...font.body(16, 'semibold'), color: colors.textPrimary }}>{t('student.trainingReminderSettingsView.copy002')}</Text>
+      <Switch accessibilityLabel={t('student.trainingReminderSettingsView.copy002')} value={settings.enabled} disabled={busy} trackColor={{ true: colors.gold500 }} onValueChange={(enabled) => { if (!enabled) setEditingTime(false); void change({ ...settings, enabled }); }} />
+    </View></MyProfileGroupCard>
+    <View style={{ gap: 8 }}><SettingsSectionTitle>{t('student.trainingReminderSettingsView.copy003')}</SettingsSectionTitle>
+      <View style={{ opacity: settings.enabled ? 1 : 0.45 }}><MyProfileGroupCard><View style={{ padding: 16, gap: 16 }}>
+        <Text style={{ ...font.body(14, 'semibold'), color: colors.textPrimary }}>{t('student.trainingReminderSettingsView.copy004')}</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{reminderWeekdays.map(({ weekday, key }) => {
+          const selected = settings.weekdays.includes(weekday);
+          return <Pressable key={weekday} accessibilityRole="button" accessibilityState={{ selected, disabled: !settings.enabled || busy }} disabled={!settings.enabled || busy}
+            onPress={() => void change({ ...settings, weekdays: selected ? settings.weekdays.filter(day => day !== weekday) : [...settings.weekdays, weekday] })}
+            style={{ flexGrow: 1, minWidth: 32, minHeight: 44, paddingHorizontal: 3, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1, borderColor: selected ? colors.gold500 : colors.borderSubtle, backgroundColor: selected ? colors.ctaFill : colors.surfaceRaised }}>
+            <Text style={{ ...font.body(12, 'semibold'), color: selected ? colors.inkOnCTAFill : colors.textSecondary }}>{t(key)}</Text>
+          </Pressable>;
+        })}</View>
+        <MyProfileDivider />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingReminderSettingsView.copy005')} accessibilityState={{ expanded: editingTime, disabled: !settings.enabled || busy }} disabled={!settings.enabled || busy} onPress={() => setEditingTime(!editingTime)}
+          style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ flex: 1, ...font.body(14, 'semibold'), color: colors.textPrimary }}>{t('student.trainingReminderSettingsView.copy005')}</Text>
+          <Text style={{ ...font.body(14), color: colors.textSecondary }}>{String(settings.hour).padStart(2, '0')}:{String(settings.minute).padStart(2, '0')}</Text>
+        </Pressable>
+        {editingTime && settings.enabled ? <View pointerEvents={busy ? 'none' : 'auto'} style={{ flexDirection: 'row', gap: 12 }}>
+          <NumberWheel options={Array.from({ length: 24 }, (_, n) => n)} value={settings.hour} onChange={(hour) => void change({ ...settings, hour })} />
+          <NumberWheel options={Array.from({ length: 60 }, (_, n) => n)} value={settings.minute} onChange={(minute) => void change({ ...settings, minute })} />
+        </View> : null}
+      </View></MyProfileGroupCard></View>
     </View>
     {denied ? <><ProfileText error>{t('student.trainingReminderSettingsView.copy006')}</ProfileText><AppButton haptic="none" variant="link" label={t('student.trainingReminderSettingsView.copy007')} onPress={() => void Linking.openSettings().catch(() => setError(true))} /></> : null}
     {error ? <ProfileText error>{t('student.trainingReminderSettingsView.copy008')}</ProfileText> : null}
-  </ProfileModal>;
+  </SettingsPage>;
 }

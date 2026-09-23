@@ -82,3 +82,27 @@ test('a rate chosen while URL renewal is pending is used when retry starts playb
   expect(video().props.paused).toBe(false);
   expect(video().props.rate).toBe(2);
 });
+
+test('workbench progress starts after the native item loads, even when a pre-load query would never settle', async () => {
+  jest.useFakeTimers();
+  let loaded = false;
+  const onProgress = jest.fn();
+  const getCurrentPosition = jest.fn(() => loaded ? Promise.resolve(7) : new Promise<number>(() => {}));
+  try {
+    await act(async () => {
+      renderer = create(<FeedbackVideoPlayer {...props} layout="workbench" onProgress={onProgress} />, {
+        createNodeMock: element => element.type === 'Video' ? { getCurrentPosition } : null,
+      });
+    });
+    await act(async () => {
+      loaded = true;
+      video().props.onLoad({ duration: 95 });
+    });
+    await act(async () => { await jest.advanceTimersByTimeAsync(1000); });
+    expect(onProgress).toHaveBeenLastCalledWith(7);
+    expect(renderer.root.findByProps({ testID: 'feedback.video.scrubber' }).props.accessibilityValue.now).toBe(7);
+  } finally {
+    act(() => renderer.unmount());
+    jest.useRealTimers();
+  }
+});

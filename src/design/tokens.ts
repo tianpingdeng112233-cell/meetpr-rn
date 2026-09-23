@@ -16,6 +16,8 @@ export const palette = {
   coachMissedFill: { light: 'rgba(229,72,77,0.16)', dark: 'rgba(229,72,77,0.16)' },
   videoStageFill: { light: '#1B2534', dark: '#1B2534' },
   videoStageBorder: { light: '#2A3646', dark: '#2A3646' },
+  // Workbench chrome retains its original dark fill behind fixed white controls.
+  videoWorkbenchFill: { light: '#111827', dark: '#111827' },
   goldCTA: { light: '#B45309', dark: '#FFB800' },
   gold500: { light: '#D97706', dark: '#F5A623' },
   gold400: { light: '#F59E0B', dark: '#FBBF3E' },

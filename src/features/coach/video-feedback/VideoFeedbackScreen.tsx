@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import { font, radius, Screen, useColors } from '@/design';
+import { Card, font, radius, Screen, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { deviceLocale } from '../student-detail/presentation';
 import { useSessionStore } from '@/api/session';
@@ -89,10 +89,10 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
           rpe: log?.rpe != null ? Number(log.rpe) : null, setOrdinal: log ? log.set_index + 1 : null, coachName }}
         selectedMarkerID={selectedMarkerID} onAnnotationClose={() => setSelectedMarkerID(null)}
         onAddMarker={slice.markers !== null ? () => setMarkerSheet({ time: Math.max(0, Math.round(seconds * 1000)) / 1000, note: '' }) : undefined} />
-      {slice.markers?.length ? <View style={{ gap: 8 }}><Text style={{ ...font.body(14, 'bold'), color: colors.textPrimary }}>{t('coach.videoFeedback.markerCount %lld', [slice.markers.length])}</Text>{slice.markers.map(marker => <View key={marker.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderColor: colors.borderHairline }}>
+      {slice.markers?.length ? <View style={{ gap: spacing.space2 }}><Text style={{ ...font.mono(12), color: colors.textTertiary }}>{t('coach.videoFeedback.markerCount %lld', [slice.markers.length])}</Text><Card style={{ paddingHorizontal: 0, paddingVertical: 0 }}>{slice.markers.map((marker, markerIndex) => <View key={marker.id} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point11, paddingHorizontal: spacing.space4, borderTopWidth: markerIndex ? spacing.point1 : 0, borderColor: colors.borderHairline }}>
         <CoachVideoMarkerRow marker={marker} select={() => setSelectedMarkerID(marker.id)} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('coach.videoFeedback.deleteMarker')} disabled={slice.markerBusy} onPress={() => void slice.deleteMarker(marker.id)} style={{ minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}><MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.danger} /></Pressable>
-      </View>)}</View> : null}
+      </View>)}</Card></View> : null}
       {slice.markerError ? <Text style={{ ...font.body(12), color: colors.danger }}>{t(slice.markerError === 'load' ? 'coach.videoFeedback.markersLoadFailed' : slice.markerError === 'save' ? 'coach.videoFeedback.markerSaveFailed' : 'coach.videoFeedback.markerDeleteFailed')}</Text> : null}
       {slice.markerError === 'load' ? <Pill haptic="light" label={t('chat.retry')} onPress={() => void slice.loadMarkers()} /> : null}
       {log ? <View testID="coach.video.setInfo" style={{ flexDirection: 'row', paddingVertical: 16, backgroundColor: colors.surfaceCard, borderRadius: radius.card }}>{cells.map(([label, value, unit], cellIndex) => <View key={label} style={{ flex: 1, paddingHorizontal: 6, gap: 8, borderLeftWidth: cellIndex ? 1 : 0, borderColor: colors.borderDefault }}><Text style={{ ...font.body(10), color: colors.textTertiary }}>{label}</Text><Text style={{ ...font.display(22), color: colors.textPrimary }}>{value}</Text>{unit ? <Text style={{ ...font.body(10), color: colors.textDisabled }}>{unit}</Text> : null}</View>)}</View> : slice.setInfo !== 'loading' ? <Text style={{ ...font.body(12), color: slice.setInfo === 'failed' ? colors.danger : colors.textDisabled }}>{t(slice.setInfo === 'failed' ? 'coach.videoFeedback.setInfoLoadFailed' : 'coach.videoFeedback.setInfoUnavailable')}</Text> : null}
@@ -111,10 +111,10 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
 
 function CoachVideoMarkerRow({ marker, select }: { marker: VideoMarker; select: () => void }) {
   const colors = useColors();
-  const style = { flex: 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, minHeight: 48 };
+  const style = { flex: 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: spacing.space3, minHeight: spacing.minimumHitTarget, paddingVertical: spacing.point13 };
   const label = <>
     <Text style={{ ...font.mono(12, 'bold'), color: colors.gold500 }}>{markerTime(marker.time_ms / 1000)}</Text>
-    <Text style={{ flex: 1, ...font.body(12), color: colors.textPrimary }}>{marker.note || t('coach.videoFeedback.marker')}</Text>
+    <Text style={{ flex: 1, ...font.body(14), color: colors.textPrimary }}>{marker.note || t('coach.videoFeedback.marker')}</Text>
     {marker.annotation_url ? <MaterialCommunityIcons name="pencil" size={11} color={colors.gold500} accessible={false} /> : null}
   </>;
   return marker.annotation_url ? <Pressable accessibilityRole="button" testID="coach.video.marker.annotation" onPress={select} style={style}>{label}</Pressable>

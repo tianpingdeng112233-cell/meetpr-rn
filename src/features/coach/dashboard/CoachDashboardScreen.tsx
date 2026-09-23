@@ -1,4 +1,4 @@
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, useWindowDimensions } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { useRouter } from 'expo-router';
 import { Card, Screen, radius, spacing, useColors } from '@/design';
@@ -18,6 +18,8 @@ export function CoachDashboardScreen() {
   const now = useCoachNow();
   const router = useRouter();
   const colors = useColors();
+  const { width, fontScale } = useWindowDimensions();
+  const compact = width / fontScale < 340;
   const todo = makeTodoItems({ rows, applications, videos, conversations, now });
   const summary = makeSummary(rows, now);
   const students = () => router.navigate('/(coach)/(tabs)/students');
@@ -28,11 +30,11 @@ export function CoachDashboardScreen() {
   // iOS CoachTodayFormatting: wide month + day, then the wide weekday ("September 5 · Saturday").
   const date = `${new Intl.DateTimeFormat(deviceLocale(), { month: 'long', day: 'numeric' }).format(now)} · ${new Intl.DateTimeFormat(deviceLocale(), { weekday: 'long' }).format(now)}`;
   return <Screen edges={['top', 'left', 'right']}><ScrollView contentContainerStyle={[pageContent, { gap: spacing.point15 }]}>
-    <View style={[rowStyle, { justifyContent: 'space-between' }]}><View><Copy mono size={12} tone="textTertiary" style={{ letterSpacing: 0.72 }}>{date}</Copy><Copy display size={38}>{t('coach.shell.today')}</Copy></View><View style={{ alignItems: 'flex-end' }}><Copy size={11} tone="textTertiary">{t('coach.today.todo')}</Copy><Copy display size={28}>{todo.length}</Copy></View></View>
+    <View style={[rowStyle, { justifyContent: 'space-between', gap: spacing.space2 }]}><View style={{ flex: 1 }}><Copy mono size={12} tone="textTertiary" style={{ letterSpacing: 0.72 }}>{date}</Copy><Copy display size={38}>{t('coach.shell.today')}</Copy></View><View style={{ alignItems: 'flex-end' }}><Copy size={11} tone="textTertiary">{t('coach.today.todo')}</Copy><Copy display size={28}>{todo.length}</Copy></View></View>
     <Copy mono size={12} tone="textTertiary">{t('coach.today.orderedByHandling')}</Copy>
     {!rows.length ? <EmptyState title={t('coach.roster.noStudents')} subtitle={t('coach.roster.noStudentsSubtitle')} /> : !todo.length ? <EmptyState done title={t('coach.today.allDone')} subtitle={t('coach.today.allDoneSubtitle')} /> : <Card style={{ padding: 0 }}>
       {todo.map((item, index) => <Pressable key={item.id} accessibilityRole="button" onPress={() => openTodo(item)} style={({ pressed }) => [{ ...rowStyle, gap: spacing.space3, padding: spacing.space4, borderTopWidth: index ? 1 : 0, borderColor: colors.borderDefault }, pressed && { transform: [{ scale: 0.97 }] }]}>
-        <View style={{ width: 7, height: 7, borderRadius: radius.pill, backgroundColor: colors[item.color] }} /><View style={{ flex: 1, gap: spacing.space1 }}><Copy size={15} weight="bold">{item.title}</Copy><Copy lines={1} size={12} tone="textTertiary">{item.subtitle}</Copy></View><Copy size={11} weight="semibold" tone={item.color}>{item.tag}</Copy><Icon name="chevron-forward" size={14} />
+        <View style={{ width: 7, height: 7, borderRadius: radius.pill, backgroundColor: colors[item.color] }} /><View style={{ flex: 1, gap: spacing.space1 }}><Copy size={15} weight="bold">{item.title}</Copy><Copy lines={compact ? undefined : 1} size={12} tone="textTertiary">{item.subtitle}</Copy>{compact ? <Copy size={11} weight="semibold" tone={item.color}>{item.tag}</Copy> : null}</View>{compact ? null : <Copy size={11} weight="semibold" tone={item.color}>{item.tag}</Copy>}<Icon name="chevron-forward" size={14} />
       </Pressable>)}
     </Card>}
     {acceptedStudentName ? <Card style={{ borderWidth: 1, borderColor: colors.coachAcceptedBorder, ...rowStyle, gap: spacing.space2 }}><Icon name="checkmark" tone="success" /><Copy tone="success" style={{ flex: 1 }}>{t('coach.today.acceptedStudent', [acceptedStudentName])}</Copy></Card> : null}

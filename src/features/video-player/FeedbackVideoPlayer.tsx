@@ -110,6 +110,9 @@ function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, ma
   }, [scrub]);
 
   useEffect(() => {
+    // Android can leave a position promise pending before its native view exists.
+    // Wait for onLoad so that one early read cannot stall all subsequent polls.
+    if (duration <= 0) return;
     let active = true;
     let reading = false;
     const update = async () => {
@@ -133,7 +136,7 @@ function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, ma
     void update();
     const timer = setInterval(() => void update(), 250);
     return () => { active = false; clearInterval(timer); };
-  }, [scrub, item.revision, failed]);
+  }, [scrub, item.revision, failed, duration]);
 
   const retry = async () => {
     if (retryPending.current) return;
