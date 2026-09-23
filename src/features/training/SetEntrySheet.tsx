@@ -136,6 +136,7 @@ export function SetEntrySheet({
   const [repsText, setRepsText] = useState(draft.repsText);
   const [rpeText, setRpeText] = useState(draft.rpeText || '8');
   const [saving, setSaving] = useState(false);
+  const [presented, setPresented] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const scrolledToVideo = useRef(false);
   const [numberPad, setNumberPad] = useState<NumberPadField | null>(null);
@@ -192,7 +193,7 @@ export function SetEntrySheet({
   };
 
   return (
-    <Modal animationType="slide" visible transparent={false} onRequestClose={() => {
+    <Modal animationType="slide" visible transparent={false} onShow={() => setPresented(true)} onRequestClose={() => {
       if (overlayHost.current?.requestClose()) return;
       if (numberPad) setNumberPad(null);
       else close();
@@ -258,7 +259,7 @@ export function SetEntrySheet({
                   studentId={studentId}
                   stableSetId={draft.stableSetId}
                   editable={editable}
-                  initialCamera={initialCamera}
+                  initialCamera={initialCamera && presented}
                   buildLogRequest={() =>
                     CoachedSetLogRequestSchema.parse({
                       plan_exercise_id: draft.exercise.id,
