@@ -5,7 +5,7 @@ const CursorSchema = z.object({ message_id: UuidSchema, seq: z.number().int() })
 export const ConversationSchema = z.object({
   id: UuidSchema,
   other_party: z.object({ id: UuidSchema, display_name: z.string() }),
-  last_message: z.object({ id: UuidSchema, seq: z.number().int(), kind: z.enum(['text', 'image', 'set_ref']), preview: z.string(), created_at: TimestampSchema, sender_id: UuidSchema }).nullish(),
+  last_message: z.object({ id: UuidSchema, seq: z.number().int(), kind: z.enum(['text', 'image', 'set_ref']), preview: z.string(), preview_kind: z.enum(['text', 'image', 'training_plan', 'training_share']).nullish().catch(null), created_at: TimestampSchema, sender_id: UuidSchema }).nullish(),
   last_message_at: TimestampSchema.nullish(), unread_count: z.number().int().nonnegative(),
   my_last_read: CursorSchema.nullish(), other_last_read: CursorSchema.nullish(),
 });
@@ -64,5 +64,5 @@ export const chatRepository = {
   read: (id: string, messageID: string) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/read`, { method: 'POST', body: { message_id: UuidSchema.parse(messageID) }, schema: z.object({ my_last_read: CursorSchema, unread_count: z.number().int().nonnegative() }) }),
 };
 export function inboxConversation(value: Conversation) {
-  return { id: value.id, otherPartyID: value.other_party.id, otherPartyName: value.other_party.display_name, lastMessageAt: value.last_message_at ?? null, lastMessagePreview: value.last_message?.preview ?? null, unreadCount: value.unread_count };
+  return { id: value.id, otherPartyID: value.other_party.id, otherPartyName: value.other_party.display_name, lastMessageAt: value.last_message_at ?? null, lastMessagePreview: value.last_message?.preview ?? null, lastMessagePreviewKind: value.last_message?.preview_kind ?? null, unreadCount: value.unread_count };
 }
