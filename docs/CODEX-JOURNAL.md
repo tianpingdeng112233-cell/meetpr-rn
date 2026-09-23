@@ -1,5 +1,7 @@
 # CODEX-JOURNAL
 
+> 当前验收正典：[2026-09-23 W3矩阵](verification-w3-2026-09-23.md)。下文按日期保留历史，旧 ADB/阶段性待办不代表当前状态。
+
 > 历史施工记录；当前集成状态以 [PARITY](../PARITY.md) 和 [2026-09-21 build 22 验收](verification-build22-2026-09-21.md) 为准。下文旧角色分工和 ADB 受限描述只代表记录当时。
 
 ## 2026-09-04 — G0-a tokens v3
@@ -1660,3 +1662,15 @@ Final checks after all source/test edits:
 W3-V01 独立 T0 补丁收掉小屏 Appearance 词中折行及聊天标签溢出；实际三种外观切换和播放通过，默认层级保持。定向47/全量897 tests、tsc/lint/build、双轴增量 CLEAN，证据见同一 Global 记录。
 
 追加 Global quick-log 当日补记：W1D4 60×5@8 于9/22提交，师生回读唯一记录、重启2/2及Bench e1RM76.9通过。教练改期POST返回403 AUTHORIZATION_FORBIDDEN，计划回读未改变；停止写重试，需核对Global部署能力，不据本地源码宣称线上已支持。
+
+## 2026-09-23 — W3 acceptance completion
+
+Starting RN7c0597c, pinned iOS0748931. P31 uses explicit optional preview_kind;
+backend PR280 derives metadata from the visibility-filtered message. Known system
+kinds localize; ordinary/legacy/unknown text remains unchanged. G05 defers initial
+camera consent until native Modal onShow. V04 restores the specified coach marker card hierarchy; V05 fixes dark workbench control contrast while preserving Light. V06 waits for native onLoad before position polling so an unresolved pre-load query cannot freeze progress. V03 fixes compact coach headers and themed CTA contrast; default Light and small Dark were observed. V02 restores pinned settings hierarchy
+and always-visible automatic rules without changing storage or scheduling.
+Independent Standards/Spec CLEAN; RN131 suites908 tests plus tsc/lint/build pass.
+Live dedicated-pair cross-date logging, multipart interruption/cold restart and
+chat reconnect/retry verified. Current evidence/remaining gates are canonical in
+docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.

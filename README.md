@@ -16,4 +16,4 @@ npm test
 
 App icon 与 adaptive icon 已有品牌资产；启动屏图片仍为 1×1 占位。
 
-当前处于 W3 集成验收，build 22 增量已实现并有定向模拟器证据；真实 Global 训练、视频和反馈链路见 [9/22 验收记录](docs/verification-global-2026-09-22.md)。完整走查与 W4 真机、签名、分发仍待完成；发布门禁见 [build 22 验收记录](docs/verification-build22-2026-09-21.md)。
+W3 可独立完成的六流程验收、弱网恢复和固定 iOS 结构对照已完成，结果及证据统一见 [9/23 验收矩阵](docs/verification-w3-2026-09-23.md)。W3 尚待 Global 后端候选上线后验证 P-31 预览与教练改期；生产迁移/部署未经授权。W4 的 Google/FCM、真机、签名、启动屏和分发仍未完成。历史增量与范围见 [build 22 记录](docs/verification-build22-2026-09-21.md)。

@@ -1,0 +1,17 @@
+{
+  "synthetic_local_only": true,
+  "injected_point": {
+    "id": "w3-missing-source",
+    "studentId": "00000000-0000-0000-0000-000000000902",
+    "exerciseId": "00000000-0000-0000-0000-000000000014",
+    "setLogId": "w3-missing-log",
+    "computedAt": "2026-09-22T12:00:00Z",
+    "e1RMKg": 300,
+    "sourceWeightKg": 100,
+    "sourceReps": 5,
+    "sourceRPE": null,
+    "confidence": "normal",
+    "origin": "imported"
+  },
+  "other_users_untouched": true
+}
