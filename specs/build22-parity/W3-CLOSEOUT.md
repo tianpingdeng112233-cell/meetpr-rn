@@ -58,3 +58,5 @@ unrelated migrations, changing other users or their production plans.
   leaving the prompt behind the sheet. Wait for Modal onShow before automatic
   camera entry. Public seam: SetEntrySheet lifecycle → visible consent prompt;
   retain once-per-entry behavior and verify decline, re-entry and denied camera.
+
+- W3-V03: 360×640 dp at 1.3× font exposes three coach layout defects: todo status crowds English titles into word fragments, the accept-sheet title overlaps Cancel, and filled Accept has white text on a light fill in Dark. Use a compact stacked status/header layout and the existing theme-aware CTA foreground. Preserve actions, disabled/busy guards, default layout, copy, navigation and palette. Verify Android default Light and small Dark screens plus existing coach interaction tests; no style-mirroring test is required.

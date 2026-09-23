@@ -14,7 +14,7 @@ export function Icon({ name, tone = 'textTertiary', size = 20 }: { name: Compone
 export function Action({ label, onPress, filled = false, disabled = false, icon, style, testID, haptic }: { haptic?: 'light' | 'warning'; label: string; onPress(): void; filled?: boolean; disabled?: boolean; icon?: ComponentProps<typeof Ionicons>['name']; style?: StyleProp<ViewStyle>; testID?: string }) {
   const colors = useColors();
   return <Pressable haptic={haptic} testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.space4, paddingVertical: spacing.point10, borderRadius: radius.pill, borderWidth: filled ? 0 : 1, borderColor: colors.borderStrong, backgroundColor: filled ? colors.textPrimary : undefined, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : 1 }, style, pressed && { transform: [{ scale: 0.97 }] }]}>
-    {icon ? <Icon name={icon} /> : <Copy size={14} weight={filled ? 'bold' : 'semibold'} tone={filled ? 'inkOnCTAFill' : 'textTertiary'}>{label}</Copy>}
+    {icon ? <Icon name={icon} /> : <Copy size={14} weight={filled ? 'bold' : 'semibold'} tone={filled ? 'ctaText' : 'textTertiary'}>{label}</Copy>}
   </Pressable>;
 }
 export function EmptyState({ title, subtitle, done = false, search = false }: { title: string; subtitle?: string; done?: boolean; search?: boolean }) {
