@@ -74,6 +74,6 @@ fixture 的第一次 readiness 提交使用了错误响应形状，修正合成�
 
 ## 交付检查
 
-- RN业务代码：47a293f；[PR57](https://github.com/tianpingdeng112233-cell/meetpr-rn/pull/57)，[最终云端CI](https://github.com/tianpingdeng112233-cell/meetpr-rn/actions/runs/35875288015)正在完成Android构建；check已通过。以该次结果为准，不沿用旧SHA的绿灯。
+- RN业务代码：47a293f；[PR57](https://github.com/tianpingdeng112233-cell/meetpr-rn/pull/57)，[最终云端CI](https://github.com/tianpingdeng112233-cell/meetpr-rn/actions/runs/35875288015)的check与Android构建均通过。验收文档/证据单独交付于[PR58](https://github.com/tianpingdeng112233-cell/meetpr-rn/pull/58)，叠在PR57；以该次业务SHA结果为准，不沿用旧SHA的绿灯。
 - 后端P31：1b9c6f5；[PR280 CI通过](https://github.com/tianpingdeng112233-cell/MeetPR-backend/actions/runs/35851532297)。预检/方案：84a4c3a；[PR281 CI通过](https://github.com/tianpingdeng112233-cell/MeetPR-backend/actions/runs/35874557186)。T2均未合并。
 - Standards / Spec逐修复增量收敛为CLEAN，V06两方独立5项测试通过；文档纠正“fixture部分失败”被误列Global的行。证据中未检出专用账号密码、JWT或签名URL；生成的native build目录不入提交。
