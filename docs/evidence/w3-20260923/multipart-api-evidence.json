@@ -1,0 +1,25 @@
+{
+  "student": {
+    "id": "eb392051-f70c-4cb9-82cd-f9ff095bafe3",
+    "set_log_id": "66c09406-4886-4da9-afff-bce24612bfdd",
+    "status": null,
+    "duration_ms": null,
+    "size_bytes": 23908878,
+    "exercise_name": "\u7ade\u6280\u6df1\u8e72",
+    "logged_date": null
+  },
+  "coach": {
+    "id": "eb392051-f70c-4cb9-82cd-f9ff095bafe3",
+    "set_log_id": "66c09406-4886-4da9-afff-bce24612bfdd",
+    "status": null,
+    "duration_ms": null,
+    "size_bytes": 23908878,
+    "exercise_name": "\u7ade\u6280\u6df1\u8e72",
+    "logged_date": null
+  },
+  "file_bytes": 23908878,
+  "parts": 5,
+  "persisted_completed_parts_before_restart": [
+    3
+  ]
+}

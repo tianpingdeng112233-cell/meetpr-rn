@@ -1,0 +1,30 @@
+{
+  "student": [
+    {
+      "id": "e16c6309-b29c-47e7-b92f-bab1f2936477",
+      "body": "W3-offline-retry-20260923",
+      "client_id": "581a3c91-e370-4304-9e94-5f855d393d3e",
+      "seq": 4
+    },
+    {
+      "id": "a0ece037-de13-48b4-9c47-b7b20ec1b5e0",
+      "body": "W3-coach-during-offline-20260923",
+      "client_id": "09e0ea8a-238b-436b-9a29-46733dccdcbe",
+      "seq": 3
+    }
+  ],
+  "coach": [
+    {
+      "id": "e16c6309-b29c-47e7-b92f-bab1f2936477",
+      "body": "W3-offline-retry-20260923",
+      "client_id": "581a3c91-e370-4304-9e94-5f855d393d3e",
+      "seq": 4
+    },
+    {
+      "id": "a0ece037-de13-48b4-9c47-b7b20ec1b5e0",
+      "body": "W3-coach-during-offline-20260923",
+      "client_id": "09e0ea8a-238b-436b-9a29-46733dccdcbe",
+      "seq": 3
+    }
+  ]
+}
