@@ -22,7 +22,7 @@ export function FeedbackVideoWorkbenchPlayer({ video, playbackControl, annotatio
 }) {
   const colors = useColors();
   return <View accessibilityValue={{ text: `${t('chat.playbackSpeed')} ${workbenchRateText(rate)}` }}
-    style={[styles.root, { backgroundColor: colors.textPrimary }]}>
+    style={[styles.root, { backgroundColor: colors.videoWorkbenchFill }]}>
     <View style={[styles.stage, { backgroundColor: colors.videoStageFill, borderColor: colors.videoStageBorder }]}>
       {video}
       {badge ? <VideoBadgeScrim /> : null}
@@ -41,7 +41,7 @@ export function FeedbackVideoWorkbenchPlayer({ video, playbackControl, annotatio
         {rates.map(option => <Pressable key={option} accessibilityRole="button"
           accessibilityLabel={`${t('chat.playbackSpeed')} ${workbenchRateText(option)}`}
           accessibilityState={{ selected: option === rate }} testID={`feedback.video.speed.${rateText(option)}`}
-          onPress={() => selectRate(option)} style={[styles.rate, option === rate && { backgroundColor: colors.textPrimary }]}>
+          onPress={() => selectRate(option)} style={[styles.rate, option === rate && { backgroundColor: colors.videoWorkbenchFill }]}>
           <Text style={[styles.rateText, { color: option === rate ? colors.inkOnCTAFill : colors.textTertiary }]}>{workbenchRateText(option)}</Text>
         </Pressable>)}
       </View>
