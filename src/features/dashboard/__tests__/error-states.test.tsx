@@ -81,3 +81,19 @@ test('a profile failure renders its own error row and retry action', () => {
 // Existing copy assertions pin the original Chinese presentation.
 beforeEach(() => setLocaleOverride('zh'));
 afterEach(() => setLocaleOverride(null));
+
+test('missing profile values retain both metric placeholders like iOS', () => {
+  setLocaleOverride('en');
+  let renderer: ReactTestRenderer | undefined;
+  act(() => {
+    renderer = create(<ProfileMetrics now={new Date('2026-09-25T12:00:00Z')} profile={null} profileError={false} onRetry={() => {}} />);
+  });
+  try {
+    const copy = renderer!.root.findAllByType(Text).map(node => node.props.children).join(' ');
+    expect(copy).toContain('Meet in');
+    expect(copy).toContain('Not scheduled');
+    expect(copy).toContain('Add a meet');
+    expect(copy).toContain('Not entered');
+    expect(copy).toContain('Add in Profile');
+  } finally { act(() => renderer?.unmount()); }
+});

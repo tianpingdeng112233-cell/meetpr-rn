@@ -142,3 +142,7 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 ## 2026-09-25 Hold completion repair
 
 修复长按时按钮内轻微移动被 Android 原生滚动取消，以及金色进度填充不显示。保留 1.1 秒、提前松手/越界取消、单次提交和无障碍入口；设备原复现转绿，取消后重试通过。验证与独立双轴审查见 [取证](docs/verification-hold-2026-09-25.md)。完成页 0/1 与 All completed 的既有文案矛盾另记为待办。
+
+## 2026-09-25 Today meet placeholder
+
+修复未设置比赛日期时整张倒计时卡消失的复刻遗漏，补齐固定 iOS 的 Not scheduled / Add a meet，并对齐体重未填写提示。保留有值显示和 Profile 编辑方式。浅色/深色模拟器亲验、131 suites / 910 tests、tsc/lint、Global Release 构建通过；独立 Standards 与 Spec 均 CLEAN。见 [验证与截图](docs/verification-meetday-2026-09-25.md)。
