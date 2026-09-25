@@ -529,19 +529,22 @@ export function ProfileMetrics({
       <View style={{ flexDirection: 'row', gap: 11 }}>
         <Card
           accessible
-          accessibilityLabel={t('student.dashboardProfileMetricsView.copy002', [
-            bodyWeightText,
-          ])}
+          accessibilityLabel={profile?.weight_kg
+            ? t('student.dashboardProfileMetricsView.copy002', [bodyWeightText])
+            : t('student.dashboardProfileMetricsView.copy011')}
           style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <MaterialCommunityIcons name="scale-bathroom" size={13} color={colors.textPrimary} />
-            <Text style={{ color: colors.textPrimary, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
+            <MaterialCommunityIcons name="scale-bathroom" size={13} color={profile?.weight_kg ? colors.textPrimary : colors.textDim} />
+            <Text style={{ color: profile?.weight_kg ? colors.textPrimary : colors.textMuted, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-            <Text style={{ color: colors.textPrimary, ...font.mono(24, 'bold') }}>{profile?.weight_kg ? formatKg(Number(profile.weight_kg)) : '—'}</Text>
-            {profile?.weight_kg ? <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}> kg</Text> : null}
-          </View>
+          {profile?.weight_kg ? <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            <Text style={{ color: colors.textPrimary, ...font.mono(24, 'bold') }}>{formatKg(Number(profile.weight_kg))}</Text>
+            <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}> kg</Text>
+          </View> : <>
+            <Text style={{ color: colors.textMuted, ...font.body(18, 'bold'), marginTop: 3 }}>{t('student.dashboardProfileMetricsView.copy009')}</Text>
+            <Text style={{ color: colors.gold500, ...font.body(11, 'bold') }}>{t('student.dashboardProfileMetricsView.copy010')}</Text>
+          </>}
         </Card>
         {competitionDays !== null && competitionDays >= 0 ? (
           <Card
@@ -562,7 +565,20 @@ export function ProfileMetrics({
               <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}>{t('student.dashboardProfileMetricsView.copy004')}</Text>
             </View>
           </Card>
-        ) : null}
+        ) : (
+          <Card accessible accessibilityLabel={t('student.dashboardProfileMetricsView.copy008')}
+            style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MaterialCommunityIcons name="flag-outline" size={13} color={colors.textDim} />
+              <Text style={{ color: colors.textMuted, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
+            </View>
+            <Text style={{ color: colors.textMuted, ...font.body(18, 'bold'), marginTop: 3 }}>{t('student.dashboardProfileMetricsView.copy006')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <MaterialCommunityIcons name="plus" size={11} color={colors.gold500} />
+              <Text style={{ color: colors.gold500, ...font.body(11, 'bold') }}>{t('student.dashboardProfileMetricsView.copy007')}</Text>
+            </View>
+          </Card>
+        )}
       </View>
     </DashboardAsyncSection>
   );
