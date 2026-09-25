@@ -90,7 +90,7 @@ test('missing profile values retain both metric placeholders like iOS', () => {
   });
   try {
     const copy = renderer!.root.findAllByType(Text).map(node => node.props.children).join(' ');
-    expect(copy).toContain('Meet in');
+    expect(copy).toContain('Meetday');
     expect(copy).toContain('Not scheduled');
     expect(copy).toContain('Add a meet');
     expect(copy).toContain('Not entered');

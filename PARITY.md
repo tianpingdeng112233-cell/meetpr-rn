@@ -146,3 +146,5 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 ## 2026-09-25 Today meet placeholder
 
 修复未设置比赛日期时整张倒计时卡消失的复刻遗漏，补齐固定 iOS 的 Not scheduled / Add a meet，并对齐体重未填写提示。保留有值显示和 Profile 编辑方式。浅色/深色模拟器亲验、131 suites / 910 tests、tsc/lint、Global Release 构建通过；独立 Standards 与 Spec 均 CLEAN。见 [验证与截图](docs/verification-meetday-2026-09-25.md)。
+
+同日 David 追加指定：英文卡片标题由 Meet in 改为 Meetday（空态和已有日期共用）。3 项相关测试与 Release 构建通过，模拟器亲验见 [截图](docs/evidence/meetday-20260925/renamed.png)。
