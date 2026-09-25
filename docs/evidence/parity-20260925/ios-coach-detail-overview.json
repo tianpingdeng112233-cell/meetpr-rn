@@ -1,0 +1,38 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "00nrbgx",
+  "seq": 9,
+  "count": 47,
+  "targets": [
+    "e42|tap|button|Recent Feedback, No feedback yet, Write the first feedback from Videos →||",
+    "e18|tap|button|Students||coach.detail.back",
+    "e21|tap|button|Message||coach.detail.chat",
+    "e29|tap|button|Overview||coach.detail.tab.overview",
+    "e30|tap|button|Videos||coach.detail.tab.videos",
+    "e31|tap|button|Progress||coach.detail.tab.growth",
+    "e32|tap|button|Feedback||coach.detail.tab.feedback",
+    "e33|tap|button|Profile||coach.detail.tab.profile",
+    "e41|tap|button|Send reminder||"
+  ],
+  "scroll": [
+    "e27|swipe|scroll-view|||",
+    "e34|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e20|text|text|Students||",
+    "e22|text|text|张以恒||",
+    "e23|text|text|Active||",
+    "e25|text|text|No plan yet||",
+    "e26|text|text|Create a plan for this student from planning||",
+    "e36|text|text|Week Training||",
+    "e37|text|text|Tap Day For Details||",
+    "e38|text|text|No Training Days This Week||",
+    "e39|text|text|Today's Readiness||",
+    "e40|text|text|Today Not Filed||",
+    "e43|text|text|Recent Feedback||",
+    "e44|text|text|No feedback yet||",
+    "e45|text|text|Write the first feedback from Videos →||"
+  ],
+  "udid": "D412AE31-0ED9-4A23-B0FD-FFFA4A5A5609"
+}
