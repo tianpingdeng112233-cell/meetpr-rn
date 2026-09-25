@@ -138,3 +138,7 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 ## 2026-09-25 Header wordmark spacing
 
 按 David 提供的 iOS 截图放开字距及末尾 R 的额外重叠，四个学员 Tab 共用同一字标。保持高度、槽位与主题描边；四页浅色及 Today/Profile 深色模拟器亲验通过，131 suites / 908 tests、tsc、lint、Android Release 构建通过。见 [验证与截图](docs/verification-wordmark-2026-09-25.md)。
+
+## 2026-09-25 Hold completion repair
+
+修复长按时按钮内轻微移动被 Android 原生滚动取消，以及金色进度填充不显示。保留 1.1 秒、提前松手/越界取消、单次提交和无障碍入口；设备原复现转绿，取消后重试通过。验证与独立双轴审查见 [取证](docs/verification-hold-2026-09-25.md)。完成页 0/1 与 All completed 的既有文案矛盾另记为待办。

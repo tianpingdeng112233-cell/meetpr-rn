@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
+import { AccessibilityInfo, Animated, StyleSheet, Text, Vibration, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { font, useColors } from '@/design';
 import { t } from '@/i18n';
@@ -33,7 +33,7 @@ export function HoldToCompleteButton({
   }, []);
   const state = useRef<HoldState>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const bounds = useRef({ width: 0, height: 0 });
+  const [bounds, setBounds] = useState({ width: 0, height: 0 });
   const [holding, setHolding] = useState(false);
   const latest = useRef({ onComplete, disabled });
   useEffect(() => {
@@ -80,8 +80,10 @@ export function HoldToCompleteButton({
   }, [disabled, progress]);
   return (
     <Animated.View style={{ transform: [{ scale: bounce }] }}>
-    <Pressable
-      disabled={disabled}
+    <View
+      accessible
+      onStartShouldSetResponder={() => !latest.current.disabled}
+      onResponderTerminationRequest={() => false}
       accessibilityRole="button"
       accessibilityLabel={label ?? t('student.todayWorkoutScreen.copy022')}
       accessibilityState={{ disabled }}
@@ -90,9 +92,10 @@ export function HoldToCompleteButton({
         if (!latest.current.disabled) latest.current.onComplete();
       }}
       onLayout={(event) => {
-        bounds.current = event.nativeEvent.layout;
+        const { width, height } = event.nativeEvent.layout;
+        setBounds({ width, height });
       }}
-      onPressIn={() => {
+      onResponderGrant={() => {
         if (state.current !== 'idle' || latest.current.disabled) return;
         state.current = holdTransition(state.current, 'begin');
         setHolding(true);
@@ -115,23 +118,24 @@ export function HoldToCompleteButton({
           ]).start();
           latest.current.onComplete();
         }, HOLD_DURATION_MS);
+        // Block Android's native ScrollView from intercepting an in-bounds hold.
+        return true;
       }}
-      onTouchMove={(event) => {
+      onResponderMove={(event) => {
         const { locationX, locationY } = event.nativeEvent;
         if (
           locationX < 0 ||
           locationY < 0 ||
-          locationX > bounds.current.width ||
-          locationY > bounds.current.height
+          locationX > bounds.width ||
+          locationY > bounds.height
         )
           cancel();
       }}
-      onPressOut={cancel}
-      onTouchCancel={() => {
+      onResponderTerminate={() => {
         cancel();
         state.current = holdTransition(state.current, 'reset');
       }}
-      onTouchEnd={() => {
+      onResponderRelease={() => {
         cancel();
         clearTimer();
         state.current = holdTransition(state.current, 'reset');
@@ -161,12 +165,13 @@ export function HoldToCompleteButton({
           {
             width: progress.interpolate({
               inputRange: [0, 1],
-              outputRange: ['0%', '100%'],
+              outputRange: [0, bounds.width],
             }),
+            overflow: 'hidden',
           },
         ]}
       >
-        <Svg width="100%" height="100%">
+        <Svg width={bounds.width} height={bounds.height}>
           <Defs>
             <LinearGradient id="hold" x1="0" y1="0" x2="1" y2="0">
               <Stop offset="0" stopColor={colors.goldGradientStart} />
@@ -187,7 +192,7 @@ export function HoldToCompleteButton({
           {label ?? t('student.todayWorkoutScreen.copy021')}
         </Text>
       </View>
-    </Pressable>
+    </View>
     </Animated.View>
   );
 }
