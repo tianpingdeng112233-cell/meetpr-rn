@@ -134,3 +134,7 @@
 ## 2026-09-23 W3 接续
 
 P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用户文本，backend PR #280 未部署。Global 跨日 quick-log、23.9 MB 五分片断网/重启恢复、聊天断线接收与失败重试已实证；首次 Record 隐私弹窗遮挡 G05 和设置页 V02 已修，独立双轴 CLEAN。RN 131 suites / 908 tests、tsc/lint/Android 构建通过。状态矩阵已补齐、V03 小屏教练标题/确认页/按钮对比修复已复验；P31 Global 新服务及真实教练改期仍未收口，见 [本轮验收](docs/verification-w3-2026-09-23.md)。
+
+## 2026-09-25 Header wordmark spacing
+
+按 David 提供的 iOS 截图放开字距及末尾 R 的额外重叠，四个学员 Tab 共用同一字标。保持高度、槽位与主题描边；四页浅色及 Today/Profile 深色模拟器亲验通过，131 suites / 908 tests、tsc、lint、Android Release 构建通过。见 [验证与截图](docs/verification-wordmark-2026-09-25.md)。

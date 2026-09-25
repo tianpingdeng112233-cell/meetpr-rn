@@ -1,15 +1,16 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { font, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
+import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 
 export function GrowthScreenHeader({ unreadCount, onOpenChat }: { unreadCount: number; onOpenChat: () => void }) {
   const colors = useColors();
   return <View style={{ gap: 14 }}>
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-      <GrowthHeaderMark />
+      <MeetPRMark testID="growth-header-mark" />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('student.trainingHistoryView.copy012')}
@@ -24,22 +25,5 @@ export function GrowthScreenHeader({ unreadCount, onOpenChat }: { unreadCount: n
     </View>
     <Text style={{ ...font.display(34), color: colors.textPrimary }}>{t('student.trainingHistoryView.copy013')}</Text>
     <Text style={{ ...font.body(12), color: colors.textFaint, marginTop: -spacing.space2 }}>{t('student.trainingHistoryView.copy014')}</Text>
-  </View>;
-}
-
-// MeetPRMark.header: eight offset Archivo Black copies form the stroke under
-// a bgBase knockout. Keep this local until the other student headers migrate.
-function GrowthHeaderMark() {
-  const colors = useColors();
-  const glyphStyle = { ...font.display(16, 'black'), letterSpacing: -16 * 0.11, includeFontPadding: false };
-  return <View testID="growth-header-mark" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: 97, height: 24, justifyContent: 'center' }}>
-    {Array.from({ length: 9 }, (_, index) => {
-      const angle = index * Math.PI / 4;
-      const color = index < 8 ? colors.textPrimary : colors.bgBase;
-      return <View key={index} style={[StyleSheet.absoluteFill, { flexDirection: 'row', alignItems: 'center', transform: [{ translateX: index < 8 ? Math.cos(angle) * 16 * 0.16 : 0 }, { translateY: index < 8 ? Math.sin(angle) * 16 * 0.16 : 0 }] }]}>
-        <Text style={[glyphStyle, { color }]}>MEETP</Text>
-        <Text style={[glyphStyle, { color, marginLeft: -16 * 0.13 }]}>R</Text>
-      </View>;
-    })}
   </View>;
 }
