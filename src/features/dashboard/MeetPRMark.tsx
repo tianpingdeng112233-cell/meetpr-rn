@@ -1,7 +1,7 @@
-import Svg, { Text as SvgText, TSpan } from 'react-native-svg';
+import Svg, { Text as SvgText } from 'react-native-svg';
 import { font, useColors } from '@/design';
 
-/** Pinned 16pt stroked wordmark, in the dashboard's 97×24 header slot. */
+/** iOS-reference header wordmark; keep the 97×24 slot and natural glyph spacing. */
 export function MeetPRMark({ testID }: { testID?: string }) {
   const colors = useColors();
   return (
@@ -12,13 +12,13 @@ export function MeetPRMark({ testID }: { testID?: string }) {
         fontFamily={font.display(16, 'black').fontFamily}
         fontSize={16}
         fontWeight="900"
-        letterSpacing={-1.76}
+        letterSpacing={0}
         stroke={colors.textPrimary}
         strokeWidth={5.12}
         strokeLinejoin="round"
         fill={colors.textPrimary}
       >
-        MEETP<TSpan dx={-2.08}>R</TSpan>
+        MEETPR
       </SvgText>
       <SvgText
         x={3}
@@ -26,10 +26,10 @@ export function MeetPRMark({ testID }: { testID?: string }) {
         fontFamily={font.display(16, 'black').fontFamily}
         fontSize={16}
         fontWeight="900"
-        letterSpacing={-1.76}
+        letterSpacing={0}
         fill={colors.bgBase}
       >
-        MEETP<TSpan dx={-2.08}>R</TSpan>
+        MEETPR
       </SvgText>
     </Svg>
   );
