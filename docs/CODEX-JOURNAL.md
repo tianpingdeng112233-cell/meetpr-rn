@@ -1864,3 +1864,83 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - 同一实现上下文对照 CARD-A 与 SPEC 的范围、存量与验收清单。**未决代码发现 0 项**；设备项未验收。
 - 已核对四类行为接线、全仓 D 展示清单、日期/推进/补录不变、Profile 编辑器及缓存复用、PR 点保留和静默确认、提醒三级回落及存量设置保留、D-31 默认尺寸与手势不变。没有混入 Plan summary 删除/翻周、登录改版、聊天/播放器改版等 B/C 卡内容。
 - **未做设备验证**：当前沙箱没有模拟器，未构建/安装/运行设备包，未产生改后截图。Today、训练页、提醒设置页与组录入页的 Light / Dark，以及 360×640dp、字体 1.3× 下的 RPE 数字，均待 Opus 按卡实屏收货。已有截图只用于理解缺陷，自动测试不能替代 Global 联调、原生导航与视觉验收；不宣布功能验收通过。
+
+
+## Spec 084 · CARD-B Android：登录顺序、训练周条与 Plan summary 移除（2026-10-02）
+
+### 基线与范围
+
+- 按 `specs/084-walkthrough-polish/CARD-B-android.md` 与 SPEC §1、§4 及其设计转写实装；基线 `7279d3056c3c1b32e68bce72109e6e8550023644`，分支 `feat/084b-week-strip-login`，worktree `meetpr-rn-wt-084b`。开工只有卡 B 为未跟踪文件，保留原样。
+- 已读 AGENTS、CLAUDE（只引用 AGENTS）、PLAN、SPEC、任务卡及工程规约；仓内没有 CONTEXT.md / FOLLOWUPS.md / 更深层 AGENTS。已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。沿用既有设计 token 与卡 A 的序号入口。
+- 不 commit、不 push；不改 PARITY、spec、收货记录、后端、依赖、eslint / TypeScript 配置或持久化结构。本节是唯一文档增量。
+
+### 实装
+
+- `GlobalLoginScreen.tsx` 仅移动既有入口：EMAIL → PASSWORD → Sign in → Create account / Forgot password? → or → Google → 法律文案。显示/隐藏密码、校验、错误展示、路由与 Google 回调保持原样；注册页没有第三方入口，未改。
+- 新增纯函数 `src/domain/plan/week-strip.ts`，按计划训练日的实际周分组，提供周列表、完成数、单周序号、进度、当前/选中标记、左右相邻周默认日、返回今日状态和指示点数据。当前周翻回游标日，其他周选首日；已完成周保留；无有效选择时落在游标，全完成时沿用最后训练日回落。
+- 新增 `TrainingWeekStrip.tsx`：44dp 左右箭头、W# / 状态胶囊 / 完成数、等宽训练日格、最多 8 周的小点。选中为 textPrimary 2dp 边框；当前日为 goldSoft 底、金色日期与空心圆；完成日绿色对勾。日期允许换行，不限制字体缩放；所有主题色使用现有 token。横滑只在横向位移大于 12dp 且超过纵向 1.5 倍时接管，释放超过 44dp 才翻周，与箭头使用相同目的日。
+- `TodayWorkoutView.tsx` 使用周条选择驱动既有日状态；非当前日用 Back to today 替换三个圆形按钮，标题跟随所选 W#D#。新增下拉刷新；手动刷新清空周条选择，离开页面时清空临时选择，完成总结退出后回到当前日。复用既有查询、草稿、补录、计时与完成流程，保留 Today 明确传来的训练导航交接。
+- 未来日由 `WorkoutBody.tsx` 复用原动作列表：推荐日期、训练日名称、动作/组数、处方摘要、当前该练的 W#D# 解锁提示。没有 Start / Quick log / 记组入口；当前日及完成日沿用原内容，PR #68 的金色竖条与 Log / 摄像机操作行未改。
+- 删除 `TrainingCalendarView.tsx`、9 个 calendar 文案键（含单数键）、2 个替换后废弃的训练页文案键及 calendar 复数索引；删除旧 Plan summary / 原训练周条展示断言，保留既有 hero / 无眉标题断言。同步增加 8 个中英文周条键（含 summary 单数键），组数复用原单复数键；Today 页 WeekCalendar 未改。
+
+### 约定 seam 与红→绿证据
+
+| seam | 红测试观察 | 绿测试与覆盖 |
+| --- | --- | --- |
+| `global-auth-screens.test.tsx` | Google / or 仍排在 EMAIL 前，顺序断言失败 | 移动入口后 7/7；`/private/tmp/084b-auth-{red,green}.log` |
+| `domain/plan/__tests__/week-strip.test.ts` | 首轮公开入口尚不存在；随后翻周目标与指示点分别返回 undefined | 逐项实装后 4/4；周/格状态、序号、独立选中、翻回游标、首尾禁用、8/9 周边界；`/private/tmp/084b-strip-{red,green}-{1,2,3}.log` |
+| `quick-log-entry.test.tsx` 的一条新增挂载用例 | 找不到 Next week 入口，原 4 条通过 | 5/5；进入未来周无开练/补录、推荐日期与预览、返回当前训练日、无 Plan summary、圆形刷新入口被替换；`/private/tmp/084b-mount-{red,green}.log` |
+
+- 仅在上述三处约定 seam 新增测试；纯函数的空计划/全部完成/移除选择/完成推进是补充覆盖，新增时已绿，不冒称它们也先失败。没有新增镜像样式、手势内部或其他 seam 的测试。
+- 最终 `npx jest --runInBand`：**138 suites / 1008 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 通过。日志 `/private/tmp/084b-jest-final.log`、`084b-tsc-final.log`、`084b-lint-final.log`。全量包括 i18n 守卫及既有记组/计时/补录/完成测试；Jest 输出仍有 react-test-renderer / act、Expo 原生测试环境警告，未屏蔽或修改豁免。
+- 首轮全量为 1009 tests；自审删除一个已失去全部断言的 Plan summary 专用测试后最终为 1008。未以删除测试掩盖失败。
+
+### Standards 自审
+
+- 同一实现上下文按 code-review Standards 轴读取全部本卡 diff（含新增文件），不是独立收货。**未决代码发现 0 项**。
+- 已核对 token、FeedbackPressable、44dp 箭头命中区、严格类型、双语键、无新依赖与持久化修改。清理旧文案与空测试；未来预览同时处理动作数和组数单复数。没有修改配置、豁免 lint 或引入样式镜像测试。
+- `docs/agents/issue-tracker.md` 不存在，本轮使用用户指定的本地批准卡；未运行或冒称 tracker 工作流。需要该工作流时先由 David 运行 `$setup-matt-pocock-skills`。
+
+### Spec 自审
+
+- 同一实现上下文逐项对照 CARD-B 与 SPEC §1 / §4。**未决代码发现 0 项**；设备验收未执行，不宣布功能验收通过。
+- 自审修正：刷新/再次点选当前日时，若实际选中 ID 未变，仅重设临时选择，不清空依赖相同加载键的 review / e1RM 数据，避免清空后没有新一轮 effect 加载。周条选择不写存储；保留完成后的原总结流程，在退出总结时解除所选完成日，再回到推进后的游标。
+- 已核对未来日只读、已完成日原有展示、首尾箭头、指示点、选中/当前双标记、Back to today、下拉刷新/页面失焦复位；登录入口行为与现有记组/休息/补录/完成路径均沿用。未混入卡 C、Today 周条、Progress、教练端、Google 接通或导航结构修改。
+- **未做设备验证**：当前沙箱没有模拟器，未构建/安装/运行 Android 包，未生成设备截图。原生左右滑动与纵向滚动竞争、切 tab 实际往返、Light / Dark、360×640dp 与字体 1.3× 下的换行/命中/主按钮可达性仍待 Opus 按卡验收；自动测试不替代这些实屏证据。
+
+### 改动摘录（完整改动留在未提交工作区）
+
+```diff
+-import { WeekCalendar } from '@/features/dashboard/WeekCalendar';
++import { TrainingWeekStrip } from './TrainingWeekStrip';
+-import { TrainingCalendarView } from './TrainingCalendarView';
++  const weekStrip = trainingWeekStrip(orderedDays, requestedDayID);
++  const planDay = weekStrip.selectedDay;
+-                label={t('student.todayWorkoutView.copy010')}
+-                onPress={() => selectDay(cursor.id)}
++                label={t('student.trainingWeekStrip.backToToday')}
++                onPress={() => selectDay(null)}
+```
+
+### 返修第 1 轮（2026-10-02）
+
+- 范围仅 `CARD-B-android.md` 文末两项：`TodayWorkoutView.tsx` 删除 `RefreshControl` 导入与 ScrollView 的 `refreshControl`，保留页头按钮及 `refreshToday()` 的 `selectDay(null)` 复位逻辑。
+- `WorkoutBody.tsx` 的训练卡/预览卡共用动作小结改为两行：序号靠顶部，动作名在上、处方在下，两段各享有序号右侧全部可用宽度，间距复用 `spacing.xs`；没有省略、行数限制或关闭字体缩放。未触及记组状态的 Log/摄像机行。
+- 全量检查：`npx jest --runInBand` **138 suites / 1008 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 均通过。日志：`/private/tmp/084b-repair1-{jest,tsc,lint}.log`；本轮代码差异：`/private/tmp/084b-repair1.diff`。
+- 本轮为删除刷新控件与局部排版，沿用已有行为测试，未新增样式镜像测试；不冒称新增先红后绿证据。未改 eslint/TypeScript 配置、测试或其他原卡实现。
+- 独立只读 code-review：Standards **0 项发现**；Spec **0 项发现**。Impeccable layout 静态扫描无发现。以上均不代表设备验收通过。
+- **未做设备验证**：沙箱没有模拟器，未构建/安装/运行 Android 包或生成设备截图；默认屏宽与 360×640 dp @1.3×、Light / Dark 下的动作名实际换行及刷新交互仍待 Opus 实屏复验。
+- 不 commit、不 push；只追加本卡返修记录，不改正典收货台账。前文的“新增下拉刷新”为首轮历史记录，本轮已按返修要求移除。
+
+```diff
+-import { ..., RefreshControl, ... } from 'react-native';
+-<ScrollView ... refreshControl={<RefreshControl ... />}>
++<ScrollView contentContainerStyle={styles.content}>
+-<Text>{动作名}</Text><Text>{处方}</Text>
++<View style={{ flex: 1, gap: spacing.xs }}>
++  <Text>{动作名}</Text>
++  <Text>{处方}</Text>
++</View>
+```
+
+- 返修第 2 轮（2026-10-02）：仅将 `WorkoutBody.tsx` 动作小结改为 `flexWrap` 自适应横排，名称与处方禁收缩并限制最大宽度，空间不足时处方整体下移，无屏宽/字体倍数分支；全量 `npx jest --runInBand` 138 suites / 1008 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过；独立 Standards / Spec 审查各 0 项，日志 `/private/tmp/084b-repair2-{jest,tsc,lint}.log`，本轮差异 `/private/tmp/084b-repair2.diff`；ADB 启动被沙箱拒绝（Operation not permitted），未取得实屏截图，两种尺寸仍待 Opus 复验；其余已有改动未动，不 commit、不 push。
