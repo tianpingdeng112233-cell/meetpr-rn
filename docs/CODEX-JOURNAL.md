@@ -1674,3 +1674,24 @@ Independent Standards/Spec CLEAN; RN131 suites908 tests plus tsc/lint/build pass
 Live dedicated-pair cross-date logging, multipart interruption/cold restart and
 chat reconnect/retry verified. Current evidence/remaining gates are canonical in
 docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
+
+## 2026-10-02 — R1/R2 Profile fields, history entry and coach badges
+
+- 任务：[R1-R2-CARD](../specs/build22-parity/R1-R2-CARD.md)。在 `fix/parity-r1-r2`、RN 基线 `a203d9c` 实装；iOS 只读参照固定 `beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea` 的 ProfileCardsSection、Step1BasicsSection、Step7ExtrasSection、MeetPRTabBar 与卡内截图。
+- P2-13：Profile 复用向导 BasicStep、控件、翻译键与完整 Step1 校验；仅 Profile 启用 Units 两段、Gender 三列、生日滚轮、纵排身高体重及输入尾缀。单位切换重建输入文本，保留公制存储值；向导默认布局不变。basics 白名单仅五个资料字段。
+- P2-12：把向导已有多行备注移入共享 CompetitionSection，Profile 与向导各呈现一次，备赛与不备赛均可填写。competition 白名单补 `note_to_coach`；所有 Profile 分区继续隔离字段并禁写三项 1RM。
+- P2-14：历史移至页头下方靠右的金色图标、文字与 chevron 行，最小命中高度 44dp，保留按钮角色、可读标签及 `/training-history` stack 路由。P-33：教练壳移除 `badgeDot` 参数，沿用 TabBar 的 0 隐藏、数字、`99+`；计数来源、Tab 顺序与学员底栏未改。
+- 红绿证据：在生产代码改动前，四个约定 seam 的定向测试为 **4 suites failed / 13 failed、22 passed**；缺失字段、校验、备注、数字角标与历史文字均触发预期失败。实装后同组 **4 suites / 35 tests passed**。新增测试仅位于 profilePatch、ProfileEditor → onboarding mutation、教练 tab 壳、训练页入口；覆盖分区字段严格隔离、1RM 禁写、单位切换、保存重开（合成返回值）、备注失败保留/重试与取消不写；无布局镜像测试。
+- 最终自检：`npx jest --runInBand` **133 suites / 929 tests passed**；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过。原始本机日志：`/private/tmp/r1r2-red.log`、`/private/tmp/r1r2-green.log`、`/private/tmp/r1r2-jest.log`、`/private/tmp/r1r2-tsc.log`、`/private/tmp/r1r2-lint.log`。
+- 代码自审：按 review-loop 做独立只读双轴初审及定向复核。Standards 无实质发现；Spec 初审指出 Units/Gender 并排与输入尾缀不足，已通过仅 Profile 启用的共享控件布局补齐，复核无未决代码问题。仓内无 Matt tracker 配置，未声称执行 tracker 流程。
+- **未做设备验证**：本机 ADB 二进制存在，但沙箱拒绝启动服务（`Operation not permitted`）。未运行设备构建/安装、未生成本卡实屏截图，未做真实服务端保存回读；Light/Dark、360×640dp、1.3 倍字体、历史返回状态与角标遮挡仍按卡交 Opus 收货，不以单测代替验收。
+- 按派卡边界未 commit、未 push；未改 PARITY.md、走查清单或任务卡，无新增依赖或后端改动。
+
+### 返修 1（2026-10-02）
+
+- 在本卡第一轮未提交改动上，仅修复 Units 分段选中背景与 Profile 编辑标题。Dark 的选中段复用 `textDisabled`，轨道仍用 `bgStack`；Light 保持 `surfaceCard`。选中/未选中文字保持 `textPrimary` / `textSecondary`，`wrap` / `row`、Gender 与向导第 1 步布局未改。按现有 token 计算，Dark 选中背景与轨道对比为 2.53:1，主文字与选中背景为 6.32:1；此数值不代替实屏复验。
+- 用 `git show` 只读核对固定 iOS SHA 的 `Modules/StudentKit/Sources/StudentKit/Features/MyProfile/ProfileCardsSection.swift` 中标题 switch（源码类型名为 `ProfileCardKind`）。新增编辑页专用映射，basics/background/environment/recovery/muscles/competition/injuries 分别复用现有 `student.profileCardsSection.copy002`–`008`；保留列表共用的 `profileTitles`，列表行标签不变。未新增色值、依赖或文案键。
+- 在现有 ProfileEditor 测试中仅补两个标题断言，逐条先红后绿：basics 从 `Height / Body weight` 失败到 `Basic information` 通过；competition 从 `Meet date` 失败到 `Meet / notes` 通过。未加样式镜像测试。红绿日志：`/private/tmp/r1r2-repair1-basics-red.log`、`/private/tmp/r1r2-repair1-basics-green.log`、`/private/tmp/r1r2-repair1-competition-red.log`，最终绿见全量 Jest 日志。
+- 自检：`npx jest --runInBand` **133 suites / 931 tests passed**；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过。日志为 `/private/tmp/r1r2-repair1-{jest,tsc,lint}.log`。改前快照 `/private/tmp/r1r2-repair1-before` 与增量 `/private/tmp/r1r2-repair1.diff` 留作本机审查证据；其余第一轮文件逐字节核对未变。
+- 独立只读代码审查（review-loop，本地批准卡为源）：Standards 0 项；Spec 代码增量 0 项，交付前已补本返修记录。仓内仍无 Matt tracker 配置，未声称运行 tracker 流程。此为代码自检，不代替 Opus 收货。
+- **未做设备验证**：本次 ADB 启动仍被沙箱拒绝（`could not install *smartsocket* listener: Operation not permitted`）；Light/Dark 实屏与其余验收由 Opus 按返修清单复验。未 commit、未 push；未改 PARITY.md、走查清单、任务卡或其他第一轮实现。
