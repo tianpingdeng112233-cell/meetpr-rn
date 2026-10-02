@@ -1729,3 +1729,13 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - 先红后绿证据：`/private/tmp/e1rm-r1-{eligibility,migration,corrupt}-{red,green}.log`；迁移失败/并发保护补充日志 `/private/tmp/e1rm-r1-migration-protection.log`。新增测试留在既有 seam，入选既有断言按本次授权更新。
 - 最终自检：`npx jest --runInBand` 134 suites / 952 tests passed；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。日志 `/private/tmp/e1rm-r1-final-{jest,tsc,lint}.log`。首次全量曾在未修改的聊天滚动测试失败（期望 y=190、得到 y=30）；该 suite 独立复跑 33 tests 通过，随后全量通过，未修改聊天代码或测试。参数化测试的 TypeScript tuple 类型已修正，未改 eslint/TypeScript 配置或增加豁免。
 - `review-loop` 独立只读自审，以开工已有 WIP 快照为基线，仅审本次返修增量：Standards 0 项；Spec 0 项。固定审查 diff 留本机 `/private/tmp/e1rm-r1.diff`；最终仅补测试 tuple 类型与本记录，无实现语义变更。此为开发自检，不代替 Opus 实屏收货。
+
+## 2026-10-02 — D-19 camera review survives background (Phase 4–6)
+
+- 任务：[D19-CAMERA-REVIEW-CARD](../specs/build22-parity/D19-CAMERA-REVIEW-CARD.md)。Opus 派卡，在 `fix/camera-review-survives-background`、基线 `5c4a59d` 的当前工作区修改；未 commit、未 push。未修改 PARITY.md、走查清单或任务卡。开工无 CONTEXT.md / FOLLOWUPS.md；已读仓规、卡片及 [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)、[Camera 文档](https://docs.expo.dev/versions/v57.0.0/sdk/camera/)。
+- **被证实的假设：#1，CameraRecorder 的 AppState 后台清理把已完成预览当成录制中断，一并清空 review 并删除 ownedUri。** 原诊断命令 `npx jest --runInBand --watchman=false --runTestsByPath src/features/training/video-upload/__tests__/camera-review.diagnose.test.tsx` 复现 2 红 2 绿：background 单事件或返回后预览消失、Retry / Use 不见、出现 00:00、本地文件被删；无打断及 inactive 对照正常。仅在清理条件加 `recordingActive.current`，同一诊断环变成 4 绿；未改父层或权限处理即可消除最小复现，#2 / #3 不是本环必要条件，不据此排除设备上其他问题。
+- 正式回归：把诊断文件迁为 `camera-review.test.tsx`，删除观察日志与诊断命名。先撤回探针恢复旧条件，正式测试得到 2 红 2 绿（本机 `/private/tmp/d19-regression-red.log`），再应用已验证的单条件修复得到 4 绿；同步注释。实现只改后台清理触发条件，录制中断与卸载清理路径保持原样。
+- 测试仅在批准的 CameraRecorder + AppState seam，共 9 条：无打断、inactive、background 返回、background 单事件四组保留预览及 Use 回调；正在录制切后台仍停止、删除即时或延迟返回的文件并可重录；Retry 删除旧文件、重录得到新 URI；Close camera 或父层卸载删除未使用文件；Use 交出文件后卸载不误删。使用假时钟先录制 3 秒，验证后台后同一 Video 实例及 URI、原生 controls 保留、不回到 00:00。原生播放时长显示未作设备验证；系统返回在此 seam 以父层卸载覆盖，未冒称执行设备 Back。调用点只读核对原有 onUse → attach 链路，未新增附件流程测试 seam 或进行真实上传。
+- 自检：`npx jest --runInBand` **135 suites / 961 tests passed**（包含既有 local-retention）；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。日志 `/private/tmp/d19-final-{jest,tsc,lint}.log`。未改 eslint / TypeScript 配置或新增豁免；`rg -n 'DEBUG-d19' src` 无匹配，诊断文件及临时观察日志已清理。
+- **未做设备验证**：ADB 二进制存在，但 daemon 启动被沙箱拒绝：`could not install *smartsocket* listener: Operation not permitted`。未构建设备包、未安装、未做原生视频回放或真实上传验证；真机复验按卡由 Opus 出包后交 David，本记录是开发自检，不代替 Opus 收货。
+- `review-loop` 独立只读双轴自审一轮：Standards 0 项；Spec 0 项。范围为 HEAD 上本卡 CameraRecorder 条件改动及未追踪的正式回归文件；审后仅追加本 JOURNAL 事实，无实现语义变更。仓内缺 Matt tracker 配置，已提示需 `$setup-matt-pocock-skills`，本次仅使用本地批准卡做 review-loop，未声称运行 tracker 流程或完成 Opus 验收。
