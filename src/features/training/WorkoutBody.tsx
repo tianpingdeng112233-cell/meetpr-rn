@@ -43,6 +43,7 @@ function reference(logs: readonly SetLog[], exerciseId: string): string | null {
   return `${t('student.todayWorkoutPresentation.copy004', [Number(last.weight_kg), last.reps])} · ${t('student.todayWorkoutPresentation.copy005', [Number(best.weight_kg), best.reps])}`;
 }
 export function WorkoutBody({
+  preview,
   exercises,
   drafts,
   editable,
@@ -60,6 +61,7 @@ export function WorkoutBody({
   onAskCoach,
   preparingShare = false,
 }: {
+  preview?: { recommendedDate: string; title: string; unlockMessage?: string };
   onAskCoach?: (draft: WorkoutSetDraft) => void;
   preparingShare?: boolean;
   exercises: readonly PlanExercise[];
@@ -145,8 +147,9 @@ export function WorkoutBody({
         >
           <GradientFill size={accentSize} direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
         </View>
+        {preview ? <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.dashboardPrimaryAction.copy009', [preview.recommendedDate])}</Text> : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017')}</Text>
+          <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{preview?.title ?? (recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017'))}</Text>
           {editable && active && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
             <View style={{ minHeight: 36, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard }}>
               {preparingShare ? <ActivityIndicator size="small" color={colors.textTertiary} /> : <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.askCoach')}</Text>}
@@ -156,33 +159,32 @@ export function WorkoutBody({
         {!recording ? (
           <>
             <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
-              {t('student.todayWorkoutScreen.copy018', [groups.length])}
-              {t('student.todayWorkoutScreen.copy019', [drafts.length])}
+              {preview ? t('student.trainingWeekStrip.summary', [groups.length]) + t('student.todayWorkoutScreen.copy019', [drafts.length]) : <>
+                {t('student.todayWorkoutScreen.copy018', [groups.length])}
+                {t('student.todayWorkoutScreen.copy019', [drafts.length])}
+              </>}
             </Text>
             {groups.map((group, index) => (
-              <View key={group.exercise.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+              <View key={group.exercise.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 11, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
                 <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>
-                <Text
-                  style={{
-                    color: colors.textPrimary,
-                    ...font.body(14, 'bold'),
-                    flex: 1,
-                  }}
-                >
-                  {exerciseTitle(
-                    resolveExerciseMetadata(group.exercise.exercise_id),
-                  )}
-                </Text>
-                <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 1 }}>
-                  {prescriptionSummary(
-                    group.drafts.map((draft) => ({
-                      prescription: decodePrescription(draft.planSet),
-                      resolution: suggestionForDraft(draft).percentage,
-                    })),
-                  )}
-                </Text>
+                <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: spacing.xs }}>
+                  <Text style={{ color: colors.textPrimary, ...font.body(14, 'bold'), flexShrink: 0, maxWidth: '100%' }}>
+                    {exerciseTitle(
+                      resolveExerciseMetadata(group.exercise.exercise_id),
+                    )}
+                  </Text>
+                  <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 0, maxWidth: '100%' }}>
+                    {prescriptionSummary(
+                      group.drafts.map((draft) => ({
+                        prescription: decodePrescription(draft.planSet),
+                        resolution: suggestionForDraft(draft).percentage,
+                      })),
+                    )}
+                  </Text>
+                </View>
               </View>
             ))}
+            {preview?.unlockMessage ? <Text style={{ color: colors.textSecondary, ...font.body(13) }}>{preview.unlockMessage}</Text> : null}
             {editable && active ? (
               <AppButton
                 disabled={startLoading}

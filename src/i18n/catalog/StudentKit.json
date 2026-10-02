@@ -3215,10 +3215,6 @@
 "en": "Current · Ready to log",
 "zh": "当前 · 可记录"
 },
-"student.todayWorkoutScreen.copy026": {
-"en": "Upcoming · Preview only",
-"zh": "未轮到 · 仅预览"
-},
 "student.todayWorkoutScreen.copy027": {
 "en": "Target intensity",
 "zh": "目标强度"
@@ -3479,10 +3475,6 @@
 "en": "Cannot retry video",
 "zh": "视频无法重试"
 },
-"student.todayWorkoutView.copy010": {
-"en": "Today",
-"zh": "今日"
-},
 "student.todayWorkoutView.copy011": {
 "en": "Workout",
 "zh": "锻炼"
@@ -3571,41 +3563,37 @@
 "en": "Exercises: {0} · Sets: {1}",
 "zh": "{0} 个动作 · {1} 组"
 },
-"student.trainingCalendarView.copy001": {
-"en": "Plan summary",
-"zh": "计划汇总"
+"student.trainingWeekStrip.current": {
+"en": "Current week",
+"zh": "当前周"
 },
-"student.trainingCalendarView.copy002": {
-"en": "Completed {0} / {1} sessions",
-"zh": "已完成 {0} / {1} 节"
+"student.trainingWeekStrip.upcoming": {
+"en": "Upcoming",
+"zh": "待训练"
 },
-"student.trainingCalendarView.copy002.one": {
-"en": "Completed {0} / {1} session",
-"zh": "已完成 {0} / {1} 节"
+"student.trainingWeekStrip.completed": {
+"en": "Completed",
+"zh": "已完成"
 },
-"student.trainingCalendarView.copy003": {
-"en": "{0} / {1} sessions",
-"zh": "{0} / {1} 节"
+"student.trainingWeekStrip.previous": {
+"en": "Previous week",
+"zh": "上一周"
 },
-"student.trainingCalendarView.copy003.one": {
-"en": "{0} / {1} session",
-"zh": "{0} / {1} 节"
+"student.trainingWeekStrip.next": {
+"en": "Next week",
+"zh": "下一周"
 },
-"student.trainingCalendarView.copy004": {
-"en": "0 sessions",
-"zh": "0 节"
+"student.trainingWeekStrip.backToToday": {
+"en": "Back to today",
+"zh": "回到今日"
 },
-"student.trainingCalendarView.copy005": {
-"en": "{0} sessions · from {1}",
-"zh": "{0} 节 · {1} 起"
+"student.trainingWeekStrip.summary": {
+"en": "{0} exercises total · ",
+"zh": "共 {0} 个动作 · "
 },
-"student.trainingCalendarView.copy005.one": {
-"en": "{0} session · from {1}",
-"zh": "{0} 节 · {1} 起"
-},
-"student.trainingCalendarView.copy006": {
-"en": "This week",
-"zh": "本周"
+"student.trainingWeekStrip.summary.one": {
+"en": "{0} exercise total · ",
+"zh": "共 {0} 个动作 · "
 },
 "student.trainingHistoryView.copy001": {
 "en": "e1RM vs training 1RM",

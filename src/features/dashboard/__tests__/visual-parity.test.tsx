@@ -92,17 +92,6 @@ test.each(['list', 'recording'] as const)('the training tab in %s mode renders n
     renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>);
   });
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
-  const copy = renderer.root.findAllByType(Text).map((node) => node.props.children).join(' ').toLowerCase();
-  expect(copy).toContain('plan summary');
-  const text = renderer.root.findAllByType(Text).map((node) =>
-    [node.props.children].flat().join(''));
-  const stripIndex = text.indexOf(t('student.dashboardWeekCalendar.copy013'));
-  expect(stripIndex).toBeGreaterThan(-1);
-  expect(text).toContain(t('student.dashboardWeekCalendar.copy014'));
-  expect(stripIndex).toBeLessThan(text.indexOf(t('student.trainingCalendarView.copy001')));
-  expect(stripIndex).toBeLessThan(text.indexOf(t(mode === 'list'
-    ? 'student.todayWorkoutScreen.copy017'
-    : 'student.todayWorkoutScreen.copy024')));
   const heroTitles = renderer.root.findAllByType(Text).filter((node) => node.props.children === "Today's workout");
   expect(heroTitles).toHaveLength(mode === 'list' ? 1 : 0);
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
