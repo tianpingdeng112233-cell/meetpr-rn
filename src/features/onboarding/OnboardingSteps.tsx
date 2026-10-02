@@ -52,19 +52,21 @@ function metricStored(value: string, factor: number): string {
   return Number.isFinite(number) && number > 0 ? String(Math.round((number / factor) * 10) / 10) : '';
 }
 
-function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+export function BasicStep({ errorFields, form, update, profileLayout = false }: Omit<Props, 'step'> & { profileLayout?: boolean }) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
       <FieldLabel>{t('student.step1BasicsSection.copy004')}</FieldLabel>
       <ChoiceGroup
+        layout={profileLayout ? 'segmented' : 'wrap'}
         choices={UNIT_PREFERENCES.map((value) => ({ value, label: UNIT_LABELS[value] }))}
         onChange={(unitPreference) => update({ unitPreference })}
         selected={form.unitPreference}
       />
       <FieldLabel>{t('student.step1BasicsSection.copy001')}</FieldLabel>
       <ChoiceGroup
+        layout={profileLayout ? 'row' : 'wrap'}
         choices={GENDERS.map((value) => ({ value, label: GENDER_LABELS[value] }))}
         error={errorFields.has('gender')}
         onChange={(gender) => update({ gender })}
@@ -74,46 +76,54 @@ function BasicStep({ errorFields, form, update }: Omit<Props, 'step'>) {
       <View style={errorFields.has('birthDate') && styles.dateError}>
         <DateWheel {...onboardingDateBounds().birth} onChange={(birthDate) => update({ birthDate })} value={form.birthDate} />
       </View>
-      <BodyMeasurementsSection errorFields={errorFields} form={form} update={update} />
+      <BodyMeasurementsSection stacked={profileLayout} errorFields={errorFields} form={form} update={update} />
     </View>
   );
 }
 
-export function BodyMeasurementsSection({ errorFields, form, update }: Omit<Props, 'step'>) {
+export function BodyMeasurementsSection({ errorFields, form, update, stacked = false }: Omit<Props, 'step'> & { stacked?: boolean }) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const imperial = form.unitPreference === 'lb';
   const [heightText, setHeightText] = useState(() => metricDisplay(form.heightCm, 0.3937007874));
   const [weightText, setWeightText] = useState(() => metricDisplay(form.weightKg, 2.2046226218));
   return (
-    <View style={styles.twoColumns}>
-      <View style={styles.column}>
-        <FieldLabel>{t('student.step1BasicsSection.copy002')}({imperial ? 'in' : 'cm'})</FieldLabel>
-        <FormInput
-          error={errorFields.has('heightCm')}
-          keyboardType="decimal-pad"
-          onBlur={() => setHeightText(metricDisplay(form.heightCm, 0.3937007874))}
-          onChangeText={(value) => {
-            setHeightText(value);
-            update({ heightCm: imperial ? metricStored(value, 0.3937007874) : decimalInput(value) });
-          }}
-          placeholder={imperial ? '70' : '178'}
-          value={imperial ? heightText : form.heightCm}
-        />
+    <View style={stacked ? styles.section : styles.twoColumns}>
+      <View style={!stacked && styles.column}>
+        <FieldLabel>{t('student.step1BasicsSection.copy002')}{!stacked && `(${imperial ? 'in' : 'cm'})`}</FieldLabel>
+        <View style={stacked && styles.measurementRow}>
+          <FormInput
+            style={stacked && styles.measurementInput}
+            error={errorFields.has('heightCm')}
+            keyboardType="decimal-pad"
+            onBlur={() => setHeightText(metricDisplay(form.heightCm, 0.3937007874))}
+            onChangeText={(value) => {
+              setHeightText(value);
+              update({ heightCm: imperial ? metricStored(value, 0.3937007874) : decimalInput(value) });
+            }}
+            placeholder={imperial ? '70' : '178'}
+            value={imperial ? heightText : form.heightCm}
+          />
+          {stacked ? <Text style={styles.measurementUnit}>{imperial ? 'in' : 'cm'}</Text> : null}
+        </View>
       </View>
-      <View style={styles.column}>
-        <FieldLabel>{t('student.step1BasicsSection.copy003')}({imperial ? 'lb' : 'kg'})</FieldLabel>
-        <FormInput
-          error={errorFields.has('weightKg')}
-          keyboardType="decimal-pad"
-          onBlur={() => setWeightText(metricDisplay(form.weightKg, 2.2046226218))}
-          onChangeText={(value) => {
-            setWeightText(value);
-            update({ weightKg: imperial ? metricStored(value, 2.2046226218) : decimalInput(value) });
-          }}
-          placeholder={imperial ? '183' : '83'}
-          value={imperial ? weightText : form.weightKg}
-        />
+      <View style={!stacked && styles.column}>
+        <FieldLabel>{t('student.step1BasicsSection.copy003')}{!stacked && `(${imperial ? 'lb' : 'kg'})`}</FieldLabel>
+        <View style={stacked && styles.measurementRow}>
+          <FormInput
+            style={stacked && styles.measurementInput}
+            error={errorFields.has('weightKg')}
+            keyboardType="decimal-pad"
+            onBlur={() => setWeightText(metricDisplay(form.weightKg, 2.2046226218))}
+            onChangeText={(value) => {
+              setWeightText(value);
+              update({ weightKg: imperial ? metricStored(value, 2.2046226218) : decimalInput(value) });
+            }}
+            placeholder={imperial ? '183' : '83'}
+            value={imperial ? weightText : form.weightKg}
+          />
+          {stacked ? <Text style={styles.measurementUnit}>{imperial ? 'lb' : 'kg'}</Text> : null}
+        </View>
       </View>
     </View>
   );
@@ -405,8 +415,6 @@ function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   return <View style={styles.section}>
     <InjuriesSection form={form} update={update} errorFields={errorFields} />
     <CompetitionSection form={form} update={update} errorFields={errorFields} />
-      <FieldLabel>{t('student.step7ExtrasSection.copy009')}</FieldLabel>
-      <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder={t('student.step7ExtrasSection.copy010')} style={styles.textArea} value={form.noteToCoach} />
   </View>;
 }
 
@@ -455,6 +463,8 @@ export function CompetitionSection({ errorFields, form, update }: Omit<Props, 's
           <FormInput onChangeText={(targetWeightClass) => update({ targetWeightClass })} placeholder={t('student.step7ExtrasSection.copy008')} value={form.targetWeightClass} />
         </>
       ) : null}
+      <FieldLabel>{t('student.step7ExtrasSection.copy009')}</FieldLabel>
+      <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder={t('student.step7ExtrasSection.copy010')} style={styles.textArea} value={form.noteToCoach} />
   </>;
 }
 
@@ -482,6 +492,9 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   section: { gap: spacing.md },
   twoColumns: { flexDirection: 'row', gap: spacing.md },
   column: { flex: 1 },
+  measurementRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  measurementInput: { flex: 1, minWidth: 0 },
+  measurementUnit: { color: colors.textSecondary, ...typography.bodyEmphasis },
   link: { color: colors.textPrimary, paddingVertical: spacing.sm, ...typography.bodyEmphasis },
   help: { color: colors.textSecondary, lineHeight: 20, ...typography.footnote },
   empty: { color: colors.textTertiary, paddingVertical: spacing.xl, textAlign: 'center', ...typography.body },

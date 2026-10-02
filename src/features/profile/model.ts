@@ -12,9 +12,9 @@ type ProfilePatch = Omit<OnboardingUpsertInput, 'squat_1rm_kg' | 'bench_1rm_kg' 
 export function profilePatch(step: OnboardingStep, form: OnboardingForm, section?: ProfileSection): ProfilePatch {
   if (step === 3) return {};
   const patch = onboardingPatchForStep(form, step);
-  const allowed = section === 'basics' ? ['height_cm', 'weight_kg']
+  const allowed = section === 'basics' ? ['unit_preference', 'gender', 'birth_date', 'height_cm', 'weight_kg']
     : section === 'injuries' ? ['injury_notes', 'injury_areas']
-    : section === 'competition' ? ['is_competing', 'competition_date', 'target_weight_class']
+    : section === 'competition' ? ['is_competing', 'competition_date', 'target_weight_class', 'note_to_coach']
     : ['unit_preference', 'gender', 'birth_date', 'height_cm', 'weight_kg', 'training_years', 'squat_stance', 'deadlift_style', 'bench_grip', 'training_days', 'gym_tier', 'equipment_overrides', 'daily_life_intensity', 'life_stress', 'recovery_speed', 'sleep_hours', 'muscle_groups_to_strengthen', 'injury_notes', 'injury_areas', 'is_competing', 'competition_date', 'target_weight_class', 'note_to_coach'];
   return Object.fromEntries(Object.entries(patch).filter(([key]) => allowed.includes(key)));
 }

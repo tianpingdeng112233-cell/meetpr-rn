@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
-import { Card, useColors, type Colors, radius, spacing, typography } from '@/design';
+import { Card, useColors, useTheme, type Colors, radius, spacing, typography } from '@/design';
 
 import { dateText } from './model';
 
@@ -35,16 +35,18 @@ export function ChoiceGroup<T extends string | number>({
   onChange,
   selected,
   error = false,
+  layout = 'wrap',
 }: {
   choices: readonly Choice<T>[];
   onChange: (value: T) => void;
   selected: T | null;
   error?: boolean;
+  layout?: 'wrap' | 'row' | 'segmented';
 }) {
-  const colors = useColors();
+  const { colors, scheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, layout !== 'wrap' && styles.choiceRow, layout === 'segmented' && styles.segmentedGroup]}>
       {choices.map((choice) => {
         const active = choice.value === selected;
         return (
@@ -55,11 +57,15 @@ export function ChoiceGroup<T extends string | number>({
             onPress={() => onChange(choice.value)}
             style={[
               styles.choice,
+              layout !== 'wrap' && styles.equalChoice,
+              layout === 'segmented' && styles.segment,
               choice.subtitle && styles.choiceCard,
               active && styles.selected,
+              active && layout === 'segmented' && styles.selectedSegment,
+              active && layout === 'segmented' && scheme === 'dark' && styles.selectedSegmentDark,
               error && styles.errorBorder,
             ]}>
-            <Text style={[styles.choiceText, active && styles.selectedText]}>
+            <Text style={[styles.choiceText, layout !== 'wrap' && styles.equalChoiceText, layout === 'segmented' && styles.segmentText, active && styles.selectedText]}>
               {choice.label}
             </Text>
             {choice.subtitle ? (
@@ -304,6 +310,14 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     ...typography.body,
   },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  choiceRow: { flexWrap: 'nowrap' },
+  equalChoice: { flex: 1, minWidth: 0, paddingHorizontal: spacing.sm },
+  equalChoiceText: { textAlign: 'center' },
+  segmentedGroup: { backgroundColor: colors.bgStack, borderRadius: radius.pill, padding: spacing.point2, gap: spacing.zero },
+  segment: { borderWidth: 0, borderRadius: radius.pill, backgroundColor: colors.bgStack },
+  selectedSegment: { backgroundColor: colors.surfaceCard },
+  selectedSegmentDark: { backgroundColor: colors.textDisabled },
+  segmentText: { ...typography.footnote },
   choice: {
     backgroundColor: colors.bgInset,
     borderColor: colors.borderStrong,

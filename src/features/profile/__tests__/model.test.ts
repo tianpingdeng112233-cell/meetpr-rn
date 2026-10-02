@@ -1,7 +1,7 @@
 import { expect, test, beforeEach, afterEach } from '@jest/globals';
 import { setLocaleOverride, t } from '@/i18n';
 import { createEmptyOnboardingForm, type OnboardingStep } from '@/features/onboarding/model';
-import { injuryChips, injurySummary, oneRMValues, profilePatch, readinessSummary, recoverySummary, rowValue } from '../model';
+import { injuryChips, injurySummary, oneRMValues, profilePatch, profileSteps, type ProfileSection, readinessSummary, recoverySummary, rowValue } from '../model';
 
 beforeEach(() => setLocaleOverride('zh'));
 afterEach(() => setLocaleOverride(null));
@@ -41,5 +41,29 @@ test.each<OnboardingStep>([1, 2, 3, 4, 5, 6, 7])('profilePatch step %s cannot tr
 test('row patches cannot clear fields belonging to another step7 section', () => {
   const form = { ...createEmptyOnboardingForm(), injuryNotes: 'knee', isCompeting: true, competitionDate: '2027-01-01' };
   expect(profilePatch(7, form, 'injuries')).toEqual({ injury_notes: 'knee', injury_areas: null });
-  expect(profilePatch(1, { ...form, heightCm: '180', weightKg: '80' }, 'basics')).toEqual({ height_cm: '180', weight_kg: '80' });
+});
+
+const editedForm = {
+  ...createEmptyOnboardingForm(), unitPreference: 'lb' as const, gender: 'female' as const,
+  birthDate: '1995-06-15', heightCm: '180', weightKg: '80',
+  squat1RMKg: '200', bench1RMKg: '150', deadlift1RMKg: '250',
+  trainingYears: 3, squatStance: 'high_bar' as const, deadliftStyle: 'conventional' as const, benchGrip: 'standard' as const,
+  trainingDays: [1, 3], gymTier: 'commercial' as const, equipmentOverrides: ['barbell_dumbbell'],
+  dailyLifeIntensity: 3, lifeStress: 2, recoverySpeed: 4, sleepHours: 8, muscleGroupsToStrengthen: ['quad'] as const,
+  injuryNotes: 'Existing injury', injuryAreas: ['knee'] as const,
+  isCompeting: true, competitionDate: '2027-01-01', targetWeightClass: '83', noteToCoach: 'Meet goal\nKeep it steady',
+};
+
+test.each<[ProfileSection, object]>([
+  ['basics', { unit_preference: 'lb', gender: 'female', birth_date: '1995-06-15', height_cm: '180', weight_kg: '80' }],
+  ['background', { training_years: 3, squat_stance: 'high_bar', deadlift_style: 'conventional', bench_grip: 'standard' }],
+  ['environment', { training_days: ['mon', 'wed'], gym_tier: 'commercial', equipment_overrides: ['barbell_dumbbell'] }],
+  ['recovery', { daily_life_intensity: 3, life_stress: 2, recovery_speed: 4, sleep_hours: 8 }],
+  ['muscles', { muscle_groups_to_strengthen: ['quad'] }],
+  ['injuries', { injury_notes: 'Existing injury', injury_areas: ['knee'] }],
+  ['competition', { is_competing: true, competition_date: '2027-01-01', target_weight_class: '83', note_to_coach: 'Meet goal\nKeep it steady' }],
+])('%s submits only its own fields and never any 1RM', (section, expected) => {
+  const patch = profilePatch(profileSteps[section], { ...editedForm, injuryAreas: [...editedForm.injuryAreas], muscleGroupsToStrengthen: [...editedForm.muscleGroupsToStrengthen] }, section);
+  expect(patch).toStrictEqual(expected);
+  for (const field of ['squat_1rm_kg', 'bench_1rm_kg', 'deadlift_1rm_kg']) expect(patch).not.toHaveProperty(field);
 });
