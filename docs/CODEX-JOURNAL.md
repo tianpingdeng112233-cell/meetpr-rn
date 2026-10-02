@@ -1820,3 +1820,47 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - 全量开发自检：`npx jest --runInBand` **137 suites / 995 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 通过。日志 `/private/tmp/smallfix-r1-{jest,tsc,lint}.log`。本轮为定向样式与绘制修正，沿用已有行为回归，没有新增镜像样式测试。
 - **未做设备验证**：按本次沙箱无模拟器的条件，未构建、安装或运行设备包，未生成设备截图。金条实际像素范围（含按钮晚于首帧出现）、相机 Light / Dark 控件外观、邀请码 360dp @1.3× 完整文字仍待 Opus 按返修卡实屏复验；上述自动检查不代表视觉验收通过。未 commit、未 push。
 - review-loop 独立只读审查（改前 WIP 快照为基线，仅审本轮增量）：Standards **0 项**；Spec **0 项**。缺 Matt tracker 配置，本轮使用本地批准卡，不冒称已执行 tracker 工作流。此为开发自审，不替代 Opus 收货。
+
+
+## Spec 084 · CARD-A Android：序号、Today 编辑入口、PR 静默确认、提醒默认日与 D-31（2026-10-02）
+
+### 基线与范围
+
+- 按 `specs/084-walkthrough-polish/CARD-A-android.md` 与 SPEC §2、§3、§5、§6 实装，包含卡内 D-31；不含 B/C 卡。开工已读 AGENTS、CLAUDE（仅引用 AGENTS）、PLAN 与工程规约；仓内不存在 CONTEXT.md / FOLLOWUPS.md / 更深层 AGENTS。已读 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。
+- 当前 worktree `meetpr-rn-wt-084a`，分支 `feat/084a-walkthrough-behaviors`，基线 `44b6c80`（与 `fix/walkthrough-small-fixes` 一致）。开工已有未跟踪 `specs/084-walkthrough-polish/`，保留原样。无 commit、无 push；正典 PARITY、spec 与收货记录未修改，本节是唯一文档增量。
+
+### 实装与展示点清单
+
+- `src/domain/plan/sequence.ts` 新增唯一序号入口 `weekDayOrdinals(weekDays)`，按既有 `sequenceDays` 排序，已完成日占号，同一 ID 重复出现只计一次；`dayCode(day, days)` 按所属周调用该入口。排序、日期、游标、完成/撤销、补录归日函数未改。
+- 展示点逐项核对：① `dashboard/use-dashboard.ts` Today 标题（当前日及全完成末日）；② `DashboardScreen.tsx` 已完成日与下一练标签；③ `WeekCalendar.tsx` Today / Training 共用周条的可见 D 与无障碍 W#D#；④ `TodayWorkoutView.tsx` 训练标题、QuickLog 标题、补录成功提示、完成总结；⑤ `TrainingCalendarView.tsx` 计划周列表；⑥ `coach/student-detail/OverviewSection.tsx` 教练概览，改为同一入口，避免日历列表过滤/移日造成的下标偏差。
+- 全仓查 `day_of_week`、`dayCode` 和 W/D 模板：历史 `HistoryEntriesView` 现状显示日历日期/星期与周标题，聊天 `ChatSetCard` / picker 现状显示日期/组号，没有直接输出 W#D# / D# 的生产位置；没有新增标签或改历史归日。`RnExtras.json` 没有需要转换的 D 模板；本卡仅从该目录同时删除中英文的 `prFirst`、`prPrevious`、`prTitle` 三个废弃键。教练排课 DAY n 不变。
+- Today 体重/Meetday 四种空态/有值态均以既有 FeedbackPressable 包裹原 Card，保留外观，提供 button 语义、现有可读标签与按压反馈。经现有 `/(student)/profile` 路由参数进入同一个 ProfileEditor（basics / competition）；允许空档案复用已有空表单，不新增编辑界面。保存沿用 useUpsertOnboarding 与 onboarding query 失效，关闭或系统返回回 Today，不提交未保存表单；路由自身的 navigation 清理参数，避免影响后来聚焦的页面。
+- 训练页移除 PRBanner、状态、定时消失逻辑及专用样式。现场录组产生的 PR 在原展示位置确认；进入训练页仍在原 1500ms 回放时机确认该学员全部积压事件，失败保留待下次访问重试，其他账号不受影响。Recorder、repository、点存储结构、Progress 与 PR 判定均未改。
+- `training-reminder.ts` 默认值依次取：已保存设置原值；已发布计划游标所在周（全完成取最后周）的 recommendedDate 日历星期；档案训练日；周一/三/五。日期按日期字符串的 UTC 日历取星期，不经过设备时区偏移。`useReminderPreference` 只在未保存时加载现有计划缓存，加载完成再开放设置入口，摘要与设置页使用同一份推导值。SettingsScreen 的保存路径、Session 的“仅恢复已保存设置”行为与持久化格式无需改变，未保存默认值不落盘、不排期。
+- D-31：对照既有 `docs/evidence/walkthrough-smallfix-20261002/video-row-360dp-1.3x.png` 中裁切现象，仅在系统字体大于 1× 时让 RPE 刻度行与数字按自然内容高度排版；默认字体保留原高度、字号、间距、颜色。PanResponder、命中计算和 PR #67 的手势逻辑未改；没有样式镜像测试。
+
+### 约定 seam 与红→绿证据
+
+| seam | 红测试观察 | 最终覆盖 / 证据 |
+| --- | --- | --- |
+| sequence 序号与标签 | 新序号入口缺失导致 1 红 / 13 绿 | 二/四/六/日 D1–D4、补早日重排、已完成占号、重复 ID 与空列表；`/private/tmp/084a-sequence-{red,green}.log` |
+| 调用方标签 | WeekCalendar 未传入新标签函数所需的周上下文，调用失败 | 可见 D 与无障碍 W#D# 一致；`/private/tmp/084a-caller-{red,green}.log`。既有 use-dashboard 单训练日在周日的旧 W1D7 断言迁至 W1D1 |
+| Dashboard 点击→编辑路由 | 空态/有值态都找不到可点击体重按钮，2 红 | 四种点击→正确编辑器；真实 Basic information 保存 83→84 后 Today 缓存刷新；空档案可打开；Meet / notes 系统返回不发 PUT；`/private/tmp/084a-cards-{red,green}.log` 与 `084a-cards-journey.log` |
+| 训练页 PR 处理 | 首次记录/已有记录提升均仍渲染祝贺文本，2 红 | 两种现场 PR 均不展示、已确认、点保留；另补回放时机/全部积压/重进无提示/账号隔离测试，7/7；`/private/tmp/084a-pr-save-{red,green}.log`、`084a-pr-all-green.log` |
+| 提醒默认推导 | 应为推荐日期星期 [6,1]，旧实现仍取档案 [2]，1 红 / 18 绿 | 锚点与移日、去重、已完成日、游标周、全部完成末周、draft 排除、档案/一三五回落、已保存空星期不变；`/private/tmp/084a-reminder-{red,green}.log` |
+
+- 只在卡约定四类 seam 增改行为测试；重进 PR 与编辑页往返是在各自既有 seam 的补充覆盖，未冒称它们在补充时再次先红。D-31 无新增测试，原 RPE 手势测试随全量通过。
+- 首轮全量 135/137 suites、1001/1003 tests：一处旧序号断言已随新口径修改；另一处未改动的 camera-review 测试报 `window.dispatchEvent is not a function`。相机单独复跑 12/12、最终全量也通过，未声称已查明该间歇错误根因，未改相机代码或豁免测试。编辑路径测试使用 mutation `gcTime: Infinity`，与仓内其他挂载测试相同，避免测试结束后遗留 GC 定时器。
+- 最终 `npx jest --runInBand`：**137 suites / 1003 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 均通过。日志 `/private/tmp/084a-jest-final.log`、`084a-tsc-final.log`、`084a-lint-final.log`。未改 eslint / TypeScript 配置或依赖。
+
+### Standards 自审
+
+- 同一实现上下文自审，按 code-review 的 Standards 轴逐一读未提交 diff；不是独立收货。**未决代码发现 0 项**。
+- 已核对：单一序号入口、已有设计 token / 反馈组件、无手势变更、翻译目录同步删除、未增加依赖/契约/持久化结构、只改卡内代码与约定 seam。清理横幅后未留未使用导入。检查修正了嵌套 Card 缩进与 route 参数清理归属。
+- `docs/agents/issue-tracker.md` 不存在，本轮依用户指定本地批准卡完成自审，没有运行或冒称 tracker 工作流；需要该工作流时先由 David 运行 `$setup-matt-pocock-skills`。
+
+### Spec 自审
+
+- 同一实现上下文对照 CARD-A 与 SPEC 的范围、存量与验收清单。**未决代码发现 0 项**；设备项未验收。
+- 已核对四类行为接线、全仓 D 展示清单、日期/推进/补录不变、Profile 编辑器及缓存复用、PR 点保留和静默确认、提醒三级回落及存量设置保留、D-31 默认尺寸与手势不变。没有混入 Plan summary 删除/翻周、登录改版、聊天/播放器改版等 B/C 卡内容。
+- **未做设备验证**：当前沙箱没有模拟器，未构建/安装/运行设备包，未产生改后截图。Today、训练页、提醒设置页与组录入页的 Light / Dark，以及 360×640dp、字体 1.3× 下的 RPE 数字，均待 Opus 按卡实屏收货。已有截图只用于理解缺陷，自动测试不能替代 Global 联调、原生导航与视觉验收；不宣布功能验收通过。
