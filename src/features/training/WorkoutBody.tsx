@@ -1,4 +1,5 @@
 import { useCameraAvailability } from './video-upload/use-camera-availability';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
 import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -8,7 +9,7 @@ import { t } from '@/i18n';
 import { training22 } from './build22-strings';
 import type { PlanExercise } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
-import { AppButton, Card, GradientFill, font, useColors } from '@/design';
+import { AppButton, Card, GradientFill, font, radius, spacing, useColors } from '@/design';
 import {
   decodePrescription,
   intensityText,
@@ -77,6 +78,7 @@ export function WorkoutBody({
   resolveExerciseMetadata: ExerciseMetadataResolver;
 }) {
   const colors = useColors();
+  const [accentSize, setAccentSize] = useState({ width: 0, height: 0 });
   const hasCamera = useCameraAvailability();
   const initiallyCompleted = exercises.filter(exercise => {
     const rows = drafts.filter(draft => draft.exercise.id === exercise.id);
@@ -136,9 +138,12 @@ export function WorkoutBody({
       >
         <View
           pointerEvents="none"
-          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 }}
+          onLayout={({ nativeEvent: { layout } }) => setAccentSize(current =>
+            current.width === layout.width && current.height === layout.height
+              ? current : { width: layout.width, height: layout.height })}
+          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: spacing.point3 }}
         >
-          <GradientFill direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
+          <GradientFill size={accentSize} direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017')}</Text>
@@ -244,17 +249,21 @@ export function WorkoutBody({
               </View>
             ) : null}
             {editable ? (
-              <>
+              <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.point9 }}>
                 <AppButton
+                  style={{ flex: 1 }}
                   label={t('student.todayWorkoutScreen.copy015')}
                   onPress={() => onRecord(active)}
                 />
-                {hasCamera ? <AppButton
+                {hasCamera ? <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('student.todayWorkoutScreen.copy016')}
                   onPress={() => onVideo(active)}
-                  variant="secondary"
-                  label={t('student.todayWorkoutScreen.copy016')}
-                /> : null}
-              </>
+                  style={{ width: spacing.point52, minHeight: spacing.point52, aspectRatio: 1, borderRadius: radius.control, borderWidth: spacing.point1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <MaterialCommunityIcons name="video-outline" size={spacing.point22} color={colors.textTertiary} />
+                </Pressable> : null}
+              </View>
             ) : null}
           </>
         ) : null}

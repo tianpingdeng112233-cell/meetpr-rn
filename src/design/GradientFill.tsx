@@ -6,14 +6,16 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 export function GradientFill({
   stops,
   direction = 'horizontal',
+  size,
 }: {
   stops: readonly { color: string; offset: number; opacity?: number }[];
   direction?: 'horizontal' | 'vertical' | 'diagonal';
+  size?: { width: number; height: number };
 }) {
   const id = `fill-${useId().replace(/:/g, '')}`;
   return (
     <View pointerEvents="none" accessible={false} style={StyleSheet.absoluteFill}>
-      <Svg width="100%" height="100%">
+      <Svg key={size ? `${size.width}x${size.height}` : undefined} width={size?.width ?? '100%'} height={size?.height ?? '100%'}>
         <Defs>
           <LinearGradient
             id={id}
@@ -27,7 +29,7 @@ export function GradientFill({
             ))}
           </LinearGradient>
         </Defs>
-        <Rect width="100%" height="100%" fill={`url(#${id})`} />
+        <Rect width={size?.width ?? '100%'} height={size?.height ?? '100%'} fill={`url(#${id})`} />
       </Svg>
     </View>
   );

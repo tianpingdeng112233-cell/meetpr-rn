@@ -12,10 +12,13 @@ type GlobalAuthFieldProps = TextInputProps & {
   mono?: boolean;
 };
 
-export function GlobalAuthField({ label, helper, error, mono = false, secureTextEntry = false, style, onFocus, onBlur, ...props }: GlobalAuthFieldProps) {
+export function GlobalAuthField({ label, helper, error, mono = false, secureTextEntry = false, style, onFocus, onBlur, onChangeText, ...props }: GlobalAuthFieldProps) {
   const colors = useColors();
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [hasUncontrolledText, setHasUncontrolledText] = useState(Boolean(props.defaultValue));
+  const hasText = props.value === undefined ? hasUncontrolledText : props.value.length > 0;
+  const passwordPlaceholder = secureTextEntry && !hasText;
   return <View style={{ gap: 6 }}>
     <View style={{
       backgroundColor: colors.surfaceCard, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
@@ -29,11 +32,13 @@ export function GlobalAuthField({ label, helper, error, mono = false, secureText
           accessibilityHint={error ?? helper ?? props.accessibilityHint}
           placeholderTextColor={colors.textDisabled} selectionColor={colors.gold500} cursorColor={colors.gold500}
           secureTextEntry={secureTextEntry && !visible}
+          multiline={secureTextEntry ? false : props.multiline}
+          onChangeText={value => { setHasUncontrolledText(value.length > 0); onChangeText?.(value); }}
           onFocus={event => { setFocused(true); onFocus?.(event); }}
           onBlur={event => { setFocused(false); onBlur?.(event); }}
           style={[{
-            ...(secureTextEntry || mono ? font.mono(18, 'semibold') : font.body(16, 'semibold')),
-            ...(secureTextEntry ? { letterSpacing: 2.52 } : {}),
+            ...(passwordPlaceholder ? font.body(16, 'semibold') : secureTextEntry || mono ? font.mono(18, 'semibold') : font.body(16, 'semibold')),
+            ...(secureTextEntry ? { letterSpacing: passwordPlaceholder ? 0 : 2.52 } : {}),
             color: colors.textPrimary, flex: 1, minHeight: 44, padding: 0,
           }, style]} />
         {secureTextEntry ? <Pressable accessibilityRole="button" accessibilityLabel={visible ? 'Hide password' : 'Show password'}

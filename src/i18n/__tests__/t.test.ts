@@ -37,6 +37,13 @@ test('formats positional placeholders using the canonical pending-bind copy', ()
   );
 });
 
+test('Today header joins the localized date and weekday without duplicating the Chinese prefix', () => {
+  setLocaleOverride('zh');
+  expect(t('student.dashboardTodayPresentation.copy004', ['10月2日', '周五'])).toBe('10月2日 · 周五');
+  setLocaleOverride('en');
+  expect(t('student.dashboardTodayPresentation.copy004', ['Oct 2', 'Fri'])).toBe('Oct 2 · Fri');
+});
+
 test('substitutes object and positional placeholders without reprocessing parameter text', () => {
   expect(t('student.filter.accessibilityLabel %@', ['Squat'])).toBe('Filter by exercise, currently Squat');
   expect(t('student.pendingBindViewModel.copy002', ['%@', '{0}'])).toBe('%@d {0}h');

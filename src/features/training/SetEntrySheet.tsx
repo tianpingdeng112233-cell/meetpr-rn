@@ -223,7 +223,7 @@ export function SetEntrySheet({
                 <View style={styles.plateSection}>
                   <PlateVisual totalKg={parsedWeight} hasCollar={collarOn} height={108} />
                   <View style={styles.plateTop}>
-                    <Text style={styles.plateDetail}>{loadout.detail}</Text>
+                    <Text numberOfLines={2} adjustsFontSizeToFit style={styles.plateDetail}>{loadout.detail}</Text>
                     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: collarOn }}
                       accessibilityLabel={t('student.setEntrySheet.copy007')} onPress={() => onChangeCollar(!collarOn)}
                       style={[styles.collar, collarOn && { borderColor: `${colors.gold500}73` }]}>
@@ -324,9 +324,9 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   navSpacer: { width: 44 },
   content: { paddingHorizontal: spacing.space4, paddingBottom: spacing.space4 },
   plateSection: { gap: 6, marginBottom: 6 },
-  plateTop: { alignItems: 'center', flexDirection: 'row', gap: 10 },
-  plateDetail: { color: colors.textPrimary, flex: 1, ...font.mono(13, 'semibold') },
-  collar: { flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: colors.surfaceCard, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderDefault, paddingHorizontal: 14, paddingVertical: 8, minHeight: 44 },
+  plateTop: { gap: spacing.point10 },
+  plateDetail: { color: colors.textPrimary, ...font.mono(13, 'semibold') },
+  collar: { alignSelf: 'flex-end', flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: colors.surfaceCard, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderDefault, paddingHorizontal: 14, paddingVertical: 8, minHeight: 44 },
   collarCircle: { width: 17, height: 17, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.textMuted },
   collarText: { color: colors.textMuted, ...font.body(14, 'medium') },
   controls: { gap: spacing.space3 },

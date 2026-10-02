@@ -565,7 +565,7 @@
 },
 "student.dashboardTodayPresentation.copy004": {
 "en": "{0} · {1}",
-"zh": "{0} · 星期{1}"
+"zh": "{0} · {1}"
 },
 "student.dashboardTodayPresentation.copy005": {
 "en": "Mon",

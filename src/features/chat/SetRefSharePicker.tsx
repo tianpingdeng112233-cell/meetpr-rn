@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, Text, View } from 'react-native';
+import { BrandSwitch } from '@/design/BrandSwitch';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { font, radius, Screen, useColors } from '@/design';
@@ -116,7 +117,7 @@ export function SetRefSharePicker({ conversationId, initialSetLogID, loadCandida
       <Text style={{ ...font.body(17), color: colors.textPrimary, backgroundColor: colors.surfaceElevated, padding: 16, borderRadius: radius.lg }}>{summary(selected)}</Text>
       {selected.video ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1, gap: 4 }}><Text style={{ ...font.body(17), color: colors.textPrimary }}>{t('chat.includeVideo')}</Text><Text style={{ ...font.body(12), color: colors.textSecondary }}>{t(selected.video.state === 'ready' ? 'chat.videoReady' : selected.video.state === 'uploading' ? 'chat.videoUploading' : 'chat.videoFailed')}</Text></View>
-        <Switch accessibilityLabel={t('chat.includeVideo')} value={includesVideo} disabled={selected.video.state === 'failed'} onValueChange={setIncludesVideo} trackColor={{ true: colors.gold500, false: colors.borderStrong }} />
+        <BrandSwitch accessibilityLabel={t('chat.includeVideo')} value={includesVideo} disabled={selected.video.state === 'failed'} onValueChange={setIncludesVideo} />
       </View> : null}
       {error ? <Text style={{ ...font.body(13), color: colors.gold500 }}>{error}</Text> : null}
       <PickerButton label={t('chat.continueToChat')} onPress={confirm} disabled={confirming} busy={confirming} />

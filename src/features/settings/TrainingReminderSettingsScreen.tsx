@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Switch, Text, ToastAndroid, View } from 'react-native';
+import { AppState, Linking, Text, ToastAndroid, View } from 'react-native';
+import { BrandSwitch } from '@/design/BrandSwitch';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { AppButton, font, useColors } from '@/design';
@@ -79,7 +80,7 @@ export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: 
   return <SettingsPage title={t('student.trainingReminderSettingsView.copy001')} onClose={onClose} busy={busy}>
     <MyProfileGroupCard><View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <Text style={{ flex: 1, ...font.body(16, 'semibold'), color: colors.textPrimary }}>{t('student.trainingReminderSettingsView.copy002')}</Text>
-      <Switch accessibilityLabel={t('student.trainingReminderSettingsView.copy002')} value={settings.enabled} disabled={busy} trackColor={{ true: colors.gold500 }} onValueChange={(enabled) => { if (!enabled) setEditingTime(false); void change({ ...settings, enabled }); }} />
+      <BrandSwitch accessibilityLabel={t('student.trainingReminderSettingsView.copy002')} value={settings.enabled} disabled={busy} onValueChange={(enabled) => { if (!enabled) setEditingTime(false); void change({ ...settings, enabled }); }} />
     </View></MyProfileGroupCard>
     <View style={{ gap: 8 }}><SettingsSectionTitle>{t('student.trainingReminderSettingsView.copy003')}</SettingsSectionTitle>
       <View style={{ opacity: settings.enabled ? 1 : 0.45 }}><MyProfileGroupCard><View style={{ padding: 16, gap: 16 }}>

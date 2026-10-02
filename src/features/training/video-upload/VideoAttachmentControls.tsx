@@ -158,11 +158,11 @@ export function VideoAttachmentControls({
     const color = `${colors.gold500}${disabled ? '4D' : 'B8'}`;
     return (
       <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
-        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 1,
+        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, flexShrink: 0,
           borderRadius: radius.control, paddingHorizontal: 15, paddingVertical: 8, minHeight: 44,
           borderWidth: 1, borderColor: `${colors.gold500}${disabled ? '1F' : '3D'}`, opacity: pressed ? 0.6 : 1 })}>
         <MaterialCommunityIcons name={icon} size={20} color={color} />
-        <Text style={{ color, flexShrink: 1, ...font.body(15, 'semibold') }}>{label}</Text>
+        <Text style={{ color, flexShrink: 0, ...font.body(15, 'semibold') }}>{label}</Text>
       </Pressable>
     );
   };
@@ -175,17 +175,17 @@ export function VideoAttachmentControls({
     </>
   );
   const titleStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, minHeight: 44 };
-  const rowStyle = { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'flex-end' as const, gap: 10 };
+  const rowStyle = { flexDirection: 'row' as const, flexWrap: 'wrap' as const, alignItems: 'center' as const, justifyContent: 'flex-end' as const, gap: spacing.point10 };
   const errorMessage = actionErrorMessage ?? record.errorMessage;
   return (
     <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 11, gap: spacing.space2 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md }}>
         {playable ? (
           <Pressable accessibilityRole="button" onPress={() => present(
             <VideoPlayback badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={dismiss} />
           )} style={titleStyle}>{title}</Pressable>
         ) : <View style={titleStyle}>{title}</View>}
-        <View style={{ flex: 1, alignItems: 'flex-end', gap: 7 }}>
+        <View style={{ flexGrow: 1, flexShrink: 1, maxWidth: '100%', alignItems: 'flex-end', gap: spacing.point7 }}>
           {preparing ? (
             <View style={rowStyle}>
               <ActivityIndicator color={`${colors.gold500}99`} />
