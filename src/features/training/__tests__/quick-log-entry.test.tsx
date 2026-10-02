@@ -21,7 +21,8 @@ jest.mock('@react-native-community/netinfo', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@react-native-community/netinfo/jest/netinfo-mock'));
 const mockNavigate = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }), useFocusEffect: () => {} }));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: () => {} }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -54,6 +55,7 @@ let writes = 0;
 beforeEach(() => {
   setLocaleOverride('en');
   mockNavigate.mockClear();
+  mockPush.mockClear();
   failCompletion = false;
   storedLogs = []; writes = 0;
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -134,4 +136,11 @@ test('Android Back closes the number pad and preserves the quick-log draft', asy
   expect(copy()).not.toContain(training22.next);
   expect(copy()).toContain(training22.title('W1D1'));
   expect(writes).toBe(0);
+});
+
+test('training history has a visible text entry and opens the history stack', async () => {
+  await mount();
+  expect(copy()).toContain(training22.history);
+  await press(training22.history);
+  expect(mockPush).toHaveBeenCalledWith('/training-history');
 });

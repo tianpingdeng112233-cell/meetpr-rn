@@ -817,9 +817,6 @@ export function TodayWorkoutView() {
                 : 'W—'}
           </Text>
           <View style={styles.navActions}>
-            <Pressable accessibilityRole="button" accessibilityLabel={training22.history} onPress={() => router.push('/training-history')} style={styles.navButton}>
-              <MaterialCommunityIcons name="history" size={18} color={colors.textSecondary} />
-            </Pressable>
             {cursor && selectedDayID !== cursor.id ? (
               <AppButton
                 variant="link"
@@ -879,6 +876,11 @@ export function TodayWorkoutView() {
             </Pressable>
           </View>
         </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={training22.history} onPress={() => router.push('/training-history')} style={styles.historyLink}>
+          <MaterialCommunityIcons name="history" size={spacing.base} color={colors.goldText} />
+          <Text style={styles.historyLabel}>{training22.history}</Text>
+          <MaterialCommunityIcons name="chevron-right" size={spacing.base} color={colors.goldText} />
+        </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {state.kind !== 'loading' && plan && weekNumber !== undefined ? (
@@ -1187,6 +1189,15 @@ const createStyles = (colors: Colors) =>
       flexDirection: 'row',
       justifyContent: 'space-between',
     },
+    historyLink: {
+      alignSelf: 'flex-end',
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: spacing.xs,
+      minHeight: spacing.minimumHitTarget,
+      maxWidth: '100%',
+    },
+    historyLabel: { color: colors.goldText, ...typography.footnote, flexShrink: 1 },
     navTitle: { color: colors.textPrimary, ...font.display(20), flexShrink: 1 },
     navActions: { alignItems: 'center', flexDirection: 'row', gap: 9 },
     navButton: {
