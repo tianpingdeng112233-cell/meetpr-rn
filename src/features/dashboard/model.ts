@@ -15,6 +15,7 @@ import {
   buildE1RMSeries,
   calculateE1RM,
   classifyE1RMAnomaly,
+  isE1RMEligible,
   displayPoint,
   E1RM_MATH,
   E1RM_POLICY,
@@ -208,10 +209,11 @@ export function replayE1RMHistoryPoints(
         !log.failed &&
         !log.assumed,
     )
-    .sort((left, right) => left.logged_at.localeCompare(right.logged_at));
+    .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime() || left.id.localeCompare(right.id));
 
   for (const log of sorted) {
     const effectiveRPE = log.coach_rpe ?? log.rpe;
+    if (!isE1RMEligible({ reps: log.reps, rpe: effectiveRPE == null ? null : Number(effectiveRPE), family })) continue;
     const value = calculateE1RM(
       Number(log.weight_kg),
       log.reps,

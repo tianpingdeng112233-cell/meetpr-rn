@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -39,6 +39,7 @@ export type HistoryViewModel = {
 };
 
 export function useHistoryViewModel(studentId: string): HistoryViewModel {
+  const queryClient = useQueryClient();
   const now = useMemo(() => new Date(), []);
   const today = utcDateText(now);
   const importedHistoryRefreshToken = useStudentTabsStore(
@@ -89,41 +90,19 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
 
   const loadPRs = useCallback(async () => {
     if (!studentId) return;
-    setPREvents(await trainingE1RMRepository.unacknowledgedPRs(studentId));
+    setPREvents(await trainingE1RMRepository.unacknowledgedPRs(studentId).catch(() => []));
   }, [studentId]);
 
   useEffect(() => {
     if (!studentId) return;
     let active = true;
-    void trainingE1RMRepository.unacknowledgedPRs(studentId).then((events) => {
+    void trainingE1RMRepository.unacknowledgedPRs(studentId).catch(() => []).then((events) => {
       if (active) setPREvents(events);
     });
     return () => {
       active = false;
     };
   }, [studentId]);
-
-  const reload = useCallback(async () => {
-    await Promise.all([
-      plansQuery.refetch(),
-      logsQuery.refetch(),
-      exerciseQuery.refetch(),
-      profileQuery.refetch(),
-      feedback.reload(),
-      ...detailQueries.map((query) => query.refetch()),
-      loadPRs(),
-      pointsQuery.refetch(),
-    ]);
-  }, [
-    detailQueries,
-    exerciseQuery,
-    feedback,
-    loadPRs,
-    logsQuery,
-    plansQuery,
-    pointsQuery,
-    profileQuery,
-  ]);
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -143,11 +122,15 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
         freshExerciseIndex,
         profileResult.data ?? profileQuery.data ?? null,
       );
-      await loadGrowthHistory(
+      const points = await loadGrowthHistory(
         trainingE1RMRepository,
         studentId,
         logsResult.data?.logs ?? logsQuery.data?.logs ?? [],
         freshFamilies,
+      );
+      queryClient.setQueryData(
+        ['growth-source-points', studentId, logsResult.dataUpdatedAt, exercisesResult.dataUpdatedAt, profileResult.dataUpdatedAt],
+        points,
       );
       await loadPRs();
     } finally {
@@ -161,8 +144,11 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
     logsQuery,
     plansQuery,
     profileQuery,
+    queryClient,
     studentId,
   ]);
+
+  const reload = refresh;
 
   const previousImportedToken = useRef(importedHistoryRefreshToken);
   useEffect(() => {

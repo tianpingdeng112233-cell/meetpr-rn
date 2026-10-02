@@ -1,4 +1,4 @@
-import { E1RM_POLICY } from './constants';
+import { E1RM_MATH, E1RM_POLICY } from './constants';
 import type { E1RMHistoryPoint, LiftFamily } from './types';
 
 export type E1RMAnomalyVerdict = 'normal' | 'lowConfidence' | 'suspectHard';
@@ -21,7 +21,7 @@ export function isE1RMEligible({
   if (!completed || failed) {
     return false;
   }
-  if (rpe !== null && rpe < E1RM_POLICY.minimumEligibleRPE) {
+  if (rpe !== null && rpe > E1RM_MATH.maximumRPE) {
     return false;
   }
   if (reps > E1RM_POLICY.maximumEligibleReps) {

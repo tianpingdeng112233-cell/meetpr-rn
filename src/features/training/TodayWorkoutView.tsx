@@ -113,7 +113,6 @@ import { TrainingCalendarView } from './TrainingCalendarView';
 import { trackTrainingTabVisit } from './training-analytics';
 import { WorkoutBody } from './WorkoutBody';
 
-const recorder = new E1RMRecorder(trainingE1RMRepository);
 const EMPTY_E1RM_BY_EXERCISE: Record<string, number | null> = {};
 
 function PRBanner({
@@ -210,6 +209,11 @@ export function TodayWorkoutView() {
   const loadGeneration = useRef(new LoadGeneration());
   const queryClient = useQueryClient();
   const resolveExerciseMetadata = useExerciseMetadataResolver(studentId);
+  const resolveE1RMFamily = useCallback((exerciseId: string) =>
+    resolveExerciseMetadata(exerciseId)?.competitionFamily ?? null, [resolveExerciseMetadata]);
+  const recorder = useMemo(() => new E1RMRecorder(trainingE1RMRepository, {
+    resolveFamily: resolveE1RMFamily,
+  }), [resolveE1RMFamily]);
   const plansQuery = usePlans(studentId);
   const selectedPlan =
     editingPlan?.trainee_id === studentId
@@ -685,7 +689,7 @@ export function TodayWorkoutView() {
 
         if (!input.failed && completed) {
           const e1rm = await recordTrainingSetE1RM({
-            recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!) }) : recorder,
+            recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!), resolveFamily: resolveE1RMFamily }) : recorder,
             repository: trainingE1RMRepository,
             resolveExerciseMetadata,
             input: {

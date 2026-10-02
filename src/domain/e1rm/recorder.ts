@@ -11,24 +11,28 @@ import type {
   E1RMHistoryPoint,
   E1RMIdFactory,
   E1RMRecorderInput,
+  LiftFamily,
   PRBreakthroughEvent,
 } from './types';
 
 export interface E1RMRecorderOptions {
   readonly now?: () => Date;
+  readonly resolveFamily?: (exerciseId: string) => LiftFamily | null;
   readonly idFactory?: E1RMIdFactory;
 }
 
 /** The single path from one completed set to history and an optional PR. */
 export class E1RMRecorder {
   private readonly now: () => Date;
+  private readonly resolveFamily?: (exerciseId: string) => LiftFamily | null;
   private readonly idFactory: E1RMIdFactory;
 
   constructor(
     private readonly repository: E1RMRepository,
-    { now = () => new Date(), idFactory = createE1RMId }: E1RMRecorderOptions = {},
+    { now = () => new Date(), idFactory = createE1RMId, resolveFamily }: E1RMRecorderOptions = {},
   ) {
     this.now = now;
+    this.resolveFamily = resolveFamily;
     this.idFactory = idFactory;
   }
 
@@ -63,7 +67,15 @@ export class E1RMRecorder {
         previousTrusted.length === 0
           ? null
           : Math.max(...previousTrusted.map((point) => point.e1RMKg));
-      const verdict = classifyE1RMAnomaly(estimate, previousMax);
+      // Imported estimates remain display/PR history, never measured anomaly baselines.
+      const family = this.resolveFamily ? this.resolveFamily(input.exerciseId) : input.family;
+      const familyHistory = this.resolveFamily && family
+        ? (await this.repository.historySnapshot(input.studentId)).points.filter(point =>
+          this.resolveFamily!(point.exerciseId) === family)
+        : history;
+      const measured = trustedEligibleE1RMPoints(familyHistory.filter(point => point.origin === 'logged'), family);
+      const measuredMax = measured.length ? Math.max(...measured.map((point) => point.e1RMKg)) : null;
+      const verdict = classifyE1RMAnomaly(estimate, measuredMax);
       const confidence =
         input.priorConfidence !== 'low' && verdict === 'normal' ? 'normal' : 'low';
       const point: E1RMHistoryPoint = {
