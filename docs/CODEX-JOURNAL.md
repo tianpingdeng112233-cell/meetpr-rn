@@ -1783,3 +1783,40 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - **Kotlin 已直接编译验证**：沙箱内调用缓存的 Kotlin 2.3.20 K2JVMCompiler，JVM target 17，使用真实 Android API 36、React Native 0.86.0、expo-modules-core 已编译类库，生成本模块及两个 AsyncFunction 的 class，退出码 0；未用 stub。脚本 `/private/tmp/walkfix2-b-compile-kotlin.py`，日志 `/private/tmp/walkfix2-b-kotlin.log`，输出 `/private/tmp/walkfix2-b-kotlin-classes/`。`npx expo-modules-autolinking resolve --platform android` 已发现新模块及 Kotlin 类。这是源码编译与自动链接发现检查，未执行完整 Gradle/APK 构建或设备安装。
 - **设备验证未完成**：明确路径执行 `adb devices`，daemon 报 `could not install *smartsocket* listener: Operation not permitted`；沙箱不允许监听，未做模拟器截图、系统授权页实操、dumpsys 精确闹钟或横幅验收。设备清单仍交 Opus/David 按原卡执行。
 - 本次只追加本卡 JOURNAL 记录，未修改 PARITY.md、任务卡或走查清单，未 commit/push。B 工作区 diff（包含接手的 B 改动）在 `/private/tmp/walkfix2-b-workspace.diff`。
+
+
+## 2026-10-02 — WALKTHROUGH-SMALL-FIXES：九项开发实现
+
+- Opus 派卡：[WALKTHROUGH-SMALL-FIXES-CARD](../specs/build22-parity/WALKTHROUGH-SMALL-FIXES-CARD.md)。当前工作区 `fix/walkthrough-small-fixes`，基线 `7574476`；未 commit、未 push。开工没有 CONTEXT.md / FOLLOWUPS.md；CLAUDE.md 仅引用 AGENTS.md。保留开工已有的未跟踪任务卡及参照截图，未修改 PARITY.md、走查清单、任务卡、依赖或 eslint / TypeScript 配置。
+- 逐项动手前，以 `git -C /Users/david/Projects/apps/MeetPR show 0748931563fefea14e7f50a7c9ee7330b5501bea:<path>` 只读核对 iOS；另亲看 [D-11 固定参照截图](evidence/walkthrough-20261002/d11-ios-log-and-camera.png)。已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。下表 iOS 路径均相对此固定源码根目录，`Student/` 简写为 `Modules/StudentKit/Sources/StudentKit/Features/`。
+
+| 项目 | 本次实现 | 对照的固定 iOS 文件 |
+| --- | --- | --- |
+| 1 · D-10 | 实际当前组卡片由 `WorkoutBody.tsx` 渲染。通过整卡 onLayout 更新金条显式高度，随 Coach note、按钮及字体换行后的卡片尺寸变化；保留原三段品牌金渐变。 | `Student/TodayWorkout/TodayWorkoutScreen.swift` 的 TodayWorkoutHero；入口 `Student/TodayWorkout/TodayWorkoutView.swift` |
+| 2 · D-11 | Log 与摄像键放同一操作行，Log 占剩余宽度，右侧52dp方形描边 video-outline；沿用 Record this set 翻译键作为无障碍标签，保持 onVideo(active) / onRecord(active) 回调与可用相机条件。 | `Student/TodayWorkout/TodayWorkoutScreen.swift` 的 recordingHero 操作行；`Student/TodayWorkout/TodayWorkoutView.swift` 的 openVideoAction |
+| 3 · D-13 | CameraRecorder 自身使用不透明 fullScreen Modal，黑底覆盖状态栏和导航栏区域，浅色状态栏内容；SafeArea 内左上角44dp圆形关闭图标，取景画面铺满拍摄内容区，计时与录制键叠在其上。预览保持原 Video controls / contain，底部保留 Retry / Use 与 Save to Photos；onRequestClose 复用原关闭回调。录制、授权、文件归属、后台保留预览与上传链路未改。 | `Student/VideoUpload/Camera/CameraRecorderView.swift`；`Student/VideoUpload/Camera/CameraRecorderComponents.swift` 的 RecorderCaptureView / RecorderReviewView / RecorderCloseButton |
+| 4 · D-15 | iOS 原实现为说明与 collars 同行。按卡内兜底让完整说明独占一行布局区域，collars 下一行右对齐；保留 mono13，说明限制两行并由原生 adjustsFontSizeToFit 缩放，覆盖较长配重组合和1.3倍字体。 | `Student/TodayWorkout/SetEntrySheet.swift` 的 plateSection / collarToggle |
+| 5 · D-21 | 视频操作键与键内文字不参与压缩；视频行和操作行允许按完整按钮换行，保留原 Change / Delete 行为与后续状态提示。 | `Student/VideoUpload/VideoAttachmentV3Controls.swift` 的 attached / actionButton；`Student/TodayWorkout/SetEntrySheet.swift` |
+| 6 · D-02 | GlobalAuthField 空密码时使用正文 semibold16、零额外字距，并明确单行；有内容后恢复原 mono18 与2.52字距，显示/隐藏密码与受控/非受控输入均保留。注册、登录、找回密码共用此字段。 | `Modules/AppShell/Sources/AppShell/Auth/AuthSecureField.swift`；本项按卡修复 Android placeholder 继承样式问题 |
+| 7 · D-07 | 查明该日期模板只有 DashboardScreen 一个生产调用方，传入 Intl 完整星期名；只删中文模板额外的“星期”，英文模板不变。 | `Student/Dashboard/DashboardTodayPresentation.swift` 的 headerDateText / weekdayLetter |
+| 8 · D-27 | 新增局部共享 BrandSwitch，轨道 gold500 / borderStrong，滑块 gold200 / textMuted，全部来自现有主题 token。替换全仓三个原生 Switch 使用点：训练提醒、相机预览、聊天组选附带视频开关；不改状态与回调。 | `Student/MyProfile/TrainingReminderSettingsView.swift` 的 Toggle tint；`Student/VideoUpload/Camera/CameraRecorderComponents.swift` 的 Save to Photos Toggle；`Modules/ChatUI/Sources/ChatUI/SetRefSharePicker.swift` |
+| 9 · D-30 | 仅两枚创建邀请码按钮使用缩小后的水平 padding 和随 fontScale 增大的 flexBasis；空间不足时整键换行，保留两行文字与原字体大小，不影响 Copy / Regenerate 或其他页面按钮。 | `Modules/CoachKit/Sources/CoachKit/Features/InviteCodes/InviteCodesView.swift` 的 secondarySection |
+
+### 测试、自审与设备边界
+
+- 仅修改卡内三处行为 seam：`set-ref-entry.test.tsx` 当前组摄像/Log 向各自回调交同一 draft；`camera-review.test.tsx` 关闭图标与原生 Modal 系统返回在录制/预览态调用关闭，并保留后台、Retry、Use 和文件清理覆盖；`i18n/__tests__/t.test.ts` 中英文 Today 日期模板输出。没有新增镜像样式测试。训练 seam 的相机可用性替身位于 expo-modules-core 原生加载边界。
+- 日期先红（收到“10月2日 · 星期周五”）后绿；相机新增系统返回断言先因缺少 Modal 失败，接入后转绿。录制中关闭的测试模拟原生卸载后延迟返回 URI，不依赖 React 卸载时已经清空的 ref。摄像/Log 回调是保持已有行为，新增保护测试在布局改动前后均通过，不冒称该项行为原本失败。证据 `/private/tmp/smallfix-date-{red,green}.log`、`/private/tmp/smallfix-camera-{red,green}.log`、`/private/tmp/smallfix-actions-before.log`。
+- review-loop 独立只读双轴初审：Standards 1 项（摄像键仅 minHeight + aspectRatio 未形成方形）；Spec 2 项（同一方形问题，以及长配重说明在360dp@1.3×仍需三行）。分别补明确52dp宽度、两行原生字体自适应后，定向复审两轴均无未决代码发现。RN 自带 Yoga 复现确认284dp操作行中 Log 为223×52dp、摄像键为52×52dp，原始证据 `/private/tmp/smallfix-review-yoga-fixed.{cpp,log}`；此为布局算法证据，不代替设备截图。缺 Matt tracker 配置，已提示完整流程需 `$setup-matt-pocock-skills`；本轮只使用本地批准卡。
+- 最终开发自检：`npx jest --runInBand` **137 suites / 995 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 全通过。日志 `/private/tmp/smallfix-final-{jest,tsc,lint}.log`。新增文件仅 BrandSwitch；没有新增依赖、翻译键或配置豁免。
+- **未做设备验证**：ADB 不在默认 PATH；明确路径 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb` 存在，但 `adb devices` 启动 daemon 报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱不允许监听。未构建设备包、未安装、未生成改后设备截图，未验证原生取景/录制/相册保存或真实上传。Light / Dark、360×640dp@1.3×与九项实屏清单仍交 Opus 按卡验收；本节记录开发实现及自检，不宣称功能验收通过。
+
+
+### 返修第 1 轮（2026-10-02）
+
+- 仅处理任务卡文末三处返修，保留开工已有 WIP；改前快照 `/private/tmp/smallfix-r1-before/`，本轮代码增量 `/private/tmp/smallfix-r1.diff`。未修改其余已通过项、任务卡、PARITY、依赖、eslint 或 TypeScript 配置。
+- 第 1 项：删除 `heroHeight` 与整卡测高；金条恢复 `top: 0 / bottom: 0`，直接测量金条自身宽高。`GradientFill` 新增可选数值 `size`，同时传给 Svg / Rect，并以宽高作为 Svg key，在按钮晚出现或内容高度变化后重建原生绘制节点。保留 gold300 → gold400 → gold500 三段渐变；只有本卡金条传入 size，其他调用点仍用原来的百分比尺寸及色标，未改其渲染路径。
+- 第 3 项：在 CameraRecorder 外围增加局部 `ColorSchemeProvider scheme="dark"`，取景、预览、权限状态及内部 AppButton / BrandSwitch 统一读取既有深色 token；Use 为金底深字，Retry 为深底浅字。作用域不写入 appearance 偏好、不更改外部主题；关闭、系统返回、录制、后台预览保留及 Retry / Use / Save to Photos 逻辑未改。只读核对固定 iOS `0748931563fefea14e7f50a7c9ee7330b5501bea` 的 `CameraRecorderComponents.swift`。
+- 第 9 项关联返修：Copy / Regenerate 复用同屏已验收的 `createButtonStyle`（随 fontScale 增大的 flexBasis、现有 spacing.sm 水平内边距），在已有 flexWrap 容器里整键换行；Single Use / Time Limited 本身未改。
+- 全量开发自检：`npx jest --runInBand` **137 suites / 995 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 通过。日志 `/private/tmp/smallfix-r1-{jest,tsc,lint}.log`。本轮为定向样式与绘制修正，沿用已有行为回归，没有新增镜像样式测试。
+- **未做设备验证**：按本次沙箱无模拟器的条件，未构建、安装或运行设备包，未生成设备截图。金条实际像素范围（含按钮晚于首帧出现）、相机 Light / Dark 控件外观、邀请码 360dp @1.3× 完整文字仍待 Opus 按返修卡实屏复验；上述自动检查不代表视觉验收通过。未 commit、未 push。
+- review-loop 独立只读审查（改前 WIP 快照为基线，仅审本轮增量）：Standards **0 项**；Spec **0 项**。缺 Matt tracker 配置，本轮使用本地批准卡，不冒称已执行 tracker 工作流。此为开发自审，不替代 Opus 收货。
