@@ -6,10 +6,11 @@ import { t } from '@/i18n';
 import { formatWeight, rirCopy } from './policy';
 import { barHeight, centerX, commitsOnRelease, index, isLit, lockedIntent, snap, valueAtX, type ScrubIntent } from './set-entry-rpe';
 
-export function SetEntryRPEScale({ value, placeholder, onChange }: {
+export function SetEntryRPEScale({ value, placeholder, onChange, onGestureActive }: {
   value: number;
   placeholder?: string;
   onChange: (value: number) => void;
+  onGestureActive?: (active: boolean) => void;
 }) {
   const colors = useColors();
   const [width, setWidth] = useState(0);
@@ -20,24 +21,27 @@ export function SetEntryRPEScale({ value, placeholder, onChange }: {
   const startX = useRef(0);
   const grant = useCallback((event: GestureResponderEvent) => {
     gestureIntent.current = 'idle';
+    onGestureActive?.(true);
     startX.current = event.nativeEvent.locationX;
-  }, []);
+  }, [onGestureActive]);
   const move = useCallback((_: GestureResponderEvent, gesture: PanResponderGestureState) => {
     gestureIntent.current = lockedIntent(gestureIntent.current, gesture.dx, gesture.dy);
+    if (gestureIntent.current === 'scroll') onGestureActive?.(false);
     if (gestureIntent.current === 'scrub') {
       setScrubbing(true);
       onChange(valueAtX(startX.current + gesture.dx, width, 3));
     }
-  }, [onChange, width]);
+  }, [onChange, onGestureActive, width]);
   const release = useCallback((_: GestureResponderEvent, gesture: PanResponderGestureState) => {
     if (commitsOnRelease(gestureIntent.current)) {
       // Reject a vertical final frame even if native scrolling took the other moves.
       const finalIntent = lockedIntent(gestureIntent.current, gesture.dx, gesture.dy);
-      if (finalIntent !== 'scroll') onChange(valueAtX(startX.current + gesture.dx, width, 3));
+      if (finalIntent === 'scrub' || (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6)) onChange(valueAtX(startX.current + gesture.dx, width, 3));
     }
     setScrubbing(false);
-  }, [onChange, width]);
-  const allowTermination = useCallback(() => gestureIntent.current !== 'scrub', []);
+    onGestureActive?.(false);
+  }, [onChange, onGestureActive, width]);
+  const allowTermination = useCallback(() => gestureIntent.current === 'scroll', []);
   const pan = useMemo(() => {
     // PanResponder.create only stores callbacks; native events own all ref reads/writes.
     // eslint-disable-next-line react-hooks/refs
@@ -50,9 +54,9 @@ export function SetEntryRPEScale({ value, placeholder, onChange }: {
       onPanResponderMove: move,
       onPanResponderRelease: release,
       onPanResponderTerminationRequest: allowTermination,
-      onPanResponderTerminate: () => setScrubbing(false),
+      onPanResponderTerminate: () => { setScrubbing(false); onGestureActive?.(false); },
     });
-  }, [grant, move, release, allowTermination]);
+  }, [grant, move, release, allowTermination, onGestureActive]);
 
   return (
     <View accessible accessibilityRole="adjustable" accessibilityLabel={t('chat.rpeMetric')}

@@ -6,7 +6,7 @@ import { decodePrescription } from '@/domain/plan/prescription';
 import { entryPrefill } from './suggestion-gating';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -135,9 +135,11 @@ export function SetEntrySheet({
   );
   const [repsText, setRepsText] = useState(draft.repsText);
   const [rpeText, setRpeText] = useState(draft.rpeText || '8');
+  const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [presented, setPresented] = useState(false);
   const scroll = useRef<ScrollView>(null);
+  const [rpeGestureActive, setRpeGestureActive] = useState(false);
   const scrolledToVideo = useRef(false);
   const [numberPad, setNumberPad] = useState<NumberPadField | null>(null);
   const [showsRPEPlaceholder, setShowsRPEPlaceholder] = useState(prescription.intensity?.kind !== 'rpe');
@@ -170,7 +172,8 @@ export function SetEntrySheet({
     dispatchWeightEntry({ type: 'userChanged', value: next });
   };
   const save = async (failed: boolean) => {
-    if (!editable || saving || !validWeight) return;
+    if (!editable || savingRef.current || !validWeight) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       await onSave({
@@ -183,6 +186,7 @@ export function SetEntrySheet({
     } catch {
       // Parent maps and presents canonical save errors; keep this sheet mounted.
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -208,7 +212,7 @@ export function SetEntrySheet({
               <Text numberOfLines={1} style={styles.navTitle}>{t('student.setEntrySheet.copy005', [exerciseName, draft.setIndex + 1])}</Text>
               <View style={styles.navSpacer} />
             </View>
-            <ScrollView ref={scroll} contentContainerStyle={styles.content}
+            <ScrollView ref={scroll} scrollEnabled={!rpeGestureActive} contentContainerStyle={styles.content}
               onContentSizeChange={() => {
                 if (initialCamera && !scrolledToVideo.current) {
                   scroll.current?.scrollToEnd({ animated: false });
@@ -244,7 +248,7 @@ export function SetEntrySheet({
                     <Text style={styles.sectionLabel}>{t('chat.rpeMetric')}</Text>
                     <Text style={styles.stepLabel}>5–10 · 0.5</Text>
                   </View>
-                  <SetEntryRPEScale value={rpe} onChange={changeRPE}
+                  <SetEntryRPEScale value={rpe} onChange={changeRPE} onGestureActive={setRpeGestureActive}
                     placeholder={showsRPEPlaceholder ? t('student.todayWorkoutTypes.copy028') : undefined} />
                 </View>
                 <VideoAttachmentControls
@@ -285,12 +289,12 @@ export function SetEntrySheet({
               </View>
             </ScrollView>
             <View style={styles.footer}>
-              <Pressable accessibilityRole="button" disabled={!validWeight} onPress={() => void save(false)}
+              <Pressable accessibilityRole="button" disabled={!editable || saving || !validWeight} accessibilityState={{ busy: saving, disabled: !editable || saving || !validWeight }} onPress={() => void save(false)}
                 style={({ pressed }) => [styles.completeButton, pressed && styles.footerPressed, !validWeight && styles.footerDisabled]}>
-                <MaterialCommunityIcons color={colors.ctaText} name="check" size={20} />
+                {saving ? <ActivityIndicator color={colors.ctaText} /> : <MaterialCommunityIcons color={colors.ctaText} name="check" size={20} />}
                 <Text style={styles.completeText}>{t('student.setEntrySheet.copy012')}</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" disabled={!validWeight} onPress={() => void save(true)}
+              <Pressable accessibilityRole="button" disabled={!editable || saving || !validWeight} accessibilityState={{ busy: saving, disabled: !editable || saving || !validWeight }} onPress={() => void save(true)}
                 style={({ pressed }) => [styles.failedButton, pressed && styles.footerPressed]}>
                 <MaterialCommunityIcons color={colors.textMuted} name="close" size={14} />
                 <Text style={styles.failedText}>{t('student.setEntrySheet.copy009')}</Text>

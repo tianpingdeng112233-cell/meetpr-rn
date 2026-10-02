@@ -98,11 +98,9 @@ export async function uploadFileParts(
             cancelUpload = () => {
               if (cancellationRequested) return;
               cancellationRequested = true;
-              // Do not depend on uploadAsync settling after native cancellation.
-              void task.cancelAsync().then(
-                () => reject(new UploadCancelledError()),
-                reject,
-              );
+              // Neither native upload nor cancellation is guaranteed to settle.
+              reject(new UploadCancelledError());
+              void task.cancelAsync().catch(() => undefined);
             };
             controller.signal.addEventListener('abort', cancelUpload, { once: true });
             timeout = setTimeout(() => {
