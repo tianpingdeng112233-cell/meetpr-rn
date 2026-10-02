@@ -1739,3 +1739,47 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - 自检：`npx jest --runInBand` **135 suites / 961 tests passed**（包含既有 local-retention）；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。日志 `/private/tmp/d19-final-{jest,tsc,lint}.log`。未改 eslint / TypeScript 配置或新增豁免；`rg -n 'DEBUG-d19' src` 无匹配，诊断文件及临时观察日志已清理。
 - **未做设备验证**：ADB 二进制存在，但 daemon 启动被沙箱拒绝：`could not install *smartsocket* listener: Operation not permitted`。未构建设备包、未安装、未做原生视频回放或真实上传验证；真机复验按卡由 Opus 出包后交 David，本记录是开发自检，不代替 Opus 收货。
 - `review-loop` 独立只读双轴自审一轮：Standards 0 项；Spec 0 项。范围为 HEAD 上本卡 CameraRecorder 条件改动及未追踪的正式回归文件；审后仅追加本 JOURNAL 事实，无实现语义变更。仓内缺 Matt tracker 配置，已提示需 `$setup-matt-pocock-skills`，本次仅使用本地批准卡做 review-loop，未声称运行 tracker 流程或完成 Opus 验收。
+
+## 2026-10-02 · WALKTHROUGH-BEHAVIOR：D-20 / D-28 / D-12（续接）
+
+- Opus 派卡，工作区 `fix/walkthrough-behavior`，基线 `e93beb8`。接手 `git status` / `git diff` 核对 A 的 7 个受跟踪改动及 2 个新增测试，保留已有实现；任务卡为接手时已有未跟踪文件，未修改。没有 commit / push，未改 PARITY.md 或走查清单。没有 CONTEXT.md / FOLLOWUPS.md / 更近层 AGENTS.override.md。
+- 测试仅在卡内约定 seam：TodayWorkoutView 提交、upload manager/runner、training-reminder 排期/处理器、settings-screens，以及 set-entry-rpe 手势归属。没有后端或用户数据操作；测试标识、视频与 URL 均为合成 fixture。
+
+### A：现状复核与补充
+
+- Complete set / Not completed 立即 busy 并禁用，ref 拦住同一事件周期重复提交；保存至多 30 秒，JS deadline 不依赖底层 abort 返回。失败保持 sheet / 输入，网络失败提示保留输入可重试。TodayWorkoutView 的重试沿用原 coached set upsert 键（plan_exercise_id + set_index），未改去重协议；不将测试 mock 的单次写入冒称生产服务端幂等验证。
+- Sending 附件不会阻塞 TodayWorkoutView 记组，保存不删除本地视频。分片 PUT 的 60 秒兜底会直接结束等待，不再等待原生 cancel Promise；进入已有退避。无网恢复或网络类型改变会取消本次悬置 PUT 并重试，已持久化 session / parts 保留；不改分片协议。
+- 定向复跑 `set-save` / `network-handover` / `multipart` / `retry-scheduler` / `manager-attach`：5 suites / 52 tests 通过，后三套原断言未改。补查切网同时删除附件：即时删除响应时原实现通过；延迟远端删除响应后得到 1 红 / 6 绿（等待删除时发生第二次 PUT），在 stop 清除 networkChanged、让显式删除/替换优先后转为 7 绿；连同 manager-attach 原断言共 20 绿。清理接手改动中的重复 import 和两个无用测试 helper，遵循现有 lint 配置。
+- 上轮 A 的红测试日志不在本轮证据中；这里只记录接手 diff 与复跑结果。原生上传与取消双悬置是条件模拟，不等同于小米真机切网根因已证实。
+
+### B：API 依据与实现进度
+
+- 动手前读取 [Expo SDK 57 Notifications 文档](https://docs.expo.dev/versions/v57.0.0/sdk/notifications/) Permissions、handler、channel API，以及版本首页。本地实际 `expo-notifications` 为 **57.0.17**。配置声明 `android.permission.SCHEDULE_EXACT_ALARM`；没有使用 `USE_EXACT_ALARM`。
+- 核对本地 `node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/delegates/ExpoSchedulingDelegate.kt`：API < 31 或 `AlarmManager.canScheduleExactAlarms()` 为 true 使用 `setExactAndAllowWhileIdle`，否则 `setAndAllowWhileIdle`；weekly 每次触发后继续排下一周。`NotificationPermissionsModule.kt` 与 `src/NotificationPermissions.types.ts` 仅暴露通知权限，不暴露精确闹钟授权。React Native PermissionsAndroid.check 底层为 `checkSelfPermission`，不能替代这个特殊授权查询。
+- [Android 官方说明](https://developer.android.com/develop/background-work/services/alarms)要求用 `canScheduleExactAlarms()` 查询及 `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` 打开授权页，回收授权会终止进程并取消精确闹钟。已提出增加最小本地 Expo 模块查询并跳转的范围确认：卡片“原生配置只动 app.json”与现有 SDK 无查询接口的缺口，不能用虚构 API 或普通通知权限冒充解决。
+- 前台策略只有 `src/notifications/handler.ts` 一处真实 `setNotificationHandler` 调用：训练提醒展示横幅、列表并响铃，上传失败继续不弹横幅、不响铃、进入列表。支持旧 identifier 与新 category；两个生产者安装同一策略。
+- 训练提醒改用 HIGH 的 `training-reminder-v2`、默认声音，删除旧 `training-reminder` 渠道，渠道名称仍沿用现有翻译键。每个星期的 identifier、weekly 排期、登出取消与重新登录恢复逻辑保持。处理器测试先 1 红 / 9 绿，再 10 绿；渠道迁移测试先 1 红 / 10 绿，再 11 绿。
+- **待完成**：精确闹钟授权查询、设置页入口/可能延迟提示、授权变化重排及三态回归；待范围答复，不宣称 B 全部完成。
+
+### C：RPE 起手
+
+- 先把约定手势归属 seam 的起手回放改成短纵向/45° 待判，得到 1 红 / 4 绿；实现后 5 绿。水平超过 6 dp 且占主导才锁 scrub；纵向达到 24 dp 且占主导才交滚动，对角保持待判。RN 坐标是 dp：诊断 AVD 420 dpi 的 40 px 约 15.2 dp，60 px 约 22.9 dp。
+- 手指开始触摸刻度条时关闭父 ScrollView 的滚动，待判/拖动期间保持，明确纵向则恢复滚动；release / terminate 恢复。父层只在该刻度条交互期间处理滚动归属；几何、范围 5–10、0.5 步进与无障碍标签未变。
+- **读代码发现的“中途停止”可能路径，仅列出，未按猜测修复**：① 原生触摸取消可进 `onPanResponderTerminate`，系统手势/窗口失焦等是否触发需设备事件；② 已被原生 ScrollView 接管后 JS 收不到 move（包括 JS 启动屏蔽尚未应用的竞态），应以触摸与滚动同一时间轴确认；③ SetEntrySheet 关闭/卸载（Back、selectedDraft 消失、账户/父页面生命周期）会移除 RPE 控件；④ PanResponder 的回调随 width/onChange 等依赖变化而更新，布局变动可能改变命中值，不能仅凭静态代码认定为中断原因。未宣称这些路径解释 David 的真机反馈。
+
+### 最终自检与交接状态
+
+- `npx jest --runInBand`：**137 suites / 975 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 均通过。完整本机日志 `/private/tmp/wb-final-{jest,tsc,lint}.log`。`rg -n 'DEBUG-wb' src` 无匹配；未改 eslint / TypeScript 配置。
+- review-loop 独立只读双轴：Standards 最终 0 项未决 finding；初报“上传中删除漏远端清理”经 reducer 的 attachmentId 赋值证伪并撤回。延迟删除与切网竞态补红/绿后，两轴定向复审均无新增 finding。Spec 保留 **B 未完成** 及 **C 原生手势待验**，未宣称整卡完成或 Opus 验收通过。仓内缺 Matt tracker 配置；完整 tracker 工作流需 David 调用 `$setup-matt-pocock-skills`，本轮采用本地任务卡驱动的 review-loop。
+- **未做设备验证**：`command -v adb` 不在 PATH；明确路径 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb` 存在，但 daemon 启动报 `could not install *smartsocket* listener: Operation not permitted`，沙箱不允许监听。未构建设备包、未安装、未做屏幕截图或 dumpsys，不用 Jest 代替卡内模拟器/小米真机验收。C 的 grant→React state→原生 scrollEnabled 存在异步应用窗口，快速起手与纵向交接必须按卡回放。
+- A、C 已交开发实现；B 已交通知分流、新 HIGH 渠道、权限声明，剩余精确授权查询/入口/状态变化重排及其测试等待范围答复。只追加本 JOURNAL 一节记录，未修改其他正典文档或任务卡，未 commit / push。
+
+### B 续接：精确闹钟授权（2026-10-02，范围答复后）
+
+- 按卡末尾范围答复补齐 B 剩余开发实现，保留接手的 A、C、通知分流、HIGH 渠道和 app.json 权限改动。新增 `modules/training-reminder-alarm`，沿用 training-video 的本地 Expo 模块结构与自动链接；仅提供 `canScheduleExactAlarms` 和带本应用 package URI 的 `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` 入口。Android 12 以下查询为 true；模块 Manifest 声明与 app.json 相同的 `SCHEDULE_EXACT_ALARM`，不引依赖、不声明 `USE_EXACT_ALARM`。
+- `training-reminder.ts` 提供安全 JS 桥接，非 Android、模块缺失、查询或跳转异常均返回 false。提醒页开启时查询并显示双语“可能延迟”说明及系统授权入口；拒绝授权保留开关、偏好和 weekly 排期。页面回前台重新查询，授权变化后重排，未变化/提醒关闭时不重排；异步查询检查页面生命周期、查询序号、账号及排期 revision，防止过期结果在登出后恢复提醒。实际精确/非精确定时仍由 Expo 57.0.17 原生 delegate 按系统权限选择，不另造定时器。
+- TDD 使用卡内 `training-reminder.test.ts`、`settings-screens.test.tsx` seam，原生模块通过 Expo loader mock。逐项红→绿：授权查询缺失（1 红/11 绿）、开启后缺少延迟说明（1 红/2 绿）、缺少授权入口（1 红/3 绿）、回前台未重排（1 红/4 绿）；随后覆盖拒绝、撤销、关闭提醒、模块/平台降级、跳转失败与登出竞态。红日志在 `/private/tmp/walkfix2-b-red-{query,guidance,open,reschedule}.log`，两个定向 suite 最终 28 tests 通过。
+- 最终开发自检：`npx jest --runInBand` **137 suites / 990 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 通过。没有改 eslint/TypeScript 配置；`rg -n 'DEBUG-wb' src` 无匹配。独立只读双轴审查：Standards 0 项；Spec 0 项，不替代 Opus 按卡验收。仍使用本地批准卡，未启用缺少配置的 Matt tracker 工作流。
+- **Kotlin 已直接编译验证**：沙箱内调用缓存的 Kotlin 2.3.20 K2JVMCompiler，JVM target 17，使用真实 Android API 36、React Native 0.86.0、expo-modules-core 已编译类库，生成本模块及两个 AsyncFunction 的 class，退出码 0；未用 stub。脚本 `/private/tmp/walkfix2-b-compile-kotlin.py`，日志 `/private/tmp/walkfix2-b-kotlin.log`，输出 `/private/tmp/walkfix2-b-kotlin-classes/`。`npx expo-modules-autolinking resolve --platform android` 已发现新模块及 Kotlin 类。这是源码编译与自动链接发现检查，未执行完整 Gradle/APK 构建或设备安装。
+- **设备验证未完成**：明确路径执行 `adb devices`，daemon 报 `could not install *smartsocket* listener: Operation not permitted`；沙箱不允许监听，未做模拟器截图、系统授权页实操、dumpsys 精确闹钟或横幅验收。设备清单仍交 Opus/David 按原卡执行。
+- 本次只追加本卡 JOURNAL 记录，未修改 PARITY.md、任务卡或走查清单，未 commit/push。B 工作区 diff（包含接手的 B 改动）在 `/private/tmp/walkfix2-b-workspace.diff`。
