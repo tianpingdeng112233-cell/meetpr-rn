@@ -1,4 +1,5 @@
 import { expect, test, beforeEach, afterEach, jest } from '@jest/globals';
+import { day, plan } from '@/domain/plan/test-fixtures';
 import { Platform } from 'react-native';
 import { reconcileTrainingReminders } from '../reminder-lifecycle';
 import { writeReminderPreference } from '../storage';
@@ -139,4 +140,23 @@ test.each(['missing', 'query fails', 'load fails', 'non-android'])('exact alarm 
   await replaceReminders(settings);
   expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(3);
   if (failure === 'non-android') expect(load).not.toHaveBeenCalled();
+});
+
+test('unsaved reminders follow recommended calendar weekdays in the cursor week, including shifted and completed days', () => {
+  const current = plan([
+    day('old', { completed_at: '2026-09-01T12:00:00Z' }),
+    day('tue', { week_number: 2, day_of_week: 2, completed_at: '2026-09-08T12:00:00Z' }),
+    day('thu', { week_number: 2, day_of_week: 4, shifted_to_date: '2026-09-20' }),
+    day('sat', { week_number: 2, day_of_week: 6, shifted_to_date: '2026-09-20' }),
+    day('future', { week_number: 3, day_of_week: 1 }),
+  ], { anchor_weekday: 4 });
+  // Thursday anchor + slot 2 = Friday (6); shifted date is Sunday (1).
+  expect(defaultReminderSettings(['mon'], current)).toEqual({ enabled: false, weekdays: [6, 1], hour: 20, minute: 0 });
+  const completed = { ...current, days: current.days.map(d => ({ ...d, completed_at: '2026-09-30T12:00:00Z' })) };
+  expect(defaultReminderSettings(['mon'], completed).weekdays).toEqual([5]);
+  expect(defaultReminderSettings(['sun', 'tue'], { ...current, status: 'draft' }).weekdays).toEqual([1, 3]);
+  expect(defaultReminderSettings(['tue'], null).weekdays).toEqual([3]);
+  expect(defaultReminderSettings([], plan([])).weekdays).toEqual([2, 4, 6]);
+  const saved = { enabled: false, weekdays: [], hour: 7, minute: 45 };
+  expect(defaultReminderSettings(['mon'], current, saved)).toEqual(saved);
 });

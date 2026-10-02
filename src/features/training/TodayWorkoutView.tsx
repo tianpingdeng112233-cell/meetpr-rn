@@ -69,7 +69,6 @@ import {
 import {
   buildE1RMSeries,
   E1RMRecorder,
-  type PRBreakthroughEvent,
 } from '@/domain/e1rm';
 import { useStudentTabsStore } from '@/features/student-tabs';
 
@@ -90,7 +89,6 @@ import type {
   WorkoutSetDraft,
 } from './model';
 import {
-  formatWeight,
   gymDayText,
   historyRangeStart,
   parseFiniteDecimal,
@@ -114,32 +112,6 @@ import { trackTrainingTabVisit } from './training-analytics';
 import { WorkoutBody } from './WorkoutBody';
 
 const EMPTY_E1RM_BY_EXERCISE: Record<string, number | null> = {};
-
-function PRBanner({
-  event,
-  exerciseName,
-}: {
-  event: PRBreakthroughEvent;
-  exerciseName: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <Card style={styles.prBanner}>
-      <Text style={styles.prTitle}>
-        🎉 {t('student.progression.prTitle', [exerciseName])}
-      </Text>
-      <Text style={styles.prValue}>
-        {formatWeight(event.breakthroughE1RMKg)} kg
-        {event.previousMaxE1RMKg > 0
-          ? t('student.progression.prPrevious', [
-              formatWeight(event.previousMaxE1RMKg),
-            ])
-          : t('student.progression.prFirst')}
-      </Text>
-    </Card>
-  );
-}
 
 export function TodayWorkoutView() {
   const colors = useColors();
@@ -194,7 +166,6 @@ export function TodayWorkoutView() {
     key: '',
     value: false,
   });
-  const [prEvent, setPREvent] = useState<PRBreakthroughEvent | null>(null);
   const [e1rmState, setE1rmState] = useState<{
     key: string;
     values: Record<string, number | null>;
@@ -327,7 +298,10 @@ export function TodayWorkoutView() {
         void trainingE1RMRepository
           .unacknowledgedPRs(studentId)
           .then((events) => {
-            if (events[0] && active) setPREvent(events[0]);
+            if (!active || useSessionStore.getState().user?.id !== studentId) return;
+            return Promise.all(events.map(event => trainingE1RMRepository.acknowledgePR(event.id)));
+          }).catch(() => {
+            // Keep failed acknowledgements pending for the next visit.
           });
       }, TRAINING_LIMITS.prReplayDelayMs);
       return () => {
@@ -336,15 +310,6 @@ export function TodayWorkoutView() {
       };
     }, [studentId]),
   );
-
-  useEffect(() => {
-    if (!prEvent) return;
-    const timer = setTimeout(
-      () => setPREvent(null),
-      TRAINING_LIMITS.transientBannerMs,
-    );
-    return () => clearTimeout(timer);
-  }, [prEvent]);
 
   useEffect(() => {
     const generation = loadGeneration.current.begin('review');
@@ -712,7 +677,9 @@ export function TodayWorkoutView() {
               },
             }));
           }
-          if (e1rm.pr && !input.quickLogDate) setPREvent(e1rm.pr);
+          if (e1rm.pr && !input.quickLogDate) {
+            await trainingE1RMRepository.acknowledgePR(e1rm.pr.id).catch(() => undefined);
+          }
           if (
             !input.quickLogDate && draft.status !== 'complete' &&
             nextDrafts.some((candidate) => !isDraftTerminal(candidate))
@@ -743,7 +710,7 @@ export function TodayWorkoutView() {
   const openQuickLog = () => {
     if (!plan || !planDay || !editable) return;
     const initial = makeQuickLogPlan({ plan, day: planDay, drafts: liveDrafts, logs: logsQuery.data?.logs ?? [], suggestedWeight: draft => outcomeForDraft(draft).suggestion?.weightKg ?? null });
-    setQuickLogContext({ dayCode: dayCode(planDay), subtitle: dayName(planDay, resolveExerciseMetadata) });
+    setQuickLogContext({ dayCode: dayCode(planDay, orderedDays), subtitle: dayName(planDay, resolveExerciseMetadata) });
     quickLogAttempt.current = new QuickLogAttempt({
       persist: async (row, date) => {
         const id = await commit({ stableSetId: row.draft.stableSetId, weightText: row.draft.weightText, repsText: row.draft.repsText, rpeText: row.draft.rpeText, failed: false, quickLogDate: date });
@@ -815,7 +782,7 @@ export function TodayWorkoutView() {
         <View style={styles.navRow}>
           <Text style={styles.navTitle}>
             {planDay
-              ? dayCode(planDay)
+              ? dayCode(planDay, orderedDays)
               : plan
                 ? t('student.todayWorkoutView.copy011')
                 : 'W—'}
@@ -894,14 +861,6 @@ export function TodayWorkoutView() {
             cells={weekCells}
             selectedDayID={selectedDayID}
             onSelect={selectDay}
-          />
-        ) : null}
-        {prEvent ? (
-          <PRBanner
-            event={prEvent}
-            exerciseName={exerciseTitle(
-              resolveExerciseMetadata(prEvent.exerciseId),
-            )}
           />
         ) : null}
         {state.kind === 'loading' ? (
@@ -1077,7 +1036,7 @@ export function TodayWorkoutView() {
           setRestSeconds(null); setRecordingSetId(null); setCompletionPhase(null);
           const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan?.id ?? ''));
           setRequestedDayID(latest ? cursorDay(latest.days)?.id ?? input.dayId : null);
-          showToast(training22.saved(completed ? dayCode(completed) : ''), true);
+          showToast(training22.saved(completed ? dayCode(completed, orderedDays) : ''), true);
           await refresh();
         }
         return outcome;
@@ -1133,7 +1092,7 @@ export function TodayWorkoutView() {
           presentation={workoutCompletionPresentation({
             planDay,
             drafts: liveDrafts,
-            weekCode: dayCode(planDay),
+            weekCode: dayCode(planDay, orderedDays),
             date: recommendedDate(plan, planDay),
             coachName: binding.data?.bind_request?.coach_display_name ?? null,
             exerciseNames: new Map(planDay.exercises.map(exercise => [exercise.exercise_id, exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))])),
@@ -1247,12 +1206,4 @@ const createStyles = (colors: Colors) =>
       textAlign: 'center',
       ...typography.footnote,
     },
-    prBanner: {
-      backgroundColor: colors.successTint,
-      borderColor: colors.success,
-      gap: spacing.xs,
-      padding: spacing.base,
-    },
-    prTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-    prValue: { color: colors.success, ...typography.footnote },
   });

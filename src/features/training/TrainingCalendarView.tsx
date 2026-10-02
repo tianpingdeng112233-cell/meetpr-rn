@@ -10,6 +10,7 @@ import {
   cursorDay,
   recommendedDate,
   sequenceDays,
+  weekDayOrdinals,
 } from '@/domain/plan/sequence';
 import {
   dayName,
@@ -61,6 +62,7 @@ export function TrainingCalendarView({
       </View>
       {weeks.map((week) => {
         const days = sorted.filter((day) => day.week_number === week);
+        const ordinals = weekDayOrdinals(days);
         const open = expanded[week] ?? week === currentWeek;
         const done = days.filter((day) => day.completed_at != null).length;
         return (
@@ -157,7 +159,7 @@ export function TrainingCalendarView({
                               ...font.mono(12),
                             }}
                           >
-                            D{day.day_of_week}
+                            D{ordinals.get(day.id)}
                           </Text>
                         </View>
                         <View style={{ flex: 1, gap: 3 }}>
