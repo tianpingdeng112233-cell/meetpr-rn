@@ -1695,3 +1695,37 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - 自检：`npx jest --runInBand` **133 suites / 931 tests passed**；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过。日志为 `/private/tmp/r1r2-repair1-{jest,tsc,lint}.log`。改前快照 `/private/tmp/r1r2-repair1-before` 与增量 `/private/tmp/r1r2-repair1.diff` 留作本机审查证据；其余第一轮文件逐字节核对未变。
 - 独立只读代码审查（review-loop，本地批准卡为源）：Standards 0 项；Spec 代码增量 0 项，交付前已补本返修记录。仓内仍无 Matt tracker 配置，未声称运行 tracker 流程。此为代码自检，不代替 Opus 收货。
 - **未做设备验证**：本次 ADB 启动仍被沙箱拒绝（`could not install *smartsocket* listener: Operation not permitted`）；Light/Dark 实屏与其余验收由 Opus 按返修清单复验。未 commit、未 push；未改 PARITY.md、走查清单、任务卡或其他第一轮实现。
+
+## 2026-10-02 — E1RM imported baseline repair
+
+- 任务：[E1RM-IMPORTED-BASELINE-CARD](../specs/build22-parity/E1RM-IMPORTED-BASELINE-CARD.md)。Opus 派卡；当前 `fix/e1rm-imported-baseline`，基线 `b996f7d`，未 commit、未 push。iOS 实现与测试仅以 `git show 03021ff6cbe82aba26827df70b48fb6451105c6d:<path>` 只读核对，未改 iOS 仓。已读 Expo SDK 57 文档。
+- 原因复核：RN recorder 原先从全部可信点取异常基线，仅排除同 setLogId 的 imported；`loadGrowthHistory` 把真实日志回放的 logged 强改为 imported。iOS `E1RMHistoryReplayService` 排除 assumed，再经 Recorder 生成 logged；preserved imported 指导入估算，不能代替实测异常基线。iOS Recorder 分开 display 与 measured 基线，后者只取同学员同比赛主项的 normal + logged。
+- 实装：保留 RN 既有展示/PR 路径，将异常基线改为可信实测，并通过既有 competition-family resolver 聚合当前学员同主项的各 exercise。回放保留 logged，沿用既有入选函数并按实际时间、set ID 排序。Progress 首读、下拉刷新与 reload 使用同一 `loadGrowthHistory` 入口，刷新快照写回对应 Query 缓存。
+- 修复：识别“更早的可信导入 + 最早合格实练 low”主项，完整时序回放后只改其已有 logged 点的 confidence。已存估值、来源字段、point ID、导入及人工复核状态、无源日志点、退役动作/其他主项、其他学员和 PR（含已确认）保留。缺点回填与修复在一次提交中完成；新 snapshot/revision CAS 在共享串行写队列里检查后单次写盘。重复刷新无写入；并发写入则放弃本次结果，返回最新存量，下次重试。写失败返回旧快照，磁盘原文不变；无法读取的旧存储报错，禁止当空仓覆盖。不增加迁移标记、不清库、不生成追溯 PR。
+
+### 原样真实案例与未决口径
+
+- fixture 原样移植 iOS `ImportedBaselineTestSupport.swift`：38 组 = 5 assumed + 2 高次数 + 31 实练，重量、日期、次数、RPE 未改，标识符全部合成。
+- **卡内有无法同时满足的约束，已向 David 提出，尚未取得变更入选规则的指示**：RN `E1RM_POLICY.minimumEligibleRPE = 7`，既有测试明确 RPE 6/6.5 不入选；固定 iOS 的 `E1RMEligibility` 已允许低于 7 的可计算 RPE。因此保留“阈值/公式/入选规则及既有断言不变”时，不能同时满足“31 个实练逐点与 iOS 一致”。本次未越权改这些规则，也未修改数据来伪造一致性。
+- RN 原样案例结果：36 个存量点及 ID 全保留，5 imported 不变，13 个合格 logged 恢复 normal，18 个 RPE 6/6.5 的原 low 点保持不变；90 天快照由 formingWindowSparse 恢复 chart，5 个样本，current = 216.2162162162 kg。iOS 同输入为 31 normal、8 个样本、221.4285714286 kg。**逐点一致性验收未完成**；需 Opus/David 决定是否另卡追齐入选口径。本地测试绿不等于本卡全部收货。
+- 新设备回放 seam：空仓回填三个不同日期深蹲实练 100/104/108 kg × 1 @10，均为 normal + logged；随后记录 140 kg × 1 @10（较历史最大值高约 29.6%）得到 logged + low，Progress 保持 108 kg。与 iOS 同输入的异常门结果一致：真实历史仍是实测基线，超过既有 18% 阈值被隔离。此用例验证回填后再记录；未宣称修复训练页新设备 First record 横幅，后者仍在 Out of Scope。
+
+### 自检与审查证据
+
+- 测试只加在卡内三个 seam。Recorder 导入低值/高值污染用例先红后绿；回填 origin 先红后绿；修复入口→真实仓储→growthSnapshot 的旧 low 恢复先红后绿。随后补同主项跨 exercise、回放同时间排序/入选、存储失败/并发复核/重开、数据与 PR 保留、零重复写、损坏存储不覆盖、原样真实案例与新设备用例。阈值/公式/入选的既有断言未改。
+- 红绿原始日志在本机 `/private/tmp/e1rm-{recorder,history,repair,replay,family,corrupt,failure-screen}-{red,green}.log`（仅适用已生成的组合）；最终检查日志 `/private/tmp/e1rm-final-{jest,tsc,lint}.log`。`npx jest --runInBand`：134 suites / 943 tests passed；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过，未改 eslint/TypeScript 配置或增加 lint 豁免。
+- review-loop 独立只读双轴自审：Standards 0 项；Spec 初审 1 项（修复写失败应继续显示旧快照），已补失败首屏红测试并修正，定向复核关闭。Spec 仍明确保留上述入选规则冲突，未宣称验收通过。仓内缺 Matt tracker 配置，已提示 `$setup-matt-pocock-skills`，仅执行本地批准卡的 review-loop，不冒称 tracker 工作流。
+- **未做设备验证**：ADB 二进制存在，但启动服务被沙箱拒绝（`could not install *smartsocket* listener: Operation not permitted`）。未构建设备包、未安装、未做实屏或真实服务端联调；由 Opus 按卡收货。
+- 只追加本节交付记录；未修改 PARITY.md、走查清单、任务卡、后端、依赖、公式或阈值。
+
+### 返修 1（2026-10-02）
+
+- 在本卡首轮未提交改动上仅处理 Opus 退回的三处；未回退其他工作，未 commit/push，未改 PARITY.md、走查清单或任务卡。仍由 Opus 按卡收货；未做设备验证。
+- 入选规则按固定 iOS `03021ff6cbe82aba26827df70b48fb6451105c6d` 的 `E1RMEligibility.swift` 逐条追齐：移除旧 RPE 7 下限，仅排除 RPE > 10，完成/失败与次数上限保持原样；RPE < 6 和 nil 继续用现有 Epley 回落。这是修正 RN 基线漂移，不是新增产品规则；本节取代首轮记录中的未决入选口径。公式、10%/18% 异常阈值未变。
+- 原样 38 组 fixture 现在恢复全部 31 个实练点为 normal，5 个真正 imported 点不动；90 天卡为 chart，8 个样本，current = 221.4285714286 kg，与固定 iOS 测试相同。Recorder 另覆盖 nil、5.5、6、6.5 的记录与估值；RPE > 10 与次数上限仍拦截。
+- 旧 RN 回填点只要对应同学员的非 assumed 服务器日志，就把 origin 归正为 logged，并对受影响主项按完整真实日志时序重算置信度；origin 归正、置信度修复、缺点回填仍共用一次 CAS。保留 `imported-*` point ID、已存估值、全部来源字段和 PR；真正 assumed、无源点与其他主项不动。覆盖写失败原状保留、并发复核胜出、重开重试及重复刷新零写。
+- 旧安装重放：先存 100/104/108 kg × 1 @10 的 `imported-*` 历史，再存旧代码标 low 的 140 kg 实练。升级后历史归正为 logged + normal，140 kg 仍 low，曲线当前值仍 108 kg：相对可信实练历史高约 29.6%，符合 iOS 既有 18% 异常门。另测 110 kg 的误标 low 恢复 normal，确认归正会重算后续实练而不只改 origin。
+- 损坏存储仍由 `readE1RM` 抛错阻止写入；Progress 入口捕获读失败，使用本学员服务器日志生成只读曲线，PR 读取失败也降级。三种损坏原文均验证可生成 chart、重复读取与训练 Recorder best-effort 不抛出、零写入、原始字节不变。
+- 先红后绿证据：`/private/tmp/e1rm-r1-{eligibility,migration,corrupt}-{red,green}.log`；迁移失败/并发保护补充日志 `/private/tmp/e1rm-r1-migration-protection.log`。新增测试留在既有 seam，入选既有断言按本次授权更新。
+- 最终自检：`npx jest --runInBand` 134 suites / 952 tests passed；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。日志 `/private/tmp/e1rm-r1-final-{jest,tsc,lint}.log`。首次全量曾在未修改的聊天滚动测试失败（期望 y=190、得到 y=30）；该 suite 独立复跑 33 tests 通过，随后全量通过，未修改聊天代码或测试。参数化测试的 TypeScript tuple 类型已修正，未改 eslint/TypeScript 配置或增加豁免。
+- `review-loop` 独立只读自审，以开工已有 WIP 快照为基线，仅审本次返修增量：Standards 0 项；Spec 0 项。固定审查 diff 留本机 `/private/tmp/e1rm-r1.diff`；最终仅补测试 tuple 类型与本记录，无实现语义变更。此为开发自检，不代替 Opus 实屏收货。
