@@ -2017,3 +2017,19 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 ```
 - 2026-10-03 · CARD-C 返修第 2 轮：仅修组录入播放器放大全屏的滚动偏移残留（RN Android Fabric 不恢复移除的原生动画属性；保持同一动画图，放大系数归零、缩小恢复，沿用 Modal 根层黑底及同一 Video 实例），补齐顶部 `Set n · 重量 × 次数 · RPE x`（缺项省略）；组信息挂载断言先红后绿，原同实例/播放与倍速/返回先缩小回归保留；全量 `npx jest --runInBand` 141 suites / 1019 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过，review-loop 独立 Standards / Spec 各 0 finding；证据 `/private/tmp/084c-android-r2-{red,green,jest,tsc,lint}.log`，本轮差异 `/private/tmp/084c-android-r2.diff`；原生偏移原因由代码支持，未做设备验证（沙箱无模拟器），全屏覆盖/系统栏/无黑帧仍待设备收货；保留其他 WIP，不 commit、不 push。
 - 2026-10-03 · CARD-C 追加改动（David 真机反馈）：仅改组录入播放器视图与对应测试；内嵌 / 放大态暂停时显示 56×56 半透明深色圆底白色播放按钮，播放隐藏，播完再次出现并从头重播，保留底部播放 / 暂停与现有无障碍文案。两种尺寸的挂载测试先红后绿，覆盖暂停恢复、结束 seek(0)、底部按钮及同一播放器实例；相关 2 suites / 7 tests、全量 `npx jest --runInBand` 141 suites / 1021 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过；review-loop 独立 Standards / Spec 各 0 finding（本地审查，不依赖缺失的 tracker 配置）。日志 `/private/tmp/084c-central-play-{red,green,jest,tsc,lint}.log`，代码差异 `/private/tmp/084c-central-play.diff`。未做设备验证（沙箱没有模拟器）；未改 eslint / TypeScript 配置，保留原有 CARD-C 文档修改，不 commit、不 push。
+
+## 2026-10-03 · INSTANT-COMPLETION：立即庆祝与后台同步
+
+- 任务：`specs/build22-parity/INSTANT-COMPLETION-CARD.md`，分支 `fix/instant-completion-celebration`，开工 HEAD `eb6d6ae`。开工已读 AGENTS/CLAUDE、PLAN、build22 spec/验证记录与 Expo SDK 57 版本文档；仓内无 CONTEXT.md / FOLLOWUPS.md。任务卡为开工已有未跟踪文件，未修改。
+- 实装：长按完成先进入 celebration、停止休息计时，再等待后台 mutation；请求在途显示 `Sending to your coach…` / `正在发送给教练…`，成功后恢复现有教练回执。完成请求 30 秒超时后取消传输并走原乐观缓存回滚，关闭尚在显示的完成流程并显示原失败提示；已记录组保留，可重试。Promise 竞速隔离迟到响应，所有结局清理超时计时器。成功缓存更新、刷新及返回 Today 保留；完成 mutation 不再等待后续刷新结束才结束 pending，undo 仍走原请求和等待刷新流程。
+- TDD：使用卡约定的训练视图模型/交互 seam，挂载真实 TodayWorkoutView 与 QueryClient，只替代请求和原生边界。先以“请求未返回时已出现奖励页”断言复现红测试，再实现；随后分别以 30 秒假定时器及刷新悬挂场景复现红测试并修复。补充 503 回滚与重试、迟到成功不重开、不覆盖回滚、离开奖励页后失败、中英文回执测试，保留原正常完成/报告与反思持久化测试。
+- 证据：`/private/tmp/instant-completion-red-{1,2,3}.log`、`/private/tmp/instant-completion-green-{1,2,3}.log`；最终定向 `/private/tmp/instant-completion-targeted.log`（11 tests）。全量 `npx jest --runInBand`：**141 suites / 1027 tests passed**；`npx tsc --noEmit`、`npm run lint` 与 `git diff --check` 通过。全量日志 `/private/tmp/instant-completion-{jest,tsc,lint}.log`。Jest 有 console 告警，未将测试通过表述为零告警；lint 无 errors/warnings。
+- Standards：review-loop 独立只读审查 0 finding，确认超时清理、迟到响应隔离、回滚与 undo 路径。Spec：独立只读审查 0 finding，逐项对应卡内即时庆祝/文案/失败与超时/成功后续/undo；不替代 Opus 收货。缺失 `docs/agents/issue-tracker.md`，未声称执行依赖 tracker 的完整 code-review，已告知该流程需 `$setup-matt-pocock-skills`。
+- **未做设备验证**：沙箱没有模拟器，未构建/安装 Android 包，未提供截图；8 秒延迟、503 与正常网络的设备验收仍由 Opus 按卡执行。测试仅证明 mocked 请求边界下的 React 状态与缓存行为，不代表 Global 联调完成。
+- 未改上传、周条、backend、eslint/TypeScript 配置；未 commit、未 push。正典台账不在本轮改动内，仅在本 JOURNAL 追加记录。代码差异：`/private/tmp/instant-completion.diff`。
+
+```diff
++ if (!undo) { setRestSeconds(null); setCompletionPhase('celebration'); }
+  await (undo ? undoCompletion : completion).mutateAsync(planDay.id);
+- if (!undo) { setRestSeconds(null); setCompletionPhase('celebration'); }
+```
