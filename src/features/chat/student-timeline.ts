@@ -40,3 +40,13 @@ export function videoDuration(seconds: number | null | undefined): string {
 export function totalUnreadCount({ hasPlanNotice, feedbackUnread, chatUnread }: { hasPlanNotice: boolean; feedbackUnread: number; chatUnread: number }): number {
   return (hasPlanNotice ? 1 : 0) + feedbackUnread + chatUnread;
 }
+
+/** Snapshot-only attachment copy also supports historical cards with partial metrics. */
+export function sharedSetAttachment(reference: import('@/api/domains/chat').ChatSetRef, note: string | null, videoURL?: string | null) {
+  const position = reference.setTotal == null ? t('chat.setPosition %@', [reference.setNumber]) : t('chat.setPosition %@ of %@', [reference.setNumber, reference.setTotal]);
+  const reps = reference.reps == null ? null : reference.repsMax == null ? `${reference.reps}` : `${reference.reps}–${reference.repsMax}`;
+  const weight = reference.weightKg == null ? null : `${reference.weightKg}kg`;
+  const metrics = weight && reps ? `${weight} × ${reps}` : weight ?? (reps ? t('chat.attachmentReps', [reps]) : null);
+  return { note: note?.trim() ? note : null, title: reference.exerciseName,
+    subtitle: [position, metrics, reference.rpe == null ? null : `RPE ${reference.rpe}`].filter(Boolean).join(' · '), hasVideo: Boolean(videoURL) };
+}

@@ -737,7 +737,7 @@ export function TodayWorkoutView() {
       const queryKey = studentChatKeys.conversations(studentId);
       await queryClient.cancelQueries({ queryKey });
       queryClient.setQueryData<{ conversations: Conversation[] }>(queryKey, previous => ({ conversations: [...(previous?.conversations ?? []).filter(item => item.id !== conversation.id), conversation] }));
-      if (generation === shareGeneration.current) setShareRoute({ conversationId: conversation.id, initialSetLogID: draft.sourceLog?.id, coachName: bound.coach_display_name ?? conversation.other_party.display_name });
+      if (generation === shareGeneration.current) setShareRoute({ conversationId: conversation.id, initialSetLogID: draft.sourceLog?.id ?? draft.exercise.sets.find(set => set.set_number === draft.setIndex + 1)?.id, coachName: bound.coach_display_name ?? conversation.other_party.display_name });
     } catch {
       if (generation === shareGeneration.current) Alert.alert(t('student.trainingShareConversationFailed'));
     } finally { preparingShareRef.current = false; setPreparingShare(false); }

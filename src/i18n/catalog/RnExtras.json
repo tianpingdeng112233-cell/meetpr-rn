@@ -90,5 +90,82 @@
 "student.rn.bind.cancelling": {
 "en": "Cancelling…",
 "zh": "取消中…"
-}
+},
+  "chat.sendsSetQuestion": {
+    "en": "Sends Set %@ of %@ with your question",
+    "zh": "发送 %@ 组（%@）和你的问题"
+  },
+  "chat.pickerPlanned": {
+    "en": "Planned",
+    "zh": "计划"
+  },
+  "chat.pickerLogged": {
+    "en": "Logged",
+    "zh": "已记录"
+  },
+  "chat.pickerLoggedVideo": {
+    "en": "Logged · video",
+    "zh": "已记录 · 视频"
+  },
+  "chat.pickerLoggedRPE": {
+    "en": "Logged · RPE %@",
+    "zh": "已记录 · RPE %@"
+  },
+  "chat.whichSet": {
+    "en": "Which set is this about?",
+    "zh": "想问哪一组？"
+  },
+  "chat.yourQuestion": {
+    "en": "Your question",
+    "zh": "你的问题"
+  },
+  "chat.questionPlaceholder": {
+    "en": "What do you want your coach to look at?",
+    "zh": "想请教练帮你看什么？"
+  },
+  "chat.sendToCoach": {
+    "en": "Send to coach",
+    "zh": "发送给教练"
+  },
+  "chat.attachmentReps": { "en": "%@ reps", "zh": "%@ 次" },
+  "training.previewPause": {
+    "en": "Pause",
+    "zh": "暂停"
+  },
+  "training.previewProgress": {
+    "en": "Playback progress",
+    "zh": "播放进度"
+  },
+  "training.previewSpeed": {
+    "en": "Playback speed",
+    "zh": "播放速度"
+  },
+  "training.previewExpand": {
+    "en": "Expand video",
+    "zh": "放大视频"
+  },
+  "training.previewCollapse": {
+    "en": "Collapse video",
+    "zh": "缩小视频"
+  },
+  "training.restBelowSeven": {
+    "en": "RPE below 7",
+    "zh": "RPE 低于 7"
+  },
+  "training.restBelowNine": {
+    "en": "RPE 7 to below 9",
+    "zh": "RPE 7 至低于 9"
+  },
+  "training.restNineOrAbove": {
+    "en": "RPE 9 or above",
+    "zh": "RPE 9 或以上"
+  },
+  "training.restMinutes": {
+    "en": "%@ min",
+    "zh": "%@ 分钟"
+  },
+  "training.restSettingsLink": {
+    "en": "Change in Profile → Rest between sets",
+    "zh": "前往个人资料 → 组间休息修改"
+  }
 }

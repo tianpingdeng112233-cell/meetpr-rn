@@ -144,9 +144,8 @@ test('Ask coach opens the picker before navigating, then enters chat with a stag
   await press(t('student.askCoach'));
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
   expect(mockNavigate).not.toHaveBeenCalled();
-  expect(copy()).toContain(t('chat.shareTodayTraining'));
-  await press(t('chat.continueSelection'));
-  await press(t('chat.continueToChat'));
+  expect(copy()).toContain(t('chat.whichSet'));
+  await press(t('chat.sendToCoach'));
   expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId, coachName: 'Alex' } });
   expect(useSetRefStagingStore.getState().intents[conversationId]).toMatchObject({ setRef: { source: 'planned', planSetId: plan.days[0].exercises[0].sets[0].id } });
 });

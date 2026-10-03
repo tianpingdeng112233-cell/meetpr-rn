@@ -2280,20 +2280,20 @@
 "zh": "相机发生错误，请重试"
 },
 "student.restTimerExplanationView.copy001": {
-"en": "Rest time is matched automatically",
-"zh": "休息时间会自动匹配"
+"en": "Rest time follows your RPE",
+"zh": "休息时间跟随你的 RPE"
 },
 "student.restTimerExplanationView.copy002": {
-"en": "Automatically matched to your logged RPE: 2 minutes below RPE 7, 3 minutes from RPE 7 to below 9, and 4 minutes at RPE 9 or above.",
-"zh": "按你记录的 RPE 自动匹配：RPE 低于 7 为 2 分钟，7 至 9 以下为 3 分钟，9 及以上为 4 分钟。"
+"en": "Your logged RPE sets the default rest time.",
+"zh": "默认休息时间由你记录的 RPE 决定。"
 },
 "student.restTimerExplanationView.copy003": {
 "en": "Sets with coach-prescribed rest times will use the coach's setting.",
 "zh": "教练指定过休息时长的组，会按教练设定。"
 },
 "student.restTimerExplanationView.copy004": {
-"en": "Change the default under Profile → Rest between sets.",
-"zh": "可在「我的 → 组间休息」修改默认行为。"
+"en": "If your coach set a rest time for a set, that one is used instead.",
+"zh": "如果教练为某组设置了休息时间，则优先使用教练设置的时长。"
 },
 "student.restTimerExplanationView.copy005": {
 "en": "Got it",
