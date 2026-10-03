@@ -1,0 +1,41 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "0taxwzd",
+  "seq": 5,
+  "count": 52,
+  "targets": [
+    "e22|tap|button|Chenxi Wang, 3 videos awaiting feedback · 2 hours ago||coach.inbox.chat.00000000-0000-0000-0000-000000000004",
+    "e26|tap|button|Chenxi Wang, 3 videos awaiting feedback||coach.inbox.video.00000000-0000-0000-0000-000000000004",
+    "e29|tap|button|Jianing Li, 2 videos awaiting feedback · 5 hours ago||coach.inbox.chat.00000000-0000-0000-0000-000000000008",
+    "e33|tap|button|Jianing Li, 2 videos awaiting feedback||coach.inbox.video.00000000-0000-0000-0000-000000000008",
+    "e36|tap|button|张以恒, 1 video awaiting feedback · 1 day ago||coach.inbox.chat.00000000-0000-0000-0000-000000000002",
+    "e39|tap|button|张以恒, 1 video awaiting feedback||coach.inbox.video.00000000-0000-0000-0000-000000000002",
+    "e45|tap|button|Today||",
+    "e46|tap|button|Messages||",
+    "e49|tap|button|Students||",
+    "e52|tap|button|Profile||"
+  ],
+  "scroll": [
+    "e18|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e20|text|text|Messages & Videos · 8||",
+    "e21|text|text|Messages||",
+    "e23|text|text|Chenxi Wang||",
+    "e28|text|text|3||",
+    "e24|text|text|3 videos awaiting feedback · 2 hours ago||",
+    "e30|text|text|Jianing Li||",
+    "e35|text|text|2||",
+    "e31|text|text|2 videos awaiting feedback · 5 hours ago||",
+    "e37|text|text|张以恒||",
+    "e41|text|text|1||",
+    "e38|text|text|1 video awaiting feedback · 1 day ago||",
+    "e42|text|text|Tap a name to chat · Tap the black count to review videos||",
+    "e47|text|text|8||",
+    "e50|text|text|1||",
+    "e48|text|text|Messages||",
+    "e51|text|text|Students||"
+  ],
+  "udid": "D412AE31-0ED9-4A23-B0FD-FFFA4A5A5609"
+}

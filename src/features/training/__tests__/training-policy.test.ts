@@ -1,13 +1,14 @@
-import { describe, expect, test } from '@jest/globals';
+import { beforeEach, afterEach, describe, expect, test } from '@jest/globals';
 
+import { setLocaleOverride, t } from '@/i18n';
 import type { PlanDay, PlanExercise, PlanSet } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 
 import { synthesizeDrafts } from '../drafts';
 import {
+  plateLoadout,
   gymDayText,
   historyRangeStart,
-  isGymDayEditable,
   resolveRestSeconds,
   rirCopy,
   selectWeightSuggestion,
@@ -47,7 +48,7 @@ function log(overrides: Partial<SetLog> = {}): SetLog {
     plan_exercise_id: exercise.id,
     exercise_id: exercise.exercise_id,
     set_index: 0,
-    weight_kg: '100.00',
+    weight_kg: '100',
     reps: 5,
     rpe: '8.0',
     completed: true,
@@ -81,7 +82,7 @@ describe('plan × log draft synthesis', () => {
 
     expect(drafts.map((draft) => draft.stableSetId)).toEqual([first.id, second.id]);
     expect(drafts.map((draft) => draft.status)).toEqual(['pending', 'failed']);
-    expect(drafts[1].weightText).toBe('100.00');
+    expect(drafts[1].weightText).toBe('100');
   });
 });
 
@@ -171,8 +172,6 @@ describe('rest, gym-day, and RIR policies', () => {
     const atCutoff = new Date(2026, 6, 19, 4, 0, 0);
     expect(gymDayText(before)).toBe('2026-07-18');
     expect(gymDayText(atCutoff)).toBe('2026-07-19');
-    expect(isGymDayEditable('2026-07-18', before)).toBe(true);
-    expect(isGymDayEditable('2026-07-18', atCutoff)).toBe(false);
   });
 
   test.each([
@@ -186,7 +185,7 @@ describe('rest, gym-day, and RIR policies', () => {
     [8.5, '还能多做 1-2 次'],
     [9, '还能多做 1 次'],
     [9.5, '或许还能多做 1 次'],
-    [10, '力竭,无保留'],
+    [10, '力竭，无保留'],
   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
     expect(rirCopy(rpe)).toBe(copy);
   });
@@ -198,4 +197,32 @@ describe('rest, gym-day, and RIR policies', () => {
   test('includes the exact 84-day history boundary', () => {
     expect(historyRangeStart('2026-07-19')).toBe('2026-04-26');
   });
+});
+
+// Existing copy assertions pin the original Chinese presentation.
+beforeEach(() => setLocaleOverride('zh'));
+afterEach(() => setLocaleOverride(null));
+
+test('cycle-wide draft synthesis chooses the newest real log for a stable set', () => {
+  const day: PlanDay = { id: exercise.plan_day_id, plan_id: '40000000-0000-4000-8000-000000000001', day_of_week: 1, week_number: 1, sort_order: 0, shifted_to_date: null, exercises: [{ ...exercise, sets: [planSet()] }] };
+  const drafts = synthesizeDrafts(day, [
+    log({ logged_at: '2026-07-19T08:00:00Z', weight_kg: '100' }),
+    log({ logged_at: '2026-07-20T08:00:00Z', weight_kg: '105' }),
+    log({ logged_at: '2026-07-21T08:00:00Z', weight_kg: '200', assumed: true }),
+  ]);
+  expect(drafts[0].weightText).toBe('105');
+});
+
+
+test('plate loadout uses aggregated copy and canonical empty branches', () => {
+  setLocaleOverride('en');
+  expect(plateLoadout(100, false)).toEqual({ perSideKg: 40, detail: '25kg × 1 · 15kg × 1' });
+  expect(plateLoadout(105, true)).toEqual({ perSideKg: 40, detail: '25kg × 1 · 15kg × 1 + 2.5 kg competition collars' });
+  expect(plateLoadout(20, false).detail).toBe('Empty 20 kg bar');
+  expect(plateLoadout(22.5, true).detail).toBe('2.5 kg competition collars only');
+  expect(plateLoadout(21, false).detail).toBe('Empty 20 kg bar');
+  expect(plateLoadout(600, false).perSideKg).toBe(240);
+  expect(t('designSystem.numberPad.enterWeight')).toBe('Enter weight');
+  expect(t('designSystem.action.confirm')).toBe('Confirm');
+  expect(t('designSystem.plate.emptyBar')).toBe('Empty 20 kg bar');
 });

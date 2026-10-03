@@ -94,6 +94,13 @@ afterEach(() => {
 });
 
 describe('API error classification', () => {
+  test('preserves CHAT_BIND_REQUIRED so student chat can show binding-invalidated copy', async () => {
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(403, { error: 'CHAT_BIND_REQUIRED' }));
+    await expect(apiRequest('/conversations', { method: 'POST' })).rejects.toMatchObject({
+      kind: 'backend', status: 403, code: 'CHAT_BIND_REQUIRED',
+    });
+  });
+
   test('parses a known backend error envelope', async () => {
     jest.mocked(fetch).mockResolvedValueOnce(
       mockResponse(400, {

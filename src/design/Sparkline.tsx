@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { colors } from './tokens';
+import { useColors } from './theme';
 
 export type SparklineDatum = {
   /** Monotonic domain value, normally a timestamp. */
@@ -66,11 +66,12 @@ export function buildStepSparklinePath(
 export function Sparkline({
   data,
   height = 110,
-  lineColor = colors.fgPrimary,
+  lineColor,
   lineWidth = 1.5,
   showEndDot = true,
   showPointDots = true,
 }: SparklineProps) {
+  const colors = useColors();
   const geometry = useMemo(() => buildStepSparklinePath(data), [data]);
   if (geometry.points.length === 0) {
     return null;
@@ -87,7 +88,7 @@ export function Sparkline({
         <Path
           d={geometry.d}
           fill="none"
-          stroke={lineColor}
+          stroke={lineColor ?? colors.textPrimary}
           strokeLinejoin="round"
           strokeWidth={lineWidth}
         />
@@ -96,7 +97,7 @@ export function Sparkline({
               <Circle
                 cx={point.x}
                 cy={point.y}
-                fill={lineColor}
+                fill={lineColor ?? colors.textPrimary}
                 key={`${point.x}-${point.y}-${index}`}
                 opacity={0.55}
                 r={2}
@@ -104,7 +105,7 @@ export function Sparkline({
             ))
           : null}
         {showEndDot ? (
-          <Circle cx={last.x} cy={last.y} fill={colors.brandRed} r={4} />
+          <Circle cx={last.x} cy={last.y} fill={colors.gold500} r={4} />
         ) : null}
       </Svg>
     </View>

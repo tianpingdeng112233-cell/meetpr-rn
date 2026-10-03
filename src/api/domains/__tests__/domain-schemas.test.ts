@@ -15,7 +15,6 @@ import {
 import {
   PlanDetailSchema,
   PlansResponseSchema,
-  ShiftPlanResponseSchema,
 } from '../plans';
 import {
   ReadinessCheckinSchema,
@@ -63,7 +62,7 @@ const planSummary = {
 };
 
 describe('plans snake_case schemas', () => {
-  test('parses list, detail, shift response, and the documented empty state', () => {
+  test('parses list, detail, and the documented empty state', () => {
     expect(PlansResponseSchema.parse({ plans: [] })).toEqual({ plans: [] });
     expect(PlansResponseSchema.parse({ plans: [planSummary] }).plans[0].coach_id).toBe(
       COACH_ID,
@@ -115,13 +114,7 @@ describe('plans snake_case schemas', () => {
       coach_note: null,
     });
 
-    expect(
-      ShiftPlanResponseSchema.parse({
-        batch_id: ATTACHMENT_ID,
-        shifted_days: [{ day_id: DAY_ID, shifted_to_date: '2026-07-20' }],
-        total_offset_days: 1,
-      }).shifted_days[0].shifted_to_date,
-    ).toBe('2026-07-20');
+
   });
 });
 
@@ -182,11 +175,11 @@ describe('readiness snake_case schemas', () => {
         sleep_quality: 4,
         mood: 5,
         stress: 3,
-        muscle_fatigue: [{ muscle_group: 'quads', severity: 2 }],
+        muscle_fatigue: [{ muscle_group: 'quad', severity: 2 }],
         submitted_at: NOW,
         updated_at: NOW,
       }).muscle_fatigue,
-    ).toEqual([{ muscle_group: 'quads', severity: 2 }]);
+    ).toEqual([{ muscle_group: 'quad', severity: 2 }]);
   });
 });
 

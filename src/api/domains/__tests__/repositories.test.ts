@@ -9,7 +9,6 @@ import { resetSessionForTests } from '../../session';
 jest.mock('expo-secure-store');
 
 const STUDENT_ID = '10000000-0000-4000-8000-000000000000';
-const PLAN_ID = '30000000-0000-4000-8000-000000000000';
 const PLAN_EXERCISE_ID = '50000000-0000-4000-8000-000000000000';
 const SET_ID = '70000000-0000-4000-8000-000000000000';
 const BATCH_ID = '80000000-0000-4000-8000-000000000000';
@@ -44,25 +43,27 @@ afterEach(() => {
 });
 
 describe('domain repositories through authenticatedRequest', () => {
-  test('POSTs plan shift with no body and parses the snake_case response', async () => {
-    jest.mocked(fetch).mockResolvedValueOnce(
-      mockResponse(201, {
-        batch_id: BATCH_ID,
-        shifted_days: [{ day_id: SET_ID, shifted_to_date: '2026-07-20' }],
-        total_offset_days: 1,
-      }),
-    );
-
-    await expect(plansRepository.shift(PLAN_ID)).resolves.toMatchObject({
-      batch_id: BATCH_ID,
-      total_offset_days: 1,
-    });
-
+  test('completes a day and undoes through the completion endpoint', async () => {
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(200, { id: BATCH_ID, plan_day_id: SET_ID, student_id: STUDENT_ID, source: 'manual', completed_at: NOW }));
+    await expect(plansRepository.completeDay(SET_ID)).resolves.toMatchObject({ plan_day_id: SET_ID, completed_at: NOW });
     const [url, init] = jest.mocked(fetch).mock.calls[0];
-    expect(String(url)).toContain(`/plans/${PLAN_ID}/shift`);
+    expect(String(url)).toContain(`/plans/days/${SET_ID}/complete`);
     expect(init?.method).toBe('POST');
     expect(init?.body).toBeUndefined();
     expect(requestHeaders(init).authorization).toBe('Bearer access-token');
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(204));
+    await expect(plansRepository.undoDayCompletion(SET_ID)).resolves.toBeUndefined();
+    expect(jest.mocked(fetch).mock.calls[1][1]?.method).toBe('DELETE');
+  });
+
+  test('undo converges silently when there is no completion to undo', async () => {
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(409, { error: 'NO_COMPLETION_TO_UNDO' }));
+    await expect(plansRepository.undoDayCompletion(SET_ID)).resolves.toBeUndefined();
+  });
+
+  test.each(['UNDO_WINDOW_PASSED', 'NOT_LATEST_COMPLETION'] as const)('undo preserves %s for localized feedback', async code => {
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(409, { error: code }));
+    await expect(plansRepository.undoDayCompletion(SET_ID)).rejects.toMatchObject({ code, status: 409 });
   });
 
   test('POSTs strict snake_case set-log body and parses its two-field response', async () => {
@@ -112,6 +113,14 @@ describe('domain repositories through authenticatedRequest', () => {
     expect(parsed.searchParams.get('from')).toBe('1970-01-01');
     expect(parsed.searchParams.get('to')).toBe('2026-07-19');
     expect(parsed.searchParams.has('scope')).toBe(false);
+  });
+
+  test('refetched backfills retain their actual date at local noon while live timestamps remain exact', async () => {
+    const serverTime = new Date(2026, 8, 21, 10, 30).toISOString();
+    const base = { id: SET_ID, student_id: STUDENT_ID, plan_exercise_id: PLAN_EXERCISE_ID, exercise_id: PLAN_EXERCISE_ID, set_index: 0, weight_kg: '100', reps: 5, rpe: '8', completed: true, failed: false, assumed: false, adhoc: false, logged_at: serverTime };
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(200, { logs: [{ ...base, logged_date: '2026-09-19' }, { ...base, logged_date: '2026-09-21' }] }));
+    const result = await setsRepository.range(STUDENT_ID, { from: '2026-09-01', to: '2026-09-22' });
+    expect(result.logs.map(log => log.logged_at)).toEqual([new Date(2026, 8, 19, 12).toISOString(), serverTime]);
   });
 
   test('maps onboarding 404 to the null query empty state', async () => {

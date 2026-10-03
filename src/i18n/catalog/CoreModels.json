@@ -1,0 +1,22 @@
+{
+"coreModels.setReference.loggedTag": {
+"en": "[Training share]",
+"zh": "[训练分享]"
+},
+"coreModels.setReference.plannedMarker": {
+"en": " planned",
+"zh": " 计划"
+},
+"coreModels.setReference.plannedTag": {
+"en": "[Training plan]",
+"zh": "[训练计划]"
+},
+"coreModels.setReference.set %@": {
+"en": "Set %@",
+"zh": "第%@组"
+},
+"coreModels.setReference.set %@ of %@": {
+"en": "Set %@ of %@",
+"zh": "第%@组/%@"
+}
+}

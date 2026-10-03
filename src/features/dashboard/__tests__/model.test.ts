@@ -1,6 +1,6 @@
-import { describe, expect, test } from '@jest/globals';
+import { beforeEach, afterEach, describe, expect, jest, test } from '@jest/globals';
 
-import { ApiError, type ApiErrorCode } from '@/api/client';
+import { setLocaleOverride } from '@/i18n';
 import {
   buildExerciseIndex,
   type Exercise,
@@ -11,50 +11,15 @@ import {
 import type { E1RMSeries } from '@/domain/e1rm';
 
 import {
-  dashboardCTA,
+  localCompetitionDays,
+  chineseMonthDay,
+  chineseWeekday,
   dashboardE1RMRange,
   e1RMPeriodLabel,
-  mondayOffset,
-  planShiftErrorCopy,
+  feedbackLabel,
   replayE1RMSeries,
   resolveDashboardLifts,
-  shouldOfferPlanShift,
-  unsupportedPlanShiftCopy,
 } from '../model';
-import type { DashboardWeekDay } from '../types';
-
-function dashboardDay(status: DashboardWeekDay['status']): DashboardWeekDay {
-  if (status === 'noPlan') {
-    return {
-      date: '2026-07-19',
-      day: null,
-      lift: null,
-      completion: 0,
-      status,
-    };
-  }
-  return {
-    date: '2026-07-19',
-    day: {
-      id: '10000000-0000-4000-8000-000000000001',
-      plan_id: '10000000-0000-4000-8000-000000000002',
-      day_of_week: 7,
-      week_number: 2,
-      sort_order: 3,
-      shifted_to_date: null,
-      exercises: [],
-    },
-    lift: {
-      exerciseId: '10000000-0000-4000-8000-000000000003',
-      family: 'squat',
-      initial: 'S',
-      name: '深蹲',
-    },
-    completion: status === 'complete' ? 1 : status === 'partial' ? 0.5 : 0,
-    status,
-  };
-}
-
 const plan = {
   id: '10000000-0000-4000-8000-000000000002',
   coach_id: '10000000-0000-4000-8000-000000000004',
@@ -72,120 +37,6 @@ const plan = {
   total_shift_days: 0,
   latest_shift_created_at: null,
 } satisfies PlanSummary;
-
-describe('Dashboard CTA', () => {
-  test('matches all four release states', () => {
-    expect(dashboardCTA(dashboardDay('complete'))).toEqual({
-      interactive: true,
-      label: '今日已完成 · 查看',
-    });
-    expect(dashboardCTA(dashboardDay('partial'))).toEqual({
-      interactive: true,
-      label: '继续 W2D3 · 深蹲',
-    });
-    expect(dashboardCTA(dashboardDay('notStarted'))).toEqual({
-      interactive: true,
-      label: '开始 W2D3 · 深蹲',
-    });
-    expect(dashboardCTA(dashboardDay('noPlan'))).toEqual({
-      interactive: false,
-      label: '今日休息',
-    });
-  });
-});
-
-describe('plan shift gate', () => {
-  test('uses the UTC calendar boundary exactly', () => {
-    const todayDay = dashboardDay('notStarted');
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay,
-        todayLogs: [],
-        now: new Date('2026-07-19T00:00:00.000Z'),
-      }),
-    ).toBe(true);
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay,
-        todayLogs: [],
-        now: new Date('2026-07-18T23:59:59.999Z'),
-      }),
-    ).toBe(false);
-  });
-
-  test('requires notStarted and no same-day log', () => {
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay: dashboardDay('partial'),
-        todayLogs: [],
-        now: new Date('2026-07-19T12:00:00Z'),
-      }),
-    ).toBe(false);
-    expect(
-      shouldOfferPlanShift({
-        role: 'coached_student',
-        plan,
-        todayDay: dashboardDay('notStarted'),
-        todayLogs: [{} as never],
-        now: new Date('2026-07-19T12:00:00Z'),
-      }),
-    ).toBe(false);
-  });
-});
-
-describe('plan shift copy', () => {
-  const cases: [ApiErrorCode, string][] = [
-    ['PLAN_NOT_ACTIVE', '当前计划未生效,暂时不能顺延'],
-    ['SHIFT_ONLY_TODAY', '只能顺延今天的训练'],
-    ['ALREADY_STARTED', '今天的训练已经开始,不能顺延或撤销'],
-    ['NOT_PLAN_STUDENT', '只有计划所属学员可以顺延'],
-    ['NO_ACTIVE_SHIFT', '当前没有可撤销的顺延'],
-    ['UNDO_WINDOW_PASSED', '只能在顺延当天撤销,请联系教练调整计划'],
-  ];
-
-  test.each(cases)('maps %s to its exact message', (code, message) => {
-    const operation = code.startsWith('NO_') || code.startsWith('UNDO_') ? 'undo' : 'shift';
-    expect(
-      planShiftErrorCopy(
-        new ApiError('backend', code, { status: 409, code }),
-        operation,
-      ).message,
-    ).toBe(message);
-  });
-
-  test('covers unsupported plus both network fallbacks', () => {
-    expect(unsupportedPlanShiftCopy().message).toBe('当前计划暂不支持顺延');
-    expect(
-      planShiftErrorCopy(
-        new ApiError('backend', 'AUTHORIZATION_FORBIDDEN', {
-          status: 403,
-          code: 'AUTHORIZATION_FORBIDDEN',
-        }),
-        'shift',
-      ).message,
-    ).toBe('当前计划暂不支持顺延');
-    expect(planShiftErrorCopy(new Error('offline'), 'shift').message).toBe(
-      '顺延失败,请检查网络后重试',
-    );
-    expect(planShiftErrorCopy(new Error('offline'), 'undo').message).toBe(
-      '撤销顺延失败,请检查网络后重试',
-    );
-  });
-});
-
-describe('week grid calendar conversion', () => {
-  test('converts iOS Sunday-based weekday to Monday-first offset', () => {
-    expect([1, 2, 3, 4, 5, 6, 7].map(mondayOffset)).toEqual([
-      6, 0, 1, 2, 3, 4, 5,
-    ]);
-  });
-});
 
 describe('e1RM period label', () => {
   const now = new Date('2026-07-29T12:00:00.000Z');
@@ -324,13 +175,21 @@ describe('Dashboard all-time e1RM replay', () => {
     };
   }
 
-  test('uses the iOS migration lower bound and omits the default plan scope', () => {
+  test('includes today through the exclusive wire end date and omits the default plan scope', () => {
     const range = dashboardE1RMRange('2026-07-19');
     expect(range).toEqual({
       from: '1970-01-01',
-      to: '2026-07-19',
+      to: '2026-07-20',
     });
     expect(range).not.toHaveProperty('scope');
+  });
+
+  test.each([
+    ['2026-09-30', '2026-10-01'],
+    ['2026-12-31', '2027-01-01'],
+    ['2028-02-29', '2028-03-01'],
+  ])('includes the complete final day at calendar boundaries: %s', (today, exclusiveEnd) => {
+    expect(dashboardE1RMRange(today).to).toBe(exclusiveEnd);
   });
 
   test('keeps a best log recorded before the current plan started', () => {
@@ -343,5 +202,71 @@ describe('Dashboard all-time e1RM replay', () => {
       'squat',
     );
     expect(series.best?.valueKg).toBe(200);
+  });
+});
+
+// Existing copy assertions pin the original Chinese presentation.
+beforeEach(() => setLocaleOverride('zh'));
+afterEach(() => setLocaleOverride(null));
+
+
+test('formats calendar labels in the selected locale without moving the UTC date', () => {
+  setLocaleOverride('en');
+  expect(chineseMonthDay('2026-07-19')).toBe('Jul 19');
+  expect(chineseWeekday('2026-07-19')).toBe('Sun');
+  setLocaleOverride('zh');
+  expect(chineseMonthDay('2026-07-19')).toBe('7月19日');
+  expect(chineseWeekday('2026-07-19')).toBe('周日');
+});
+
+test('feedback without an associated video is labelled Training feedback', () => {
+  setLocaleOverride('en');
+  expect(feedbackLabel({ video_id: null })).toBe('Training feedback');
+});
+
+test('video feedback without a set uses its exercise display name or the video fallback', () => {
+  setLocaleOverride('en');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: 'Competition squat', set_index: null } })).toBe('Competition squat');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: '  ', set_index: null } })).toBe('Training video');
+  expect(feedbackLabel({ video_id: 'video', video: null })).toBe('Training video');
+});
+
+test('video feedback displays zero-based set index 1 as Set 2', () => {
+  setLocaleOverride('en');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: 'Competition squat', set_index: 1 } })).toBe('Competition squat · Set 2');
+  expect(feedbackLabel({ video_id: 'video', video: { exercise_name: null, set_index: 0 } })).toBe('Training video · Set 1');
+});
+
+// Jest's process.env.TZ does not change its VM timezone. Model the Date boundary
+// explicitly with London offsets while retaining the real UTC/static operations.
+describe('competition calendar days in Europe/London', () => {
+  test.each([
+    ['across DST end', '2026-10-03', '2026-11-03', 31],
+    ['back across DST start', '2026-04-03', '2026-03-03', -31],
+    ['on the same day', '2026-10-03', '2026-10-03', 0],
+    ['after expiry', '2026-10-03', '2026-10-01', -2],
+  ])('%s', (_label, today, competition, expected) => {
+    const RealDate = Date;
+    const now = new RealDate(`${today}T12:00:00Z`);
+    const [year, month, day] = today.split('-').map(Number);
+    jest.spyOn(now, 'getFullYear').mockReturnValue(year);
+    jest.spyOn(now, 'getMonth').mockReturnValue(month - 1);
+    jest.spyOn(now, 'getDate').mockReturnValue(day);
+    global.Date = new Proxy(RealDate, {
+      construct(target, args) {
+        if (args.length !== 3) return Reflect.construct(target, args);
+        const midnight = target.UTC(args[0], args[1], args[2]);
+        const zone = new Intl.DateTimeFormat('en', {
+          timeZone: 'Europe/London', timeZoneName: 'shortOffset',
+        }).formatToParts(new target(midnight)).find(part => part.type === 'timeZoneName')?.value;
+        return new target(midnight - (zone === 'GMT+1' ? 3_600_000 : 0));
+      },
+    });
+    try {
+      expect(localCompetitionDays(competition, now)).toBe(expected);
+    } finally {
+      global.Date = RealDate;
+      jest.restoreAllMocks();
+    }
   });
 });

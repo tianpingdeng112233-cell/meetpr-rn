@@ -1,0 +1,29 @@
+{
+  "at": "2026-09-23T11:12:26.359370+00:00",
+  "records": [
+    {
+      "status": "uploaded",
+      "progress": 1,
+      "sizeBytes": 350912,
+      "prepared": false,
+      "attachmentId": "5090ebdb-e938-495f-a28d-214cd521e1d4",
+      "setLogId": "eb5407ce-7031-48ed-8012-c96fe63c4686",
+      "errorMessage": null,
+      "retry": null,
+      "parts": [],
+      "partCount": 0
+    },
+    {
+      "status": "uploaded",
+      "progress": 1,
+      "sizeBytes": 23908878,
+      "prepared": true,
+      "attachmentId": "eb392051-f70c-4cb9-82cd-f9ff095bafe3",
+      "setLogId": "66c09406-4886-4da9-afff-bce24612bfdd",
+      "errorMessage": null,
+      "retry": null,
+      "parts": [],
+      "partCount": 0
+    }
+  ]
+}

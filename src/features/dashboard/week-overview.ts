@@ -7,11 +7,8 @@ import {
   type PlanDetail,
 } from '@/api/domains';
 
-import {
-  buildDashboardWeekDays,
-  effectivePlanEnd,
-  weekWindow,
-} from './model';
+import { buildDashboardWeekDays } from './model';
+import { planLogRange, recommendedDate } from '@/domain/plan/sequence';
 import type { WeekOverviewState } from './types';
 
 export type WeekOverviewViewModel = {
@@ -19,11 +16,6 @@ export type WeekOverviewViewModel = {
   reload: () => Promise<unknown>;
 };
 
-/**
- * Fetches the entire plan cycle, then projects only the requested UTC week.
- * planRevision is deliberately consumed here so shifts reload this VM even
- * when a parent screen remains mounted.
- */
 export function useWeekOverviewViewModel(
   studentId: string,
   plan: PlanDetail | null,
@@ -32,11 +24,7 @@ export function useWeekOverviewViewModel(
   exerciseIndex: ReadonlyMap<string, Exercise>,
   onboarding: OnboardingProfile | null,
 ): WeekOverviewViewModel {
-  const range = {
-    from: plan?.start_date ?? '1970-01-01',
-    to: plan ? effectivePlanEnd(plan) : '1970-01-01',
-    scope: 'plan' as const,
-  };
+  const range = plan ? planLogRange(plan) : { from: '1970-01-01', to: '1970-01-01', scope: 'plan' as const };
   const query = useSetLogs(studentId, range, Boolean(plan));
   const previousRevision = useRef(planRevision);
 
@@ -57,10 +45,9 @@ export function useWeekOverviewViewModel(
     if (query.isError || !query.data) {
       return { status: 'error', error: query.error };
     }
-    const { start, endExclusive } = weekWindow(plan, weekIndex);
-    const logs = query.data.logs.filter(
-      (log) => log.logged_date >= start && log.logged_date < endExclusive,
-    );
+    const start = recommendedDate(plan, { week_number: weekIndex, day_of_week: 1 });
+    const endExclusive = recommendedDate(plan, { week_number: weekIndex + 1, day_of_week: 1 });
+    const logs = query.data.logs;
     return {
       status: 'loaded',
       plan,

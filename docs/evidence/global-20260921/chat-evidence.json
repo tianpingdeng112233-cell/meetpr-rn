@@ -1,0 +1,27 @@
+{
+  "conversation_id": "6b82f1a5-1ecf-4523-b82e-a9e063d85754",
+  "student_message_verified": true,
+  "coach_reply_id": "d7e73979-560e-47f8-a179-e453e7f6cb18",
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/auth/email/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/conversations",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/conversations/6b82f1a5-1ecf-4523-b82e-a9e063d85754/messages",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/conversations/6b82f1a5-1ecf-4523-b82e-a9e063d85754/messages",
+      "status": 201
+    }
+  ]
+}

@@ -12,9 +12,9 @@ export function dashboardPlanSeenKey(studentId: string): string {
 }
 
 export function dashboardPlanSignature(
-  plan: Pick<PlanSummary, 'id' | 'created_at'>,
+  plan: Pick<PlanSummary, 'id' | 'created_at' | 'published_at'>,
 ): DashboardPlanSignature {
-  return { planId: plan.id, publishedAt: plan.created_at };
+  return { planId: plan.id, publishedAt: plan.published_at ?? plan.created_at };
 }
 
 export function dashboardPlanSignatureKey(

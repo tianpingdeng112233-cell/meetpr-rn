@@ -126,3 +126,40 @@
 3. E1RM 门=空门+算法移植,无 UI 选择流。
 4. MyProfile 以分组 reskin 版为准。
 5. Onboarding step6 上传禁用态照抄(「即将开放」),不接上传。
+
+## 附 B:Onboarding 线值枚举(⚖️2026-09-04 补,权威 = backend `src/db/types.ts` + iOS CoreModels/Enums @ release/1.0)
+
+> 参照包 v1 只列了字段名没列枚举值,w1i 首版因此自造了中文/自定义线值。**线值一律用下表 token,UI 标签只做显示映射。**
+
+| 字段 | 线值(逐字) | 备注 |
+|---|---|---|
+| `unit_preference` | `kg` / `lb` | 不是 metric/imperial |
+| `gender` | `male` / `female` / `other` | |
+| `squat_stance` | `high_bar` / `low_bar` | |
+| `deadlift_style` | `conventional` / `sumo` / `both` | |
+| `bench_grip` | `narrow` / `standard` / `wide` / null | 选填 |
+| `training_days` | `mon` `tue` `wed` `thu` `fri` `sat` `sun`(字符串数组) | 不是 1-7 整数 |
+| `gym_tier` | `home_with_rack` / `commercial` / `professional` | UI 标签 家庭(含深蹲架)/商业健身房/专业力量馆 |
+| `equipment_overrides` | 见下表 token 数组 | 换场馆时 prefill = 所有 `tiers` 含该场馆的 token |
+| `daily_life_intensity` `life_stress` `recovery_speed` `sleep_hours` | 1–5 整数 notch | sleep 标签 ≤5h/6h/7h/8h/9h+ 仅显示,线上传 notch |
+| `muscle_groups_to_strengthen` | `quad` `hamstring` `glute` `back` `chest` `shoulder` `triceps` `biceps` `core` `calf` | iOS 向导只提供这 10 个,max 3 |
+| `injury_areas` | `shoulder` `elbow` `wrist` `lower_back` `hip` `knee` `ankle` `other` | max 8 |
+
+器械 catalog(token · 分组 · 出现在哪些场馆;prefill(tier) = tiers 含 tier 的全部 token):
+
+| token | group | tiers |
+|---|---|---|
+| `barbell_dumbbell` | basics | 全部 |
+| `squat_bench_rack` | basics | 全部 |
+| `pullup_bar` | basics | 全部 |
+| `db_max_20` | dumbbellMax | home_with_rack |
+| `db_max_40` | dumbbellMax | commercial, professional |
+| `db_max_40_plus` | dumbbellMax | (无预填,可选) |
+| `smith_machine` | machines | commercial |
+| `cable_crossover` `lat_pulldown` `leg_press_machine` `leg_curl_extension` `seated_row` `landmine` | machines | commercial, professional |
+| `seal_row` `hack_squat` | machines | professional |
+| `power_bar_stiff` `deadlift_bar` `safety_bar` `fractional_plates` `lifting_platform` `rack_pins_blocks` `chains_bands` `ghr` `belt_squat` | powerlifting | professional |
+
+- dumbbellMax 组在 iOS 是单选(三档互斥),其余组多选 chip;器械区按 基础 / 哑铃最大重量 / 固定器械 / 力量举专项 四段展示。**四段始终展示该组全部 token,不按场馆过滤**(`EquipmentCatalog.items(in: group)`);`tiers` 只决定换场馆时的预填(⚖️2026-09-04 勘误:首版附 B 误写为「只展示 tiers 含当前场馆的 token」)。
+- 显示未知 token(老数据 `heavy_dumbbells` `blocks_chains_bands` `reverse_hyper` `cable_lat_pulldown`)时回落 token 原文,不丢弃。
+- **1RM 估算器**:iOS `OneRMEstimator` = `E1RMCalculator.calculate(weightKg, reps, rpe)`(RTS 表)→ 0.5 kg 取整;保守值 = 原值×0.9 再 0.5 取整。RN 必须复用 `@/domain/e1rm` 的 `calculateE1RM`,禁止另写 Epley。

@@ -1,0 +1,32 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "08iwcim",
+  "seq": 84,
+  "count": 43,
+  "targets": [
+    "e15|tap|button|Back||BackButton",
+    "e27|tap|tab|||",
+    "e28|tap|tab|Automatic (by RPE)|1|",
+    "e29|tap|tab|Set manually|0|",
+    "e40|tap|button|Today||",
+    "e41|tap|button|Training||",
+    "e42|tap|button|Progress||",
+    "e43|tap|button|Profile||"
+  ],
+  "scroll": [
+    "e21|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e26|text|text|Default behavior||",
+    "e30|text|text|Automatic rules||",
+    "e31|text|text|RPE below 7||",
+    "e32|text|text|2 minutes||",
+    "e33|text|text|RPE 7 to below 9||",
+    "e34|text|text|3 minutes||",
+    "e35|text|text|RPE 9 or above||",
+    "e36|text|text|4 minutes||",
+    "e37|text|text|Rest times set by your coach always take priority. This setting only changes the default when your coach has not set one.||"
+  ],
+  "udid": "A5119984-9A8D-415C-83D4-E7145351FA79"
+}

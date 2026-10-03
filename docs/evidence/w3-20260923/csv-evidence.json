@@ -1,0 +1,17 @@
+{
+  "synthetic_local_only": true,
+  "header": "date,exercise,exercise_en,set_index,weight_kg,reps,rpe,completed,failed,adhoc",
+  "rows": 36,
+  "sample": {
+    "date": "2026-09-07",
+    "exercise": "Squat",
+    "exercise_en": "Squat",
+    "set_index": "0",
+    "weight_kg": "140",
+    "reps": "5",
+    "rpe": "8",
+    "completed": "true",
+    "failed": "false",
+    "adhoc": "false"
+  }
+}

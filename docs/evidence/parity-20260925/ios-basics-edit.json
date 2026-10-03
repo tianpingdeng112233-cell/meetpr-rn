@@ -1,0 +1,37 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "1y4tbz5",
+  "seq": 103,
+  "count": 56,
+  "targets": [
+    "e41|typeText|text-field||178|",
+    "e44|typeText|text-field||83|",
+    "e15|tap|button|Back||BackButton",
+    "e27|tap|tab|||",
+    "e28|tap|tab|Kilograms · Centimeters|1|",
+    "e29|tap|tab|pounds · inches|0|",
+    "e31|tap|button|Male||",
+    "e32|tap|button|Female||",
+    "e33|tap|button|Other||",
+    "e46|tap|button|Save||",
+    "e53|tap|button|Today||",
+    "e54|tap|button|Training||",
+    "e55|tap|button|Progress||",
+    "e56|tap|button|Profile||"
+  ],
+  "scroll": [
+    "e21|swipe|scroll-view|||",
+    "e35|swipe|other|Date of birth||"
+  ],
+  "text": [
+    "e26|text|text|Units||",
+    "e30|text|text|Gender||",
+    "e34|text|text|Date of birth||",
+    "e40|text|text|Height||",
+    "e42|text|text|cm||",
+    "e43|text|text|Body weight||",
+    "e45|text|text|kg||"
+  ],
+  "udid": "A5119984-9A8D-415C-83D4-E7145351FA79"
+}

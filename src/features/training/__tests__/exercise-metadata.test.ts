@@ -1,5 +1,6 @@
-import { describe, expect, test } from '@jest/globals';
+import { beforeEach, afterEach, describe, expect, test } from '@jest/globals';
 
+import { setLocaleOverride } from '@/i18n';
 import type { Exercise } from '@/api/domains/exercises';
 import type { OnboardingProfile } from '@/api/domains/onboarding';
 
@@ -82,4 +83,15 @@ describe('exercise metadata resolver seam', () => {
       competitionFamily: 'deadlift',
     });
   });
+});
+
+// Existing copy assertions pin the original Chinese presentation.
+beforeEach(() => setLocaleOverride('zh'));
+afterEach(() => setLocaleOverride(null));
+
+test('shows canonical English exercise names and falls back only when name_en is null', () => {
+  setLocaleOverride('en');
+  expect(createExerciseMetadataResolver([exercise()], null)(exercise().id)?.name).toBe('High-bar squat');
+  expect(createExerciseMetadataResolver([exercise({ name_en: null })], null)(exercise().id)?.name).toBe('高杠深蹲');
+  expect(exerciseTitle(null)).toBe('Workout');
 });

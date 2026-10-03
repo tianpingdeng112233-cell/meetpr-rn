@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { BUILD_TRACK } from '@/config/build-track';
+import GlobalLoginScreen from '@/features/auth/GlobalLoginScreen';
+
+import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,13 +11,14 @@ import {
   View,
 } from 'react-native';
 
+import { t } from '@/i18n';
 import { ApiError } from '@/api/client';
 import { useSessionStore } from '@/api/session';
 import {
   AppButton,
   Card,
   Screen,
-  colors,
+  useColors, type Colors,
   radius,
   spacing,
   typography,
@@ -22,20 +26,26 @@ import {
 
 function loginErrorMessage(error: unknown): string | null {
   if (!(error instanceof ApiError)) {
-    return error ? '登录失败，请稍后重试' : null;
+    return error ? t('appShell.auth.requestFailed') : null;
   }
 
   switch (error.code) {
     case 'AUTH_INVALID_CREDENTIALS':
-      return '手机号或密码不正确';
+      return t('appShell.auth.invalidCredentials');
     case 'RATE_LIMITED':
-      return '尝试过于频繁，请稍后再试';
+      return t('appShell.auth.rateLimited');
     default:
-      return '登录失败，请稍后重试';
+      return t('appShell.auth.requestFailed');
   }
 }
 
-export default function LoginScreen() {
+export default function LoginRoute() {
+  return BUILD_TRACK === 'global' ? <GlobalLoginScreen /> : <LoginScreen />;
+}
+
+function LoginScreen() {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const login = useSessionStore((state) => state.login);
   const authenticationError = useSessionStore((state) => state.authenticationError);
   const [phone, setPhone] = useState('');
@@ -55,33 +65,33 @@ export default function LoginScreen() {
         <View style={styles.content}>
           <View style={styles.heading}>
             <Text style={styles.title}>MeetPR</Text>
-            <Text style={styles.subtitle}>登录你的训练账户</Text>
+            <Text style={styles.subtitle}>{t('appShell.login.instructions')}</Text>
             <View style={styles.accent} />
           </View>
 
           <Card style={styles.card}>
             <View style={styles.field}>
-              <Text style={styles.label}>手机号</Text>
+              <Text style={styles.label}>{t('appShell.auth.phoneNumber')}</Text>
               <TextInput
                 autoCapitalize="none"
                 autoComplete="tel"
                 keyboardType="phone-pad"
                 onChangeText={setPhone}
-                placeholder="请输入手机号"
-                placeholderTextColor={colors.fgTertiary}
+                placeholder={t('appShell.auth.phoneInputHint')}
+                placeholderTextColor={colors.textTertiary}
                 style={styles.input}
                 value={phone}
               />
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>密码</Text>
+              <Text style={styles.label}>{t('appShell.auth.password')}</Text>
               <TextInput
                 autoCapitalize="none"
                 autoComplete="password"
                 onChangeText={setPassword}
-                placeholder="请输入密码"
-                placeholderTextColor={colors.fgTertiary}
+                placeholder={t('appShell.auth.passwordInputHint')}
+                placeholderTextColor={colors.textTertiary}
                 secureTextEntry
                 style={styles.input}
                 value={password}
@@ -96,7 +106,7 @@ export default function LoginScreen() {
 
             <AppButton
               disabled={!phone.trim() || !password}
-              label="登录"
+              label={t('appShell.login.signIn')}
               onPress={handleLogin}
             />
             {/* TODO(W1): Restore the canonical registration entry and flow. */}
@@ -107,7 +117,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   keyboard: {
     flex: 1,
   },
@@ -121,18 +131,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   accent: {
-    backgroundColor: colors.brandRed,
+    backgroundColor: colors.gold500,
     borderRadius: radius.pill,
     height: 3,
     marginTop: spacing.xs,
     width: 48,
   },
   title: {
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     ...typography.title1,
   },
   subtitle: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     ...typography.body,
   },
   card: {
@@ -143,21 +153,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     ...typography.footnote,
   },
   input: {
-    backgroundColor: colors.surface2,
-    borderColor: colors.border,
+    backgroundColor: colors.bgInset,
+    borderColor: colors.borderDefault,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
     ...typography.body,
   },
   error: {
-    color: colors.brandRed,
+    color: colors.danger,
     ...typography.footnote,
   },
 });

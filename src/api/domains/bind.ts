@@ -38,6 +38,7 @@ export const MineBindRequestResponseSchema = z.object({
 });
 
 export type BindRequest = z.infer<typeof BindRequestSchema>;
+export type BindRequestStatus = z.infer<typeof BindRequestStatusSchema>;
 export type CreateBindRequest = z.infer<typeof CreateBindRequestSchema>;
 export type MineBindRequestResponse = z.infer<
   typeof MineBindRequestResponseSchema

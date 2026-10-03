@@ -1,116 +1,440 @@
+import { useCameraAvailability } from './video-upload/use-camera-availability';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-
+import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
+import { useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { RollUpBody, RollUpCard } from '@/design/TrainingRewardMotion';
+import { t } from '@/i18n';
+import { training22 } from './build22-strings';
+import type { PlanExercise } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
-import { AppButton, Card, colors, radius, spacing, typography } from '@/design';
-
+import { AppButton, Card, GradientFill, font, radius, spacing, useColors } from '@/design';
+import {
+  decodePrescription,
+  intensityText,
+  percentageAnchorText,
+  prescribed,
+  prescriptionSummary,
+} from '@/domain/plan/prescription';
 import { isDraftTerminal } from './drafts';
 import type { WorkoutSetDraft } from './model';
+import type { SuggestionOutcome } from './suggestion-gating';
 import {
   exerciseTitle,
   type ExerciseMetadataResolver,
 } from './exercise-metadata';
 
-type Props = {
+function reference(logs: readonly SetLog[], exerciseId: string): string | null {
+  const relevant = logs.filter(
+    (log) =>
+      log.exercise_id === exerciseId &&
+      log.completed &&
+      !log.failed &&
+      !log.assumed,
+  );
+  if (!relevant.length) return null;
+  const last = [...relevant].sort((a, b) =>
+    b.logged_at.localeCompare(a.logged_at),
+  )[0];
+  const best = [...relevant].sort(
+    (a, b) => Number(b.weight_kg) - Number(a.weight_kg),
+  )[0];
+  return `${t('student.todayWorkoutPresentation.copy004', [Number(last.weight_kg), last.reps])} · ${t('student.todayWorkoutPresentation.copy005', [Number(best.weight_kg), best.reps])}`;
+}
+export function WorkoutBody({
+  preview,
+  exercises,
+  drafts,
+  editable,
+  recording,
+  startLoading,
+  onStart,
+  onQuickLog,
+  suggestionForDraft,
+  historyLogs,
+  onRecord,
+  onVideo,
+  studentId,
+  onToggleComplete,
+  resolveExerciseMetadata,
+  onAskCoach,
+  preparingShare = false,
+}: {
+  preview?: { recommendedDate: string; title: string; unlockMessage?: string };
+  onAskCoach?: (draft: WorkoutSetDraft) => void;
+  preparingShare?: boolean;
+  exercises: readonly PlanExercise[];
   drafts: readonly WorkoutSetDraft[];
   editable: boolean;
+  recording: boolean;
+  startLoading: boolean;
+  onStart: () => void;
+  onQuickLog?: () => void;
+  suggestionForDraft: (draft: WorkoutSetDraft) => SuggestionOutcome;
   historyLogs: readonly SetLog[];
+  studentId: string;
+  onVideo: (draft: WorkoutSetDraft) => void;
   onRecord: (draft: WorkoutSetDraft) => void;
   onToggleComplete: (draft: WorkoutSetDraft) => void;
   resolveExerciseMetadata: ExerciseMetadataResolver;
-};
-
-function statusMark(draft: WorkoutSetDraft): { mark: string; color: string } {
-  if (draft.status === 'complete') return { mark: '✓', color: colors.green };
-  if (draft.status === 'failed') return { mark: '✗', color: colors.amber };
-  return { mark: '○', color: colors.fgTertiary };
-}
-
-function reference(logs: readonly SetLog[], exerciseId: string): string | null {
-  const relevant = logs.filter((log) => log.exercise_id === exerciseId && log.completed && !log.failed);
-  if (!relevant.length) return null;
-  const last = [...relevant].sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
-  const best = [...relevant].sort((a, b) => Number(b.weight_kg) - Number(a.weight_kg))[0];
-  return `上次 ${Number(last.weight_kg)}kg×${last.reps} · 最佳 ${Number(best.weight_kg)}kg×${best.reps}`;
-}
-
-export function WorkoutBody({
-  drafts,
-  editable,
-  historyLogs,
-  onRecord,
-  onToggleComplete,
-  resolveExerciseMetadata,
-}: Props) {
-  const active = drafts.find((draft) => !isDraftTerminal(draft));
-  const groups = [...new Set(drafts.map((draft) => draft.exercise.id))].map((id) => ({
-    exercise: drafts.find((draft) => draft.exercise.id === id)!.exercise,
-    drafts: drafts.filter((draft) => draft.exercise.id === id),
-  }));
-
+}) {
+  const colors = useColors();
+  const [accentSize, setAccentSize] = useState({ width: 0, height: 0 });
+  const hasCamera = useCameraAvailability();
+  const initiallyCompleted = exercises.filter(exercise => {
+    const rows = drafts.filter(draft => draft.exercise.id === exercise.id);
+    return rows.length > 0 && rows.every(isDraftTerminal);
+  }).map(exercise => exercise.id);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => Object.fromEntries(initiallyCompleted.map(id => [id, true])));
+  const [previousCompleted, setPreviousCompleted] = useState(initiallyCompleted.join('|'));
+  const completedKey = initiallyCompleted.join('|');
+  if (previousCompleted !== completedKey) {
+    const previous = new Set(previousCompleted.split('|'));
+    const newlyCompleted = initiallyCompleted.filter(id => !previous.has(id));
+    setPreviousCompleted(completedKey);
+    if (newlyCompleted.length) setCollapsed(current => ({ ...current, ...Object.fromEntries(newlyCompleted.map(id => [id, true])) }));
+  }
+  const active =
+    drafts.find(
+      (draft) => !isDraftTerminal(draft) || draft.sourceLog?.assumed,
+    ) ?? drafts[drafts.length - 1];
+  const groups = [...exercises]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((exercise) => ({
+      exercise,
+      drafts: drafts.filter((draft) => draft.exercise.id === exercise.id),
+    }));
+  const p = active ? decodePrescription(active.planSet) : null;
+  const outcome = active ? suggestionForDraft(active) : null;
+  const actualWeight =
+    active?.sourceLog && !active.sourceLog.assumed
+      ? Number(active.sourceLog.weight_kg)
+      : undefined;
+  const targetWeight =
+    actualWeight ?? p?.weightKg ?? outcome?.percentage?.resolvedKg ?? undefined;
+  const number =
+    targetWeight !== undefined
+      ? actualWeight == null &&
+        p?.weightKg == null &&
+        outcome?.percentage?.resolvedKg != null
+        ? t('student.todayWorkoutTypes.copy019', [targetWeight])
+        : String(targetWeight)
+      : intensityText(p?.intensity) || '—';
   return (
     <>
-      {active ? (
-        <Card style={styles.hero}>
-          <Text style={styles.eyebrow}>下一组 · {exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id))}</Text>
-          <View style={styles.heroNumbers}>
-            <View><Text style={styles.heroValue}>{active.weightText || '—'}</Text><Text style={styles.unit}>KG</Text></View>
-            <Text style={styles.multiply}>×</Text>
-            <View><Text style={styles.heroValue}>{active.repsText}</Text><Text style={styles.unit}>次</Text></View>
-            <View style={styles.rpeBlock}><Text style={styles.rpeLabel}>RPE</Text><Text style={styles.rpeHero}>{active.rpeText || '—'}</Text></View>
-          </View>
-          {active.planSet.coach_note ?? active.exercise.notes ? <View style={styles.notePill}><Text style={styles.note}>教练备注 · {active.planSet.coach_note ?? active.exercise.notes}</Text></View> : null}
-          <AppButton disabled={!editable} label="记录此组" onPress={() => onRecord(active)} />
-        </Card>
-      ) : null}
-      {groups.map(({ drafts: exerciseDrafts, exercise }, groupIndex) => {
-        const note = exercise.notes ?? exerciseDrafts.find((draft) => draft.planSet.coach_note)?.planSet.coach_note;
-        return (
-          <Card key={exercise.id} style={styles.exerciseCard}>
-            <View style={styles.exerciseHeader}>
-              <View><Text style={styles.exerciseTitle}>{exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}</Text><Text style={styles.exerciseMeta}>{exercise.is_main_lift ? '主项' : `动作 ${groupIndex + 1}`} · {exerciseDrafts.length} 组</Text></View>
-              <MaterialCommunityIcons color={colors.fgTertiary} name="video-outline" size={20} />
+      <Card
+        style={{
+          backgroundColor: colors.bgInset,
+          borderColor: colors.borderStrong,
+          borderWidth: 1,
+          borderTopLeftRadius: 0,
+          borderBottomLeftRadius: 0,
+          borderTopRightRadius: 16,
+          borderBottomRightRadius: 16,
+          padding: 16,
+          paddingLeft: 19,
+          gap: 14,
+          overflow: 'hidden',
+        }}
+      >
+        <View
+          pointerEvents="none"
+          onLayout={({ nativeEvent: { layout } }) => setAccentSize(current =>
+            current.width === layout.width && current.height === layout.height
+              ? current : { width: layout.width, height: layout.height })}
+          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: spacing.point3 }}
+        >
+          <GradientFill size={accentSize} direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
+        </View>
+        {preview ? <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.dashboardPrimaryAction.copy009', [preview.recommendedDate])}</Text> : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{preview?.title ?? (recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017'))}</Text>
+          {editable && active && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
+            <View style={{ minHeight: 36, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard }}>
+              {preparingShare ? <ActivityIndicator size="small" color={colors.textTertiary} /> : <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.askCoach')}</Text>}
             </View>
-            {!active && note ? <View style={styles.notePill}><Text style={styles.note}>教练备注 · {note}</Text></View> : null}
-            <View style={styles.tableHeader}><Text style={styles.numberColumn}>#</Text><Text style={styles.column}>重量</Text><Text style={styles.column}>次数</Text><Text style={styles.column}>RPE</Text><View style={styles.statusColumn} /></View>
-            {exerciseDrafts.map((draft) => {
-              const status = statusMark(draft);
-              return (
-                <Pressable disabled={!editable} key={draft.stableSetId} onPress={() => onRecord(draft)} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-                  <Text style={styles.numberColumn}>{draft.setIndex + 1}</Text><Text style={styles.column}>{draft.weightText || '—'}</Text><Text style={styles.column}>{draft.repsText || '—'}</Text><Text style={styles.column}>{draft.rpeText || '—'}</Text><View style={styles.statusColumn}><Pressable disabled={!editable} onPress={(event) => { event.stopPropagation(); onToggleComplete(draft); }}><Text style={[styles.status, { color: status.color }]}>{status.mark}</Text></Pressable><MaterialCommunityIcons color={colors.fgTertiary} name="video-outline" size={15} /></View>
-                </Pressable>
-              );
-            })}
-            {reference(historyLogs, exercise.exercise_id) ? <Text style={styles.reference}>{reference(historyLogs, exercise.exercise_id)}</Text> : null}
-          </Card>
-        );
-      })}
+          </Pressable> : null}
+        </View>
+        {!recording ? (
+          <>
+            <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
+              {preview ? t('student.trainingWeekStrip.summary', [groups.length]) + t('student.todayWorkoutScreen.copy019', [drafts.length]) : <>
+                {t('student.todayWorkoutScreen.copy018', [groups.length])}
+                {t('student.todayWorkoutScreen.copy019', [drafts.length])}
+              </>}
+            </Text>
+            {groups.map((group, index) => (
+              <View key={group.exercise.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 11, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+                <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>
+                <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: spacing.xs }}>
+                  <Text style={{ color: colors.textPrimary, ...font.body(14, 'bold'), flexShrink: 0, maxWidth: '100%' }}>
+                    {exerciseTitle(
+                      resolveExerciseMetadata(group.exercise.exercise_id),
+                    )}
+                  </Text>
+                  <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 0, maxWidth: '100%' }}>
+                    {prescriptionSummary(
+                      group.drafts.map((draft) => ({
+                        prescription: decodePrescription(draft.planSet),
+                        resolution: suggestionForDraft(draft).percentage,
+                      })),
+                    )}
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {preview?.unlockMessage ? <Text style={{ color: colors.textSecondary, ...font.body(13) }}>{preview.unlockMessage}</Text> : null}
+            {editable && active ? (
+              <AppButton
+                disabled={startLoading}
+                label={t('student.todayWorkoutScreen.copy008')}
+                onPress={onStart}
+              />
+            ) : null}
+            {onQuickLog ? <AppButton variant="link" label={training22.entry} onPress={onQuickLog} disabled={startLoading} /> : null}
+          </>
+        ) : active && p ? (
+          <>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'baseline',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    targetWeight === undefined
+                      ? colors.textMuted
+                      : colors.textPrimary,
+                  ...font.display(targetWeight === undefined ? 32 : 54),
+                }}
+              >
+                {number}
+              </Text>
+              {targetWeight !== undefined ? (
+                <Text style={{ color: colors.textMuted, ...font.mono(16, 'bold') }}>
+                  KG
+                </Text>
+              ) : null}
+            </View>
+            <Text style={{ color: colors.textFaint, ...font.mono(11, 'semibold'), letterSpacing: 0.55 }}>
+              {p.intensity?.kind === 'pct'
+                ? percentageAnchorText(p, outcome?.percentage)
+                : t('student.todayWorkoutScreen.copy027')}
+            </Text>
+            <Text style={{ color: colors.textSecondary, ...font.mono(12) }}>
+              {prescribed(p, outcome?.percentage)}
+            </Text>
+            <Text style={{ color: colors.textMuted, ...font.body(12) }}>
+              {t('student.todayWorkoutPresentation.copy002', [
+                active.setIndex + 1,
+                active.exercise.sets.length,
+              ])}
+              {t('student.todayWorkoutPresentation.copy003', [
+                active.exerciseOrdinal + 1,
+                groups.length,
+              ])}
+            </Text>
+            {reference(historyLogs, active.exercise.exercise_id) ? (
+              <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
+                {reference(historyLogs, active.exercise.exercise_id)}
+              </Text>
+            ) : null}
+            {(active.planSet.coach_note ?? active.exercise.notes) ? (
+              <View style={{ paddingHorizontal: 12, paddingVertical: 10, gap: 3, borderRadius: 10, backgroundColor: colors.bgInset }}>
+                <Text style={{ color: colors.textFaint, ...font.mono(11) }}>{t('student.todayWorkoutScreen.copy014')}</Text>
+                <Text style={{ color: colors.coachNoteText, ...font.body(12), lineHeight: 18 }}>{active.planSet.coach_note ?? active.exercise.notes}</Text>
+              </View>
+            ) : null}
+            {editable ? (
+              <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.point9 }}>
+                <AppButton
+                  style={{ flex: 1 }}
+                  label={t('student.todayWorkoutScreen.copy015')}
+                  onPress={() => onRecord(active)}
+                />
+                {hasCamera ? <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('student.todayWorkoutScreen.copy016')}
+                  onPress={() => onVideo(active)}
+                  style={{ width: spacing.point52, minHeight: spacing.point52, aspectRatio: 1, borderRadius: radius.control, borderWidth: spacing.point1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <MaterialCommunityIcons name="video-outline" size={spacing.point22} color={colors.textTertiary} />
+                </Pressable> : null}
+              </View>
+            ) : null}
+          </>
+        ) : null}
+      </Card>
+      {recording
+        ? groups.map(({ exercise, drafts: rows }) => (
+            <RollUpCard key={exercise.id} collapsed={Boolean(collapsed[exercise.id])}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: !collapsed[exercise.id] }}
+                onPress={() =>
+                  setCollapsed((current) => ({
+                    ...current,
+                    [exercise.id]: !current[exercise.id],
+                  }))
+                }
+                style={({ pressed }) => ({ minHeight: 48, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}
+              >
+                <Text
+                  style={{
+                    color: colors.textPrimary,
+                    ...font.body(16, 'bold'),
+                    flex: 1,
+                  }}
+                >
+                  {exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}
+                </Text>
+                <Text style={{ color: colors.textMuted }}>
+                  {collapsed[exercise.id] ? '›' : '⌄'}
+                </Text>
+              </Pressable>
+              <RollUpBody collapsed={Boolean(collapsed[exercise.id])}>
+              {exercise.notes ? (
+                <Text style={{ color: colors.textMuted }}>
+                  {t('student.todayWorkoutScreen.copy014')} · {exercise.notes}
+                </Text>
+              ) : null}
+                <>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {[
+                      '#',
+                      t('student.setEntrySheet.copy001'),
+                      t('student.setEntrySheet.copy003'),
+                      'RPE',
+                      '',
+                    ].map((label, i) => (
+                      <Text
+                        key={i}
+                        style={{
+                          flex: i === 0 ? 0.5 : 1,
+                          color: colors.textMuted,
+                          ...font.mono(10),
+                          textAlign: 'center',
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    ))}
+                  </View>
+                  {rows.map((draft) => (
+                    <View
+                      key={draft.stableSetId}
+                      style={{
+                        borderTopWidth: 1,
+                        borderTopColor: colors.borderSubtle,
+                      }}
+                    >
+                      <Pressable
+                        disabled={!editable}
+                        onPress={() => onRecord(draft)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          minHeight: 48,
+                          gap: 8,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            flex: 0.5,
+                            ...font.mono(13, 'bold'),
+                            color: colors.textMuted,
+                            textAlign: 'center',
+                          }}
+                        >
+                          {draft.setIndex + 1}
+                        </Text>
+                        {[
+                          draft.weightText || '—',
+                          draft.repsText || '—',
+                          draft.rpeText || '—',
+                        ].map((value, i) => (
+                          <Text
+                            key={i}
+                            style={{
+                              flex: 1,
+                              textAlign: 'center',
+                              color: colors.textPrimary,
+                              ...font.mono(i === 0 ? 15 : 14, i === 0 ? 'bold' : 'regular'),
+                            }}
+                          >
+                            {value}
+                          </Text>
+                        ))}
+                        <View
+                          style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <Pressable feedback="none"
+                            disabled={!editable}
+                            accessibilityRole="button"
+                            accessibilityLabel={t(
+                              'student.todayWorkoutScreen.copy015',
+                            )}
+                            onPress={(event) => {
+                              event.stopPropagation();
+                              if (!draft.weightText.trim()) onRecord(draft);
+                              else onToggleComplete(draft);
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color:
+                                  draft.status === 'complete'
+                                    ? colors.success
+                                    : draft.status === 'failed'
+                                      ? colors.gold500
+                                      : colors.textGhost,
+                              }}
+                            >
+                              {draft.status === 'complete'
+                                ? '✓'
+                                : draft.status === 'failed'
+                                  ? '✗'
+                                  : '○'}
+                            </Text>
+                          </Pressable>
+                          <SetVideoUploadIndicator studentId={studentId} stableSetId={draft.stableSetId} />
+                        </View>
+                      </Pressable>
+                      <Text
+                        style={{
+                          color: colors.textMuted,
+                          ...font.mono(10),
+                          paddingBottom: 8,
+                        }}
+                      >
+                        {prescribed(
+                          decodePrescription(draft.planSet),
+                          suggestionForDraft(draft).percentage,
+                        )}
+                      </Text>
+                    </View>
+                  ))}
+                  {reference(historyLogs, exercise.exercise_id) ? (
+                    <Text style={{ color: colors.textMuted, ...font.body(12) }}>
+                      {reference(historyLogs, exercise.exercise_id)}
+                    </Text>
+                  ) : null}
+                </>
+              </RollUpBody>
+            </RollUpCard>
+          ))
+        : null}
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  hero: { gap: spacing.base, padding: spacing.lg },
-  eyebrow: { color: colors.fgSecondary, ...typography.monoLabel },
-  heroNumbers: { alignItems: 'flex-end', flexDirection: 'row', gap: spacing.sm },
-  heroValue: { color: colors.fgPrimary, ...typography.displayNumeral },
-  unit: { color: colors.fgSecondary, textAlign: 'center', ...typography.displayUnit },
-  multiply: { color: colors.fgTertiary, fontSize: 32, marginBottom: 24 },
-  rpeBlock: { marginBottom: 5, marginLeft: 'auto' },
-  rpeLabel: { color: colors.fgTertiary, ...typography.caption },
-  rpeHero: { color: colors.fgPrimary, ...typography.title2 },
-  notePill: { alignSelf: 'flex-start', backgroundColor: colors.surface3, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  note: { color: colors.fgSecondary, ...typography.footnote },
-  exerciseCard: { gap: spacing.sm, overflow: 'hidden', paddingTop: spacing.base },
-  exerciseHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.base },
-  exerciseTitle: { color: colors.fgPrimary, ...typography.headline },
-  exerciseMeta: { color: colors.fgTertiary, marginTop: spacing.xs, ...typography.caption },
-  tableHeader: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', paddingHorizontal: spacing.base, paddingVertical: spacing.sm },
-  row: { alignItems: 'center', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', minHeight: 48, paddingHorizontal: spacing.base },
-  rowPressed: { backgroundColor: colors.surface2 },
-  numberColumn: { color: colors.fgSecondary, width: 28, ...typography.footnote },
-  column: { color: colors.fgPrimary, flex: 1, textAlign: 'center', ...typography.footnote },
-  statusColumn: { alignItems: 'center', flexDirection: 'row', gap: 3, justifyContent: 'flex-end', width: 43 },
-  status: { fontSize: 18, fontWeight: '700' },
-  reference: { color: colors.fgTertiary, paddingBottom: spacing.md, paddingHorizontal: spacing.base, ...typography.caption },
-});

@@ -1,8 +1,11 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
+import { t } from '@/i18n';
 import { useSessionStore } from '@/api/session';
-import { Card, Screen, colors, spacing, typography } from '@/design';
+import { Card, Screen, useColors, type Colors, font, spacing, typography } from '@/design';
 
 type FeaturePlaceholderScreenProps = {
   title: string;
@@ -13,6 +16,8 @@ export function FeaturePlaceholderScreen({
   showLogout = false,
   title,
 }: FeaturePlaceholderScreenProps) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const logout = useSessionStore((state) => state.logout);
 
   return (
@@ -20,7 +25,7 @@ export function FeaturePlaceholderScreen({
       <View style={styles.content}>
         <Card style={styles.card}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.detail}>W1 实装</Text>
+          <Text style={styles.detail}>{t('student.rn.featurePlaceholder')}</Text>
           {showLogout ? (
             <Pressable
               accessibilityRole="button"
@@ -28,8 +33,8 @@ export function FeaturePlaceholderScreen({
                 void logout().catch(() => undefined);
               }}
               style={({ pressed }) => [styles.logout, pressed && styles.logoutPressed]}>
-              <MaterialCommunityIcons color={colors.brandRed} name="logout" size={20} />
-              <Text style={styles.logoutLabel}>退出登录</Text>
+              <MaterialCommunityIcons color={colors.danger} name="logout" size={20} />
+              <Text style={styles.logoutLabel}>{t('student.bindGateView.copy007')}</Text>
             </Pressable>
           ) : null}
         </Card>
@@ -38,7 +43,7 @@ export function FeaturePlaceholderScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: Colors) => StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -49,11 +54,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   title: {
-    color: colors.fgPrimary,
+    color: colors.textPrimary,
     ...typography.headline,
   },
   detail: {
-    color: colors.fgSecondary,
+    color: colors.textSecondary,
     ...typography.body,
   },
   logout: {
@@ -67,8 +72,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   logoutLabel: {
-    color: colors.brandRed,
-    fontSize: 15,
-    fontWeight: '600',
+    color: colors.danger,
+    ...font.body(15, 'semibold'),
   },
 });

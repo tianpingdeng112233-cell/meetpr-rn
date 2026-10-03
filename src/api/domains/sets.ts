@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
+import { gymDayToday } from '@/domain/plan/workout-date-policy';
+
+import { ApiError } from '../client';
 import { authenticatedRequest } from '../session';
 import {
   DateTextSchema,
@@ -61,6 +64,7 @@ export const SetLogSchema = z.object({
   reps: z.number().int(),
   /** Nullable Decimal wire value; kept as a string when present. */
   rpe: DecimalStringSchema.nullable(),
+  coach_rpe: DecimalStringSchema.nullish(),
   completed: z.boolean(),
   failed: z.boolean(),
   assumed: z.boolean(),
@@ -76,7 +80,7 @@ export const SetLogRangeSchema = z
   .object({
     /** DATE-text lower bound. */
     from: DateTextSchema,
-    /** DATE-text upper bound. */
+    /** Exclusive DATE-text upper bound: [from, to). */
     to: DateTextSchema,
     scope: z.enum(['plan', 'all']).optional(),
   })
@@ -90,11 +94,23 @@ export type SetLogRange = z.input<typeof SetLogRangeSchema>;
 
 async function upsert(input: SetLogUpsertRequest): Promise<SetLogUpsertResponse> {
   const body = SetLogUpsertRequestSchema.parse(input);
-  return authenticatedRequest('/sets/log', {
-    method: 'POST',
-    body,
-    schema: SetLogUpsertResponseSchema,
-  });
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      authenticatedRequest('/sets/log', {
+        method: 'POST', body, schema: SetLogUpsertResponseSchema, signal: controller.signal,
+      }),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          reject(new ApiError('network', 'Set save timed out', { status: 408 }));
+          controller.abort();
+        }, 30_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function range(
@@ -103,10 +119,12 @@ async function range(
 ): Promise<SetLogsResponse> {
   const id = UuidSchema.parse(studentId);
   const params = SetLogRangeSchema.parse(input);
-  return authenticatedRequest(
+  const response = await authenticatedRequest(
     `/students/${id}/sets${encodeQuery(params)}`,
     { schema: SetLogsResponseSchema },
   );
+  return { logs: response.logs.map(log => ({ ...log, logged_at: resolvedLoggedAt(log.logged_at, log.logged_date) })) };
+
 }
 
 export const setsRepository = { range, upsert };
@@ -141,4 +159,11 @@ export function useUpsertSetLog() {
     mutationFn: setsRepository.upsert,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: setKeys.all }),
   });
+}
+
+/** Keep live instants exact; a DATE differing from its write gym-day is a backfill. */
+export function resolvedLoggedAt(serverTimestamp: string, loggedDate: string): string {
+  if (gymDayToday(new Date(serverTimestamp)) === loggedDate) return serverTimestamp;
+  const [year, month, day] = loggedDate.split('-').map(Number);
+  return new Date(year, month - 1, day, 12).toISOString();
 }

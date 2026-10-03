@@ -1,0 +1,96 @@
+import { beforeEach, expect, jest, test } from '@jest/globals';
+import { getLocales } from 'expo-localization';
+
+import student from '../../../docs/w0-reference/i18n/StudentKit.json';
+import { getLocale, setLocaleOverride, t } from '..';
+
+jest.mock('expo-localization', () => ({
+  getLocales: jest.fn(() => [{ languageTag: 'en-US' }]),
+}));
+
+beforeEach(() => {
+  setLocaleOverride(null);
+  jest.mocked(getLocales).mockReturnValue([{ languageTag: 'en-US' }] as unknown as ReturnType<typeof getLocales>);
+});
+
+test('uses the device language, with English for non-Chinese locales', () => {
+  expect(t('student.bindGateView.copy001')).toBe('Checking connection status');
+  for (const languageTag of ['zh-CN', 'zh-Hant-TW']) {
+    jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
+    expect(getLocale()).toBe('zh');
+    expect(t('student.bindGateView.copy001')).toBe('正在检查绑定状态');
+  }
+  jest.mocked(getLocales).mockReturnValue([{ languageTag: 'fr-FR' }] as unknown as ReturnType<typeof getLocales>);
+  expect(getLocale()).toBe('en');
+});
+
+test('supports debug overrides and returning to the device language', () => {
+  setLocaleOverride('zh');
+  expect(t('student.bindGateView.copy001')).toBe('正在检查绑定状态');
+  setLocaleOverride(null);
+  expect(getLocale()).toBe('en');
+});
+
+test('formats positional placeholders using the canonical pending-bind copy', () => {
+  expect(t('student.pendingBindViewModel.copy002', [3, 2])).toBe(
+    student['student.pendingBindViewModel.copy002'].en.replace('{0}', '3').replace('{1}', '2'),
+  );
+});
+
+test('Today header joins the localized date and weekday without duplicating the Chinese prefix', () => {
+  setLocaleOverride('zh');
+  expect(t('student.dashboardTodayPresentation.copy004', ['10月2日', '周五'])).toBe('10月2日 · 周五');
+  setLocaleOverride('en');
+  expect(t('student.dashboardTodayPresentation.copy004', ['Oct 2', 'Fri'])).toBe('Oct 2 · Fri');
+});
+
+test('substitutes object and positional placeholders without reprocessing parameter text', () => {
+  expect(t('student.filter.accessibilityLabel %@', ['Squat'])).toBe('Filter by exercise, currently Squat');
+  expect(t('student.pendingBindViewModel.copy002', ['%@', '{0}'])).toBe('%@d {0}h');
+  expect(t('coach.inbox.pendingVideoPreview %lld %@', [2, 'Squat'])).toBe('2 videos awaiting feedback · Squat');
+});
+
+test('selects English one/other and the Chinese plural copy', () => {
+  expect(t('coach.bind.card.age %lld', [1])).toBe('1 year old');
+  expect(t('coach.bind.card.age %lld', [2])).toBe('2 years old');
+  expect(t('coach.bind.card.age %lld', [0])).toBe('0 years old');
+  setLocaleOverride('zh');
+  expect(t('coach.bind.card.age %lld', [1])).toBe('1 岁');
+  expect(t('coach.bind.card.age %lld', [2])).toBe('2 岁');
+});
+
+test('pluralizes prescription summaries by the third parameter', () => {
+  expect(t('student.todayWorkoutScreen.copy020', ['80 kg', 5, 1])).toBe('80 kg × 5 · 1 set');
+  expect(t('student.todayWorkoutScreen.copy020', [1, 5, 2])).toBe('1 × 5 · 2 sets');
+});
+
+test('defaults standalone plural keys to the first parameter', () => {
+  expect(t('student.dayCompletionBanner.copy001', [1])).toBe("Today's workout completed · 1 set");
+  expect(t('student.dayCompletionBanner.copy001', [2])).toBe("Today's workout completed · 2 sets");
+});
+
+test('pluralizes coach workspace summaries by weeks after the descriptive parameters', () => {
+  expect(t('coach.workspace.draftSummary %@ %@ %lld', ['Alex', 'Strength', 1])).toBe('Alex · Strength · 1 week');
+  expect(t('coach.workspace.draftSummary %@ %@ %lld', [1, 'Strength', 2])).toBe('1 · Strength · 2 weeks');
+  expect(t('coach.workspace.publishedSummary %@ %lld', ['Strength', 1])).toBe('Strength · 1 week');
+  expect(t('coach.workspace.publishedSummary %@ %lld', [1, 2])).toBe('1 · 2 weeks');
+  expect(t('coach.workspace.defaultDraftName %@ %lld', ['Alex', 1])).toBe("Alex's 1-Week Plan");
+  expect(t('coach.workspace.defaultDraftName %@ %lld', ['Alex', 2])).toBe("Alex's 2-Week Plan");
+  setLocaleOverride('zh');
+  expect(t('coach.workspace.draftSummary %@ %@ %lld', ['Alex', 'Strength', 1])).toBe('Alex · Strength · 1周');
+  expect(t('coach.workspace.publishedSummary %@ %lld', ['Strength', 2])).toBe('Strength · 2周');
+});
+
+test('returns an unknown runtime key without throwing, while rejecting it at compile time', () => {
+  // @ts-expect-error Unknown catalog keys are rejected by TypeScript.
+  expect(t('missing.key')).toBe('missing.key');
+});
+
+test('plural sibling keys (<key>.one) are used for a count of exactly one in English', () => {
+  setLocaleOverride('en');
+  expect(t('student.todayWorkoutScreen.copy019', [1])).toBe('1 set');
+  expect(t('student.todayWorkoutScreen.copy019', [3])).toBe('3 sets');
+  setLocaleOverride('zh');
+  expect(t('student.todayWorkoutScreen.copy019', [1])).toBe('1 组');
+  setLocaleOverride(null);
+});

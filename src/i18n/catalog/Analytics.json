@@ -1,0 +1,18 @@
+{
+"analytics.friction.placeholder": {
+"en": "What felt awkward?",
+"zh": "哪里让你不顺手?"
+},
+"analytics.friction.send": {
+"en": "Send",
+"zh": "发送"
+},
+"analytics.friction.skip": {
+"en": "Skip",
+"zh": "跳过"
+},
+"analytics.friction.title": {
+"en": "Stuck? Tell us in one sentence",
+"zh": "卡住了?一句话告诉我们"
+}
+}

@@ -1,0 +1,91 @@
+{
+  "responses": {
+    "/coach/students": {
+      "students": []
+    },
+    "/conversations": {
+      "conversations": [
+        {
+          "id": "00000000-0000-0000-0000-000000002328",
+          "other_party": {
+            "id": "00000000-0000-0000-0000-00000000238c",
+            "display_name": "Plan preview"
+          },
+          "last_message": {
+            "id": "00000000-0000-0000-0000-0000000023f0",
+            "seq": 1,
+            "kind": "text",
+            "preview": "[\u8bad\u7ec3\u8ba1\u5212]",
+            "preview_kind": "training_plan",
+            "created_at": "2026-09-23T12:00:00Z",
+            "sender_id": "00000000-0000-0000-0000-00000000238c"
+          },
+          "last_message_at": "2026-09-23T12:00:00Z",
+          "unread_count": 0,
+          "my_last_read": null,
+          "other_last_read": null
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000002329",
+          "other_party": {
+            "id": "00000000-0000-0000-0000-00000000238d",
+            "display_name": "Share preview"
+          },
+          "last_message": {
+            "id": "00000000-0000-0000-0000-0000000023f1",
+            "seq": 1,
+            "kind": "text",
+            "preview": "[\u8bad\u7ec3\u5206\u4eab]",
+            "preview_kind": "training_share",
+            "created_at": "2026-09-23T12:00:00Z",
+            "sender_id": "00000000-0000-0000-0000-00000000238d"
+          },
+          "last_message_at": "2026-09-23T12:00:00Z",
+          "unread_count": 0,
+          "my_last_read": null,
+          "other_last_read": null
+        },
+        {
+          "id": "00000000-0000-0000-0000-00000000232a",
+          "other_party": {
+            "id": "00000000-0000-0000-0000-00000000238e",
+            "display_name": "Image preview"
+          },
+          "last_message": {
+            "id": "00000000-0000-0000-0000-0000000023f2",
+            "seq": 1,
+            "kind": "text",
+            "preview": "[\u56fe\u7247]",
+            "preview_kind": "image",
+            "created_at": "2026-09-23T12:00:00Z",
+            "sender_id": "00000000-0000-0000-0000-00000000238e"
+          },
+          "last_message_at": "2026-09-23T12:00:00Z",
+          "unread_count": 0,
+          "my_last_read": null,
+          "other_last_read": null
+        },
+        {
+          "id": "00000000-0000-0000-0000-00000000232b",
+          "other_party": {
+            "id": "00000000-0000-0000-0000-00000000238f",
+            "display_name": "Ordinary text"
+          },
+          "last_message": {
+            "id": "00000000-0000-0000-0000-0000000023f3",
+            "seq": 1,
+            "kind": "text",
+            "preview": "[\u8bad\u7ec3\u8ba1\u5212]",
+            "preview_kind": "text",
+            "created_at": "2026-09-23T12:00:00Z",
+            "sender_id": "00000000-0000-0000-0000-00000000238f"
+          },
+          "last_message_at": "2026-09-23T12:00:00Z",
+          "unread_count": 0,
+          "my_last_read": null,
+          "other_last_read": null
+        }
+      ]
+    }
+  }
+}

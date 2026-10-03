@@ -443,7 +443,7 @@ test('configured batches read the current stored access token for the request he
   await configure({ fetch: fetchImplementation });
   await track(AnalyticsEvent.AppOpen, { cold: true });
 
-  await confirmPrivacyNotice();
+  await confirmPrivacyNotice({ waitForFlush: true });
 
   expect(mockedGetAccessToken).toHaveBeenCalledTimes(1);
   expect(postHeaders).toMatchObject({
@@ -581,7 +581,7 @@ test('privacy confirmation persists and is the trigger that releases queued even
   expect(configGets).toBe(1);
   expect(posts).toBe(0);
 
-  await confirmPrivacyNotice();
+  await confirmPrivacyNotice({ waitForFlush: true });
 
   expect(storedValues.get(ANALYTICS_PRIVACY_NOTICE_KEY)).toBe('true');
   expect(posts).toBe(1);

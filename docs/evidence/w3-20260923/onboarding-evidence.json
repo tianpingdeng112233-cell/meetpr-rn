@@ -1,0 +1,19 @@
+{
+  "synthetic_local_only": true,
+  "completed": true,
+  "saved_fields": {
+    "gender": "male",
+    "height_cm": "178",
+    "weight_kg": "83",
+    "squat_1rm_kg": "190",
+    "bench_1rm_kg": "115",
+    "deadlift_1rm_kg": "225",
+    "training_days": [
+      "mon",
+      "wed"
+    ],
+    "gym_tier": "commercial",
+    "is_competing": false
+  },
+  "resume_observed_step": 3
+}

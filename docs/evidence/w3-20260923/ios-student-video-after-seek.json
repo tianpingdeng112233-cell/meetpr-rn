@@ -1,0 +1,52 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "04xflt5",
+  "seq": 66,
+  "count": 94,
+  "targets": [
+    "e30|tap|button|Play linked video, Low Bar Squat · Set 1 · 125 kg × 5 reps||",
+    "e56|typeText|text-field||. 00:00:00.233|",
+    "e15|tap|button|Back||BackButton",
+    "e42|tap|button|Today||",
+    "e43|tap|button|Training||",
+    "e44|tap|button|Progress||",
+    "e45|tap|button|Profile||",
+    "e63|tap|button|Close playback||xmark",
+    "e65|tap|button|Export||feedback.video.export",
+    "e66|tap|button|Playback speed 1x||",
+    "e67|tap|button|Collapse training badge||feedback.video.badge.expanded",
+    "e80|tap|button|✏️ Jump to 0:02||",
+    "e85|tap|button|Jump to 0:06||",
+    "e94|tap|button|Retry||"
+  ],
+  "scroll": [
+    "e21|swipe|scroll-view|||",
+    "e78|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e64|text|text|VIDEO PLAYBACK //||",
+    "e27|text|text|Coach feedback||",
+    "e28|text|text|23 Sep||",
+    "e29|text|text|Linked training day 20 Sep||",
+    "e32|text|text|Linked video||",
+    "e33|text|text|Low Bar Squat · Set 1 · 125 kg × 5 reps||",
+    "e35|text|text|Your first squat set moved well. Keep the same tempo next time and stay patient off the floor on the last set.||",
+    "e93|text|text|Playback failed. The link may have expired.||",
+    "e71|text|text|1||",
+    "e70|text|text|Set||",
+    "e72|text|text|Low Bar Squat||",
+    "e73|text|text|125||",
+    "e75|text|text|× 5||",
+    "e74|text|text|kg||",
+    "e76|text|text|Markers · 2||",
+    "e77|text|text|0:06 / 0:14||",
+    "e82|text|text|保持核心收紧||",
+    "e81|text|text|0:02||",
+    "e87|text|text|注意动作深度||",
+    "e86|text|text|0:06||",
+    "e89|text|text|0:06||",
+    "e91|text|text|0:14||"
+  ],
+  "udid": "A5119984-9A8D-415C-83D4-E7145351FA79"
+}

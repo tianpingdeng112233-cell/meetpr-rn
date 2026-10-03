@@ -36,6 +36,8 @@ export interface E1RMHistoryPoint {
   readonly sourceWeightKg: number;
   readonly sourceReps: number;
   readonly sourceRPE: number | null;
+  /** Optional in older stored points; never overwrite the student's report. */
+  readonly sourceCoachRPE?: number | null;
   readonly confidence: E1RMConfidence;
   readonly origin: E1RMPointOrigin;
 }

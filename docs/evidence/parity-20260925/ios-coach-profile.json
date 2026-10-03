@@ -1,0 +1,39 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "0m4n9as",
+  "seq": 17,
+  "count": 47,
+  "targets": [
+    "e23|tap|button|Permanent invite code, DEMO2COACH, 23 students joined with this code · Share it to receive applications||coach.profile.inviteCard",
+    "e22|tap|button|Copy||coach.profile.copyInvite",
+    "e28|tap|button|Help & Feedback||coach.profile.help",
+    "e31|tap|button|Privacy & Terms||coach.profile.privacyTerms",
+    "e37|tap|button|Sign out||coach.profile.logout",
+    "e40|tap|button|Today||",
+    "e41|tap|button|Messages||",
+    "e44|tap|button|Students||",
+    "e47|tap|button|Profile||"
+  ],
+  "scroll": [
+    "e18|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e20|text|text|Profile||",
+    "e21|text|text|Demo Coach||coach.profile.displayName",
+    "e24|text|text|Permanent invite code||",
+    "e25|text|text|DEMO2COACH||",
+    "e26|text|text|23 students joined with this code · Share it to receive applications||",
+    "e27|text|text|General||",
+    "e29|text|text|Help & Feedback||",
+    "e32|text|text|Privacy & Terms||",
+    "e34|text|text|App Version, 1.0 · Beta||coach.profile.appVersion",
+    "e35|text|text|App Version||",
+    "e36|text|text|1.0 · Beta||",
+    "e42|text|text|8||",
+    "e45|text|text|1||",
+    "e43|text|text|Messages||",
+    "e46|text|text|Students||"
+  ],
+  "udid": "D412AE31-0ED9-4A23-B0FD-FFFA4A5A5609"
+}

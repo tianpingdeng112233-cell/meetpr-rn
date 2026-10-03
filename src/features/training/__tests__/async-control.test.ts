@@ -1,5 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 
+import { StudentTodayRefreshThrottle } from '../refresh-throttle';
 import { LoadGeneration } from '../load-generation';
 import { SerialTaskQueue } from '../serial-task-queue';
 
@@ -67,4 +68,14 @@ describe('training async controls', () => {
     await second;
     expect(order).toEqual(['first:start', 'first:end', 'second']);
   });
+});
+
+test('returning within 25 seconds refreshes volatile state; the boundary triggers a full refresh', () => {
+  const throttle = new StudentTodayRefreshThrottle();
+  expect(throttle.refreshWhenReturning(0)).toBe('full');
+  expect(throttle.refreshWhenReturning(24_999)).toBe('volatileOnly');
+  expect(throttle.refreshWhenReturning(25_000)).toBe('full');
+  throttle.recordFullRefresh(40_000);
+  expect(throttle.refreshWhenReturning(64_999)).toBe('volatileOnly');
+  expect(throttle.refreshWhenReturning(65_000)).toBe('full');
 });

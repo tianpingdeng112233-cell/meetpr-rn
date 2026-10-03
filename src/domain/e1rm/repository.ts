@@ -8,7 +8,19 @@ import type {
  * Local-first persistence seam. W1 screens can bind this contract to a durable
  * adapter later without changing recorder/series logic.
  */
+export interface E1RMHistorySnapshot {
+  readonly points: readonly E1RMHistoryPoint[];
+  readonly revision: number;
+}
+
 export interface E1RMRepository {
+  historySnapshot(studentId: string): Promise<E1RMHistorySnapshot>;
+  /** Atomic student history replacement; retains all PR events and rejects stale snapshots. */
+  replaceHistoryIfUnchanged(
+    studentId: string,
+    points: readonly E1RMHistoryPoint[],
+    revision: number,
+  ): Promise<boolean>;
   recordPoint(point: E1RMHistoryPoint): Promise<void>;
   upsertPoint(point: E1RMHistoryPoint): Promise<E1RMHistoryPoint>;
   updatePointConfidence(
@@ -34,6 +46,7 @@ export interface E1RMRepository {
 }
 
 export class InMemoryE1RMRepository implements E1RMRepository {
+  private revision = 0;
   private points: E1RMHistoryPoint[];
   private prEvents: PRBreakthroughEvent[];
 
@@ -45,11 +58,31 @@ export class InMemoryE1RMRepository implements E1RMRepository {
     this.prEvents = [...seedPRs];
   }
 
+  async historySnapshot(studentId: string): Promise<E1RMHistorySnapshot> {
+    return { points: this.points.filter(point => point.studentId === studentId), revision: this.revision };
+  }
+
+  async replaceHistoryIfUnchanged(
+    studentId: string,
+    points: readonly E1RMHistoryPoint[],
+    revision: number,
+  ): Promise<boolean> {
+    if (revision !== this.revision) return false;
+    this.points = [
+      ...this.points.filter(point => point.studentId !== studentId),
+      ...points.filter(point => point.studentId === studentId),
+    ];
+    this.revision += 1;
+    return true;
+  }
+
   async recordPoint(point: E1RMHistoryPoint): Promise<void> {
+    this.revision += 1;
     this.points.push(point);
   }
 
   async upsertPoint(point: E1RMHistoryPoint): Promise<E1RMHistoryPoint> {
+    this.revision += 1;
     const existingIndex = this.points.findIndex(
       (candidate) =>
         candidate.studentId === point.studentId && candidate.setLogId === point.setLogId,
@@ -69,6 +102,7 @@ export class InMemoryE1RMRepository implements E1RMRepository {
     pointIds: ReadonlySet<string>,
     confidence: E1RMConfidence,
   ): Promise<void> {
+    this.revision += 1;
     this.points = this.points.map((point) =>
       point.studentId === studentId &&
       point.origin === 'imported' &&
@@ -86,6 +120,7 @@ export class InMemoryE1RMRepository implements E1RMRepository {
       ...this.points.filter((point) => point.studentId !== studentId),
       ...replacement.filter((point) => point.studentId === studentId),
     ];
+    this.revision += 1;
     this.prEvents = this.prEvents.filter((event) => event.studentId !== studentId);
   }
 
@@ -130,6 +165,7 @@ export class InMemoryE1RMRepository implements E1RMRepository {
   }
 
   async recordPR(event: PRBreakthroughEvent): Promise<void> {
+    this.revision += 1;
     this.prEvents.push(event);
   }
 
@@ -140,6 +176,7 @@ export class InMemoryE1RMRepository implements E1RMRepository {
   }
 
   async acknowledgePR(eventId: string, acknowledgedAt = new Date()): Promise<void> {
+    this.revision += 1;
     this.prEvents = this.prEvents.map((event) =>
       event.id === eventId ? { ...event, acknowledgedAt } : event,
     );

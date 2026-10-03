@@ -18,7 +18,7 @@ export default function SessionRouter() {
   }
 
   if (user.role === 'coach') {
-    return <Redirect href="/(coach)/today" />;
+    return <Redirect href="/(coach)/(tabs)/today" />;
   }
 
   return <Redirect href="/(student)/today" />;

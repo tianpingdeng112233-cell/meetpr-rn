@@ -172,6 +172,11 @@ async function abort(attachmentId: string): Promise<void> {
   });
 }
 
+async function remove(attachmentId: string): Promise<void> {
+  const id = UuidSchema.parse(attachmentId);
+  await authenticatedRequest(`/uploads/${id}`, { method: 'DELETE' });
+}
+
 async function url(attachmentId: string): Promise<UploadUrlResponse> {
   const id = UuidSchema.parse(attachmentId);
   return authenticatedRequest(`/uploads/${id}/url`, {
@@ -179,7 +184,7 @@ async function url(attachmentId: string): Promise<UploadUrlResponse> {
   });
 }
 
-export const uploadsRepository = { abort, complete, initiate, url };
+export const uploadsRepository = { abort, complete, initiate, remove, url };
 
 export const uploadKeys = {
   all: ['uploads'] as const,
@@ -219,5 +224,17 @@ export function useAbortUpload() {
     mutationFn: uploadsRepository.abort,
     onSuccess: (_, attachmentId) =>
       queryClient.invalidateQueries({ queryKey: uploadKeys.url(attachmentId) }),
+  });
+}
+
+export function useRemoveUpload() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: uploadsRepository.remove,
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: uploadKeys.all }),
+        queryClient.invalidateQueries({ queryKey: videoKeys.all }),
+      ]),
   });
 }

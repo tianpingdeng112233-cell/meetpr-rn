@@ -1,0 +1,44 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "19aohza",
+  "seq": 3,
+  "count": 54,
+  "targets": [
+    "e25|tap|button|6 videos awaiting feedback, Earliest clip 1 day ago, Awaiting Feedback||",
+    "e30|tap|button|2 unread student messages, Jianing Li · Chenxi Wang, Unread||",
+    "e35|tap|button|陈一鸣 applied to join, Waiting 2 hours, New Application||",
+    "e42|tap|button|View All Students||",
+    "e47|tap|button|Today||",
+    "e48|tap|button|Messages||",
+    "e51|tap|button|Students||",
+    "e54|tap|button|Profile||"
+  ],
+  "scroll": [
+    "e18|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e20|text|text|25 September · Friday||",
+    "e21|text|text|Todo||",
+    "e23|text|text|3||",
+    "e22|text|text|Today||",
+    "e24|text|text|Ordered By Handling||",
+    "e26|text|text|6 videos awaiting feedback||",
+    "e28|text|text|Awaiting Feedback||",
+    "e27|text|text|Earliest clip 1 day ago||",
+    "e31|text|text|2 unread student messages||",
+    "e33|text|text|Unread||",
+    "e32|text|text|Jianing Li · Chenxi Wang||",
+    "e36|text|text|陈一鸣 applied to join||",
+    "e38|text|text|New Application||",
+    "e37|text|text|Waiting 2 hours||",
+    "e40|text|text|Week Overview||",
+    "e41|text|text|No training scheduled this week||",
+    "e43|text|text|View All Students||",
+    "e49|text|text|8||",
+    "e52|text|text|1||",
+    "e50|text|text|Messages||",
+    "e53|text|text|Students||"
+  ],
+  "udid": "D412AE31-0ED9-4A23-B0FD-FFFA4A5A5609"
+}

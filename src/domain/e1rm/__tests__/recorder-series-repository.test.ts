@@ -85,6 +85,19 @@ function recorder(seed: readonly E1RMHistoryPoint[] = []) {
 }
 
 describe('E1RMRecorder PR policy', () => {
+  test('imports cannot set or mask the measured anomaly baseline', async () => {
+    const imported = point({ e1RMKg: 100, origin: 'imported' });
+    const context = recorder([imported]);
+    await context.recorder.record(input(150));
+    await context.repository.recordPoint(point({ e1RMKg: 500, origin: 'imported' }));
+    await context.recorder.record(input(200));
+
+    const history = await context.repository.fetchHistory(studentId, exerciseId);
+    expect(history.filter(value => value.origin === 'logged').map(value => value.confidence))
+      .toEqual(['normal', 'low']);
+    expect(history).toContainEqual(imported);
+  });
+
   test('records the first trusted point as the first PR', async () => {
     const context = recorder();
     const event = await context.recorder.record(input(100));
@@ -141,11 +154,22 @@ describe('E1RMRecorder PR policy', () => {
     expect(realPR?.breakthroughE1RMKg).toBe(208);
   });
 
+  test.each<[number | null, number]>([
+    [null, 116.6666666667], [5.5, 116.6666666667], [6, 142.8571428571], [6.5, 138.8888888889],
+  ])('records calculator-supported RPE %s like iOS', async (rpe, estimate) => {
+    const context = recorder();
+    await context.recorder.record(input(100, { reps: 5, rpe }));
+    const saved = await context.repository.fetchHistory(studentId, exerciseId);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].e1RMKg).toBeCloseTo(estimate, 8);
+    expect(saved[0].confidence).toBe('normal');
+  });
+
   test('ineligible or invalid sets produce neither point nor PR', async () => {
     const context = recorder();
     expect(await context.recorder.record(input(100, { completed: false }))).toBeNull();
     expect(await context.recorder.record(input(100, { failed: true }))).toBeNull();
-    expect(await context.recorder.record(input(100, { reps: 5, rpe: 6 }))).toBeNull();
+    expect(await context.recorder.record(input(100, { reps: 5, rpe: 10.5 }))).toBeNull();
     expect(
       await context.recorder.record(input(100, { family: 'deadlift', reps: 6, rpe: 9 })),
     ).toBeNull();
@@ -270,4 +294,19 @@ describe('InMemoryE1RMRepository contract', () => {
     expect(await repository.unacknowledgedPRs(studentId)).toEqual([]);
     expect(await repository.unacknowledgedPRs(otherStudentId)).toHaveLength(1);
   });
+});
+
+test('measured anomaly history spans resolved exercises in the same family and student only', async () => {
+  const seed = point({ e1RMKg: 100 });
+  const repository = new InMemoryE1RMRepository([
+    seed,
+    { ...point({ e1RMKg: 500 }), exerciseId: 'bench' },
+    { ...point({ e1RMKg: 500 }), studentId: 'another-student' },
+  ]);
+  const subject = new E1RMRecorder(repository, {
+    now: () => now, idFactory: fixtureId,
+    resolveFamily: id => id === 'bench' ? 'bench' : 'squat',
+  });
+  await subject.record(input(130, { exerciseId: 'another-squat' }));
+  expect((await repository.fetchHistory(studentId, 'another-squat'))[0].confidence).toBe('low');
 });

@@ -8,8 +8,8 @@
 | 文件 | 出什么 |
 |---|---|
 | `app-icon.svg` | 与 iOS 完全同构的 1024 主图（`assets/images/icon.png` 的源） |
-| `android-icon-foreground.svg` | 自适应前景：透明底，圆盘 + 盘内形状按 **.8** 收一档让开自适应遮罩 |
-| `android-icon-monochrome.svg` | 主题图标层：同样 .8，圆盘实心 + 盘内挖空，系统自己上主题色 |
+| `android-icon-foreground.svg` | 自适应前景：透明底，圆盘 + 盘内形状按 **.64** 收进安全区并留余量（2026-10-02 由 .8 改，真机桌面上圆盘约占图标 78%） |
+| `android-icon-monochrome.svg` | 主题图标层：同样 .64，圆盘实心 + 盘内挖空，系统自己上主题色 |
 
 对应的 `assets/images/*.png` 都是从这三个 SVG 出的，不手改。
 背景是纯色，没有 SVG——`android-icon-background.png` 是一张 432 的 `#F5F6F8`，
@@ -42,6 +42,6 @@ magick /tmp/app-icon.png -background '#F5F6F8' -alpha remove -alpha off -colorsp
 
 ## 还没做
 
-- **启动页**：`assets/images/splash-icon.png` 现在是个 1×1 占位，`app.json` 里 splash 底色还是
-  `#000000`。定稿附带的图标动效（圆盘淡入 → 折线画出 → 圆点弹入 → 上弧扫出）也没实装。
+- **启动页**：`assets/images/splash-icon.png` 现在是个 1×1 占位，`app.json` 里 splash 底色为
+  `#F5F6F8`。定稿附带的图标动效（圆盘淡入 → 折线画出 → 圆点弹入 → 上弧扫出）也没实装。
   两件都不在这波里。

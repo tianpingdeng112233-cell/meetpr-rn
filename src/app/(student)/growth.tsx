@@ -1,5 +1,5 @@
-import { FeaturePlaceholderScreen } from '@/navigation/FeaturePlaceholderScreen';
+import { GrowthScreen } from '@/features/history';
 
 export default function StudentGrowthScreen() {
-  return <FeaturePlaceholderScreen title="成长" />;
+  return <GrowthScreen />;
 }

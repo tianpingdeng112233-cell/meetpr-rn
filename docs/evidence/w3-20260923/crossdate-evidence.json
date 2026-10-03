@@ -1,0 +1,45 @@
+{
+  "student": {
+    "total_logs": 5,
+    "new_logs": [
+      {
+        "id": "d44fab72-c8c4-45e8-867e-538cf327c380",
+        "plan_exercise_id": "83f000ec-f7b7-485b-9ccc-a7352d784dee",
+        "set_index": 1,
+        "logged_date": "2026-09-22",
+        "weight_kg": "70.00",
+        "reps": 5
+      },
+      {
+        "id": "69802b1a-22d7-497e-89b4-fc0bdf1ae0d9",
+        "plan_exercise_id": "83f000ec-f7b7-485b-9ccc-a7352d784dee",
+        "set_index": 0,
+        "logged_date": "2026-09-22",
+        "weight_kg": "70.00",
+        "reps": 5
+      }
+    ]
+  },
+  "coach": {
+    "total_logs": 5,
+    "new_logs": [
+      {
+        "id": "d44fab72-c8c4-45e8-867e-538cf327c380",
+        "plan_exercise_id": "83f000ec-f7b7-485b-9ccc-a7352d784dee",
+        "set_index": 1,
+        "logged_date": "2026-09-22",
+        "weight_kg": "70.00",
+        "reps": 5
+      },
+      {
+        "id": "69802b1a-22d7-497e-89b4-fc0bdf1ae0d9",
+        "plan_exercise_id": "83f000ec-f7b7-485b-9ccc-a7352d784dee",
+        "set_index": 0,
+        "logged_date": "2026-09-22",
+        "weight_kg": "70.00",
+        "reps": 5
+      }
+    ]
+  },
+  "completed_days": 3
+}

@@ -1,0 +1,30 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "1dcs83a",
+  "seq": 86,
+  "count": 48,
+  "targets": [
+    "e33|typeText|text-field|Target weight class (optional)|IPF 83kg|",
+    "e35|typeText|text-field||I want to qualify for nationals. Please watch my speed out of the bottom of the squat|",
+    "e15|tap|button|Back||BackButton",
+    "e27|tap|button|No||",
+    "e28|tap|button|Preparing for a meet||",
+    "e31|tap|button|Date Picker|Sep 28, 2026|",
+    "e38|tap|button|Save||",
+    "e45|tap|button|Today||",
+    "e46|tap|button|Training||",
+    "e47|tap|button|Progress||",
+    "e48|tap|button|Profile||"
+  ],
+  "scroll": [
+    "e21|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e26|text|text|Are you preparing for a meet?||",
+    "e29|text|text|Meet date||",
+    "e32|text|text|TARGET WEIGHT CLASS (OPTIONAL)||",
+    "e34|text|text|Anything to tell your coach? (optional)||"
+  ],
+  "udid": "A5119984-9A8D-415C-83D4-E7145351FA79"
+}

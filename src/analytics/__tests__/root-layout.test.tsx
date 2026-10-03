@@ -8,6 +8,7 @@ import {
 } from '@/analytics';
 import RootLayout from '@/app/_layout';
 
+jest.mock('@/features/notifications/PlanNotificationSession', () => ({ PlanNotificationSession: () => null }));
 jest.mock('@/analytics', () => {
   // Jest hoists this factory before React imports are initialized.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -36,7 +37,10 @@ jest.mock('@/api/session', () => {
     user: null,
   };
   return {
-    useSessionStore: (selector: (value: typeof state) => unknown) => selector(state),
+    useSessionStore: Object.assign((selector: (value: typeof state) => unknown) => selector(state), {
+      getState: () => state,
+      subscribe: () => () => {},
+    }),
   };
 });
 jest.mock('expo-router', () => {
@@ -58,10 +62,13 @@ jest.mock('expo-router', () => {
   Stack.Protected = Protected;
   return {
     DarkTheme: { colors: {} },
+    DefaultTheme: { colors: {} },
     Stack,
     ThemeProvider,
   };
 });
+jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
+jest.mock('expo-splash-screen', () => ({ preventAutoHideAsync: jest.fn(), hideAsync: jest.fn() }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
 const mockedConfigure = jest.mocked(configure);
@@ -106,3 +113,7 @@ test('the privacy sheet is not blocked by a pending analytics config request', a
     renderer?.unmount();
   });
 });
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

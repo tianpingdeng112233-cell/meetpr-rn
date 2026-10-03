@@ -1,0 +1,377 @@
+{
+  "rn_sha": "d818bf8",
+  "ios_sha": "0748931563fefea14e7f50a7c9ee7330b5501bea",
+  "android": "AVD meetpr 1080x2400 density420 fontScale1",
+  "ios": "DemoStudent / Demo; English; simulated fixture data differs from Android",
+  "scope": "screens and source audit; not same-data pixel comparison or fresh full E2E",
+  "files": [
+    {
+      "file": "auth-register.png",
+      "sha256": "7b471ef090854cf656a4d376e82fc92683fecd4d87949ea021ccc1448408c4a1"
+    },
+    {
+      "file": "auth-register.xml",
+      "sha256": "65b0812aadf3a754386c5ced445af04a32e650ac3bb4db35245734286995c327"
+    },
+    {
+      "file": "auth-reset.png",
+      "sha256": "52b9a0634d3ffeca3c324833017a1b3c2a1ad26d3c73573e44f055d723f78438"
+    },
+    {
+      "file": "auth-reset.xml",
+      "sha256": "0b37368563954e854967fc09d6718d8b06427b2240985bf897c396561e413d80"
+    },
+    {
+      "file": "fixture-after-login.png",
+      "sha256": "45182d1badf6724baae0cb178981b1c95a1e850edc634c4da965e8f7e40298db"
+    },
+    {
+      "file": "fixture-after-login.xml",
+      "sha256": "0b832b651cb0144ea3f144dbee38f4847cecdaa779221030b4900c5bf47acf5f"
+    },
+    {
+      "file": "fixture-basics.png",
+      "sha256": "ad50d8f15f3f3ddc60b9044d726da3af49d0214f35444fe22a80b31d33fa0539"
+    },
+    {
+      "file": "fixture-basics.xml",
+      "sha256": "0bb9e666d5c895d59f9b7e8782e19169c00fb32c08b00b20a7b19f8c5320e840"
+    },
+    {
+      "file": "fixture-coach-detail.png",
+      "sha256": "c7cfd159c6e26ad864fde263d5e4564005997d274feec0aaef370d33b5b5ce22"
+    },
+    {
+      "file": "fixture-coach-detail.xml",
+      "sha256": "12ad644b4618962089848e74781022da5636e25d38c682eab1351a9e69c5f9c9"
+    },
+    {
+      "file": "fixture-coach-feedback.png",
+      "sha256": "0b4eb2007a46e522fd83f134e1b7a0385b4dcfd631862fa602b300794a41b95d"
+    },
+    {
+      "file": "fixture-coach-feedback.xml",
+      "sha256": "0fa85c1612c8609df27f7d573a7a0a20cf5e97bd37a70712d09d2f3a543452ce"
+    },
+    {
+      "file": "fixture-coach-growth.png",
+      "sha256": "064bd3fd3beffa5b31e0c0023a5dba6abe9e3514dfee175b6792f84446bc902f"
+    },
+    {
+      "file": "fixture-coach-growth.xml",
+      "sha256": "9696db4b9a7104f2b8fc79f9c9a8bef617ed642228721ba0503d2bab3c2bb128"
+    },
+    {
+      "file": "fixture-coach-invites.png",
+      "sha256": "e506a70844b74c4d8239bcfb6c359cf0d8eab851ffbdf941e144ef1b7ca48793"
+    },
+    {
+      "file": "fixture-coach-invites.xml",
+      "sha256": "70aadd2b47d19b3366a5beaf9da4330a0ed8a0dcf119bce5ee78564d1637eb7c"
+    },
+    {
+      "file": "fixture-coach-messages.png",
+      "sha256": "ee1b55aeeb993c657c60f06b85f765e8a2e91c6099678d98241eebf96220e598"
+    },
+    {
+      "file": "fixture-coach-messages.xml",
+      "sha256": "9c978fcbf8a1ee795ec7275d537e23ba91aad2b16f91a9eb030605c0342d45da"
+    },
+    {
+      "file": "fixture-coach-profile.png",
+      "sha256": "ef6a74bdc873d515d81261c37585576b70c7858244519aae300acadcd0a82776"
+    },
+    {
+      "file": "fixture-coach-profile.xml",
+      "sha256": "5857da66501d426add2fb8431489f87f0482379534c2c0a0232d10c59ca3f2c9"
+    },
+    {
+      "file": "fixture-coach-student-profile.png",
+      "sha256": "5707777927f7082379d37a4ee6f97055bd704439c5894d60cdaa14f6b70c48e4"
+    },
+    {
+      "file": "fixture-coach-student-profile.xml",
+      "sha256": "a3f1698d969c3c4d0866f3d48bba77e41c6cbbdad9840cceb3c0f3f5dc49f785"
+    },
+    {
+      "file": "fixture-coach-students.png",
+      "sha256": "d5f14184ade4713f9ce0ac77b802ae97fdaca8d70902aaf0fe72d001072d700e"
+    },
+    {
+      "file": "fixture-coach-students.xml",
+      "sha256": "95a56329faf20450062aff8843161f57ff68ee87ee19c0c086fc5a346a6a6a2f"
+    },
+    {
+      "file": "fixture-coach-today.png",
+      "sha256": "57e961533c10379f5bf4ab6c95ed517cd64f588295ed1bf5b3b3555c023553c5"
+    },
+    {
+      "file": "fixture-coach-today.xml",
+      "sha256": "b70380390f18763aac444e2fdad2c2d67e473b6f556dd0aac39ef68500dbac6e"
+    },
+    {
+      "file": "fixture-coach-videos.png",
+      "sha256": "6fd2642a3de7db2c64f082be4feac63004518d32639be15cd645bf80fd1af5ee"
+    },
+    {
+      "file": "fixture-coach-videos.xml",
+      "sha256": "1b6f7ed39825f5bd98ef13f4d2f33a0f8e54e6decd179f76c0a0c9dd72f7b33a"
+    },
+    {
+      "file": "fixture-feedback-player.png",
+      "sha256": "7ec645af53374868692348182aa28c37459ac021d05bbe56a5d54e9d65a96984"
+    },
+    {
+      "file": "fixture-feedback-player.xml",
+      "sha256": "135dcef69151529360eb6cd06c410d86c39dd6c89b1736e2b8419ef709df9867"
+    },
+    {
+      "file": "fixture-meet-expanded.png",
+      "sha256": "c2b8bdc266483cc7b3ad78b622fb642918f148cfc88aaf376885d8a82af0498d"
+    },
+    {
+      "file": "fixture-meet-expanded.xml",
+      "sha256": "4c405e039f203ff5c9e2081e1da5181866106115a017f816fd09a802ac29223a"
+    },
+    {
+      "file": "fixture-password.png",
+      "sha256": "d14072aee8061b11b52846ad53b502d49453fd909cb8e1feb2cb39a0e59997a9"
+    },
+    {
+      "file": "fixture-password.xml",
+      "sha256": "28e284e30995c6be05a8cdf66b1df841ae587447ed1a436e5926c73d0cfedea4"
+    },
+    {
+      "file": "fixture-profile-lower.png",
+      "sha256": "836947745b59e612765cee5901ed6f5ec90f3b27fc59fcc60e351459b7d5f19e"
+    },
+    {
+      "file": "fixture-profile-lower.xml",
+      "sha256": "69d2bd353dc518acaf928845956b1ce53e10be03749869785834b0e4cd83f2ea"
+    },
+    {
+      "file": "fixture-profile-top.png",
+      "sha256": "2b826ea1f2a8b0c22556f64ffd6d14dd8de2cc4f404f3bcb94efb95dcb261f9d"
+    },
+    {
+      "file": "fixture-profile-top.xml",
+      "sha256": "0d96919058f412d4c2a07526591966c782769c4b3fe183524772edc4705c6366"
+    },
+    {
+      "file": "fixture-quicklog.png",
+      "sha256": "5fbee5be2950055c9c0185ece336158ce94eddded83b0a60dbc658cb220e2852"
+    },
+    {
+      "file": "fixture-quicklog.xml",
+      "sha256": "7235a7d5a14d28ea185c923cb53c244c480ca55e5bb5d8a891222d31670293db"
+    },
+    {
+      "file": "fixture-reminders.png",
+      "sha256": "9ab85d6581b6f8b20854ac55aec1da7370846bda437b3b2687e41ce2f6cd29eb"
+    },
+    {
+      "file": "fixture-reminders.xml",
+      "sha256": "ce8a334461d3e0c9260546f28e164b925bec28d04eebcb1543a24373dbec6b3f"
+    },
+    {
+      "file": "fixture-rest.png",
+      "sha256": "a92f8bd6f8d0d20e57dd36a0ff242109f37ee4a0c1515189eebb6bd5689fbfca"
+    },
+    {
+      "file": "fixture-rest.xml",
+      "sha256": "41f0898599a005c455ead228aece962f313166091bac7ae4e376bc07b8cde611"
+    },
+    {
+      "file": "fixture-set-entry.png",
+      "sha256": "31ed9c93df06d9365367ae5eea8398bd049ebaa8fdad3c41ae5de79a3d047783"
+    },
+    {
+      "file": "fixture-set-entry.xml",
+      "sha256": "627b4d5c9dbe2491286f30046c7bfd2636791ffc81f6f0f9bd5325638927cdff"
+    },
+    {
+      "file": "fixture-student-chat.png",
+      "sha256": "854ee39de945ebd1edd3a241d7c7e48083cf7fa9ff384c7c75b657cf6bf1a648"
+    },
+    {
+      "file": "fixture-student-chat.xml",
+      "sha256": "0bd2b29d57f3748684f6d488728336131e7fd6ffda7e83f1e8b4f2813ef3cfee"
+    },
+    {
+      "file": "fixture-training.png",
+      "sha256": "2fa9d56d58cda2729a51125a02c3ecb871d6229441ff1ae7937439a07edf4329"
+    },
+    {
+      "file": "fixture-training.xml",
+      "sha256": "191db9bfdea99e4b9ddea42222565a125a651640301961448a76d02d51ede085"
+    },
+    {
+      "file": "global-restored.png",
+      "sha256": "0bc78de57ca34d5d57d00994638da78453209f03c81466bd25b2c4f4b0b9e143"
+    },
+    {
+      "file": "global-restored.xml",
+      "sha256": "ceaa9a7555c4453d617ecee15df737f32a07d7a1aed55c897d0bf63dc25f4650"
+    },
+    {
+      "file": "ios-basics-edit.jpg",
+      "sha256": "26bbc2a303d3261ed71acfdf5d6f78af34f353e9a9fbdcce407fa12146c1ba46"
+    },
+    {
+      "file": "ios-basics-edit.json",
+      "sha256": "5c0c496658647e6b09e121b59c4eed9cf3be1cf353006dd69179b267e475c63d"
+    },
+    {
+      "file": "ios-coach-detail-growth-empty.jpg",
+      "sha256": "1202d9f50fe1fbc73b76017799248dd76935d2dba059be306be0d9d32656917b"
+    },
+    {
+      "file": "ios-coach-detail-growth-empty.json",
+      "sha256": "e162091b75976aeed93dbb69bff3fbdbbfbfe1c358e11293ddc68b9b2c9f0c70"
+    },
+    {
+      "file": "ios-coach-detail-overview.jpg",
+      "sha256": "903159f370641f9c41e8444d01e464489c47fd5ad93e5a702a5bafa3677e94d3"
+    },
+    {
+      "file": "ios-coach-detail-overview.json",
+      "sha256": "ae7b4bee7d7372d56c0d264215234fe03ac462c33cb217ca39baf6f287cca3ea"
+    },
+    {
+      "file": "ios-coach-detail-videos-empty.jpg",
+      "sha256": "558942f8455386096c03e0a00c60ed02adfe1701a374588d7117d32fda5bda77"
+    },
+    {
+      "file": "ios-coach-detail-videos-empty.json",
+      "sha256": "61219a981bd21cbfc566aa3f4df98300c987294e8d5d98aa71b102572f1461c3"
+    },
+    {
+      "file": "ios-coach-invites.jpg",
+      "sha256": "58f117fc02559add9b38ebd2c728351c7542c1b8b74b6510a0f15b1e4a8d6ca1"
+    },
+    {
+      "file": "ios-coach-invites.json",
+      "sha256": "aee56647c0da65af8db0f4445e2562f85da692be82323528c14092a73ce04382"
+    },
+    {
+      "file": "ios-coach-messages.jpg",
+      "sha256": "3f415b4d6412bb09632b4d85a5c8c9b708f0367ce8fa69af75293d2972b326d4"
+    },
+    {
+      "file": "ios-coach-messages.json",
+      "sha256": "e2bd7165dbc167caa16b167d06c06271966b06b0027887d36df179e431328e6a"
+    },
+    {
+      "file": "ios-coach-profile.jpg",
+      "sha256": "0959e2699e04f9cec86841b1aaecc83c3423a67ee0fa761279032fb7ca0e24f1"
+    },
+    {
+      "file": "ios-coach-profile.json",
+      "sha256": "10a72c83854ed6933ddd4d303397a224f51057d565485987510cc30704955f3d"
+    },
+    {
+      "file": "ios-coach-students.jpg",
+      "sha256": "9d4973dcb2e2abaa86542b90be2b30b89a3f7d1faf00b925742fbfee8f6f60bd"
+    },
+    {
+      "file": "ios-coach-students.json",
+      "sha256": "5e04fe175494008ae58bb7c7427a7ea987f9404f3884a1455ae8308c01a2df18"
+    },
+    {
+      "file": "ios-coach-today.jpg",
+      "sha256": "f71f46ff1fabddee33f0c20981a2f5a2c39ece51057a78f1d0d478586612501d"
+    },
+    {
+      "file": "ios-coach-today.json",
+      "sha256": "e1333407223867debeb68165c011a843227046af9c5ea9af62000c31819836d9"
+    },
+    {
+      "file": "ios-growth.jpg",
+      "sha256": "f2218c4f41598b7646f4c62ca9a5f1dc4987e8c480508df376c40ff44aab5870"
+    },
+    {
+      "file": "ios-growth.json",
+      "sha256": "c31e462e1a156129b7d3e3661a4a3b73785ee490f3b0b5b856a0b336c7faf4bd"
+    },
+    {
+      "file": "ios-meet-edit.jpg",
+      "sha256": "60330ddf007218f19be8d6e834b6cd6490b44656d7fd8443579cbffbd7488216"
+    },
+    {
+      "file": "ios-meet-edit.json",
+      "sha256": "178754ef942d068ee0e87e4dcc516e73a05101609b9e288c86e1190ca66bec79"
+    },
+    {
+      "file": "ios-profile.jpg",
+      "sha256": "5edcf7ee58484e622ad192c5e28471189ae6f347d11eb0dc098bc3a89430d245"
+    },
+    {
+      "file": "ios-profile.json",
+      "sha256": "66935af273c199bbe55e27479356b4ba75114bd52ae470eb5de47e0d78ad09a1"
+    },
+    {
+      "file": "ios-readiness.jpg",
+      "sha256": "53b0bcd8395328e0e12ef0ccfbcca093efe0d57cecb42ac2f0d82d307c7f4ab2"
+    },
+    {
+      "file": "ios-rest.jpg",
+      "sha256": "1568c5aaf9f075e1b64f0a01d47d1f0339f9e078f93419dd81dd827fac156b00"
+    },
+    {
+      "file": "ios-rest.json",
+      "sha256": "85de26da29b777d0830f9e2561786c4769243b900ea3b17a88bffa01d2652328"
+    },
+    {
+      "file": "ios-set-entry.jpg",
+      "sha256": "dee70601f5437fb83e13509ff29d974679d761cb1cb2d63eef5792d177994017"
+    },
+    {
+      "file": "ios-set-entry.json",
+      "sha256": "1e7bf8ba347a2c5dde3d6c821caf6db3861c8e6b49e602012d4bbdf350fd1cc4"
+    },
+    {
+      "file": "ios-training.jpg",
+      "sha256": "10138c6cd89d5bb50daec8eeca0cba019ceb0e1e6bb636daad315c12669d21af"
+    },
+    {
+      "file": "student-growth.png",
+      "sha256": "36b82fdc4c8672748d144a2ac6820815a547e65b05bb3e92b888837fb79571a8"
+    },
+    {
+      "file": "student-growth.xml",
+      "sha256": "c48a209708c6dbd417b2980bffc82e75814d8e6f994e6a03e794bcecfec70736"
+    },
+    {
+      "file": "student-history.png",
+      "sha256": "82ddb2c8c187c652bd9e4606cbd8f18bbf6f7180bc7627a51bbc80a634d54b36"
+    },
+    {
+      "file": "student-history.xml",
+      "sha256": "f2a330bafbc4cb0393f964100e6fd90d4e68e93abd788f00d13caf4e74ad0338"
+    },
+    {
+      "file": "student-readiness.png",
+      "sha256": "81f22ee5b02d3f52a5587ac670df5519446894f4ec67ecec9803b48b89d6b1d1"
+    },
+    {
+      "file": "student-readiness.xml",
+      "sha256": "156ff883b3b12f01ee34044fdf22315199f87079a54dde224be5d405b6c9c501"
+    },
+    {
+      "file": "student-today.png",
+      "sha256": "bce0a4622713e64c56800f6d3f339aa8fc46172b83864b0e5678d65660b2a0c1"
+    },
+    {
+      "file": "student-today.xml",
+      "sha256": "ceaa9a7555c4453d617ecee15df737f32a07d7a1aed55c897d0bf63dc25f4650"
+    },
+    {
+      "file": "student-training.png",
+      "sha256": "5a6071b6fd2ede2766fb0ceed7c30e8a1152ff35010cb9cdb766632016f50350"
+    },
+    {
+      "file": "student-training.xml",
+      "sha256": "e7bea42906bcc50a7124d2b81310b1ad5a1ec1c2288cae0a7b741ccc6da87dd9"
+    }
+  ]
+}
