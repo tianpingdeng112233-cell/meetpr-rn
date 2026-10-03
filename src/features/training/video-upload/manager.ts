@@ -213,6 +213,8 @@ async function run(
       if (sourceUri !== prepared.localUri) deleteLocalVideo(sourceUri);
     }
     check();
+    if (record.session)
+      dispatch(id, { type: 'uploadStarted', attachmentId: record.session.attachment_id });
     const attachmentId = await runPreparedVideoUpload({
       localUri: record.localUri!,
       setLogId,
@@ -235,7 +237,9 @@ async function run(
         await flushVideoUploads();
       },
       onInitiated: () => {},
-      onProgress: () => {},
+      onProgress: (progress) => {
+        if (!signal.aborted) dispatch(id, { type: 'progress', progress });
+      },
     });
     check();
     const original = recordFor(id)?.source?.uri;

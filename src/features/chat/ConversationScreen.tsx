@@ -225,7 +225,7 @@ export function ConversationScreen({ conversationId, studentName, status, initia
 function ChatMessageRow({ message, outgoing, read, openImage, openVideo }: { message: ChatMessage; outgoing: boolean; read: boolean; openImage: () => void; openVideo: () => Promise<void> }) {
   const colors = useColors();
   const presentation = message.kind === 'text' ? ChatSetCardPresentation(message) : null;
-  if (presentation) return <ChatSetCard reference={presentation.setRef} note={presentation.note} message={message} outgoing={false} read={false} openVideo={openVideo} />;
+  if (presentation) return <ChatSetCard reference={presentation.setRef} note={presentation.note} message={message} outgoing={outgoing} read={read} openVideo={openVideo} />;
   if (message.kind === 'image') return <Pressable accessibilityRole="button" accessibilityLabel={t('chat.image')} onPress={openImage} style={{ width: '75%', aspectRatio: 4 / 3, alignSelf: outgoing ? 'flex-end' : 'flex-start', borderRadius: radius.xl, borderBottomRightRadius: outgoing ? 5 : radius.xl, borderBottomLeftRadius: outgoing ? radius.xl : 5, overflow: 'hidden' }}><ChatImage key={message.image_url} url={message.image_url} /></Pressable>;
   return <View style={{ flexDirection: 'row', justifyContent: outgoing ? 'flex-end' : 'flex-start', paddingLeft: outgoing ? 32 : 0, paddingRight: outgoing ? 0 : 32 }}>
     <View style={{ flexShrink: 1, alignItems: outgoing ? 'flex-end' : 'flex-start', gap: 4 }}>

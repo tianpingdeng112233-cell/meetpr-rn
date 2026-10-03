@@ -9,6 +9,8 @@ export const VIDEO_UPLOAD_CONSENT_KEY = 'video_upload_consent_v1';
 export const VIDEO_MAX_DURATION_SECONDS = 120;
 export const VIDEO_PART_SIZE_BYTES = 5 * 1024 * 1024;
 export const VIDEO_UPLOAD_CONCURRENCY = 3;
+export const VIDEO_PART_IDLE_TIMEOUT_MS = 30_000;
+export const VIDEO_PART_MAX_DURATION_MS = 10 * 60_000;
 
 export const VIDEO_UPLOAD_ERRORS = Object.freeze({
   tooLong: (seconds: number) =>

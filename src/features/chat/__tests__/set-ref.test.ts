@@ -63,15 +63,33 @@ test('candidates order recent logs before unrecorded prescriptions and preserve 
 
 const id2 = '20000000-0000-4000-8000-000000000000';
 const id3 = '30000000-0000-4000-8000-000000000000';
-test('picker defaults to requested log or first row, and guards confirmation without a selection', () => {
+test('picker preselects only the requested set, groups exercises and allows one selection', () => {
+  setLocaleOverride('en');
   const picker = new SetRefPickerPresentation();
-  expect(picker.proceed()).toBe(false);
-  picker.load([{ id, source: logged }, { id: id2, source: logged }], id2);
+  const candidates = [
+    { id, exerciseId: 'squat', dayLabel: 'W2D1', source: logged },
+    { id: id2, exerciseId: 'squat', dayLabel: 'W2D1', source: { ...logged, setNumber: 1, rpe: null }, video: { state: 'ready' as const, videoId: id } },
+    { id: id3, exerciseId: 'bench', dayLabel: 'W2D1', source: { ...logged, exerciseName: 'Bench', source: 'planned' as const } },
+  ];
+  picker.load(candidates);
+  expect(picker.canSend).toBe(false);
+  expect(picker.sendSummary).toBe('');
+  expect(picker.groups).toMatchObject([
+    { exerciseName: 'Squat', dayLabel: 'W2D1', cells: [
+      { id: id2, title: 'Set 1', metrics: '100kg × 5', status: 'Logged · video' },
+      { id, title: 'Set 2', metrics: '100kg × 5', status: 'Logged · RPE 8' },
+    ] },
+    { exerciseName: 'Bench', cells: [{ id: id3, status: 'Planned' }] },
+  ]);
+  picker.load(candidates, id2);
   expect(picker.selectedCandidate?.id).toBe(id2);
-  picker.select('missing'); expect(picker.selectedCandidate?.id).toBe(id2);
-  picker.select(id); expect(picker.proceed()).toBe(true); expect(picker.page).toBe('confirmation');
-  picker.showSelection(); expect(picker.page).toBe('selection');
-  picker.load([{ id, source: logged }], 'missing'); expect(picker.selectedCandidate?.id).toBe(id);
+  picker.select(id);
+  picker.select('missing');
+  expect(picker.selectedCandidate?.id).toBe(id);
+  expect(picker.canSend).toBe(true);
+  expect(picker.sendSummary).toBe('Sends Set 2 of Squat with your question');
+  picker.load(candidates, 'missing');
+  expect(picker.canSend).toBe(false);
 });
 
 test('planned candidates use prescription set numbers and preserve legacy zero RPE', () => {
@@ -81,4 +99,11 @@ test('planned candidates use prescription set numbers and preserve legacy zero R
   // Set 3 is invalid with only two prescribed sets; do not relabel it as Set 2.
   expect(candidates).toHaveLength(1);
   expect(candidates[0].source).toMatchObject({ setNumber: 2, setTotal: 2, rpe: '0.0' });
+});
+
+test('an invalid recorded snapshot cannot enable sending or crash picker presentation', () => {
+  const picker = new SetRefPickerPresentation();
+  picker.load([{ id, source: { ...logged, rpe: '8.2' } }], id);
+  expect(picker.canSend).toBe(false);
+  expect(picker.selectedReference).toBeNull();
 });

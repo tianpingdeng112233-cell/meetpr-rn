@@ -58,6 +58,15 @@ test('login presents the Global actions and lets the user reveal their password'
   expect(input('PASSWORD').props.secureTextEntry).toBe(true);
 });
 
+test('login places credentials and account links before the separator and Google', () => {
+  act(() => { renderer = create(<GlobalLoginScreen />); });
+  const labels = ['EMAIL', 'PASSWORD', 'Sign in', 'Create account', 'Forgot password?', 'or', 'Continue with Google', 'Privacy Policy'];
+  const order = renderer.root.findAllByType(Text)
+    .map(node => node.props.children)
+    .filter(text => labels.includes(text));
+  expect(order).toEqual(labels);
+});
+
 test('login validates email on blur and shows a failed sign-in inline without a floating toast', async () => {
   const error = new ApiError('backend', 'invalid', { status: 401, code: 'AUTH_INVALID_CREDENTIALS' });
   mockLogin.mockRejectedValueOnce(error);
