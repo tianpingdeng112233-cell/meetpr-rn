@@ -1944,3 +1944,75 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 ```
 
 - 返修第 2 轮（2026-10-02）：仅将 `WorkoutBody.tsx` 动作小结改为 `flexWrap` 自适应横排，名称与处方禁收缩并限制最大宽度，空间不足时处方整体下移，无屏宽/字体倍数分支；全量 `npx jest --runInBand` 138 suites / 1008 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过；独立 Standards / Spec 审查各 0 项，日志 `/private/tmp/084b-repair2-{jest,tsc,lint}.log`，本轮差异 `/private/tmp/084b-repair2.diff`；ADB 启动被沙箱拒绝（Operation not permitted），未取得实屏截图，两种尺寸仍待 Opus 复验；其余已有改动未动，不 commit、不 push。
+
+## 2026-10-02 · Spec 084 Card C Android：选组、训练卡、原地回看、休息说明
+
+- 任务：`specs/084-walkthrough-polish/CARD-C-android.md`，参照 `SPEC.md` 设计定稿 §7–§10。开工已读 `AGENTS.md` / `CLAUDE.md`；仓内无 `CONTEXT.md`、`FOLLOWUPS.md`。分支 `feat/084c-chat-video-rest`，基点 `d96de06`，叠在 Card B 上。保留开工时已存在的未跟踪 Card C 文件；不 commit、不 push，不改 PARITY 或收货正典。
+- 已查 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)、[react-native-video v6 events](https://docs.thewidlarzgroup.com/react-native-video/docs/v6/component/events/) 与 [React Native Modal](https://reactnative.dev/docs/modal)，并核对本地依赖声明；未新增依赖，未改 eslint / TypeScript 配置。
+
+### 实装
+
+- §7：两个入口共用一页 Ask coach：按计划动作身份分卡、三列组网格、卡 A 的 W#D#、问题输入、视频开关与发送复述。训练页预选当前日志或当前计划组；聊天入口未选时禁发。归一化失败的记录不会令视图抛错，超长问题给出既有长度提示并禁发。发送问题后沿原 staging / `sendSetRef` 通道自动提交，等待视频、冻结 body 和 clientId、失败重试、轮询确认、取消暂存继续沿用。`autoSend` 仅为内存 intent 标记，没有新增持久化结构或 wire 字段。
+- §8：两端聊天共用“问题正文 → 浅色附件行 → 时间/既有送达状态”结构；无问题时不留正文空白。附件显示动作名与可用快照指标；有视频仍走既有 URL 更新与播放器，无视频点附件可查看该快照。旧 canonical 消息解析和非法快照的普通文本回退保留。
+- §9：只为组录入新增 `SetVideoPlayer`：默认暂停、拖动、四档倍速、页内 Modal 放大/缩小、系统返回先缩小。播放状态在 Modal 切换之外保留；缩放与源重载忽略旧进度，等匹配的 `onSeek` 后恢复。以视频选择 `createdAt` 保持身份，压缩 URI / 上传 attachmentId 变化不重置进度与倍速。时间标签复用 `timeText`；倍速菜单处于播放器父边界内，留足四档高度。黑底覆盖系统栏区域，控件避开安全区；状态与 Replace / Delete 按钮组可整体换行。上传管理器、相机、独立 `FeedbackVideoPlayer`、打点和标注未改。
+- §10：首次说明改底部可滚动弹层，三档时长经 `restSecondsForRPE({ mode: 'automatic' }, rpe)` 推导并本地化；中英文同步。沿用原 `restTimer.explained.<studentId>` 键与读取时机。链接打开现有 `RestTimerSettingsScreen`，先加载已保存偏好；设置打开期间避免计时结束直接卸载设置页，关闭后仍按原绝对结束时间结算。
+
+### 测试与证据
+
+新增测试仅落在卡片四个约定 seam；旧挂载测试随一页流程和附件文案同步，没有新增视图样式镜像测试。
+
+| seam | 红 → 绿证据（本机临时日志） |
+| --- | --- |
+| 选组 presentation：分组、格子文案、预选/单选、禁发、复述；非法快照 | `/private/tmp/084c-picker-{red,green}.log`、`/private/tmp/084c-invalid-{red,green}.log` |
+| `set-ref-entry.test.tsx` 挂载：两种入口参数的一页 staging、进入会话自动发送及离线同键重试；原有真实训练/聊天入口测试同步 | `/private/tmp/084c-entry-{red,green}.log`、`/private/tmp/084c-send-{red,green}.log` |
+| 时间线 presentation：有话/无话、有无视频、缺字段与次数范围 | `/private/tmp/084c-chat-{red,green}.log` |
+| 播放 reducer：暂停/播放、四档倍速、拖动、缩放/返回保持状态、忽略恢复前旧进度、源重载 | `/private/tmp/084c-video-{red,green}.log`、`/private/tmp/084c-seek-{red,green}.log`、`/private/tmp/084c-reload-{red,green}.log` |
+| 休息说明：三档默认值、默认规则变化随动与中英文格式 | `/private/tmp/084c-rest-{red,green}.log` |
+
+- 最终全量 `npx jest --runInBand`：**140 suites / 1017 tests passed**；`npx tsc --noEmit` 通过；`npm run lint` 通过（0 errors / 0 warnings）；`git diff --check` 通过。日志：`/private/tmp/084c-final-{jest,tsc,lint}.log`。lint 曾缓存编辑中途的旧 import 解析错误，经 `npm run lint -- --no-cache` 清除后重跑原命令；未更改规则或忽略错误。
+- 完整实现差异（含新增 src 文件）：`/private/tmp/084c-implementation.diff`。
+
+### Standards 自审
+
+主代理读最终改动，并按 `review-loop` 使用独立只读 Standards reviewer；本仓缺 Matt tracker 配置，未声称运行依赖 tracker 的完整 `code-review` 流程。初审发现新增字号存在字面量，已改为现有 `fontMetrics`，颜色/间距/圆角沿用 `src/design`。定向复审无剩余 Standards finding；未改依赖、后端契约、持久化结构或规则配置。
+
+### Spec 自审
+
+独立只读 Spec reviewer 初审发现小屏倍速菜单裁切与父级边界外触摸风险，已移至播放器尺寸的直接子层并保证菜单空间。定向复审发现小数秒可能撑长标签，已改用现有 `timeText`。主代理补强解码器 seek 恢复与非法选组记录保护，均在约定 seam 留红绿证据；最终定向核实无剩余代码 finding。此结论只覆盖实现与自动检查，不替代 Opus 按卡验收。
+
+**未做设备验证**：沙箱没有模拟器；未构建、安装或运行 Android 包，未取得设备截图。Light / Dark、360×640 dp / 字体 1.3×、原生播放器拖动/倍速/缩放/系统返回、系统栏与相册样片播放，以及实际联调仍待 Opus 按卡收货。未宣称功能验收通过。
+
+### 改动摘录
+
+```diff
+- page: 'selection' | 'confirmation' = 'selection';
++ get canSend() { return this.selectedReference !== null; }
+- body: canonicalBody(setRef), video
++ body: canonicalBody(setRef, question), video, autoSend: true
+- <VideoPlayback ... /> // 点击 Video 后独立呈现
++ <VideoPlayback key={record.createdAt} inline ... />
++ if (uri && inline) return <SetVideoPlayer ... />;
++ restExplanationRows().map(row => /* 默认规则三行对照 */)
+```
+
+### 返修第 1 轮（2026-10-03）
+
+- 范围：仅 CARD-C 文末第 1 轮的播放器缩放返修；以本轮开工时的未提交文件为基准，保留其余 Card C 改动。未改 eslint / TypeScript 配置、依赖、上传机制、聊天或独立 `FeedbackVideoPlayer`；不 commit、不 push。
+- 复现：新增挂载测试先直接挂载 `SetVideoPlayer`，载入并播放到 24 秒、切为 1.5× 后点放大，原实现触发 Video 的卸载回调 **1 次**，断言失败。红证据：`/private/tmp/084c-r1-red.log`。原实现切换 `View` / `Modal` 根节点，并设置 `loaded=false`、`restoring=true`；这会重建 Video 并等待重新加载。内嵌区域在放大时消失，也会改变滚动内容高度；该滚动成因是代码层判断，未进行设备复现。
+- 修复：新增仅用于组录入页的 `SetVideoPlayerHost`，Video 与自定义控件从首次挂载起就位于同一宿主。内嵌态按原位占位测量位置，并使用原生驱动的滚动位移及视口裁切；放大/缩小只切换宿主布局，原 ScrollView 和占位高度保持。使用现有 react-native-video 的 TextureView 支持变换和裁切；缩放不进入重新加载/恢复流程，真实源重载、拖动后的 seek 恢复保留。
+- 宿主：组录入 Modal 将系统返回先交给视频宿主缩小；原相机 overlay 返回处理仍优先。底层内容在放大时不接收触摸/无障碍焦点，数字键盘打开时遮住视频层。系统栏区域由同一个透明系统栏 Modal 覆盖，控件仍使用安全区 inset。关闭组录入、删除或替换视频时沿原生命周期释放播放器。
+- 回归 seam：最终测试升级为真实 `SetEntrySheet` 挂载，只替代原生模块边界；分别覆盖播放/暂停态下放大、按钮缩小、Android 返回先缩小、Video 实例一致且没有二次挂载、无重新 loading、倍速保持、ScrollView 实例保持、同路径重新选片建立新播放会话、离开时释放。既有 reducer 测试同步为缩放保持连续进度，源重载仍等待恢复；不写视图样式镜像测试。
+- 最终检查：`npx jest --runInBand` **141 suites / 1019 tests passed**；`npx tsc --noEmit` 通过；`npm run lint` 通过（0 errors / 0 warnings）；`git diff --check` 通过。日志：`/private/tmp/084c-r1-final-{jest,tsc,lint}.log`。本轮两次全量 Jest 均通过，未复现收货方报告的偶发失败，无法提供对应失败用例名。
+- Standards：按 `review-loop` 运行独立只读审查及后续定向复核，0 项剩余 finding。仓内缺少 `docs/agents/issue-tracker.md`，本次未声称执行依赖 tracker 的完整 `code-review`；若以后需要该流程，先由 David 调用 `$setup-matt-pocock-skills`，本轮本地双轴审查不受影响。
+- Spec：独立只读初审指出两处布局问题，均已定向修复：菜单使用当前控件高度，占位单独保留内嵌高度；滚动内容高度变化时重新测量播放器位置。定向复核无剩余确定代码问题；不替代 Opus 收货。
+- **未做设备验证**：沙箱没有模拟器，未构建/安装 Android 包、未拍设备截图。原生 TextureView 缩放无黑帧/无缓冲、缩小后的实际滚动位置、测量与触摸精度、系统栏、小屏及大字体仍需相册样片实屏验收；mocked 挂载测试只证明 React 生命周期及状态行为。
+- 本轮独立差异（含新增文件，相对开工 WIP）：`/private/tmp/084c-r1.diff`。核心变更摘录：
+
+```diff
+- return state.expanded ? <Modal>{surface}</Modal> : surface;
++ host.update({ node: surface, anchor, expanded: state.expanded, collapse });
++ return <View ref={anchor} style={{ height: inlineHeight }} />;
+- case 'expand': return { ...state, expanded: true, restoring: true };
++ case 'expand': return { ...state, expanded: true };
+```
+- 2026-10-03 · CARD-C 返修第 2 轮：仅修组录入播放器放大全屏的滚动偏移残留（RN Android Fabric 不恢复移除的原生动画属性；保持同一动画图，放大系数归零、缩小恢复，沿用 Modal 根层黑底及同一 Video 实例），补齐顶部 `Set n · 重量 × 次数 · RPE x`（缺项省略）；组信息挂载断言先红后绿，原同实例/播放与倍速/返回先缩小回归保留；全量 `npx jest --runInBand` 141 suites / 1019 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过，review-loop 独立 Standards / Spec 各 0 finding；证据 `/private/tmp/084c-android-r2-{red,green,jest,tsc,lint}.log`，本轮差异 `/private/tmp/084c-android-r2.diff`；原生偏移原因由代码支持，未做设备验证（沙箱无模拟器），全屏覆盖/系统栏/无黑帧仍待设备收货；保留其他 WIP，不 commit、不 push。
