@@ -1,3 +1,5 @@
+import type { PlanDetail } from '@/api/domains/plans';
+import { currentWeekDays, recommendedDate } from '@/domain/plan/sequence';
 import { configureNotificationHandler } from '@/notifications/handler';
 import { t, type TranslationKey } from '@/i18n';
 import { TRAINING_DAYS } from '@/features/onboarding/catalog';
@@ -36,7 +38,17 @@ export const reminderWeekdays: readonly { weekday: number; key: TranslationKey }
   { weekday: 6, key: 'student.trainingReminderWeekday.copy005' }, { weekday: 7, key: 'student.trainingReminderWeekday.copy006' },
   { weekday: 1, key: 'student.trainingReminderWeekday.copy007' },
 ];
-export function defaultReminderSettings(trainingDays?: readonly string[] | null): ReminderSettings {
+export function defaultReminderSettings(
+  trainingDays?: readonly string[] | null,
+  plan?: PlanDetail | null,
+  saved?: ReminderSettings | null,
+): ReminderSettings {
+  if (saved) return saved;
+  if (plan?.status === 'published') {
+    const weekdays = currentWeekDays(plan.days).map(day =>
+      new Date(`${recommendedDate(plan, day)}T00:00:00Z`).getUTCDay() + 1);
+    if (weekdays.length) return { enabled: false, weekdays: [...new Set(weekdays)], hour: 20, minute: 0 };
+  }
   const weekdays = (trainingDays ?? []).flatMap((day) => { const index = TRAINING_DAYS.findIndex((token) => token === day); return index < 0 ? [] : [(index + 1) % 7 + 1]; });
   return { enabled: false, weekdays: weekdays.length ? [...new Set(weekdays)] : [2, 4, 6], hour: 20, minute: 0 };
 }

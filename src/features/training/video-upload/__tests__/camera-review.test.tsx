@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { AppState, Text, type AppStateStatus } from 'react-native';
+import { AppState, Modal, Text, type AppStateStatus } from 'react-native';
 import { CameraView } from 'expo-camera';
 import Video from 'react-native-video';
 import { setLocaleOverride, t } from '@/i18n';
@@ -146,7 +146,7 @@ test('Retry after returning from background deletes the old file and allows a ne
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(nextUri);
 });
 
-test.each(['Close camera', 'parent unmount'])('%s cleans up an unused preview after returning from background', async (action) => {
+test.each(['Close camera', 'system back', 'parent unmount'])('%s cleans up an unused preview after returning from background', async (action) => {
   const { onUse, onClose } = await mountCamera();
   await completeRecording();
   await changeAppState('background', 'active');
@@ -154,10 +154,24 @@ test.each(['Close camera', 'parent unmount'])('%s cleans up an unused preview af
   if (action === 'Close camera') {
     await press(t('student.cameraRecorderComponents.copy011'));
     expect(onClose).toHaveBeenCalledTimes(1);
+  } else if (action === 'system back') {
+    act(() => renderer.root.findByType(Modal).props.onRequestClose());
+    expect(onClose).toHaveBeenCalledTimes(1);
   } else {
-    // System back dismisses the parent overlay, unmounting this component.
     act(() => renderer.unmount());
   }
+  expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
+  expect(onUse).not.toHaveBeenCalled();
+});
+
+test.each(['Close camera', 'system back'])('%s closes capture and cleans up an in-flight recording', async action => {
+  const { onUse, onClose } = await mountCamera();
+  await startRecording();
+  if (action === 'Close camera') await press(t('student.cameraRecorderComponents.copy011'));
+  else await act(async () => { renderer.root.findByType(Modal).props.onRequestClose(); });
+  expect(onClose).toHaveBeenCalledTimes(1);
+  // Native camera unmount may settle recordAsync after React has cleared its ref.
+  await act(async () => { mockFinishRecording?.({ uri }); });
   expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
   expect(onUse).not.toHaveBeenCalled();
 });

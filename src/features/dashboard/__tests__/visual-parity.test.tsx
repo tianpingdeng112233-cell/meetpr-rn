@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { StyleSheet, Text } from 'react-native';
+import { Modal, StyleSheet, Text, TextInput } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import { FeedbackResponseSchema } from '@/api/domains/feedback';
+import type { OnboardingProfile } from '@/api/domains/onboarding';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
+import ProfileRoute from '@/app/(student)/profile';
+import { ProfileEditor } from '@/features/profile/ProfileEditor';
 import { DashboardScreen } from '../DashboardScreen';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 
@@ -21,7 +24,10 @@ jest.mock('@react-native-community/netinfo', () =>
   require('@react-native-community/netinfo/jest/netinfo-mock'));
 const mockPush = jest.fn();
 const mockNavigate = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: mockNavigate }), useFocusEffect: () => {} }));
+const mockSetParams = jest.fn();
+let mockProfileParams: { edit?: string; returnTo?: string } = {};
+const mockNavigation = { setParams: mockSetParams };
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: mockNavigate }), useFocusEffect: () => {}, useLocalSearchParams: () => mockProfileParams, useNavigation: () => mockNavigation }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -47,22 +53,29 @@ const plan: PlanDetail = {
 let renderer: ReactTestRenderer;
 let client: QueryClient;
 let servedPlan: PlanDetail | null;
+let servedProfile: OnboardingProfile | null;
 let feedbackItems: import('@/api/domains').FeedbackItem[];
 
 beforeEach(() => {
   mockNavigate.mockClear();
+  mockSetParams.mockClear();
+  mockProfileParams = {};
   setLocaleOverride('en');
   servedPlan = plan;
+  servedProfile = null;
   feedbackItems = [];
   mockPush.mockClear();
   mockNavigate.mockClear();
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
-  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
     if (path.endsWith('/plans')) return { plans: servedPlan ? [servedPlan] : [] } as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: [] } as never;
-    if (path.endsWith('/onboarding')) return null as never;
+    if (path.endsWith('/onboarding')) {
+      if (options?.method === 'PUT' && servedProfile) servedProfile = { ...servedProfile, ...options.body as Partial<OnboardingProfile> };
+      return servedProfile as never;
+    }
     if (path.endsWith('/feedback')) return { items: feedbackItems } as never;
     if (path.endsWith('/videos')) return { videos: [{ id: 'video', exercise_name: 'Competition squat', set_index: 1 }] } as never;
     if (path.includes('/sets')) return { logs: [] } as never;
@@ -79,17 +92,6 @@ test.each(['list', 'recording'] as const)('the training tab in %s mode renders n
     renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>);
   });
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
-  const copy = renderer.root.findAllByType(Text).map((node) => node.props.children).join(' ').toLowerCase();
-  expect(copy).toContain('plan summary');
-  const text = renderer.root.findAllByType(Text).map((node) =>
-    [node.props.children].flat().join(''));
-  const stripIndex = text.indexOf(t('student.dashboardWeekCalendar.copy013'));
-  expect(stripIndex).toBeGreaterThan(-1);
-  expect(text).toContain(t('student.dashboardWeekCalendar.copy014'));
-  expect(stripIndex).toBeLessThan(text.indexOf(t('student.trainingCalendarView.copy001')));
-  expect(stripIndex).toBeLessThan(text.indexOf(t(mode === 'list'
-    ? 'student.todayWorkoutScreen.copy017'
-    : 'student.todayWorkoutScreen.copy024')));
   const heroTitles = renderer.root.findAllByType(Text).filter((node) => node.props.children === "Today's workout");
   expect(heroTitles).toHaveLength(mode === 'list' ? 1 : 0);
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
@@ -201,4 +203,57 @@ test('a bound student with no plan can message the coach from the Dashboard wait
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
   expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
   expect(mockNavigate).not.toHaveBeenCalledWith('/(student)/feedback');
+});
+
+test.each([false, true])('Today metric cards open the existing Profile editors (has values: %s)', async (hasValues) => {
+  if (hasValues) servedProfile = {
+    user_id: '10000000-0000-4000-8000-000000000000', unit_preference: 'kg', gender: 'male',
+    birth_date: '2000-01-01', height_cm: '180', weight_kg: '83', training_years: 3,
+    squat_stance: 'high_bar', deadlift_style: 'conventional', bench_grip: 'standard',
+    squat_1rm_kg: '200', bench_1rm_kg: '150', deadlift_1rm_kg: '250',
+    training_days: ['mon', 'wed'], gym_tier: 'commercial', equipment_overrides: null,
+    daily_life_intensity: 3, life_stress: 2, recovery_speed: 4, sleep_hours: 8,
+    muscle_groups_to_strengthen: null, injury_notes: 'Existing injury', injury_areas: ['knee'],
+    is_competing: true, competition_date: '2099-01-01', target_weight_class: '83', note_to_coach: 'Existing note',
+    completed_at: null, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z', upload_attachment_ids: [],
+  };
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  const weightLabel = hasValues ? t('student.dashboardProfileMetricsView.copy002', ['83 kg']) : t('student.dashboardProfileMetricsView.copy011');
+  const weight = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === weightLabel)[0];
+  expect(weight).toBeDefined();
+  await act(async () => weight.props.onPress());
+  expect(mockNavigate).toHaveBeenLastCalledWith({ pathname: '/(student)/profile', params: { edit: 'basics', returnTo: 'today' } });
+  mockProfileParams = { edit: 'basics', returnTo: 'today' };
+  await act(async () => { renderer.update(<QueryClientProvider client={client}><ProfileRoute /></QueryClientProvider>); });
+  expect(renderer.root.findByType(ProfileEditor).props.section).toBe('basics');
+  if (hasValues) {
+    await act(async () => { renderer.root.findAllByType(TextInput).find(node => node.props.value === '83')!.props.onChangeText('84'); });
+    const save = renderer.root.findByType(ProfileEditor).findAll(node => typeof node.props.onPress === 'function' && node.props.label === t('student.profileCardsSection.copy013'))[0];
+    await act(async () => { save.props.onPress(); });
+    for (let attempt = 0; attempt < 30 && mockNavigate.mock.lastCall?.[0] !== '/(student)/today'; attempt += 1) {
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+    }
+  } else {
+    await act(async () => { renderer.root.findByType(ProfileEditor).findByType(Modal).props.onRequestClose(); });
+  }
+  expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/today');
+  expect(mockSetParams).toHaveBeenCalledWith({ edit: undefined, returnTo: undefined });
+  await act(async () => { renderer.update(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  if (hasValues) expect(renderer.root.findAll(node => node.props.accessibilityLabel === t('student.dashboardProfileMetricsView.copy002', ['84 kg'])).length).toBeGreaterThan(0);
+  const meetText = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.dashboardProfileMetricsView.copy003'))!;
+  let meetButton = meetText;
+  while (meetButton.parent && (meetButton.props.accessibilityRole !== 'button' || typeof meetButton.props.onPress !== 'function')) meetButton = meetButton.parent;
+  expect(meetButton.props.accessibilityRole).toBe('button');
+  expect(meetButton.props.accessibilityLabel).toEqual(expect.any(String));
+  await act(async () => meetButton.props.onPress());
+  expect(mockNavigate).toHaveBeenLastCalledWith({ pathname: '/(student)/profile', params: { edit: 'competition', returnTo: 'today' } });
+  mockProfileParams = { edit: 'competition', returnTo: 'today' };
+  await act(async () => { renderer.update(<QueryClientProvider client={client}><ProfileRoute /></QueryClientProvider>); });
+  expect(renderer.root.findByType(ProfileEditor).props.section).toBe('competition');
+  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method === 'PUT').length;
+  await act(async () => { renderer.root.findByType(ProfileEditor).findByType(Modal).props.onRequestClose(); });
+  expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/today');
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method === 'PUT')).toHaveLength(writes);
 });

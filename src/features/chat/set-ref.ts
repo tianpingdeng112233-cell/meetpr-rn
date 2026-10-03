@@ -46,7 +46,7 @@ export type SetRefVideo =
   | { state: 'ready'; videoId: string }
   | { state: 'uploading'; attachmentId: string | null; recordKey: string; createdAt: number }
   | { state: 'failed' };
-export type SetRefCandidate = { id: string; source: SetRefSource; video?: SetRefVideo };
+export type SetRefCandidate = { id: string; exerciseId?: string; dayLabel?: string; source: SetRefSource; video?: SetRefVideo };
 export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, videos }: {
   planDay: import('@/api/domains/plans').PlanDay;
   drafts: readonly Pick<import('@/features/training/model').WorkoutSetDraft, 'exercise' | 'setIndex' | 'sourceLog'>[];
@@ -68,7 +68,7 @@ export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, video
         : record.status === 'failed' || record.status === 'uploaded' ? { state: 'failed' }
         : { state: 'uploading', attachmentId: record.attachmentId, recordKey, createdAt: record.createdAt };
     }
-    return { id: log.id, video, source: { source: 'logged', exerciseName: exerciseNames.get(draft.exercise.exercise_id) ?? t('student.todayWorkoutView.copy011'),
+    return { id: log.id, exerciseId: draft.exercise.id, video, source: { source: 'logged', exerciseName: exerciseNames.get(draft.exercise.exercise_id) ?? t('student.todayWorkoutView.copy011'),
       setNumber: draft.setIndex + 1, setTotal: draft.exercise.sets.length >= draft.setIndex + 1 ? draft.exercise.sets.length : null,
       weightKg: log.weight_kg, reps: log.reps, repsMax: null, rpe: log.rpe, dayDate, setLogId: log.id, planSetId: null } };
   });
@@ -80,7 +80,7 @@ export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, video
         weightKg: set.load_mode == null ? (set.intensity_mode === 'weight' ? set.target_value : null) : set.target_weight ?? null,
         rpe: set.load_mode == null ? (set.intensity_mode === 'rpe' ? set.target_value : null) : set.load_mode === 'rpe' ? set.target_rpe ?? null : null,
         reps: set.target_reps, repsMax: set.target_reps_max, dayDate, setLogId: null, planSetId: set.id };
-      try { normalizeSetRef(source); candidates.push({ id: set.id, source }); } catch { /* iOS excludes invalid prescriptions. */ }
+      try { normalizeSetRef(source); candidates.push({ id: set.id, exerciseId: exercise.id, source }); } catch { /* iOS excludes invalid prescriptions. */ }
     }
   }
   return candidates;
@@ -88,16 +88,37 @@ export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, video
 export class SetRefPickerPresentation {
   candidates: SetRefCandidate[] = [];
   selectedCandidateID?: string;
-  page: 'selection' | 'confirmation' = 'selection';
   get selectedCandidate() { return this.candidates.find(item => item.id === this.selectedCandidateID); }
+  get selectedReference() {
+    try { return this.selectedCandidate ? normalizeSetRef(this.selectedCandidate.source) : null; }
+    catch { return null; }
+  }
+  get canSend() { return this.selectedReference !== null; }
+  get sendSummary() {
+    const source = this.selectedCandidate?.source;
+    return source ? t('chat.sendsSetQuestion', [source.setNumber, source.exerciseName]) : '';
+  }
+  get groups() {
+    const groups = new Map<string, { id: string; exerciseName: string; dayLabel?: string; cells: { id: string; title: string; metrics: string; status: string }[] }>();
+    for (const candidate of this.candidates) {
+      const source = candidate.source;
+      const id = candidate.exerciseId ?? source.exerciseName;
+      const group = groups.get(id) ?? { id, exerciseName: source.exerciseName, dayLabel: candidate.dayLabel, cells: [] };
+      group.cells.push({ id: candidate.id, title: t('chat.setPosition %@', [source.setNumber]),
+        metrics: `${source.weightKg ?? '—'}kg × ${source.repsMax != null ? `${source.reps}–${source.repsMax}` : source.reps ?? '—'}`,
+        status: source.source === 'planned' ? t('chat.pickerPlanned') : candidate.video && candidate.video.state !== 'failed'
+          ? t('chat.pickerLoggedVideo') : source.rpe != null ? t('chat.pickerLoggedRPE', [source.rpe]) : t('chat.pickerLogged'),
+      });
+      groups.set(id, group);
+    }
+    return [...groups.values()].map(group => ({ ...group, cells: group.cells.sort((a, b) =>
+      this.candidates.find(item => item.id === a.id)!.source.setNumber - this.candidates.find(item => item.id === b.id)!.source.setNumber) }));
+  }
   load(candidates: SetRefCandidate[], initialSetLogID?: string | null) {
     this.candidates = candidates;
-    this.selectedCandidateID = candidates.find(item => item.id === initialSetLogID)?.id ?? candidates[0]?.id;
-    this.page = 'selection';
+    this.selectedCandidateID = candidates.find(item => item.id === initialSetLogID)?.id;
   }
   select(id: string) { if (this.candidates.some(item => item.id === id)) this.selectedCandidateID = id; }
-  proceed() { if (!this.selectedCandidate) return false; this.page = 'confirmation'; return true; }
-  showSelection() { this.page = 'selection'; }
 }
 
 export const SetRefEntryVisibility = {

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { PanResponder, Text, View, type GestureResponderEvent, type PanResponderGestureState } from 'react-native';
+import { PanResponder, Text, View, useWindowDimensions, type GestureResponderEvent, type PanResponderGestureState } from 'react-native';
 
 import { font, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
@@ -13,6 +13,7 @@ export function SetEntryRPEScale({ value, placeholder, onChange, onGestureActive
   onGestureActive?: (active: boolean) => void;
 }) {
   const colors = useColors();
+  const { fontScale } = useWindowDimensions();
   const [width, setWidth] = useState(0);
   const [bubbleWidth, setBubbleWidth] = useState(0);
   const [scrubbing, setScrubbing] = useState(false);
@@ -78,7 +79,7 @@ export function SetEntryRPEScale({ value, placeholder, onChange, onGestureActive
         </Text>
       </View>
       <View {...pan.panHandlers} onLayout={event => setWidth(event.nativeEvent.layout.width)}
-        style={{ height: 48, flexDirection: 'row', gap: 3 }}>
+        style={{ minHeight: 48, height: fontScale <= 1 ? 48 : undefined, flexDirection: 'row', gap: 3 }}>
         {Array.from({ length: 11 }, (_, i) => {
           const tick = 5 + i * 0.5;
           const active = tick === selected;
@@ -88,7 +89,7 @@ export function SetEntryRPEScale({ value, placeholder, onChange, onGestureActive
                 <View style={{ width: 6, height: barHeight(tick, selected), borderRadius: 3,
                   backgroundColor: active ? colors.gold500 : isLit(tick, selected) ? colors.rpeLit : colors.rpeUnlit }} />
               </View>
-              <Text style={{ height: 14, marginTop: 6, ...font.mono(12, 'semibold'),
+              <Text style={{ minHeight: 14, height: fontScale <= 1 ? 14 : undefined, marginTop: 6, ...font.mono(12, 'semibold'),
                 color: active || (Number.isInteger(tick) && Math.abs(tick - selected) < 0.3) ? colors.textPrimary : colors.rpeTickLabel }}>
                 {Number.isInteger(tick) ? tick : ''}
               </Text>

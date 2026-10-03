@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, View, type TextProps } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { Card, Screen, font, radius, useColors } from '@/design';
@@ -11,11 +11,11 @@ export function ProfileText({ style, ...props }: TextProps) {
 }
 
 /** CoachKit still uses SecondaryButton: body 15, two lines, card fill. */
-export function InviteSecondaryButton({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
+export function InviteSecondaryButton({ label, disabled, onPress, style }: { label: string; disabled?: boolean; onPress: () => void; style?: StyleProp<ViewStyle> }) {
   const colors = useColors();
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress}
     style={({ pressed }) => [{ flex: 1, minHeight: 44, paddingHorizontal: 20, paddingVertical: 14, borderRadius: radius.pill,
-      backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, borderWidth: 1, justifyContent: 'center', opacity: disabled ? 0.35 : 1 }, pressed && { transform: [{ scale: 0.97 }] }]}>
+      backgroundColor: colors.surfaceCard, borderColor: colors.borderDefault, borderWidth: 1, justifyContent: 'center', opacity: disabled ? 0.35 : 1 }, style, pressed && { transform: [{ scale: 0.97 }] }]}>
     <ProfileText numberOfLines={2} style={{ ...font.body(15, 'semibold'), color: colors.textSecondary, textAlign: 'center' }}>{label}</ProfileText>
   </Pressable>;
 }

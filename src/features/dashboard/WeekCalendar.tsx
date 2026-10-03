@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { font, useColors } from '@/design';
 import { t } from '@/i18n';
-import { dayCode } from '@/domain/plan/sequence';
+import { dayCode, weekDayOrdinals } from '@/domain/plan/sequence';
 import { recommendedDateText } from '@/domain/plan/presentation';
 import type { DashboardWeekDay } from './types';
 
@@ -75,13 +75,15 @@ export function WeekGrid({
   onSelect: (id: string) => void;
 }) {
   const colors = useColors();
+  const weekDays = days.map(cell => cell.day);
+  const ordinals = weekDayOrdinals(weekDays);
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
       {days.map(({ day, status, date }) => (
         <Pressable
           key={day.id}
           accessibilityRole="button"
-          accessibilityLabel={`${dayCode(day)} ${recommendedDateText(date)}`}
+          accessibilityLabel={`${dayCode(day, weekDays)} ${recommendedDateText(date)}`}
           accessibilityState={{ selected: selectedDayID === day.id }}
           onPress={() => onSelect(day.id)}
           style={{
@@ -104,7 +106,7 @@ export function WeekGrid({
           }}
         >
           {status === 'done' ? <MaterialCommunityIcons name="check" size={11} color={colors.success} /> : <View style={{ width: 7, height: 7, borderRadius: 3.5, borderWidth: status === 'current' ? 0 : 1, borderColor: colors.textGhost, backgroundColor: status === 'current' ? colors.gold500 : 'transparent' }} />}
-          <Text style={{ color: status === 'current' ? colors.textPrimary : colors.textMuted, ...font.mono(10, status === 'current' ? 'bold' : 'semibold') }}>D{day.day_of_week}</Text>
+          <Text style={{ color: status === 'current' ? colors.textPrimary : colors.textMuted, ...font.mono(10, status === 'current' ? 'bold' : 'semibold') }}>D{ordinals.get(day.id)}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ color: status === 'current' ? colors.textSecondary : colors.textMuted, ...font.mono(10) }}>{recommendedDateText(date)}</Text>
         </Pressable>
       ))}
