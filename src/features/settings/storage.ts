@@ -1,3 +1,5 @@
+import { usePlans, usePlan } from '@/api/domains/plans';
+import { selectCurrentPlan } from '@/domain/plan/sequence';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
@@ -29,5 +31,15 @@ export function useRestPreference(id: string) {
 }
 export function useReminderPreference(id: string, trainingDays?: readonly string[] | null) {
   const query = useQuery({ queryKey: preferenceKeys.reminder(id), queryFn: () => readReminderPreference(id), enabled: Boolean(id) });
-  return { ...query, settings: query.data ?? defaultReminderSettings(trainingDays) };
+  const unsaved = query.isSuccess && query.data === null;
+  const plans = usePlans(unsaved ? id : '');
+  const selected = selectCurrentPlan(plans.data?.plans ?? []);
+  const plan = usePlan(unsaved ? selected?.id ?? '' : '');
+  return {
+    ...query,
+    isPending: query.isPending || (unsaved && (plans.isPending || Boolean(selected && plan.isPending))),
+    isError: query.isError || (unsaved && (plans.isError || Boolean(selected && plan.isError))),
+    refetch: async () => { await Promise.all([query.refetch(), ...(unsaved ? [plans.refetch(), ...(selected ? [plan.refetch()] : [])] : [])]); },
+    settings: defaultReminderSettings(trainingDays, selected ? plan.data : null, query.data),
+  };
 }

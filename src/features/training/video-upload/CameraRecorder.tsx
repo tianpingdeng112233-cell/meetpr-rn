@@ -2,11 +2,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, Camera } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, StyleSheet, Switch, Text, ToastAndroid, View } from 'react-native';
+import { AppState, Linking, Modal, StatusBar, StyleSheet, Text, ToastAndroid, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Video from 'react-native-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppButton, font, spacing, useColors } from '@/design';
+import { AppButton, IconButton, font, radius, spacing, useColors } from '@/design';
+import { BrandSwitch } from '@/design/BrandSwitch';
+import { ColorSchemeProvider } from '@/design/theme';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { t } from '@/i18n';
 import { deleteLocalVideo } from './native';
 import { VIDEO_MAX_DURATION_SECONDS } from './model';
@@ -15,15 +18,21 @@ const clockText = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
-export function CameraRecorder({
-  onClose,
-  onUse,
-  maxDurationSeconds = VIDEO_MAX_DURATION_SECONDS,
-}: {
+type CameraRecorderProps = {
   onClose: () => void;
   onUse: (uri: string) => void;
   maxDurationSeconds?: number;
-}) {
+};
+
+export function CameraRecorder(props: CameraRecorderProps) {
+  return <ColorSchemeProvider scheme="dark"><CameraRecorderContent {...props} /></ColorSchemeProvider>;
+}
+
+function CameraRecorderContent({
+  onClose,
+  onUse,
+  maxDurationSeconds = VIDEO_MAX_DURATION_SECONDS,
+}: CameraRecorderProps) {
   const colors = useColors();
   const camera = useRef<CameraView>(null);
   const [permission, setPermission] = useState<
@@ -84,10 +93,10 @@ export function CameraRecorder({
         if (live) setPreferenceLoaded(true);
       });
     const subscription = AppState.addEventListener('change', (state) => {
-      // An interruption drops any in-flight recording or review and returns to the clean preview.
+      // Only interrupt an in-flight recording; completed reviews still own their local video.
       // Android also reports a transient 'background' while the camera / permission activity attaches,
       // so closing the recorder here would dismiss it before the user ever sees it.
-      if (state === 'background') {
+      if (state === 'background' && recordingActive.current) {
         generation.current++;
         cameraRefStop();
         deleteLocalVideo(ownedUri.current);
@@ -179,160 +188,113 @@ export function CameraRecorder({
     onUse(review);
   };
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bgBase }}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
-        <View style={{ padding: spacing.base }}>
-          <AppButton haptic="none"
-            variant="secondary"
-            label={t('student.cameraRecorderComponents.copy011')}
-            onPress={onClose}
-          />
-        </View>
-        {permission === 'denied' ? (
-          <View style={{ padding: spacing.xl, gap: spacing.base }}>
-            <Text style={{ color: colors.textPrimary }}>
-              {t('student.cameraRecorderView.copy002')}
-            </Text>
-            <Text style={{ color: colors.textSecondary }}>
-              {t('student.cameraRecorderView.copy003')}
-            </Text>
-            <AppButton haptic="none"
-              label={t('student.cameraRecorderView.copy004')}
-              onPress={() => void Linking.openSettings()}
+    <Modal visible presentationStyle="fullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.chatImageBackground }}>
+        <View style={{ flex: 1 }}>
+          {permission === 'granted' ? review ? (
+            <Video
+              source={{ uri: review }}
+              repeat
+              controls
+              resizeMode="contain"
+              style={StyleSheet.absoluteFill}
+              onError={() => setError(true)}
             />
-          </View>
-        ) : permission === 'granted' ? (
-          <>
-            <View style={{ flex: 1, backgroundColor: colors.bgDeep }}>
-              {review ? (
-                <Video
-                  source={{ uri: review }}
-                  repeat
-                  controls
-                  resizeMode="contain"
-                  style={StyleSheet.absoluteFill}
-                  onError={() => setError(true)}
-                />
-              ) : (
-                <CameraView
-                  ref={camera}
-                  style={StyleSheet.absoluteFill}
-                  facing="back"
-                  mode="video"
-                  videoQuality="720p"
-                  videoBitrate={2_750_000}
-                  onCameraReady={() => setReady(true)}
-                  onMountError={() => {
-                    camera.current?.stopRecording();
-                    closeRef.current();
-                  }}
-                />
-              )}
-            </View>
-            <View
-              style={{
-                padding: spacing.base,
-                gap: spacing.md,
-                alignItems: 'center',
+          ) : (
+            <CameraView
+              ref={camera}
+              style={StyleSheet.absoluteFill}
+              facing="back"
+              mode="video"
+              videoQuality="720p"
+              videoBitrate={2_750_000}
+              onCameraReady={() => setReady(true)}
+              onMountError={() => {
+                camera.current?.stopRecording();
+                closeRef.current();
               }}
-            >
-              {error ? (
-                <Text style={{ color: colors.danger }}>
-                  {t('student.cameraRecorderView.copy008')}
+            />
+          ) : null}
+          <View pointerEvents="box-none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: spacing.base }}>
+            <IconButton
+              haptic="none"
+              accessibilityLabel={t('student.cameraRecorderComponents.copy011')}
+              onPress={onClose}
+              style={{ backgroundColor: colors.numberPadScrim }}
+              icon={({ size }) => <MaterialCommunityIcons name="close" size={size} color={colors.inkOnCTAFill} />}
+            />
+            {permission === 'granted' && !review ? (
+              <View style={{ alignItems: 'flex-end', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.control, backgroundColor: colors.numberPadScrim }}>
+                <Text style={{ color: colors.inkOnCTAFill, ...font.mono(18) }}>{clockText(elapsed)}</Text>
+                <Text style={{ color: colors.inkOnCTAFill, ...font.body(12) }}>
+                  {t('student.cameraRecorderComponents.copy002', [maxDurationSeconds - elapsed])}
                 </Text>
-              ) : null}
-              {review ? (
-                <>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.md,
-                    }}
-                  >
-                    <Text style={{ color: colors.textPrimary }}>
-                      {t('student.cameraRecorderComponents.copy006')}
-                    </Text>
-                    <Switch
-                      disabled={!preferenceLoaded || using}
-                      value={saveToPhotos}
-                      onValueChange={(value) => {
-                        setSaveToPhotos(value);
-                        void AsyncStorage.setItem(
-                          SAVE_TO_PHOTOS_KEY,
-                          String(value),
-                        ).catch(() => undefined);
-                      }}
-                    />
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: spacing.base }}>
-                    <AppButton
-                      disabled={using}
-                      variant="secondary"
-                      label={t('student.cameraRecorderView.copy009')}
-                      onPress={() => {
-                        deleteLocalVideo(review);
-                        ownedUri.current = null;
-                        setReview(null);
-                        setReady(false);
-                        setError(false);
-                      }}
-                    />
-                    <AppButton
-                      disabled={using || !preferenceLoaded || error}
-                      label={t('student.cameraRecorderComponents.copy010')}
-                      onPress={() => void use()}
-                    />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text style={{ color: colors.textPrimary, ...font.mono(18) }}>
-                    {clockText(elapsed)}
-                  </Text>
-                  <Text style={{ color: colors.textSecondary }}>
-                    {t('student.cameraRecorderComponents.copy002', [
-                      maxDurationSeconds - elapsed,
-                    ])}
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t(
-                      recording
-                        ? 'student.cameraRecorderComponents.copy003'
-                        : 'student.cameraRecorderComponents.copy004',
-                    )}
-                    disabled={!ready}
-                    onPress={() => void record()}
-                    style={{
-                      width: 82,
-                      height: 82,
-                      borderRadius: 41,
-                      borderWidth: 4,
-                      borderColor: colors.gold500,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: recording ? 32 : 66,
-                        height: recording ? 32 : 66,
-                        borderRadius: recording ? 6 : 33,
-                        backgroundColor: colors.gold500,
-                      }}
-                    />
-                  </Pressable>
-                </>
-              )}
+              </View>
+            ) : null}
+          </View>
+          {permission === 'denied' ? (
+            <View style={{ padding: spacing.xl, gap: spacing.base }}>
+              <Text style={{ color: colors.inkOnCTAFill }}>{t('student.cameraRecorderView.copy002')}</Text>
+              <Text style={{ color: colors.inkOnCTAFill }}>{t('student.cameraRecorderView.copy003')}</Text>
+              <AppButton haptic="none" label={t('student.cameraRecorderView.copy004')} onPress={() => void Linking.openSettings()} />
             </View>
-          </>
-        ) : (
-          <Text style={{ color: colors.textSecondary }}>
-            {t('student.cameraRecorderView.copy001')}
-          </Text>
-        )}
+          ) : permission === 'loading' ? (
+            <Text style={{ color: colors.inkOnCTAFill }}>{t('student.cameraRecorderView.copy001')}</Text>
+          ) : !review ? (
+            <View pointerEvents="box-none" style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: spacing.xxl, gap: spacing.md }}>
+              {error ? <Text style={{ color: colors.danger }}>{t('student.cameraRecorderView.copy008')}</Text> : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t(recording ? 'student.cameraRecorderComponents.copy003' : 'student.cameraRecorderComponents.copy004')}
+                disabled={!ready}
+                onPress={() => void record()}
+                style={{ width: 82, height: 82, borderRadius: radius.pill, borderWidth: spacing.xs, borderColor: colors.gold500, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <View style={{ width: recording ? 32 : 66, height: recording ? 32 : 66, borderRadius: recording ? spacing.point6 : radius.pill, backgroundColor: colors.gold500 }} />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+        {permission === 'granted' && review ? (
+          <View style={{ padding: spacing.base, gap: spacing.md }}>
+            {error ? <Text style={{ color: colors.danger }}>{t('student.cameraRecorderView.copy008')}</Text> : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
+              <Text style={{ color: colors.inkOnCTAFill, ...font.body(16), flexShrink: 1 }}>{t('student.cameraRecorderComponents.copy006')}</Text>
+              <BrandSwitch
+                accessibilityLabel={t('student.cameraRecorderComponents.copy006')}
+                disabled={!preferenceLoaded || using}
+                value={saveToPhotos}
+                onValueChange={value => {
+                  setSaveToPhotos(value);
+                  void AsyncStorage.setItem(SAVE_TO_PHOTOS_KEY, String(value)).catch(() => undefined);
+                }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.base }}>
+              <AppButton
+                style={{ flex: 1 }}
+                disabled={using}
+                variant="secondary"
+                label={t('student.cameraRecorderView.copy009')}
+                onPress={() => {
+                  deleteLocalVideo(review);
+                  ownedUri.current = null;
+                  setReview(null);
+                  setReady(false);
+                  setError(false);
+                }}
+              />
+              <AppButton
+                style={{ flex: 1 }}
+                disabled={using || !preferenceLoaded || error}
+                label={t('student.cameraRecorderComponents.copy010')}
+                onPress={() => void use()}
+              />
+            </View>
+          </View>
+        ) : null}
       </SafeAreaView>
-    </View>
+    </Modal>
   );
 }

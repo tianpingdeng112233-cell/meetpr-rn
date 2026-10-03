@@ -1,6 +1,6 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { ChatSetCard } from '../ChatSetCard';
 import { t } from '@/i18n';
 import type { ChatMessage, ChatSetRef } from '@/api/domains/chat';
@@ -32,4 +32,18 @@ test.each([null, '', 'Keep the tempo'])('incoming card has no delivery footer wi
 test('outgoing read card shows its read footer without an empty remark', async () => {
   await act(async () => { renderer = create(<ChatSetCard reference={reference} message={message} note={null} outgoing read />); });
   expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(t('chat.setCardRead'));
+});
+
+
+test.each([false, true])('card sizes its title from content without a note (outgoing: %s)', async outgoing => {
+  for (const video_url of [undefined, 'https://example.test/video.mp4']) {
+    await act(async () => { renderer = create(<ChatSetCard reference={reference} message={{ ...message, video_url }} note={null} outgoing={outgoing} read={false} />); });
+    const title = renderer.root.findAllByType(Text).find(node => node.props.children === 'Squat')!;
+    let column = title.parent!;
+    while (column.type !== View) column = column.parent!;
+    expect(StyleSheet.flatten(column.props.style)).toMatchObject({ flexBasis: 'auto', flexShrink: 1 });
+    expect(StyleSheet.flatten(column.props.style).flex).toBeUndefined();
+    expect(StyleSheet.flatten(renderer.root.findByProps({ testID: 'chat.setCard.share' }).props.style)).toMatchObject({ maxWidth: '88%', alignSelf: outgoing ? 'flex-end' : 'flex-start' });
+    act(() => renderer.unmount());
+  }
 });

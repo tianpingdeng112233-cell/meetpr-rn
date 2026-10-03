@@ -64,7 +64,7 @@ function LoadedProfile({ studentId, profile }: { studentId: string; profile: Onb
     {showsReadiness ? <ReadinessSheet studentId={studentId} date={date} onComplete={() => setShowsReadiness(false)} onSkip={() => setShowsReadiness(false)} /> : null}
   </>;
 }
-export function MyProfileScreen() {
+export function MyProfileScreen({ editSection, onEditClose }: { editSection?: 'basics' | 'competition'; onEditClose?: () => void } = {}) {
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const profile = useOnboardingProfile(studentId);
   const chat = useOpenCoachChat(studentId);
@@ -75,5 +75,7 @@ export function MyProfileScreen() {
       {profile.isPending ? <View accessibilityLabel={t('student.myProfileView.copy024')} accessibilityState={{ busy: true }} style={{ gap: 14 }}><ActivityIndicator color={colors.gold500} />{[150, 90, 130].map((height, index) => <Card key={index} style={{ height, backgroundColor: colors.surfaceRaised }} />)}</View> : <Pressable accessibilityRole={profile.isError ? 'button' : undefined} onPress={profile.isError ? () => void profile.refetch() : undefined}><Card><ProfileText>{t(profile.isError ? 'student.myProfileView.copy002' : 'student.myProfileView.copy001')}</ProfileText></Card></Pressable>}
       <MyProfileFallbackRows key={studentId} studentId={studentId} />
     </>}
-  </ScrollView></Screen>;
+  </ScrollView>
+    {editSection && onEditClose && !profile.isPending && !profile.isError ? <ProfileEditor key={`${studentId}:${editSection}`} section={editSection} profile={profile.data ?? null} onClose={onEditClose} /> : null}
+  </Screen>;
 }

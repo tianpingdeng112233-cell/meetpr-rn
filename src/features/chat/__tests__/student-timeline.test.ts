@@ -1,7 +1,7 @@
 import { expect, test } from '@jest/globals';
 import type { ChatMessage } from '@/api/domains/chat';
 import type { FeedbackItem } from '@/api/domains/feedback';
-import { mergeStudentTimeline, visibleFraction, videoLabel, videoDuration, totalUnreadCount } from '../student-timeline';
+import { sharedSetAttachment, mergeStudentTimeline, visibleFraction, videoLabel, videoDuration, totalUnreadCount } from '../student-timeline';
 
 import { setLocaleOverride, t } from '@/i18n';
 
@@ -34,4 +34,12 @@ test('video labels include available exercise and one-based set position; missin
 test('header count adds one unseen plan, unread feedback and coach chat messages', () => {
   expect(totalUnreadCount({ hasPlanNotice: true, feedbackUnread: 2, chatUnread: 4 })).toBe(7);
   expect(totalUnreadCount({ hasPlanNotice: false, feedbackUnread: 2, chatUnread: 0 })).toBe(2);
+});
+
+test('shared-set attachment presents the note before compact metrics and omits unavailable fields', () => {
+  const ref = { v: 1 as const, source: 'logged' as const, exerciseName: 'Squat', setNumber: 2, setTotal: 3, weightKg: '50', reps: 5, rpe: '8', dayDate: '2026-10-02', setLogId: null };
+  expect(sharedSetAttachment(ref, 'Check depth', 'https://video')).toEqual({ note: 'Check depth', title: 'Squat', subtitle: 'Set 2 of 3 · 50kg × 5 · RPE 8', hasVideo: true });
+  expect(sharedSetAttachment({ ...ref, setTotal: null, weightKg: null, reps: null, rpe: null }, '', null)).toEqual({ note: null, title: 'Squat', subtitle: 'Set 2', hasVideo: false });
+  expect(sharedSetAttachment({ ...ref, weightKg: null, repsMax: 8, rpe: null }, null, null).subtitle).toBe('Set 2 of 3 · 5–8 reps');
+  expect(sharedSetAttachment({ ...ref, reps: null, rpe: null }, null, null).subtitle).toBe('Set 2 of 3 · 50kg');
 });

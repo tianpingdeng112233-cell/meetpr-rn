@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Switch, Text, ToastAndroid, View } from 'react-native';
+import { AppState, Linking, Text, ToastAndroid, View } from 'react-native';
+import { BrandSwitch } from '@/design/BrandSwitch';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { AppButton, font, useColors } from '@/design';
@@ -7,24 +8,46 @@ import { t } from '@/i18n';
 import { NumberWheel } from '@/features/onboarding/controls';
 import { useSessionStore } from '@/api/session';
 import { ProfileText, MyProfileGroupCard, MyProfileDivider } from '@/features/profile/components';
-import { reminderWeekdays, replaceReminders, requestReminderPermission, type ReminderSettings } from './training-reminder';
+import { canScheduleExactReminders, openExactReminderSettings, reminderRevision, reminderWeekdays, replaceReminders, requestReminderPermission, type ReminderSettings } from './training-reminder';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SettingsPage, SettingsSectionTitle } from './SettingsPage';
 import { preferenceKeys, writeReminderPreference } from './storage';
 export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: { studentId: string; initial: ReminderSettings; onClose: () => void }) {
   const [editingTime, setEditingTime] = useState(false);
   const [settings, setSettings] = useState(initial);
+  const [exactAuthorized, setExactAuthorized] = useState<boolean | null>(null);
   const [denied, setDenied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const changing = useRef(false);
+  const lastExactAuthorization = useRef<boolean | null>(null);
   const client = useQueryClient();
   const colors = useColors();
   useEffect(() => {
-    const check = () => { void Notifications.getPermissionsAsync().then((permission) => setDenied(!permission.granted && !permission.canAskAgain)).catch(() => undefined); };
-    check(); const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') check(); });
-    return () => subscription.remove();
-  }, []);
+    let active = true;
+    let query = 0;
+    const check = async () => {
+      if (changing.current) return;
+      const id = ++query;
+      const revision = reminderRevision();
+      const current = () => active && id === query && !changing.current && useSessionStore.getState().user?.id === studentId;
+      try {
+        const [permission, exact] = await Promise.all([Notifications.getPermissionsAsync(), canScheduleExactReminders()]);
+        if (!current() || revision !== reminderRevision()) return;
+        setDenied(!permission.granted && !permission.canAskAgain);
+        setExactAuthorized(exact);
+        if (lastExactAuthorization.current !== null && lastExactAuthorization.current !== exact && settings.enabled && permission.granted) {
+          await replaceReminders(settings);
+        }
+        if (current()) lastExactAuthorization.current = exact;
+      } catch {
+        if (current()) setError(true);
+      }
+    };
+    void check();
+    const subscription = AppState.addEventListener('change', (state) => { if (state === 'active') void check(); });
+    return () => { active = false; subscription.remove(); };
+  }, [settings, studentId, busy]);
   const change = async (next: ReminderSettings) => {
     if (changing.current) return;
     changing.current = true; setBusy(true); setError(false);
@@ -38,6 +61,10 @@ export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: 
       }
       if (useSessionStore.getState().user?.id !== studentId) return;
       setDenied(false);
+      const exact = await canScheduleExactReminders();
+      setExactAuthorized(exact);
+      lastExactAuthorization.current = exact;
+      if (useSessionStore.getState().user?.id !== studentId) return;
       await replaceReminders(next);
       await writeReminderPreference(studentId, next);
       setSettings(next); client.setQueryData(preferenceKeys.reminder(studentId), next);
@@ -53,7 +80,7 @@ export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: 
   return <SettingsPage title={t('student.trainingReminderSettingsView.copy001')} onClose={onClose} busy={busy}>
     <MyProfileGroupCard><View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <Text style={{ flex: 1, ...font.body(16, 'semibold'), color: colors.textPrimary }}>{t('student.trainingReminderSettingsView.copy002')}</Text>
-      <Switch accessibilityLabel={t('student.trainingReminderSettingsView.copy002')} value={settings.enabled} disabled={busy} trackColor={{ true: colors.gold500 }} onValueChange={(enabled) => { if (!enabled) setEditingTime(false); void change({ ...settings, enabled }); }} />
+      <BrandSwitch accessibilityLabel={t('student.trainingReminderSettingsView.copy002')} value={settings.enabled} disabled={busy} onValueChange={(enabled) => { if (!enabled) setEditingTime(false); void change({ ...settings, enabled }); }} />
     </View></MyProfileGroupCard>
     <View style={{ gap: 8 }}><SettingsSectionTitle>{t('student.trainingReminderSettingsView.copy003')}</SettingsSectionTitle>
       <View style={{ opacity: settings.enabled ? 1 : 0.45 }}><MyProfileGroupCard><View style={{ padding: 16, gap: 16 }}>
@@ -78,6 +105,7 @@ export function TrainingReminderSettingsScreen({ studentId, initial, onClose }: 
         </View> : null}
       </View></MyProfileGroupCard></View>
     </View>
+    {settings.enabled && exactAuthorized === false ? <><ProfileText>{t('student.trainingReminderExactAlarmDelay')}</ProfileText><AppButton haptic="none" variant="link" disabled={busy} label={t('student.trainingReminderExactAlarmSettings')} onPress={() => void openExactReminderSettings().then((opened) => { if (!opened) setError(true); })} /></> : null}
     {denied ? <><ProfileText error>{t('student.trainingReminderSettingsView.copy006')}</ProfileText><AppButton haptic="none" variant="link" label={t('student.trainingReminderSettingsView.copy007')} onPress={() => void Linking.openSettings().catch(() => setError(true))} /></> : null}
     {error ? <ProfileText error>{t('student.trainingReminderSettingsView.copy008')}</ProfileText> : null}
   </SettingsPage>;

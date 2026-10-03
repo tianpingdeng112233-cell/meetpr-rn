@@ -102,7 +102,7 @@ export async function runPreparedVideoUpload(
       if (
         session &&
         !completeConflict &&
-        (input.signal.aborted || !input.onSession)
+        !input.onSession
       ) {
         await repository.abort(session.attachment_id).catch(() => undefined);
       }

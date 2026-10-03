@@ -27,24 +27,27 @@ test('329 pt strip accounts for ten 3 pt gaps and hits the nearest center', () =
 });
 
 
-test('locks intent at 6 pt, preserves scroll on return, and only commits taps on release', () => {
+test('keeps a short vertical or diagonal start undecided until horizontal intent wins', () => {
+  for (const start of [[0, 3], [0, 6], [0, 15], [23, 23]]) {
+    let current: ScrubIntent = lockedIntent('idle', start[0], start[1]);
+    expect(current).toBe('idle');
+    current = lockedIntent(current, 110, start[1]);
+    expect(current).toBe('scrub');
+    expect(lockedIntent(current, 110, 200)).toBe('scrub');
+  }
+});
+
+test('hands clearly vertical movement to the page and preserves taps and horizontal half-step scrubbing', () => {
   expect(intent(5.9, -5.9)).toBe('idle');
   expect(intent(6, 0)).toBe('scrub');
-  expect(intent(0, 6)).toBe('scroll');
-  expect(intent(10, 10)).toBe('scrub');
   expect(intent(-20, 4)).toBe('scrub');
-  expect(intent(4, -20)).toBe('scroll');
-  expect(lockedIntent('scrub', 0, 90)).toBe('scrub');
-  expect(lockedIntent('scrub', 0, 0)).toBe('scrub');
+  expect(intent(4, -40)).toBe('scroll');
   expect(lockedIntent('scroll', 90, 2)).toBe('scroll');
-  let current: ScrubIntent = 'idle';
-  for (const [dx, dy] of [[1, 8], [1, 20], [0, 4], [0, 0]]) current = lockedIntent(current, dx, dy);
-  expect(current).toBe('scroll');
-  expect(commitsOnRelease(current)).toBe(false);
+  expect(commitsOnRelease('scroll')).toBe(false);
   expect(commitsOnRelease('scrub')).toBe(false);
   expect(commitsOnRelease('idle')).toBe(true);
-  expect(lockedIntent(lockedIntent('idle', 2, 1), 18, 3)).toBe('scrub');
 });
+
 
 
 test('emphasizes the selected bar and lights all lower stops', () => {
