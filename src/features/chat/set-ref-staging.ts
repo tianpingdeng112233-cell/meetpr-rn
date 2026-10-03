@@ -4,6 +4,7 @@ import type { SetRefVideo } from './set-ref';
 import { useVideoUploadStore } from '@/features/training/video-upload/store';
 
 export type SetRefSendIntent = {
+  autoSend?: boolean;
   conversationId: string;
   clientId: string;
   setRef: ChatSetRef;

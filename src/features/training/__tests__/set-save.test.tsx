@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { E1RMRecorder } from '@/domain/e1rm';
+import { trainingE1RMRepository } from '../storage';
 import { WorkoutBody } from '../WorkoutBody';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
 import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
@@ -25,7 +27,8 @@ jest.mock('@react-native-community/netinfo', () =>
   require('@react-native-community/netinfo/jest/netinfo-mock'));
 const mockNavigate = jest.fn();
 const mockPush = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: () => {} }));
+let mockFocused = false;
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: (effect: () => void | (() => void)) => { jest.requireActual<typeof import('react')>('react').useEffect(() => mockFocused ? effect() : undefined, [effect]); } }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -56,6 +59,7 @@ let storedLogs: SetLog[] = [];
 let writes = 0;
 
 beforeEach(() => {
+  mockFocused = false;
   setLocaleOverride('en');
   mockNavigate.mockClear();
   mockPush.mockClear();
@@ -162,4 +166,46 @@ test('Sending does not block the TodayWorkoutView save path or discard the attac
   await act(async () => { saveButton().props.onPress(); });
   expect(writes).toBe(1);
   expect(useVideoUploadStore.getState().records[key].localUri).toBe('file:///video.mp4');
+});
+
+test.each([false, true])('a saved PR is recorded and silently acknowledged without a banner (previous record: %s)', async (previousRecord) => {
+  const exerciseId = plan.days[0].exercises[0].exercise_id;
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/exercises') return { exercises: [{ id: exerciseId, name: 'Bench press', name_en: 'Bench press', main_lift_family: 'bench', is_competition_lift: true, competition_stance: null }] } as never;
+    return original(path, options);
+  });
+  if (previousRecord) {
+    const prior = await new E1RMRecorder(trainingE1RMRepository).record({ studentId, exerciseId, setLogId: 'previous', family: 'bench', weightKg: 75, reps: 5, rpe: 8, completed: true, failed: false });
+    await trainingE1RMRepository.acknowledgePR(prior!.id);
+  }
+  await openSet();
+  await act(async () => { saveButton().props.onPress(); });
+  const copy = renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ');
+  expect(copy).not.toMatch(/🎉|First record|new e1RM/i);
+  expect(await trainingE1RMRepository.unacknowledgedPRs(studentId)).toEqual([]);
+  const points = await trainingE1RMRepository.fetchHistory(studentId, exerciseId);
+  expect(points).toHaveLength(previousRecord ? 2 : 1);
+  expect(points.some(point => point.setLogId === storedLogs[0].id && point.origin === 'logged')).toBe(true);
+});
+
+test('reentering Training silently drains all pending PRs at the replay time, leaving other accounts alone', async () => {
+  const recorder = new E1RMRecorder(trainingE1RMRepository);
+  for (const [owner, weight, log] of [[studentId, 75, 'old-first'], [studentId, 80, 'old-pr'], ['other', 80, 'other-pr']] as const) {
+    await recorder.record({ studentId: owner, exerciseId: plan.days[0].exercises[0].exercise_id, setLogId: log, family: 'bench', weightKg: weight, reps: 5, rpe: 8, completed: true, failed: false });
+  }
+  expect(await trainingE1RMRepository.unacknowledgedPRs(studentId)).toHaveLength(2);
+  mockFocused = true;
+  jest.useFakeTimers();
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+  await act(async () => { await jest.advanceTimersByTimeAsync(1499); });
+  expect(await trainingE1RMRepository.unacknowledgedPRs(studentId)).toHaveLength(2);
+  await act(async () => { await jest.advanceTimersByTimeAsync(1); });
+  expect(renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ')).not.toMatch(/🎉|First record|new e1RM/i);
+  expect(await trainingE1RMRepository.unacknowledgedPRs(studentId)).toEqual([]);
+  expect(await trainingE1RMRepository.unacknowledgedPRs('other')).toHaveLength(1);
+  await act(async () => { renderer.unmount(); });
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+  await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
+  expect(renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ')).not.toMatch(/🎉|First record|new e1RM/i);
 });

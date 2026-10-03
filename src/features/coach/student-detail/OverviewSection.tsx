@@ -5,7 +5,7 @@ import type { PlanDetail } from '@/api/domains/plans';
 import type { FeedbackItem } from '@/api/domains/feedback';
 import { type ExecutionDay, localDay, makeOverview } from '@/domain/coach/detail-week';
 import { useColors } from '@/design';
-import { cursorDay, sequenceDays } from '@/domain/plan/sequence';
+import { dayCode } from '@/domain/plan/sequence';
 import { t } from '@/i18n';
 import type { ReadinessRowState } from './plan-card-state';
 import { Badge, Capsule, Copy, SectionCard, styles } from './components';
@@ -18,8 +18,6 @@ export function OverviewSection({ plan, days, feedback, readiness, now, exercise
 }) {
   const colors = useColors();
   const trainingDays = days.filter((day) => day.planDay?.exercises.length);
-  const ordered = sequenceDays(plan?.days ?? []);
-  const planWeekIndex = (cursorDay(ordered) ?? ordered[ordered.length - 1])?.week_number ?? 1;
   const latest = makeOverview(days, feedback).latestFeedback;
   const severity = ['coach.shared.severity.light', 'coach.shared.severity.moderate', 'coach.shared.severity.heavy'] as const;
   return <View style={styles.stack}>
@@ -31,7 +29,7 @@ export function OverviewSection({ plan, days, feedback, readiness, now, exercise
         const completed = day.logs.some((log) => log.completed);
         const badge = planned.shifted_to_date ? t('coach.detail.adjusted') : index === 0 && (plan?.total_shift_days ?? 0) > 0 ? t('coach.studentDetail.shiftedDays %lld', [plan!.total_shift_days]) : null;
         return <Pressable key={planned.id} testID={`coach.detail.day.${localDay(day.date)}`} accessibilityRole="button" onPress={() => onDay(day)} style={({ pressed }) => [styles.row, { paddingVertical: 9 }, pressed && { transform: [{ scale: 0.97 }] }]}>
-          <View style={{ flex: 1, gap: 5 }}><Copy size={14} bold>{`W${planWeekIndex}D${index + 1} · ${exerciseName(planned.exercises[0].exercise_id)}`}</Copy>
+          <View style={{ flex: 1, gap: 5 }}><Copy size={14} bold>{`${dayCode(planned, plan?.days ?? [])} · ${exerciseName(planned.exercises[0].exercise_id)}`}</Copy>
             <Copy size={12} tone="textTertiary">{new Intl.DateTimeFormat(deviceLocale(), { month: 'numeric', day: 'numeric', weekday: 'short' }).format(day.date)}</Copy>
             {badge && <View style={{ alignSelf: 'flex-start' }}><Badge label={badge} filled /></View>}
           </View>
