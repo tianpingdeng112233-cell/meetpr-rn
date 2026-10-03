@@ -1,14 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref, type RefObject } from 'react';
 import { Animated, StyleSheet, View, type ScrollView } from 'react-native';
 
-type Entry = { node: ReactNode; anchor: RefObject<View | null>; expanded: boolean; collapse: () => void };
-type Host = { update: (entry: Entry) => void; clear: () => void; measure: () => void };
+type Entry = { node: ReactNode; anchor: RefObject<View | null>; expanded: boolean; collapse: () => void; togglePlayback: () => void };
+type Host = { update: (entry: Entry) => void; clear: () => void; measure: () => void; togglePlayback: () => void };
 const Context = createContext<Host | null>(null);
 export const useSetVideoPlayerHost = () => useContext(Context);
 export type SetVideoPlayerHostHandle = { measure: () => void; requestClose: () => boolean };
 type Frame = { left: number; top: number; width: number; viewportTop: number; viewportHeight: number };
 
-/** The player lives here for its entire lifetime; the scrolling row only reserves space. */
+/** The player lives here for its entire lifetime; the scrolling row supplies the inline touch target. */
 export function SetVideoPlayerHost({ children, viewport, scrollY, obscured = false, ref }: {
   children: ReactNode;
   viewport: RefObject<ScrollView | null>;
@@ -44,7 +44,8 @@ export function SetVideoPlayerHost({ children, viewport, scrollY, obscured = fal
     if (changedAnchor) measure();
   }, [measure]);
   const clear = useCallback(() => { active.current = null; setEntry(null); setFrame(null); }, []);
-  const host = useMemo(() => ({ update, clear, measure }), [update, clear, measure]);
+  const togglePlayback = useCallback(() => { active.current?.togglePlayback(); }, []);
+  const host = useMemo(() => ({ update, clear, measure, togglePlayback }), [update, clear, measure, togglePlayback]);
   useImperativeHandle(ref, () => ({ measure, requestClose: () => {
     if (!active.current?.expanded) return false;
     active.current.collapse();
