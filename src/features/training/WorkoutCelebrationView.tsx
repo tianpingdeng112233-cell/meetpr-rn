@@ -43,12 +43,13 @@ function CelebrationMedal() {
   );
 }
 
-export function WorkoutCelebrationView({ presentation, streak = null, onOpenReview, onFinish, saving = false }: {
+export function WorkoutCelebrationView({ presentation, streak = null, onOpenReview, onFinish, saving = false, sending = false }: {
   presentation: WorkoutCompletionPresentation;
   streak?: number | null;
   onOpenReview: () => void;
   onFinish: () => void;
   saving?: boolean;
+  sending?: boolean;
 }) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -75,7 +76,7 @@ export function WorkoutCelebrationView({ presentation, streak = null, onOpenRevi
             <GradientFill direction="diagonal" stops={[{ color: colors.textGhost, offset: 0 }, { color: colors.surfaceKey, offset: 1 }]} />
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.coachInitial}>{t('student.workoutCompletionFlowView.copy004')}</Text>
           </View>
-          <Text style={styles.receiptText}>{presentation.coachReceiptText}</Text>
+          <Text style={styles.receiptText}>{sending ? t('student.workoutCompletionFlowView.sending') : presentation.coachReceiptText}</Text>
         </RewardEntrance>
         <View style={styles.stats}>
           <RewardEntrance delay={340} slide style={styles.stat}><Text style={styles.value}>{presentation.weekCode}</Text><Text style={styles.label}>{presentation.weekDayLabel}</Text></RewardEntrance>

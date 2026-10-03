@@ -525,14 +525,15 @@ export function TodayWorkoutView() {
   const completeDay = async (undo = false) => {
     if (!planDay || completion.isPending || undoCompletion.isPending) return;
     setRequestedDayID(planDay.id);
+    if (!undo) {
+      setRestSeconds(null);
+      setCompletionPhase('celebration');
+    }
     try {
       await (undo ? undoCompletion : completion).mutateAsync(planDay.id);
-      if (!undo) {
-        setRestSeconds(null);
-        setCompletionPhase('celebration');
-      }
       bumpCompletion();
     } catch (error) {
+      if (!undo) setCompletionPhase(null);
       Alert.alert(
         t('student.todayWorkoutScreen.copy001'),
         completionError(error, undo),
@@ -1069,6 +1070,7 @@ export function TodayWorkoutView() {
         <WorkoutCompletionFlowView
           key={reviewKey}
           initialPhase={completionPhase}
+          sending={completion.isPending}
           presentation={workoutCompletionPresentation({
             planDay,
             drafts: liveDrafts,
