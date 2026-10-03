@@ -2189,3 +2189,11 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - Jest 使用 react-test-renderer / MockVideo，不能执行 Android 原生命中、ScrollView 拦截、惯性/回弹或拖动取消按压。pointerEvents 契约与回调测试不证明实际滚动成功。
 - 本轮未构建/安装 Android 包、未做模拟器截图或实屏验收。按卡由 Opus 用 `adb shell input swipe 200 1000 200 1500 400`（另测 1500ms 慢拖）及 `adb shell input swipe 1040 1000 1040 1300 300` 验收：画面起手必须使 RPE 坐标变化；默认及小屏上下拖动、惯性、无误触播放、轻点播放/暂停、进度条可拖与放大态均待设备确认。失败态 Retry 的真实点击同样待设备回归。
 - 第 1–3 项采用任务卡中 Opus 已通过的结论，不重新开启验收或改动。
+
+## 2026-10-03 — Opus 合并冲突卡：integration/land-main-20261003
+
+- 当前 HEAD `0d74b64`，合并目标 origin/main / MERGE_HEAD `2bf4842`；仅处理两个冲突文件并追加本记录，不 add、commit、push 或 abort。
+- `.github/workflows/ci.yml` 冲突取 origin/main 三行（含注释）：fetch base branch 后以 `git merge-base` 计算 BASE，保留 #12 后由 #15 修正的 docs-only 判断，避免旧 PR base.sha 导致误判。
+- `src/api/auth.ts` 冲突取 HEAD 三行：phone nullable、email nullable/optional、name nullish，保留 Global 邮箱账号无手机号的形状。
+- 核对 #19（`640a3bf`）：auth.ts 的 UserSchema.id 与 domains/shared.ts 的 UuidSchema 均保留非 RFC 4122 GUID 正则；domains/exercises.ts 保留 movement_pattern 数组 / 旧字符串 / null 兼容；domain-schemas.test.ts 两项回归仍在。无 #19 改动被覆盖，无需额外修改；其余自动合并文件未动。
+- 验证：`npm test` 全量 142 suites / 1056 tests passed，0 failed；`npm run lint` 0 errors / 0 warnings；`npx tsc --noEmit` 0 errors，三项退出码均 0。原始日志：`/private/tmp/land-main-test.log`、`/private/tmp/land-main-lint.log`、`/private/tmp/land-main-tsc.log`。
