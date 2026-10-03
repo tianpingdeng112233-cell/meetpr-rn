@@ -2189,3 +2189,7 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - Jest 使用 react-test-renderer / MockVideo，不能执行 Android 原生命中、ScrollView 拦截、惯性/回弹或拖动取消按压。pointerEvents 契约与回调测试不证明实际滚动成功。
 - 本轮未构建/安装 Android 包、未做模拟器截图或实屏验收。按卡由 Opus 用 `adb shell input swipe 200 1000 200 1500 400`（另测 1500ms 慢拖）及 `adb shell input swipe 1040 1000 1040 1300 300` 验收：画面起手必须使 RPE 坐标变化；默认及小屏上下拖动、惯性、无误触播放、轻点播放/暂停、进度条可拖与放大态均待设备确认。失败态 Retry 的真实点击同样待设备回归。
 - 第 1–3 项采用任务卡中 Opus 已通过的结论，不重新开启验收或改动。
+
+## 2026-10-03 · T0 视频行 Replace 文案（Opus 派单）
+- `fix/video-row-replace-copy` 基于 `0d74b64`：仅将 `StudentKit.json` 的 `student.videoAttachmentV3Controls.copy004.en` 从 `Change` 改为 `Replace`，中文“更换”不变；唯一运行时使用点为 `VideoAttachmentControls.tsx:198` 更换按钮，另见正式词库与 `docs/w0-reference/i18n/StudentKit.json:3838` 历史定义；测试无硬编码 `Change` 断言。
+- 验证：全量 `npm test -- --runInBand` 142 suites / 1056 tests 全通过；`npm run lint` 0 errors / 0 warnings；词库差异校验通过。日志：`/private/tmp/video-row-replace-test.log`、`/private/tmp/video-row-replace-lint.log`。未做模拟器视觉验收；未 commit/push。
