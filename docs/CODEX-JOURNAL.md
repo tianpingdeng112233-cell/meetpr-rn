@@ -1674,3 +1674,518 @@ Independent Standards/Spec CLEAN; RN131 suites908 tests plus tsc/lint/build pass
 Live dedicated-pair cross-date logging, multipart interruption/cold restart and
 chat reconnect/retry verified. Current evidence/remaining gates are canonical in
 docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
+
+## 2026-10-02 — R1/R2 Profile fields, history entry and coach badges
+
+- 任务：[R1-R2-CARD](../specs/build22-parity/R1-R2-CARD.md)。在 `fix/parity-r1-r2`、RN 基线 `a203d9c` 实装；iOS 只读参照固定 `beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea` 的 ProfileCardsSection、Step1BasicsSection、Step7ExtrasSection、MeetPRTabBar 与卡内截图。
+- P2-13：Profile 复用向导 BasicStep、控件、翻译键与完整 Step1 校验；仅 Profile 启用 Units 两段、Gender 三列、生日滚轮、纵排身高体重及输入尾缀。单位切换重建输入文本，保留公制存储值；向导默认布局不变。basics 白名单仅五个资料字段。
+- P2-12：把向导已有多行备注移入共享 CompetitionSection，Profile 与向导各呈现一次，备赛与不备赛均可填写。competition 白名单补 `note_to_coach`；所有 Profile 分区继续隔离字段并禁写三项 1RM。
+- P2-14：历史移至页头下方靠右的金色图标、文字与 chevron 行，最小命中高度 44dp，保留按钮角色、可读标签及 `/training-history` stack 路由。P-33：教练壳移除 `badgeDot` 参数，沿用 TabBar 的 0 隐藏、数字、`99+`；计数来源、Tab 顺序与学员底栏未改。
+- 红绿证据：在生产代码改动前，四个约定 seam 的定向测试为 **4 suites failed / 13 failed、22 passed**；缺失字段、校验、备注、数字角标与历史文字均触发预期失败。实装后同组 **4 suites / 35 tests passed**。新增测试仅位于 profilePatch、ProfileEditor → onboarding mutation、教练 tab 壳、训练页入口；覆盖分区字段严格隔离、1RM 禁写、单位切换、保存重开（合成返回值）、备注失败保留/重试与取消不写；无布局镜像测试。
+- 最终自检：`npx jest --runInBand` **133 suites / 929 tests passed**；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过。原始本机日志：`/private/tmp/r1r2-red.log`、`/private/tmp/r1r2-green.log`、`/private/tmp/r1r2-jest.log`、`/private/tmp/r1r2-tsc.log`、`/private/tmp/r1r2-lint.log`。
+- 代码自审：按 review-loop 做独立只读双轴初审及定向复核。Standards 无实质发现；Spec 初审指出 Units/Gender 并排与输入尾缀不足，已通过仅 Profile 启用的共享控件布局补齐，复核无未决代码问题。仓内无 Matt tracker 配置，未声称执行 tracker 流程。
+- **未做设备验证**：本机 ADB 二进制存在，但沙箱拒绝启动服务（`Operation not permitted`）。未运行设备构建/安装、未生成本卡实屏截图，未做真实服务端保存回读；Light/Dark、360×640dp、1.3 倍字体、历史返回状态与角标遮挡仍按卡交 Opus 收货，不以单测代替验收。
+- 按派卡边界未 commit、未 push；未改 PARITY.md、走查清单或任务卡，无新增依赖或后端改动。
+
+### 返修 1（2026-10-02）
+
+- 在本卡第一轮未提交改动上，仅修复 Units 分段选中背景与 Profile 编辑标题。Dark 的选中段复用 `textDisabled`，轨道仍用 `bgStack`；Light 保持 `surfaceCard`。选中/未选中文字保持 `textPrimary` / `textSecondary`，`wrap` / `row`、Gender 与向导第 1 步布局未改。按现有 token 计算，Dark 选中背景与轨道对比为 2.53:1，主文字与选中背景为 6.32:1；此数值不代替实屏复验。
+- 用 `git show` 只读核对固定 iOS SHA 的 `Modules/StudentKit/Sources/StudentKit/Features/MyProfile/ProfileCardsSection.swift` 中标题 switch（源码类型名为 `ProfileCardKind`）。新增编辑页专用映射，basics/background/environment/recovery/muscles/competition/injuries 分别复用现有 `student.profileCardsSection.copy002`–`008`；保留列表共用的 `profileTitles`，列表行标签不变。未新增色值、依赖或文案键。
+- 在现有 ProfileEditor 测试中仅补两个标题断言，逐条先红后绿：basics 从 `Height / Body weight` 失败到 `Basic information` 通过；competition 从 `Meet date` 失败到 `Meet / notes` 通过。未加样式镜像测试。红绿日志：`/private/tmp/r1r2-repair1-basics-red.log`、`/private/tmp/r1r2-repair1-basics-green.log`、`/private/tmp/r1r2-repair1-competition-red.log`，最终绿见全量 Jest 日志。
+- 自检：`npx jest --runInBand` **133 suites / 931 tests passed**；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过。日志为 `/private/tmp/r1r2-repair1-{jest,tsc,lint}.log`。改前快照 `/private/tmp/r1r2-repair1-before` 与增量 `/private/tmp/r1r2-repair1.diff` 留作本机审查证据；其余第一轮文件逐字节核对未变。
+- 独立只读代码审查（review-loop，本地批准卡为源）：Standards 0 项；Spec 代码增量 0 项，交付前已补本返修记录。仓内仍无 Matt tracker 配置，未声称运行 tracker 流程。此为代码自检，不代替 Opus 收货。
+- **未做设备验证**：本次 ADB 启动仍被沙箱拒绝（`could not install *smartsocket* listener: Operation not permitted`）；Light/Dark 实屏与其余验收由 Opus 按返修清单复验。未 commit、未 push；未改 PARITY.md、走查清单、任务卡或其他第一轮实现。
+
+## 2026-10-02 — E1RM imported baseline repair
+
+- 任务：[E1RM-IMPORTED-BASELINE-CARD](../specs/build22-parity/E1RM-IMPORTED-BASELINE-CARD.md)。Opus 派卡；当前 `fix/e1rm-imported-baseline`，基线 `b996f7d`，未 commit、未 push。iOS 实现与测试仅以 `git show 03021ff6cbe82aba26827df70b48fb6451105c6d:<path>` 只读核对，未改 iOS 仓。已读 Expo SDK 57 文档。
+- 原因复核：RN recorder 原先从全部可信点取异常基线，仅排除同 setLogId 的 imported；`loadGrowthHistory` 把真实日志回放的 logged 强改为 imported。iOS `E1RMHistoryReplayService` 排除 assumed，再经 Recorder 生成 logged；preserved imported 指导入估算，不能代替实测异常基线。iOS Recorder 分开 display 与 measured 基线，后者只取同学员同比赛主项的 normal + logged。
+- 实装：保留 RN 既有展示/PR 路径，将异常基线改为可信实测，并通过既有 competition-family resolver 聚合当前学员同主项的各 exercise。回放保留 logged，沿用既有入选函数并按实际时间、set ID 排序。Progress 首读、下拉刷新与 reload 使用同一 `loadGrowthHistory` 入口，刷新快照写回对应 Query 缓存。
+- 修复：识别“更早的可信导入 + 最早合格实练 low”主项，完整时序回放后只改其已有 logged 点的 confidence。已存估值、来源字段、point ID、导入及人工复核状态、无源日志点、退役动作/其他主项、其他学员和 PR（含已确认）保留。缺点回填与修复在一次提交中完成；新 snapshot/revision CAS 在共享串行写队列里检查后单次写盘。重复刷新无写入；并发写入则放弃本次结果，返回最新存量，下次重试。写失败返回旧快照，磁盘原文不变；无法读取的旧存储报错，禁止当空仓覆盖。不增加迁移标记、不清库、不生成追溯 PR。
+
+### 原样真实案例与未决口径
+
+- fixture 原样移植 iOS `ImportedBaselineTestSupport.swift`：38 组 = 5 assumed + 2 高次数 + 31 实练，重量、日期、次数、RPE 未改，标识符全部合成。
+- **卡内有无法同时满足的约束，已向 David 提出，尚未取得变更入选规则的指示**：RN `E1RM_POLICY.minimumEligibleRPE = 7`，既有测试明确 RPE 6/6.5 不入选；固定 iOS 的 `E1RMEligibility` 已允许低于 7 的可计算 RPE。因此保留“阈值/公式/入选规则及既有断言不变”时，不能同时满足“31 个实练逐点与 iOS 一致”。本次未越权改这些规则，也未修改数据来伪造一致性。
+- RN 原样案例结果：36 个存量点及 ID 全保留，5 imported 不变，13 个合格 logged 恢复 normal，18 个 RPE 6/6.5 的原 low 点保持不变；90 天快照由 formingWindowSparse 恢复 chart，5 个样本，current = 216.2162162162 kg。iOS 同输入为 31 normal、8 个样本、221.4285714286 kg。**逐点一致性验收未完成**；需 Opus/David 决定是否另卡追齐入选口径。本地测试绿不等于本卡全部收货。
+- 新设备回放 seam：空仓回填三个不同日期深蹲实练 100/104/108 kg × 1 @10，均为 normal + logged；随后记录 140 kg × 1 @10（较历史最大值高约 29.6%）得到 logged + low，Progress 保持 108 kg。与 iOS 同输入的异常门结果一致：真实历史仍是实测基线，超过既有 18% 阈值被隔离。此用例验证回填后再记录；未宣称修复训练页新设备 First record 横幅，后者仍在 Out of Scope。
+
+### 自检与审查证据
+
+- 测试只加在卡内三个 seam。Recorder 导入低值/高值污染用例先红后绿；回填 origin 先红后绿；修复入口→真实仓储→growthSnapshot 的旧 low 恢复先红后绿。随后补同主项跨 exercise、回放同时间排序/入选、存储失败/并发复核/重开、数据与 PR 保留、零重复写、损坏存储不覆盖、原样真实案例与新设备用例。阈值/公式/入选的既有断言未改。
+- 红绿原始日志在本机 `/private/tmp/e1rm-{recorder,history,repair,replay,family,corrupt,failure-screen}-{red,green}.log`（仅适用已生成的组合）；最终检查日志 `/private/tmp/e1rm-final-{jest,tsc,lint}.log`。`npx jest --runInBand`：134 suites / 943 tests passed；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过，未改 eslint/TypeScript 配置或增加 lint 豁免。
+- review-loop 独立只读双轴自审：Standards 0 项；Spec 初审 1 项（修复写失败应继续显示旧快照），已补失败首屏红测试并修正，定向复核关闭。Spec 仍明确保留上述入选规则冲突，未宣称验收通过。仓内缺 Matt tracker 配置，已提示 `$setup-matt-pocock-skills`，仅执行本地批准卡的 review-loop，不冒称 tracker 工作流。
+- **未做设备验证**：ADB 二进制存在，但启动服务被沙箱拒绝（`could not install *smartsocket* listener: Operation not permitted`）。未构建设备包、未安装、未做实屏或真实服务端联调；由 Opus 按卡收货。
+- 只追加本节交付记录；未修改 PARITY.md、走查清单、任务卡、后端、依赖、公式或阈值。
+
+### 返修 1（2026-10-02）
+
+- 在本卡首轮未提交改动上仅处理 Opus 退回的三处；未回退其他工作，未 commit/push，未改 PARITY.md、走查清单或任务卡。仍由 Opus 按卡收货；未做设备验证。
+- 入选规则按固定 iOS `03021ff6cbe82aba26827df70b48fb6451105c6d` 的 `E1RMEligibility.swift` 逐条追齐：移除旧 RPE 7 下限，仅排除 RPE > 10，完成/失败与次数上限保持原样；RPE < 6 和 nil 继续用现有 Epley 回落。这是修正 RN 基线漂移，不是新增产品规则；本节取代首轮记录中的未决入选口径。公式、10%/18% 异常阈值未变。
+- 原样 38 组 fixture 现在恢复全部 31 个实练点为 normal，5 个真正 imported 点不动；90 天卡为 chart，8 个样本，current = 221.4285714286 kg，与固定 iOS 测试相同。Recorder 另覆盖 nil、5.5、6、6.5 的记录与估值；RPE > 10 与次数上限仍拦截。
+- 旧 RN 回填点只要对应同学员的非 assumed 服务器日志，就把 origin 归正为 logged，并对受影响主项按完整真实日志时序重算置信度；origin 归正、置信度修复、缺点回填仍共用一次 CAS。保留 `imported-*` point ID、已存估值、全部来源字段和 PR；真正 assumed、无源点与其他主项不动。覆盖写失败原状保留、并发复核胜出、重开重试及重复刷新零写。
+- 旧安装重放：先存 100/104/108 kg × 1 @10 的 `imported-*` 历史，再存旧代码标 low 的 140 kg 实练。升级后历史归正为 logged + normal，140 kg 仍 low，曲线当前值仍 108 kg：相对可信实练历史高约 29.6%，符合 iOS 既有 18% 异常门。另测 110 kg 的误标 low 恢复 normal，确认归正会重算后续实练而不只改 origin。
+- 损坏存储仍由 `readE1RM` 抛错阻止写入；Progress 入口捕获读失败，使用本学员服务器日志生成只读曲线，PR 读取失败也降级。三种损坏原文均验证可生成 chart、重复读取与训练 Recorder best-effort 不抛出、零写入、原始字节不变。
+- 先红后绿证据：`/private/tmp/e1rm-r1-{eligibility,migration,corrupt}-{red,green}.log`；迁移失败/并发保护补充日志 `/private/tmp/e1rm-r1-migration-protection.log`。新增测试留在既有 seam，入选既有断言按本次授权更新。
+- 最终自检：`npx jest --runInBand` 134 suites / 952 tests passed；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。日志 `/private/tmp/e1rm-r1-final-{jest,tsc,lint}.log`。首次全量曾在未修改的聊天滚动测试失败（期望 y=190、得到 y=30）；该 suite 独立复跑 33 tests 通过，随后全量通过，未修改聊天代码或测试。参数化测试的 TypeScript tuple 类型已修正，未改 eslint/TypeScript 配置或增加豁免。
+- `review-loop` 独立只读自审，以开工已有 WIP 快照为基线，仅审本次返修增量：Standards 0 项；Spec 0 项。固定审查 diff 留本机 `/private/tmp/e1rm-r1.diff`；最终仅补测试 tuple 类型与本记录，无实现语义变更。此为开发自检，不代替 Opus 实屏收货。
+
+## 2026-10-02 — D-19 camera review survives background (Phase 4–6)
+
+- 任务：[D19-CAMERA-REVIEW-CARD](../specs/build22-parity/D19-CAMERA-REVIEW-CARD.md)。Opus 派卡，在 `fix/camera-review-survives-background`、基线 `5c4a59d` 的当前工作区修改；未 commit、未 push。未修改 PARITY.md、走查清单或任务卡。开工无 CONTEXT.md / FOLLOWUPS.md；已读仓规、卡片及 [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)、[Camera 文档](https://docs.expo.dev/versions/v57.0.0/sdk/camera/)。
+- **被证实的假设：#1，CameraRecorder 的 AppState 后台清理把已完成预览当成录制中断，一并清空 review 并删除 ownedUri。** 原诊断命令 `npx jest --runInBand --watchman=false --runTestsByPath src/features/training/video-upload/__tests__/camera-review.diagnose.test.tsx` 复现 2 红 2 绿：background 单事件或返回后预览消失、Retry / Use 不见、出现 00:00、本地文件被删；无打断及 inactive 对照正常。仅在清理条件加 `recordingActive.current`，同一诊断环变成 4 绿；未改父层或权限处理即可消除最小复现，#2 / #3 不是本环必要条件，不据此排除设备上其他问题。
+- 正式回归：把诊断文件迁为 `camera-review.test.tsx`，删除观察日志与诊断命名。先撤回探针恢复旧条件，正式测试得到 2 红 2 绿（本机 `/private/tmp/d19-regression-red.log`），再应用已验证的单条件修复得到 4 绿；同步注释。实现只改后台清理触发条件，录制中断与卸载清理路径保持原样。
+- 测试仅在批准的 CameraRecorder + AppState seam，共 9 条：无打断、inactive、background 返回、background 单事件四组保留预览及 Use 回调；正在录制切后台仍停止、删除即时或延迟返回的文件并可重录；Retry 删除旧文件、重录得到新 URI；Close camera 或父层卸载删除未使用文件；Use 交出文件后卸载不误删。使用假时钟先录制 3 秒，验证后台后同一 Video 实例及 URI、原生 controls 保留、不回到 00:00。原生播放时长显示未作设备验证；系统返回在此 seam 以父层卸载覆盖，未冒称执行设备 Back。调用点只读核对原有 onUse → attach 链路，未新增附件流程测试 seam 或进行真实上传。
+- 自检：`npx jest --runInBand` **135 suites / 961 tests passed**（包含既有 local-retention）；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。日志 `/private/tmp/d19-final-{jest,tsc,lint}.log`。未改 eslint / TypeScript 配置或新增豁免；`rg -n 'DEBUG-d19' src` 无匹配，诊断文件及临时观察日志已清理。
+- **未做设备验证**：ADB 二进制存在，但 daemon 启动被沙箱拒绝：`could not install *smartsocket* listener: Operation not permitted`。未构建设备包、未安装、未做原生视频回放或真实上传验证；真机复验按卡由 Opus 出包后交 David，本记录是开发自检，不代替 Opus 收货。
+- `review-loop` 独立只读双轴自审一轮：Standards 0 项；Spec 0 项。范围为 HEAD 上本卡 CameraRecorder 条件改动及未追踪的正式回归文件；审后仅追加本 JOURNAL 事实，无实现语义变更。仓内缺 Matt tracker 配置，已提示需 `$setup-matt-pocock-skills`，本次仅使用本地批准卡做 review-loop，未声称运行 tracker 流程或完成 Opus 验收。
+
+## 2026-10-02 · WALKTHROUGH-BEHAVIOR：D-20 / D-28 / D-12（续接）
+
+- Opus 派卡，工作区 `fix/walkthrough-behavior`，基线 `e93beb8`。接手 `git status` / `git diff` 核对 A 的 7 个受跟踪改动及 2 个新增测试，保留已有实现；任务卡为接手时已有未跟踪文件，未修改。没有 commit / push，未改 PARITY.md 或走查清单。没有 CONTEXT.md / FOLLOWUPS.md / 更近层 AGENTS.override.md。
+- 测试仅在卡内约定 seam：TodayWorkoutView 提交、upload manager/runner、training-reminder 排期/处理器、settings-screens，以及 set-entry-rpe 手势归属。没有后端或用户数据操作；测试标识、视频与 URL 均为合成 fixture。
+
+### A：现状复核与补充
+
+- Complete set / Not completed 立即 busy 并禁用，ref 拦住同一事件周期重复提交；保存至多 30 秒，JS deadline 不依赖底层 abort 返回。失败保持 sheet / 输入，网络失败提示保留输入可重试。TodayWorkoutView 的重试沿用原 coached set upsert 键（plan_exercise_id + set_index），未改去重协议；不将测试 mock 的单次写入冒称生产服务端幂等验证。
+- Sending 附件不会阻塞 TodayWorkoutView 记组，保存不删除本地视频。分片 PUT 的 60 秒兜底会直接结束等待，不再等待原生 cancel Promise；进入已有退避。无网恢复或网络类型改变会取消本次悬置 PUT 并重试，已持久化 session / parts 保留；不改分片协议。
+- 定向复跑 `set-save` / `network-handover` / `multipart` / `retry-scheduler` / `manager-attach`：5 suites / 52 tests 通过，后三套原断言未改。补查切网同时删除附件：即时删除响应时原实现通过；延迟远端删除响应后得到 1 红 / 6 绿（等待删除时发生第二次 PUT），在 stop 清除 networkChanged、让显式删除/替换优先后转为 7 绿；连同 manager-attach 原断言共 20 绿。清理接手改动中的重复 import 和两个无用测试 helper，遵循现有 lint 配置。
+- 上轮 A 的红测试日志不在本轮证据中；这里只记录接手 diff 与复跑结果。原生上传与取消双悬置是条件模拟，不等同于小米真机切网根因已证实。
+
+### B：API 依据与实现进度
+
+- 动手前读取 [Expo SDK 57 Notifications 文档](https://docs.expo.dev/versions/v57.0.0/sdk/notifications/) Permissions、handler、channel API，以及版本首页。本地实际 `expo-notifications` 为 **57.0.17**。配置声明 `android.permission.SCHEDULE_EXACT_ALARM`；没有使用 `USE_EXACT_ALARM`。
+- 核对本地 `node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/delegates/ExpoSchedulingDelegate.kt`：API < 31 或 `AlarmManager.canScheduleExactAlarms()` 为 true 使用 `setExactAndAllowWhileIdle`，否则 `setAndAllowWhileIdle`；weekly 每次触发后继续排下一周。`NotificationPermissionsModule.kt` 与 `src/NotificationPermissions.types.ts` 仅暴露通知权限，不暴露精确闹钟授权。React Native PermissionsAndroid.check 底层为 `checkSelfPermission`，不能替代这个特殊授权查询。
+- [Android 官方说明](https://developer.android.com/develop/background-work/services/alarms)要求用 `canScheduleExactAlarms()` 查询及 `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` 打开授权页，回收授权会终止进程并取消精确闹钟。已提出增加最小本地 Expo 模块查询并跳转的范围确认：卡片“原生配置只动 app.json”与现有 SDK 无查询接口的缺口，不能用虚构 API 或普通通知权限冒充解决。
+- 前台策略只有 `src/notifications/handler.ts` 一处真实 `setNotificationHandler` 调用：训练提醒展示横幅、列表并响铃，上传失败继续不弹横幅、不响铃、进入列表。支持旧 identifier 与新 category；两个生产者安装同一策略。
+- 训练提醒改用 HIGH 的 `training-reminder-v2`、默认声音，删除旧 `training-reminder` 渠道，渠道名称仍沿用现有翻译键。每个星期的 identifier、weekly 排期、登出取消与重新登录恢复逻辑保持。处理器测试先 1 红 / 9 绿，再 10 绿；渠道迁移测试先 1 红 / 10 绿，再 11 绿。
+- **待完成**：精确闹钟授权查询、设置页入口/可能延迟提示、授权变化重排及三态回归；待范围答复，不宣称 B 全部完成。
+
+### C：RPE 起手
+
+- 先把约定手势归属 seam 的起手回放改成短纵向/45° 待判，得到 1 红 / 4 绿；实现后 5 绿。水平超过 6 dp 且占主导才锁 scrub；纵向达到 24 dp 且占主导才交滚动，对角保持待判。RN 坐标是 dp：诊断 AVD 420 dpi 的 40 px 约 15.2 dp，60 px 约 22.9 dp。
+- 手指开始触摸刻度条时关闭父 ScrollView 的滚动，待判/拖动期间保持，明确纵向则恢复滚动；release / terminate 恢复。父层只在该刻度条交互期间处理滚动归属；几何、范围 5–10、0.5 步进与无障碍标签未变。
+- **读代码发现的“中途停止”可能路径，仅列出，未按猜测修复**：① 原生触摸取消可进 `onPanResponderTerminate`，系统手势/窗口失焦等是否触发需设备事件；② 已被原生 ScrollView 接管后 JS 收不到 move（包括 JS 启动屏蔽尚未应用的竞态），应以触摸与滚动同一时间轴确认；③ SetEntrySheet 关闭/卸载（Back、selectedDraft 消失、账户/父页面生命周期）会移除 RPE 控件；④ PanResponder 的回调随 width/onChange 等依赖变化而更新，布局变动可能改变命中值，不能仅凭静态代码认定为中断原因。未宣称这些路径解释 David 的真机反馈。
+
+### 最终自检与交接状态
+
+- `npx jest --runInBand`：**137 suites / 975 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 均通过。完整本机日志 `/private/tmp/wb-final-{jest,tsc,lint}.log`。`rg -n 'DEBUG-wb' src` 无匹配；未改 eslint / TypeScript 配置。
+- review-loop 独立只读双轴：Standards 最终 0 项未决 finding；初报“上传中删除漏远端清理”经 reducer 的 attachmentId 赋值证伪并撤回。延迟删除与切网竞态补红/绿后，两轴定向复审均无新增 finding。Spec 保留 **B 未完成** 及 **C 原生手势待验**，未宣称整卡完成或 Opus 验收通过。仓内缺 Matt tracker 配置；完整 tracker 工作流需 David 调用 `$setup-matt-pocock-skills`，本轮采用本地任务卡驱动的 review-loop。
+- **未做设备验证**：`command -v adb` 不在 PATH；明确路径 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb` 存在，但 daemon 启动报 `could not install *smartsocket* listener: Operation not permitted`，沙箱不允许监听。未构建设备包、未安装、未做屏幕截图或 dumpsys，不用 Jest 代替卡内模拟器/小米真机验收。C 的 grant→React state→原生 scrollEnabled 存在异步应用窗口，快速起手与纵向交接必须按卡回放。
+- A、C 已交开发实现；B 已交通知分流、新 HIGH 渠道、权限声明，剩余精确授权查询/入口/状态变化重排及其测试等待范围答复。只追加本 JOURNAL 一节记录，未修改其他正典文档或任务卡，未 commit / push。
+
+### B 续接：精确闹钟授权（2026-10-02，范围答复后）
+
+- 按卡末尾范围答复补齐 B 剩余开发实现，保留接手的 A、C、通知分流、HIGH 渠道和 app.json 权限改动。新增 `modules/training-reminder-alarm`，沿用 training-video 的本地 Expo 模块结构与自动链接；仅提供 `canScheduleExactAlarms` 和带本应用 package URI 的 `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` 入口。Android 12 以下查询为 true；模块 Manifest 声明与 app.json 相同的 `SCHEDULE_EXACT_ALARM`，不引依赖、不声明 `USE_EXACT_ALARM`。
+- `training-reminder.ts` 提供安全 JS 桥接，非 Android、模块缺失、查询或跳转异常均返回 false。提醒页开启时查询并显示双语“可能延迟”说明及系统授权入口；拒绝授权保留开关、偏好和 weekly 排期。页面回前台重新查询，授权变化后重排，未变化/提醒关闭时不重排；异步查询检查页面生命周期、查询序号、账号及排期 revision，防止过期结果在登出后恢复提醒。实际精确/非精确定时仍由 Expo 57.0.17 原生 delegate 按系统权限选择，不另造定时器。
+- TDD 使用卡内 `training-reminder.test.ts`、`settings-screens.test.tsx` seam，原生模块通过 Expo loader mock。逐项红→绿：授权查询缺失（1 红/11 绿）、开启后缺少延迟说明（1 红/2 绿）、缺少授权入口（1 红/3 绿）、回前台未重排（1 红/4 绿）；随后覆盖拒绝、撤销、关闭提醒、模块/平台降级、跳转失败与登出竞态。红日志在 `/private/tmp/walkfix2-b-red-{query,guidance,open,reschedule}.log`，两个定向 suite 最终 28 tests 通过。
+- 最终开发自检：`npx jest --runInBand` **137 suites / 990 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 通过。没有改 eslint/TypeScript 配置；`rg -n 'DEBUG-wb' src` 无匹配。独立只读双轴审查：Standards 0 项；Spec 0 项，不替代 Opus 按卡验收。仍使用本地批准卡，未启用缺少配置的 Matt tracker 工作流。
+- **Kotlin 已直接编译验证**：沙箱内调用缓存的 Kotlin 2.3.20 K2JVMCompiler，JVM target 17，使用真实 Android API 36、React Native 0.86.0、expo-modules-core 已编译类库，生成本模块及两个 AsyncFunction 的 class，退出码 0；未用 stub。脚本 `/private/tmp/walkfix2-b-compile-kotlin.py`，日志 `/private/tmp/walkfix2-b-kotlin.log`，输出 `/private/tmp/walkfix2-b-kotlin-classes/`。`npx expo-modules-autolinking resolve --platform android` 已发现新模块及 Kotlin 类。这是源码编译与自动链接发现检查，未执行完整 Gradle/APK 构建或设备安装。
+- **设备验证未完成**：明确路径执行 `adb devices`，daemon 报 `could not install *smartsocket* listener: Operation not permitted`；沙箱不允许监听，未做模拟器截图、系统授权页实操、dumpsys 精确闹钟或横幅验收。设备清单仍交 Opus/David 按原卡执行。
+- 本次只追加本卡 JOURNAL 记录，未修改 PARITY.md、任务卡或走查清单，未 commit/push。B 工作区 diff（包含接手的 B 改动）在 `/private/tmp/walkfix2-b-workspace.diff`。
+
+
+## 2026-10-02 — WALKTHROUGH-SMALL-FIXES：九项开发实现
+
+- Opus 派卡：[WALKTHROUGH-SMALL-FIXES-CARD](../specs/build22-parity/WALKTHROUGH-SMALL-FIXES-CARD.md)。当前工作区 `fix/walkthrough-small-fixes`，基线 `7574476`；未 commit、未 push。开工没有 CONTEXT.md / FOLLOWUPS.md；CLAUDE.md 仅引用 AGENTS.md。保留开工已有的未跟踪任务卡及参照截图，未修改 PARITY.md、走查清单、任务卡、依赖或 eslint / TypeScript 配置。
+- 逐项动手前，以 `git -C /Users/david/Projects/apps/MeetPR show 0748931563fefea14e7f50a7c9ee7330b5501bea:<path>` 只读核对 iOS；另亲看 [D-11 固定参照截图](evidence/walkthrough-20261002/d11-ios-log-and-camera.png)。已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。下表 iOS 路径均相对此固定源码根目录，`Student/` 简写为 `Modules/StudentKit/Sources/StudentKit/Features/`。
+
+| 项目 | 本次实现 | 对照的固定 iOS 文件 |
+| --- | --- | --- |
+| 1 · D-10 | 实际当前组卡片由 `WorkoutBody.tsx` 渲染。通过整卡 onLayout 更新金条显式高度，随 Coach note、按钮及字体换行后的卡片尺寸变化；保留原三段品牌金渐变。 | `Student/TodayWorkout/TodayWorkoutScreen.swift` 的 TodayWorkoutHero；入口 `Student/TodayWorkout/TodayWorkoutView.swift` |
+| 2 · D-11 | Log 与摄像键放同一操作行，Log 占剩余宽度，右侧52dp方形描边 video-outline；沿用 Record this set 翻译键作为无障碍标签，保持 onVideo(active) / onRecord(active) 回调与可用相机条件。 | `Student/TodayWorkout/TodayWorkoutScreen.swift` 的 recordingHero 操作行；`Student/TodayWorkout/TodayWorkoutView.swift` 的 openVideoAction |
+| 3 · D-13 | CameraRecorder 自身使用不透明 fullScreen Modal，黑底覆盖状态栏和导航栏区域，浅色状态栏内容；SafeArea 内左上角44dp圆形关闭图标，取景画面铺满拍摄内容区，计时与录制键叠在其上。预览保持原 Video controls / contain，底部保留 Retry / Use 与 Save to Photos；onRequestClose 复用原关闭回调。录制、授权、文件归属、后台保留预览与上传链路未改。 | `Student/VideoUpload/Camera/CameraRecorderView.swift`；`Student/VideoUpload/Camera/CameraRecorderComponents.swift` 的 RecorderCaptureView / RecorderReviewView / RecorderCloseButton |
+| 4 · D-15 | iOS 原实现为说明与 collars 同行。按卡内兜底让完整说明独占一行布局区域，collars 下一行右对齐；保留 mono13，说明限制两行并由原生 adjustsFontSizeToFit 缩放，覆盖较长配重组合和1.3倍字体。 | `Student/TodayWorkout/SetEntrySheet.swift` 的 plateSection / collarToggle |
+| 5 · D-21 | 视频操作键与键内文字不参与压缩；视频行和操作行允许按完整按钮换行，保留原 Change / Delete 行为与后续状态提示。 | `Student/VideoUpload/VideoAttachmentV3Controls.swift` 的 attached / actionButton；`Student/TodayWorkout/SetEntrySheet.swift` |
+| 6 · D-02 | GlobalAuthField 空密码时使用正文 semibold16、零额外字距，并明确单行；有内容后恢复原 mono18 与2.52字距，显示/隐藏密码与受控/非受控输入均保留。注册、登录、找回密码共用此字段。 | `Modules/AppShell/Sources/AppShell/Auth/AuthSecureField.swift`；本项按卡修复 Android placeholder 继承样式问题 |
+| 7 · D-07 | 查明该日期模板只有 DashboardScreen 一个生产调用方，传入 Intl 完整星期名；只删中文模板额外的“星期”，英文模板不变。 | `Student/Dashboard/DashboardTodayPresentation.swift` 的 headerDateText / weekdayLetter |
+| 8 · D-27 | 新增局部共享 BrandSwitch，轨道 gold500 / borderStrong，滑块 gold200 / textMuted，全部来自现有主题 token。替换全仓三个原生 Switch 使用点：训练提醒、相机预览、聊天组选附带视频开关；不改状态与回调。 | `Student/MyProfile/TrainingReminderSettingsView.swift` 的 Toggle tint；`Student/VideoUpload/Camera/CameraRecorderComponents.swift` 的 Save to Photos Toggle；`Modules/ChatUI/Sources/ChatUI/SetRefSharePicker.swift` |
+| 9 · D-30 | 仅两枚创建邀请码按钮使用缩小后的水平 padding 和随 fontScale 增大的 flexBasis；空间不足时整键换行，保留两行文字与原字体大小，不影响 Copy / Regenerate 或其他页面按钮。 | `Modules/CoachKit/Sources/CoachKit/Features/InviteCodes/InviteCodesView.swift` 的 secondarySection |
+
+### 测试、自审与设备边界
+
+- 仅修改卡内三处行为 seam：`set-ref-entry.test.tsx` 当前组摄像/Log 向各自回调交同一 draft；`camera-review.test.tsx` 关闭图标与原生 Modal 系统返回在录制/预览态调用关闭，并保留后台、Retry、Use 和文件清理覆盖；`i18n/__tests__/t.test.ts` 中英文 Today 日期模板输出。没有新增镜像样式测试。训练 seam 的相机可用性替身位于 expo-modules-core 原生加载边界。
+- 日期先红（收到“10月2日 · 星期周五”）后绿；相机新增系统返回断言先因缺少 Modal 失败，接入后转绿。录制中关闭的测试模拟原生卸载后延迟返回 URI，不依赖 React 卸载时已经清空的 ref。摄像/Log 回调是保持已有行为，新增保护测试在布局改动前后均通过，不冒称该项行为原本失败。证据 `/private/tmp/smallfix-date-{red,green}.log`、`/private/tmp/smallfix-camera-{red,green}.log`、`/private/tmp/smallfix-actions-before.log`。
+- review-loop 独立只读双轴初审：Standards 1 项（摄像键仅 minHeight + aspectRatio 未形成方形）；Spec 2 项（同一方形问题，以及长配重说明在360dp@1.3×仍需三行）。分别补明确52dp宽度、两行原生字体自适应后，定向复审两轴均无未决代码发现。RN 自带 Yoga 复现确认284dp操作行中 Log 为223×52dp、摄像键为52×52dp，原始证据 `/private/tmp/smallfix-review-yoga-fixed.{cpp,log}`；此为布局算法证据，不代替设备截图。缺 Matt tracker 配置，已提示完整流程需 `$setup-matt-pocock-skills`；本轮只使用本地批准卡。
+- 最终开发自检：`npx jest --runInBand` **137 suites / 995 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 全通过。日志 `/private/tmp/smallfix-final-{jest,tsc,lint}.log`。新增文件仅 BrandSwitch；没有新增依赖、翻译键或配置豁免。
+- **未做设备验证**：ADB 不在默认 PATH；明确路径 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb` 存在，但 `adb devices` 启动 daemon 报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱不允许监听。未构建设备包、未安装、未生成改后设备截图，未验证原生取景/录制/相册保存或真实上传。Light / Dark、360×640dp@1.3×与九项实屏清单仍交 Opus 按卡验收；本节记录开发实现及自检，不宣称功能验收通过。
+
+
+### 返修第 1 轮（2026-10-02）
+
+- 仅处理任务卡文末三处返修，保留开工已有 WIP；改前快照 `/private/tmp/smallfix-r1-before/`，本轮代码增量 `/private/tmp/smallfix-r1.diff`。未修改其余已通过项、任务卡、PARITY、依赖、eslint 或 TypeScript 配置。
+- 第 1 项：删除 `heroHeight` 与整卡测高；金条恢复 `top: 0 / bottom: 0`，直接测量金条自身宽高。`GradientFill` 新增可选数值 `size`，同时传给 Svg / Rect，并以宽高作为 Svg key，在按钮晚出现或内容高度变化后重建原生绘制节点。保留 gold300 → gold400 → gold500 三段渐变；只有本卡金条传入 size，其他调用点仍用原来的百分比尺寸及色标，未改其渲染路径。
+- 第 3 项：在 CameraRecorder 外围增加局部 `ColorSchemeProvider scheme="dark"`，取景、预览、权限状态及内部 AppButton / BrandSwitch 统一读取既有深色 token；Use 为金底深字，Retry 为深底浅字。作用域不写入 appearance 偏好、不更改外部主题；关闭、系统返回、录制、后台预览保留及 Retry / Use / Save to Photos 逻辑未改。只读核对固定 iOS `0748931563fefea14e7f50a7c9ee7330b5501bea` 的 `CameraRecorderComponents.swift`。
+- 第 9 项关联返修：Copy / Regenerate 复用同屏已验收的 `createButtonStyle`（随 fontScale 增大的 flexBasis、现有 spacing.sm 水平内边距），在已有 flexWrap 容器里整键换行；Single Use / Time Limited 本身未改。
+- 全量开发自检：`npx jest --runInBand` **137 suites / 995 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 通过。日志 `/private/tmp/smallfix-r1-{jest,tsc,lint}.log`。本轮为定向样式与绘制修正，沿用已有行为回归，没有新增镜像样式测试。
+- **未做设备验证**：按本次沙箱无模拟器的条件，未构建、安装或运行设备包，未生成设备截图。金条实际像素范围（含按钮晚于首帧出现）、相机 Light / Dark 控件外观、邀请码 360dp @1.3× 完整文字仍待 Opus 按返修卡实屏复验；上述自动检查不代表视觉验收通过。未 commit、未 push。
+- review-loop 独立只读审查（改前 WIP 快照为基线，仅审本轮增量）：Standards **0 项**；Spec **0 项**。缺 Matt tracker 配置，本轮使用本地批准卡，不冒称已执行 tracker 工作流。此为开发自审，不替代 Opus 收货。
+
+
+## Spec 084 · CARD-A Android：序号、Today 编辑入口、PR 静默确认、提醒默认日与 D-31（2026-10-02）
+
+### 基线与范围
+
+- 按 `specs/084-walkthrough-polish/CARD-A-android.md` 与 SPEC §2、§3、§5、§6 实装，包含卡内 D-31；不含 B/C 卡。开工已读 AGENTS、CLAUDE（仅引用 AGENTS）、PLAN 与工程规约；仓内不存在 CONTEXT.md / FOLLOWUPS.md / 更深层 AGENTS。已读 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。
+- 当前 worktree `meetpr-rn-wt-084a`，分支 `feat/084a-walkthrough-behaviors`，基线 `44b6c80`（与 `fix/walkthrough-small-fixes` 一致）。开工已有未跟踪 `specs/084-walkthrough-polish/`，保留原样。无 commit、无 push；正典 PARITY、spec 与收货记录未修改，本节是唯一文档增量。
+
+### 实装与展示点清单
+
+- `src/domain/plan/sequence.ts` 新增唯一序号入口 `weekDayOrdinals(weekDays)`，按既有 `sequenceDays` 排序，已完成日占号，同一 ID 重复出现只计一次；`dayCode(day, days)` 按所属周调用该入口。排序、日期、游标、完成/撤销、补录归日函数未改。
+- 展示点逐项核对：① `dashboard/use-dashboard.ts` Today 标题（当前日及全完成末日）；② `DashboardScreen.tsx` 已完成日与下一练标签；③ `WeekCalendar.tsx` Today / Training 共用周条的可见 D 与无障碍 W#D#；④ `TodayWorkoutView.tsx` 训练标题、QuickLog 标题、补录成功提示、完成总结；⑤ `TrainingCalendarView.tsx` 计划周列表；⑥ `coach/student-detail/OverviewSection.tsx` 教练概览，改为同一入口，避免日历列表过滤/移日造成的下标偏差。
+- 全仓查 `day_of_week`、`dayCode` 和 W/D 模板：历史 `HistoryEntriesView` 现状显示日历日期/星期与周标题，聊天 `ChatSetCard` / picker 现状显示日期/组号，没有直接输出 W#D# / D# 的生产位置；没有新增标签或改历史归日。`RnExtras.json` 没有需要转换的 D 模板；本卡仅从该目录同时删除中英文的 `prFirst`、`prPrevious`、`prTitle` 三个废弃键。教练排课 DAY n 不变。
+- Today 体重/Meetday 四种空态/有值态均以既有 FeedbackPressable 包裹原 Card，保留外观，提供 button 语义、现有可读标签与按压反馈。经现有 `/(student)/profile` 路由参数进入同一个 ProfileEditor（basics / competition）；允许空档案复用已有空表单，不新增编辑界面。保存沿用 useUpsertOnboarding 与 onboarding query 失效，关闭或系统返回回 Today，不提交未保存表单；路由自身的 navigation 清理参数，避免影响后来聚焦的页面。
+- 训练页移除 PRBanner、状态、定时消失逻辑及专用样式。现场录组产生的 PR 在原展示位置确认；进入训练页仍在原 1500ms 回放时机确认该学员全部积压事件，失败保留待下次访问重试，其他账号不受影响。Recorder、repository、点存储结构、Progress 与 PR 判定均未改。
+- `training-reminder.ts` 默认值依次取：已保存设置原值；已发布计划游标所在周（全完成取最后周）的 recommendedDate 日历星期；档案训练日；周一/三/五。日期按日期字符串的 UTC 日历取星期，不经过设备时区偏移。`useReminderPreference` 只在未保存时加载现有计划缓存，加载完成再开放设置入口，摘要与设置页使用同一份推导值。SettingsScreen 的保存路径、Session 的“仅恢复已保存设置”行为与持久化格式无需改变，未保存默认值不落盘、不排期。
+- D-31：对照既有 `docs/evidence/walkthrough-smallfix-20261002/video-row-360dp-1.3x.png` 中裁切现象，仅在系统字体大于 1× 时让 RPE 刻度行与数字按自然内容高度排版；默认字体保留原高度、字号、间距、颜色。PanResponder、命中计算和 PR #67 的手势逻辑未改；没有样式镜像测试。
+
+### 约定 seam 与红→绿证据
+
+| seam | 红测试观察 | 最终覆盖 / 证据 |
+| --- | --- | --- |
+| sequence 序号与标签 | 新序号入口缺失导致 1 红 / 13 绿 | 二/四/六/日 D1–D4、补早日重排、已完成占号、重复 ID 与空列表；`/private/tmp/084a-sequence-{red,green}.log` |
+| 调用方标签 | WeekCalendar 未传入新标签函数所需的周上下文，调用失败 | 可见 D 与无障碍 W#D# 一致；`/private/tmp/084a-caller-{red,green}.log`。既有 use-dashboard 单训练日在周日的旧 W1D7 断言迁至 W1D1 |
+| Dashboard 点击→编辑路由 | 空态/有值态都找不到可点击体重按钮，2 红 | 四种点击→正确编辑器；真实 Basic information 保存 83→84 后 Today 缓存刷新；空档案可打开；Meet / notes 系统返回不发 PUT；`/private/tmp/084a-cards-{red,green}.log` 与 `084a-cards-journey.log` |
+| 训练页 PR 处理 | 首次记录/已有记录提升均仍渲染祝贺文本，2 红 | 两种现场 PR 均不展示、已确认、点保留；另补回放时机/全部积压/重进无提示/账号隔离测试，7/7；`/private/tmp/084a-pr-save-{red,green}.log`、`084a-pr-all-green.log` |
+| 提醒默认推导 | 应为推荐日期星期 [6,1]，旧实现仍取档案 [2]，1 红 / 18 绿 | 锚点与移日、去重、已完成日、游标周、全部完成末周、draft 排除、档案/一三五回落、已保存空星期不变；`/private/tmp/084a-reminder-{red,green}.log` |
+
+- 只在卡约定四类 seam 增改行为测试；重进 PR 与编辑页往返是在各自既有 seam 的补充覆盖，未冒称它们在补充时再次先红。D-31 无新增测试，原 RPE 手势测试随全量通过。
+- 首轮全量 135/137 suites、1001/1003 tests：一处旧序号断言已随新口径修改；另一处未改动的 camera-review 测试报 `window.dispatchEvent is not a function`。相机单独复跑 12/12、最终全量也通过，未声称已查明该间歇错误根因，未改相机代码或豁免测试。编辑路径测试使用 mutation `gcTime: Infinity`，与仓内其他挂载测试相同，避免测试结束后遗留 GC 定时器。
+- 最终 `npx jest --runInBand`：**137 suites / 1003 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 均通过。日志 `/private/tmp/084a-jest-final.log`、`084a-tsc-final.log`、`084a-lint-final.log`。未改 eslint / TypeScript 配置或依赖。
+
+### Standards 自审
+
+- 同一实现上下文自审，按 code-review 的 Standards 轴逐一读未提交 diff；不是独立收货。**未决代码发现 0 项**。
+- 已核对：单一序号入口、已有设计 token / 反馈组件、无手势变更、翻译目录同步删除、未增加依赖/契约/持久化结构、只改卡内代码与约定 seam。清理横幅后未留未使用导入。检查修正了嵌套 Card 缩进与 route 参数清理归属。
+- `docs/agents/issue-tracker.md` 不存在，本轮依用户指定本地批准卡完成自审，没有运行或冒称 tracker 工作流；需要该工作流时先由 David 运行 `$setup-matt-pocock-skills`。
+
+### Spec 自审
+
+- 同一实现上下文对照 CARD-A 与 SPEC 的范围、存量与验收清单。**未决代码发现 0 项**；设备项未验收。
+- 已核对四类行为接线、全仓 D 展示清单、日期/推进/补录不变、Profile 编辑器及缓存复用、PR 点保留和静默确认、提醒三级回落及存量设置保留、D-31 默认尺寸与手势不变。没有混入 Plan summary 删除/翻周、登录改版、聊天/播放器改版等 B/C 卡内容。
+- **未做设备验证**：当前沙箱没有模拟器，未构建/安装/运行设备包，未产生改后截图。Today、训练页、提醒设置页与组录入页的 Light / Dark，以及 360×640dp、字体 1.3× 下的 RPE 数字，均待 Opus 按卡实屏收货。已有截图只用于理解缺陷，自动测试不能替代 Global 联调、原生导航与视觉验收；不宣布功能验收通过。
+
+
+## Spec 084 · CARD-B Android：登录顺序、训练周条与 Plan summary 移除（2026-10-02）
+
+### 基线与范围
+
+- 按 `specs/084-walkthrough-polish/CARD-B-android.md` 与 SPEC §1、§4 及其设计转写实装；基线 `7279d3056c3c1b32e68bce72109e6e8550023644`，分支 `feat/084b-week-strip-login`，worktree `meetpr-rn-wt-084b`。开工只有卡 B 为未跟踪文件，保留原样。
+- 已读 AGENTS、CLAUDE（只引用 AGENTS）、PLAN、SPEC、任务卡及工程规约；仓内没有 CONTEXT.md / FOLLOWUPS.md / 更深层 AGENTS。已读 [Expo SDK 57 版本文档](https://docs.expo.dev/versions/v57.0.0/)。沿用既有设计 token 与卡 A 的序号入口。
+- 不 commit、不 push；不改 PARITY、spec、收货记录、后端、依赖、eslint / TypeScript 配置或持久化结构。本节是唯一文档增量。
+
+### 实装
+
+- `GlobalLoginScreen.tsx` 仅移动既有入口：EMAIL → PASSWORD → Sign in → Create account / Forgot password? → or → Google → 法律文案。显示/隐藏密码、校验、错误展示、路由与 Google 回调保持原样；注册页没有第三方入口，未改。
+- 新增纯函数 `src/domain/plan/week-strip.ts`，按计划训练日的实际周分组，提供周列表、完成数、单周序号、进度、当前/选中标记、左右相邻周默认日、返回今日状态和指示点数据。当前周翻回游标日，其他周选首日；已完成周保留；无有效选择时落在游标，全完成时沿用最后训练日回落。
+- 新增 `TrainingWeekStrip.tsx`：44dp 左右箭头、W# / 状态胶囊 / 完成数、等宽训练日格、最多 8 周的小点。选中为 textPrimary 2dp 边框；当前日为 goldSoft 底、金色日期与空心圆；完成日绿色对勾。日期允许换行，不限制字体缩放；所有主题色使用现有 token。横滑只在横向位移大于 12dp 且超过纵向 1.5 倍时接管，释放超过 44dp 才翻周，与箭头使用相同目的日。
+- `TodayWorkoutView.tsx` 使用周条选择驱动既有日状态；非当前日用 Back to today 替换三个圆形按钮，标题跟随所选 W#D#。新增下拉刷新；手动刷新清空周条选择，离开页面时清空临时选择，完成总结退出后回到当前日。复用既有查询、草稿、补录、计时与完成流程，保留 Today 明确传来的训练导航交接。
+- 未来日由 `WorkoutBody.tsx` 复用原动作列表：推荐日期、训练日名称、动作/组数、处方摘要、当前该练的 W#D# 解锁提示。没有 Start / Quick log / 记组入口；当前日及完成日沿用原内容，PR #68 的金色竖条与 Log / 摄像机操作行未改。
+- 删除 `TrainingCalendarView.tsx`、9 个 calendar 文案键（含单数键）、2 个替换后废弃的训练页文案键及 calendar 复数索引；删除旧 Plan summary / 原训练周条展示断言，保留既有 hero / 无眉标题断言。同步增加 8 个中英文周条键（含 summary 单数键），组数复用原单复数键；Today 页 WeekCalendar 未改。
+
+### 约定 seam 与红→绿证据
+
+| seam | 红测试观察 | 绿测试与覆盖 |
+| --- | --- | --- |
+| `global-auth-screens.test.tsx` | Google / or 仍排在 EMAIL 前，顺序断言失败 | 移动入口后 7/7；`/private/tmp/084b-auth-{red,green}.log` |
+| `domain/plan/__tests__/week-strip.test.ts` | 首轮公开入口尚不存在；随后翻周目标与指示点分别返回 undefined | 逐项实装后 4/4；周/格状态、序号、独立选中、翻回游标、首尾禁用、8/9 周边界；`/private/tmp/084b-strip-{red,green}-{1,2,3}.log` |
+| `quick-log-entry.test.tsx` 的一条新增挂载用例 | 找不到 Next week 入口，原 4 条通过 | 5/5；进入未来周无开练/补录、推荐日期与预览、返回当前训练日、无 Plan summary、圆形刷新入口被替换；`/private/tmp/084b-mount-{red,green}.log` |
+
+- 仅在上述三处约定 seam 新增测试；纯函数的空计划/全部完成/移除选择/完成推进是补充覆盖，新增时已绿，不冒称它们也先失败。没有新增镜像样式、手势内部或其他 seam 的测试。
+- 最终 `npx jest --runInBand`：**138 suites / 1008 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 通过。日志 `/private/tmp/084b-jest-final.log`、`084b-tsc-final.log`、`084b-lint-final.log`。全量包括 i18n 守卫及既有记组/计时/补录/完成测试；Jest 输出仍有 react-test-renderer / act、Expo 原生测试环境警告，未屏蔽或修改豁免。
+- 首轮全量为 1009 tests；自审删除一个已失去全部断言的 Plan summary 专用测试后最终为 1008。未以删除测试掩盖失败。
+
+### Standards 自审
+
+- 同一实现上下文按 code-review Standards 轴读取全部本卡 diff（含新增文件），不是独立收货。**未决代码发现 0 项**。
+- 已核对 token、FeedbackPressable、44dp 箭头命中区、严格类型、双语键、无新依赖与持久化修改。清理旧文案与空测试；未来预览同时处理动作数和组数单复数。没有修改配置、豁免 lint 或引入样式镜像测试。
+- `docs/agents/issue-tracker.md` 不存在，本轮使用用户指定的本地批准卡；未运行或冒称 tracker 工作流。需要该工作流时先由 David 运行 `$setup-matt-pocock-skills`。
+
+### Spec 自审
+
+- 同一实现上下文逐项对照 CARD-B 与 SPEC §1 / §4。**未决代码发现 0 项**；设备验收未执行，不宣布功能验收通过。
+- 自审修正：刷新/再次点选当前日时，若实际选中 ID 未变，仅重设临时选择，不清空依赖相同加载键的 review / e1RM 数据，避免清空后没有新一轮 effect 加载。周条选择不写存储；保留完成后的原总结流程，在退出总结时解除所选完成日，再回到推进后的游标。
+- 已核对未来日只读、已完成日原有展示、首尾箭头、指示点、选中/当前双标记、Back to today、下拉刷新/页面失焦复位；登录入口行为与现有记组/休息/补录/完成路径均沿用。未混入卡 C、Today 周条、Progress、教练端、Google 接通或导航结构修改。
+- **未做设备验证**：当前沙箱没有模拟器，未构建/安装/运行 Android 包，未生成设备截图。原生左右滑动与纵向滚动竞争、切 tab 实际往返、Light / Dark、360×640dp 与字体 1.3× 下的换行/命中/主按钮可达性仍待 Opus 按卡验收；自动测试不替代这些实屏证据。
+
+### 改动摘录（完整改动留在未提交工作区）
+
+```diff
+-import { WeekCalendar } from '@/features/dashboard/WeekCalendar';
++import { TrainingWeekStrip } from './TrainingWeekStrip';
+-import { TrainingCalendarView } from './TrainingCalendarView';
++  const weekStrip = trainingWeekStrip(orderedDays, requestedDayID);
++  const planDay = weekStrip.selectedDay;
+-                label={t('student.todayWorkoutView.copy010')}
+-                onPress={() => selectDay(cursor.id)}
++                label={t('student.trainingWeekStrip.backToToday')}
++                onPress={() => selectDay(null)}
+```
+
+### 返修第 1 轮（2026-10-02）
+
+- 范围仅 `CARD-B-android.md` 文末两项：`TodayWorkoutView.tsx` 删除 `RefreshControl` 导入与 ScrollView 的 `refreshControl`，保留页头按钮及 `refreshToday()` 的 `selectDay(null)` 复位逻辑。
+- `WorkoutBody.tsx` 的训练卡/预览卡共用动作小结改为两行：序号靠顶部，动作名在上、处方在下，两段各享有序号右侧全部可用宽度，间距复用 `spacing.xs`；没有省略、行数限制或关闭字体缩放。未触及记组状态的 Log/摄像机行。
+- 全量检查：`npx jest --runInBand` **138 suites / 1008 tests passed**；`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）、`git diff --check` 均通过。日志：`/private/tmp/084b-repair1-{jest,tsc,lint}.log`；本轮代码差异：`/private/tmp/084b-repair1.diff`。
+- 本轮为删除刷新控件与局部排版，沿用已有行为测试，未新增样式镜像测试；不冒称新增先红后绿证据。未改 eslint/TypeScript 配置、测试或其他原卡实现。
+- 独立只读 code-review：Standards **0 项发现**；Spec **0 项发现**。Impeccable layout 静态扫描无发现。以上均不代表设备验收通过。
+- **未做设备验证**：沙箱没有模拟器，未构建/安装/运行 Android 包或生成设备截图；默认屏宽与 360×640 dp @1.3×、Light / Dark 下的动作名实际换行及刷新交互仍待 Opus 实屏复验。
+- 不 commit、不 push；只追加本卡返修记录，不改正典收货台账。前文的“新增下拉刷新”为首轮历史记录，本轮已按返修要求移除。
+
+```diff
+-import { ..., RefreshControl, ... } from 'react-native';
+-<ScrollView ... refreshControl={<RefreshControl ... />}>
++<ScrollView contentContainerStyle={styles.content}>
+-<Text>{动作名}</Text><Text>{处方}</Text>
++<View style={{ flex: 1, gap: spacing.xs }}>
++  <Text>{动作名}</Text>
++  <Text>{处方}</Text>
++</View>
+```
+
+- 返修第 2 轮（2026-10-02）：仅将 `WorkoutBody.tsx` 动作小结改为 `flexWrap` 自适应横排，名称与处方禁收缩并限制最大宽度，空间不足时处方整体下移，无屏宽/字体倍数分支；全量 `npx jest --runInBand` 138 suites / 1008 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过；独立 Standards / Spec 审查各 0 项，日志 `/private/tmp/084b-repair2-{jest,tsc,lint}.log`，本轮差异 `/private/tmp/084b-repair2.diff`；ADB 启动被沙箱拒绝（Operation not permitted），未取得实屏截图，两种尺寸仍待 Opus 复验；其余已有改动未动，不 commit、不 push。
+
+## 2026-10-02 · Spec 084 Card C Android：选组、训练卡、原地回看、休息说明
+
+- 任务：`specs/084-walkthrough-polish/CARD-C-android.md`，参照 `SPEC.md` 设计定稿 §7–§10。开工已读 `AGENTS.md` / `CLAUDE.md`；仓内无 `CONTEXT.md`、`FOLLOWUPS.md`。分支 `feat/084c-chat-video-rest`，基点 `d96de06`，叠在 Card B 上。保留开工时已存在的未跟踪 Card C 文件；不 commit、不 push，不改 PARITY 或收货正典。
+- 已查 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)、[react-native-video v6 events](https://docs.thewidlarzgroup.com/react-native-video/docs/v6/component/events/) 与 [React Native Modal](https://reactnative.dev/docs/modal)，并核对本地依赖声明；未新增依赖，未改 eslint / TypeScript 配置。
+
+### 实装
+
+- §7：两个入口共用一页 Ask coach：按计划动作身份分卡、三列组网格、卡 A 的 W#D#、问题输入、视频开关与发送复述。训练页预选当前日志或当前计划组；聊天入口未选时禁发。归一化失败的记录不会令视图抛错，超长问题给出既有长度提示并禁发。发送问题后沿原 staging / `sendSetRef` 通道自动提交，等待视频、冻结 body 和 clientId、失败重试、轮询确认、取消暂存继续沿用。`autoSend` 仅为内存 intent 标记，没有新增持久化结构或 wire 字段。
+- §8：两端聊天共用“问题正文 → 浅色附件行 → 时间/既有送达状态”结构；无问题时不留正文空白。附件显示动作名与可用快照指标；有视频仍走既有 URL 更新与播放器，无视频点附件可查看该快照。旧 canonical 消息解析和非法快照的普通文本回退保留。
+- §9：只为组录入新增 `SetVideoPlayer`：默认暂停、拖动、四档倍速、页内 Modal 放大/缩小、系统返回先缩小。播放状态在 Modal 切换之外保留；缩放与源重载忽略旧进度，等匹配的 `onSeek` 后恢复。以视频选择 `createdAt` 保持身份，压缩 URI / 上传 attachmentId 变化不重置进度与倍速。时间标签复用 `timeText`；倍速菜单处于播放器父边界内，留足四档高度。黑底覆盖系统栏区域，控件避开安全区；状态与 Replace / Delete 按钮组可整体换行。上传管理器、相机、独立 `FeedbackVideoPlayer`、打点和标注未改。
+- §10：首次说明改底部可滚动弹层，三档时长经 `restSecondsForRPE({ mode: 'automatic' }, rpe)` 推导并本地化；中英文同步。沿用原 `restTimer.explained.<studentId>` 键与读取时机。链接打开现有 `RestTimerSettingsScreen`，先加载已保存偏好；设置打开期间避免计时结束直接卸载设置页，关闭后仍按原绝对结束时间结算。
+
+### 测试与证据
+
+新增测试仅落在卡片四个约定 seam；旧挂载测试随一页流程和附件文案同步，没有新增视图样式镜像测试。
+
+| seam | 红 → 绿证据（本机临时日志） |
+| --- | --- |
+| 选组 presentation：分组、格子文案、预选/单选、禁发、复述；非法快照 | `/private/tmp/084c-picker-{red,green}.log`、`/private/tmp/084c-invalid-{red,green}.log` |
+| `set-ref-entry.test.tsx` 挂载：两种入口参数的一页 staging、进入会话自动发送及离线同键重试；原有真实训练/聊天入口测试同步 | `/private/tmp/084c-entry-{red,green}.log`、`/private/tmp/084c-send-{red,green}.log` |
+| 时间线 presentation：有话/无话、有无视频、缺字段与次数范围 | `/private/tmp/084c-chat-{red,green}.log` |
+| 播放 reducer：暂停/播放、四档倍速、拖动、缩放/返回保持状态、忽略恢复前旧进度、源重载 | `/private/tmp/084c-video-{red,green}.log`、`/private/tmp/084c-seek-{red,green}.log`、`/private/tmp/084c-reload-{red,green}.log` |
+| 休息说明：三档默认值、默认规则变化随动与中英文格式 | `/private/tmp/084c-rest-{red,green}.log` |
+
+- 最终全量 `npx jest --runInBand`：**140 suites / 1017 tests passed**；`npx tsc --noEmit` 通过；`npm run lint` 通过（0 errors / 0 warnings）；`git diff --check` 通过。日志：`/private/tmp/084c-final-{jest,tsc,lint}.log`。lint 曾缓存编辑中途的旧 import 解析错误，经 `npm run lint -- --no-cache` 清除后重跑原命令；未更改规则或忽略错误。
+- 完整实现差异（含新增 src 文件）：`/private/tmp/084c-implementation.diff`。
+
+### Standards 自审
+
+主代理读最终改动，并按 `review-loop` 使用独立只读 Standards reviewer；本仓缺 Matt tracker 配置，未声称运行依赖 tracker 的完整 `code-review` 流程。初审发现新增字号存在字面量，已改为现有 `fontMetrics`，颜色/间距/圆角沿用 `src/design`。定向复审无剩余 Standards finding；未改依赖、后端契约、持久化结构或规则配置。
+
+### Spec 自审
+
+独立只读 Spec reviewer 初审发现小屏倍速菜单裁切与父级边界外触摸风险，已移至播放器尺寸的直接子层并保证菜单空间。定向复审发现小数秒可能撑长标签，已改用现有 `timeText`。主代理补强解码器 seek 恢复与非法选组记录保护，均在约定 seam 留红绿证据；最终定向核实无剩余代码 finding。此结论只覆盖实现与自动检查，不替代 Opus 按卡验收。
+
+**未做设备验证**：沙箱没有模拟器；未构建、安装或运行 Android 包，未取得设备截图。Light / Dark、360×640 dp / 字体 1.3×、原生播放器拖动/倍速/缩放/系统返回、系统栏与相册样片播放，以及实际联调仍待 Opus 按卡收货。未宣称功能验收通过。
+
+### 改动摘录
+
+```diff
+- page: 'selection' | 'confirmation' = 'selection';
++ get canSend() { return this.selectedReference !== null; }
+- body: canonicalBody(setRef), video
++ body: canonicalBody(setRef, question), video, autoSend: true
+- <VideoPlayback ... /> // 点击 Video 后独立呈现
++ <VideoPlayback key={record.createdAt} inline ... />
++ if (uri && inline) return <SetVideoPlayer ... />;
++ restExplanationRows().map(row => /* 默认规则三行对照 */)
+```
+
+### 返修第 1 轮（2026-10-03）
+
+- 范围：仅 CARD-C 文末第 1 轮的播放器缩放返修；以本轮开工时的未提交文件为基准，保留其余 Card C 改动。未改 eslint / TypeScript 配置、依赖、上传机制、聊天或独立 `FeedbackVideoPlayer`；不 commit、不 push。
+- 复现：新增挂载测试先直接挂载 `SetVideoPlayer`，载入并播放到 24 秒、切为 1.5× 后点放大，原实现触发 Video 的卸载回调 **1 次**，断言失败。红证据：`/private/tmp/084c-r1-red.log`。原实现切换 `View` / `Modal` 根节点，并设置 `loaded=false`、`restoring=true`；这会重建 Video 并等待重新加载。内嵌区域在放大时消失，也会改变滚动内容高度；该滚动成因是代码层判断，未进行设备复现。
+- 修复：新增仅用于组录入页的 `SetVideoPlayerHost`，Video 与自定义控件从首次挂载起就位于同一宿主。内嵌态按原位占位测量位置，并使用原生驱动的滚动位移及视口裁切；放大/缩小只切换宿主布局，原 ScrollView 和占位高度保持。使用现有 react-native-video 的 TextureView 支持变换和裁切；缩放不进入重新加载/恢复流程，真实源重载、拖动后的 seek 恢复保留。
+- 宿主：组录入 Modal 将系统返回先交给视频宿主缩小；原相机 overlay 返回处理仍优先。底层内容在放大时不接收触摸/无障碍焦点，数字键盘打开时遮住视频层。系统栏区域由同一个透明系统栏 Modal 覆盖，控件仍使用安全区 inset。关闭组录入、删除或替换视频时沿原生命周期释放播放器。
+- 回归 seam：最终测试升级为真实 `SetEntrySheet` 挂载，只替代原生模块边界；分别覆盖播放/暂停态下放大、按钮缩小、Android 返回先缩小、Video 实例一致且没有二次挂载、无重新 loading、倍速保持、ScrollView 实例保持、同路径重新选片建立新播放会话、离开时释放。既有 reducer 测试同步为缩放保持连续进度，源重载仍等待恢复；不写视图样式镜像测试。
+- 最终检查：`npx jest --runInBand` **141 suites / 1019 tests passed**；`npx tsc --noEmit` 通过；`npm run lint` 通过（0 errors / 0 warnings）；`git diff --check` 通过。日志：`/private/tmp/084c-r1-final-{jest,tsc,lint}.log`。本轮两次全量 Jest 均通过，未复现收货方报告的偶发失败，无法提供对应失败用例名。
+- Standards：按 `review-loop` 运行独立只读审查及后续定向复核，0 项剩余 finding。仓内缺少 `docs/agents/issue-tracker.md`，本次未声称执行依赖 tracker 的完整 `code-review`；若以后需要该流程，先由 David 调用 `$setup-matt-pocock-skills`，本轮本地双轴审查不受影响。
+- Spec：独立只读初审指出两处布局问题，均已定向修复：菜单使用当前控件高度，占位单独保留内嵌高度；滚动内容高度变化时重新测量播放器位置。定向复核无剩余确定代码问题；不替代 Opus 收货。
+- **未做设备验证**：沙箱没有模拟器，未构建/安装 Android 包、未拍设备截图。原生 TextureView 缩放无黑帧/无缓冲、缩小后的实际滚动位置、测量与触摸精度、系统栏、小屏及大字体仍需相册样片实屏验收；mocked 挂载测试只证明 React 生命周期及状态行为。
+- 本轮独立差异（含新增文件，相对开工 WIP）：`/private/tmp/084c-r1.diff`。核心变更摘录：
+
+```diff
+- return state.expanded ? <Modal>{surface}</Modal> : surface;
++ host.update({ node: surface, anchor, expanded: state.expanded, collapse });
++ return <View ref={anchor} style={{ height: inlineHeight }} />;
+- case 'expand': return { ...state, expanded: true, restoring: true };
++ case 'expand': return { ...state, expanded: true };
+```
+- 2026-10-03 · CARD-C 返修第 2 轮：仅修组录入播放器放大全屏的滚动偏移残留（RN Android Fabric 不恢复移除的原生动画属性；保持同一动画图，放大系数归零、缩小恢复，沿用 Modal 根层黑底及同一 Video 实例），补齐顶部 `Set n · 重量 × 次数 · RPE x`（缺项省略）；组信息挂载断言先红后绿，原同实例/播放与倍速/返回先缩小回归保留；全量 `npx jest --runInBand` 141 suites / 1019 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过，review-loop 独立 Standards / Spec 各 0 finding；证据 `/private/tmp/084c-android-r2-{red,green,jest,tsc,lint}.log`，本轮差异 `/private/tmp/084c-android-r2.diff`；原生偏移原因由代码支持，未做设备验证（沙箱无模拟器），全屏覆盖/系统栏/无黑帧仍待设备收货；保留其他 WIP，不 commit、不 push。
+- 2026-10-03 · CARD-C 追加改动（David 真机反馈）：仅改组录入播放器视图与对应测试；内嵌 / 放大态暂停时显示 56×56 半透明深色圆底白色播放按钮，播放隐藏，播完再次出现并从头重播，保留底部播放 / 暂停与现有无障碍文案。两种尺寸的挂载测试先红后绿，覆盖暂停恢复、结束 seek(0)、底部按钮及同一播放器实例；相关 2 suites / 7 tests、全量 `npx jest --runInBand` 141 suites / 1021 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过；review-loop 独立 Standards / Spec 各 0 finding（本地审查，不依赖缺失的 tracker 配置）。日志 `/private/tmp/084c-central-play-{red,green,jest,tsc,lint}.log`，代码差异 `/private/tmp/084c-central-play.diff`。未做设备验证（沙箱没有模拟器）；未改 eslint / TypeScript 配置，保留原有 CARD-C 文档修改，不 commit、不 push。
+
+## 2026-10-03 · INSTANT-COMPLETION：立即庆祝与后台同步
+
+- 任务：`specs/build22-parity/INSTANT-COMPLETION-CARD.md`，分支 `fix/instant-completion-celebration`，开工 HEAD `eb6d6ae`。开工已读 AGENTS/CLAUDE、PLAN、build22 spec/验证记录与 Expo SDK 57 版本文档；仓内无 CONTEXT.md / FOLLOWUPS.md。任务卡为开工已有未跟踪文件，未修改。
+- 实装：长按完成先进入 celebration、停止休息计时，再等待后台 mutation；请求在途显示 `Sending to your coach…` / `正在发送给教练…`，成功后恢复现有教练回执。完成请求 30 秒超时后取消传输并走原乐观缓存回滚，关闭尚在显示的完成流程并显示原失败提示；已记录组保留，可重试。Promise 竞速隔离迟到响应，所有结局清理超时计时器。成功缓存更新、刷新及返回 Today 保留；完成 mutation 不再等待后续刷新结束才结束 pending，undo 仍走原请求和等待刷新流程。
+- TDD：使用卡约定的训练视图模型/交互 seam，挂载真实 TodayWorkoutView 与 QueryClient，只替代请求和原生边界。先以“请求未返回时已出现奖励页”断言复现红测试，再实现；随后分别以 30 秒假定时器及刷新悬挂场景复现红测试并修复。补充 503 回滚与重试、迟到成功不重开、不覆盖回滚、离开奖励页后失败、中英文回执测试，保留原正常完成/报告与反思持久化测试。
+- 证据：`/private/tmp/instant-completion-red-{1,2,3}.log`、`/private/tmp/instant-completion-green-{1,2,3}.log`；最终定向 `/private/tmp/instant-completion-targeted.log`（11 tests）。全量 `npx jest --runInBand`：**141 suites / 1027 tests passed**；`npx tsc --noEmit`、`npm run lint` 与 `git diff --check` 通过。全量日志 `/private/tmp/instant-completion-{jest,tsc,lint}.log`。Jest 有 console 告警，未将测试通过表述为零告警；lint 无 errors/warnings。
+- Standards：review-loop 独立只读审查 0 finding，确认超时清理、迟到响应隔离、回滚与 undo 路径。Spec：独立只读审查 0 finding，逐项对应卡内即时庆祝/文案/失败与超时/成功后续/undo；不替代 Opus 收货。缺失 `docs/agents/issue-tracker.md`，未声称执行依赖 tracker 的完整 code-review，已告知该流程需 `$setup-matt-pocock-skills`。
+- **未做设备验证**：沙箱没有模拟器，未构建/安装 Android 包，未提供截图；8 秒延迟、503 与正常网络的设备验收仍由 Opus 按卡执行。测试仅证明 mocked 请求边界下的 React 状态与缓存行为，不代表 Global 联调完成。
+- 未改上传、周条、backend、eslint/TypeScript 配置；未 commit、未 push。正典台账不在本轮改动内，仅在本 JOURNAL 追加记录。代码差异：`/private/tmp/instant-completion.diff`。
+
+```diff
++ if (!undo) { setRestSeconds(null); setCompletionPhase('celebration'); }
+  await (undo ? undoCompletion : completion).mutateAsync(planDay.id);
+- if (!undo) { setRestSeconds(null); setCompletionPhase('celebration'); }
+```
+- 周条 7 天日历格追加（2026-10-03）：仅按 SPEC 末尾 §4 修订与卡 B 追加实装；分页数据源增加训练／休息日历格，复用推荐日期与卡 A 序号，保留原训练日列表供进度／翻周；视图改为星期→状态→D 序号→单行短日期，休息格约 0.7 宽、不可点并有中英文读屏描述，7 格按容器分配宽度、超过 7 格横向滚动（溢出时换周滑动留在换周行，避免抢滚动）。约定 seam 新增四项测试：普通四练、后移超 7 天、同日双练、七天全练；前三项逐个红→绿（`/private/tmp/084b-calendar-{red1,green1,red2,green2,red3,green3}.log`），第四项确认已有实现自然通过，另覆盖锚定星期、跨月与 DST 日期；没有样式镜像测试。最终全量 `npx jest --runInBand` **138 suites / 1012 tests passed**、`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）均通过，日志 `/private/tmp/084b-calendar-{jest,tsc,lint}.log`；Impeccable layout 静态扫描 0 项。本地 review-loop 独立只读 Standards：0 项；Spec：0 项确定实现违规，另记需求边界：首／末依训练序列取推荐日期（与 SPEC 文字和 iOS 同步实现一致），非单调推荐日期可能使范围外训练日不显示，需 Opus 确认两端展示规则，本次未擅改 min/max；缺 tracker 配置，未运行依赖 tracker 的 Matt 流程。**未做设备验证**：沙箱无模拟器，未构建／安装／实屏截图，360dp、大字体、Light / Dark、读屏和原生滚动仍待实屏复验，不宣称验收通过。不 commit、不 push；未动用户原有两份 spec 修改及 eslint／TypeScript 配置；本任务路径 `git diff --check` 通过，全树检查仅命中用户既有 `SPEC.md:162` EOF 空行，保留未动。本次代码差异：`/private/tmp/084b-calendar.diff`。
+## 2026-10-03 · UPLOAD-PROGRESS-TIMEOUT：无进度超时与上传百分比
+
+- 任务：`specs/build22-parity/UPLOAD-PROGRESS-TIMEOUT-CARD.md`；排障依据：`docs/diagnose-upload-cellular-2026-10-03.md` Phase 4。开工基线 `fix/upload-progress-timeout` @ `eb6d6ae`，与 `feat/084c-chat-video-rest` 顶一致；无 CONTEXT.md。开工已有任务卡和诊断记录两个未跟踪文件，未改它们。未 commit、未 push；文档仅在本 JOURNAL 末尾追加本节。
+- 实现：每片连续 30 秒没有新增发送字节才超时，另设独立 10 分钟绝对上限；阈值放在 model 现有常量处，沿用 `PartUploadError(408)` 和原生取消路径。重复、倒退或非有限字节不续计时；结束后忽略迟到进度并清理计时器。
+- 进度：按实际字节汇总已完成/续传分片与全部并发分片，末片按真实大小计权。manager 将 `onProgress` 接入既有 `progress` 字段；已有 session 开始重传时恢复 `uploading`，使 reducer 接收进度。视频行上传中显示 `Sending · 42%` / `发送中 · 42%`，取整数，0% 仅显示 Sending / 发送中；其他状态文案保持原样。
+- 边界：分片仍为 5 MiB、并发数不变；没有改退避表、网络变化判定、压缩流程、后端契约、持久化结构、依赖或 eslint / TypeScript 配置。开工查阅 [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) 与 [FileSystem legacy 文档](https://docs.expo.dev/versions/v57.0.0/sdk/filesystem-legacy/)，并核对已安装 SDK 回调类型。
+
+### 红 → 绿与自动检查
+
+测试限定在卡片的 multipart 与视频行状态两个 seam。逐项先运行红测试，再实装：
+
+| 行为 | 本机证据 |
+| --- | --- |
+| 持续有进度的分片在 80 秒完成；原实现返回超时 | `/private/tmp/upload-slow-{red,green}.log` |
+| 30 秒无进度取消并返回 408 | `/private/tmp/upload-idle-{red,green}.log` |
+| 持续有进度仍在 10 分钟绝对上限取消 | `/private/tmp/upload-limit-{red,green}.log` |
+| 12 MiB 文件：5 MiB 已完成 + 两片并发，正确计入 2 MiB 末片 | `/private/tmp/upload-bytes-{red,green}.log` |
+| 中英文整数百分比、0% 不带百分比、等待态原文案 | `/private/tmp/upload-status-{red,green}.log` |
+| 原生回调经 multipart、manager、store 到真实视频行；新/已有 session 都更新为 42%，完成后 Delivered | `/private/tmp/upload-wiring-{red,green}.log` |
+
+接线测试最初缺 SafeArea 测试环境，补好环境后才记录有效行为红证据：原实现新 session 仍显示 Sending、已有 session 显示 Processing，均未出现 42%。另补重复/倒退字节不能延长超时、取消后迟到回调不更新进度及无残留定时器的回归。
+
+- 全量 `npx jest --runInBand`：**142 suites / 1029 tests passed**，含 i18n 守卫；`npx tsc --noEmit` 通过；`npm run lint` 通过（0 errors / 0 warnings）；`git diff --check` 通过。日志 `/private/tmp/upload-final-{jest,tsc,lint}.log`。Jest 输出包含既有测试环境 console 警告，未抑制它们。
+- 完整代码差异（含新增测试文件）：`/private/tmp/upload-progress-timeout.diff`。
+
+### Standards 自审
+
+主代理亲读最终 diff，并按 `review-loop` 执行独立只读 Standards 审查：**0 finding**，无硬性仓规违反或具实质影响的代码坏味道。缺少 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的完整 `code-review` 流程；将来使用该流程需 David 先调用 `$setup-matt-pocock-skills`，本次本地双轴审查不受影响。
+
+### Spec 自审
+
+独立只读 Spec 审查：**0 finding**。卡片的无进度超时、绝对上限、字节进度接线、中英文文案与约束均有实现及自动测试依据；未扩大到切网判定或压缩卡住问题。本结论是开发自测与审查，不替代 Opus 收货。
+
+**未做设备验证**：沙箱没有模拟器；未构建、安装或运行 Android 包，未取得设备截图。300 kbps 限速经虚拟网卡传 2.7 MB 分片、正常网速、分片挂住后约 30 秒超时并按既有退避重试成功，以及百分比真实显示与最终 Delivered，仍待 Opus 按原卡验收。没有宣称设备验收通过。
+
+## 2026-10-03 — UPLOAD-PROGRESS-TIMEOUT 修订一：整体无进度计时
+
+- 基线：`fix/upload-progress-timeout@9941e62`。仅实现任务卡文末「修订一」；未 commit、未 push。开工时卡片已有未提交修改，原样保留。本节只追加，不改已有记录或正典台账。
+- 改动：`src/features/training/video-upload/multipart.ts` 与 `src/features/training/video-upload/__tests__/multipart.test.ts`。每次 `uploadFileParts` 调用独立持有共享无进度计时器；任一在途分片新增字节或成功完成即重置。整体连续 30 秒无进展，记录 `PartUploadError(408)` 并沿原有 abort 路径取消所有在途任务。完成任务先移出在途集合，再等待 `onPart`；在途清空与调用收尾均清理计时器。
+- 保留每片 10 分钟硬上限、外部中止、百分比上报、退避时间表、并发数、分片大小、压缩参数及文案。
+- 按 `tdd` 在卡片批准的公开 seam 上逐轮验证；原生上传与时钟使用 mock / Jest 假定时器。
+
+| 测试名 | 红 → 绿证据 |
+| --- | --- |
+| `a part idle for 40 seconds succeeds while another part keeps making progress` | 改实现前：期望两片成功，实际 `Part upload returned 408`；1 failed / 24 passed。共享计时后：25 passed。日志 `/private/tmp/upload-revision1-red1.log`、`/private/tmp/upload-revision1-green1.log`。 |
+| `completing a part gives the remaining part 30 seconds before an idle timeout` | 补完成事件处理前：剩余片提前取消，期望取消次数 0，实际 1；1 failed / 26 passed。补处理后：27 passed。日志 `/private/tmp/upload-revision1-red2.log`、`/private/tmp/upload-revision1-green2.log`。 |
+| `30 seconds without progress on any part rejects with HTTP 408 and cancels both native tasks` | 新增守护用例直接通过（未宣称它曾红）：29,999 ms 两片均不取消，30,000 ms 返回 408，两片原生任务各取消一次，临时文件与计时器清理。 |
+
+验证：
+
+- `npm test -- --runInBand`：**142 suites / 1032 tests passed**（含原有用例）；日志 `/private/tmp/upload-revision1-full-test.log`。
+- `npm run lint`：退出码 0，**0 errors / 0 warnings**；日志 `/private/tmp/upload-revision1-lint.log`。
+- `npx tsc --noEmit`：退出码 0；日志 `/private/tmp/upload-revision1-tsc.log`。
+- `git diff --check`：通过。
+- 按 `review-loop` 对上述两个代码文件相对 HEAD 的 diff 做一轮独立只读审查。Standards：**0 finding**；Spec：**0 finding**。本仓仍缺 `docs/agents/issue-tracker.md`；完整 Matt tracker 流程需 `$setup-matt-pocock-skills`，本次使用无需 tracker 的本地双轴审查。按用户范围要求，审查记录仅写本节。
+
+未覆盖验收：ADB 启动报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱无法连接模拟器；未执行 `hang_parts: 1` 的超时重传至送达、`part_bytes_per_second` 限速无超时及百分比递增的设备验证。真机流量下 20–30 秒视频送达与百分比显示仍由 David 验收。上述结果是开发自测与自审，不替代 Opus 收货。
+
+## 2026-10-03 · UNVERIFIED-SWEEP-FIXES（Opus T1 派工）
+
+- 基线 `d433ef3`，分支 `fix/unverified-sweep-20261003`；仅卡内四项，不 commit、不 push。开工唯一未跟踪文件为本卡；文档仅追加本节，不改正典台账。
+
+### 第 4 项：修前根因与 seam
+
+- 代码确认：`SetEntrySheet` 将 `Animated.ScrollView` 放在 `SetVideoPlayerHost` 的 children 分支；`SetVideoPlayer` 在此分支只返回 anchor 占位。实际画面和中央播放按钮经 `host.update` 挂入宿主后绘制的绝对定位兄弟层。因此画面命中覆盖层时，ScrollView 不在触摸祖先链；视觉上的内嵌不是触摸树内嵌，也没有转交纵向位移的代码。左右留白命中下方 ScrollView，解释卡内两组 swipe 的差异。
+- 排查候选：①宿主兄弟覆盖层截断滚动祖先链（代码已确认）；②画面上的全屏 Pressable 抢占（排除：只有 56×56 中央按钮，外层 box-none）；③原生播放器启用触摸控制（`controls={false}`，本地 react-native-video 6.19.2 的 `setControls` 调用 `setUseController(false)`）；④进度条 responder（仅底部轨道，不覆盖画面）。故不是仅删进度条 responder 可以修复的问题。
+- 原生复验受阻：已执行 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices`，ADB 监听器报 `Operation not permitted`，无法连接模拟器。未声称实机/模拟器复现或动态排除所有原生因素。依据卡明确允许的代码调查路径继续修复已确认的宿主缺口；diagnosing-bugs 原生复现/最小化环节受该限制，卡内 Opus 的既有复现作为症状来源。
+- Jest seam 缺口：现有 react-test-renderer 将 Video 替换为 MockVideo，没有 Android 命中测试、原生 ScrollView 拦截或手势派发。直接调用 PanResponder/scrollTo 只能测试调用，无法让原版“画面起手不滚动”的真实症状变红；本项不新增这种充数测试。后续仍跑现有中央播放、暂停、缩放同实例回归，真实拖动按卡交 Opus 验收。
+- 修复方向（本段在改动前记录）：仅为内嵌画面及中央播放覆盖区域添加纵向 PanResponder，将位移转给既有 viewport.scrollTo；点击不抢，横向不抢，进度条不接该 responder；放大态不挂接。保留同一 Video 实例及现有宿主布局。
+
+### 实装结果与先红后绿
+
+1. **倒计时**：根因是本地两个零点的实际毫秒差包含 DST 的 23/25 小时日，`ceil` 不等于日历日差。改用 `Date.UTC` 投影本地年月日再相减，保留同日 0 与过期负数；只读核对 iOS `CompetitionCountdownPresenter.daysUntil` 的 calendar day 口径。已搜索整个 `src/features/dashboard/`，没有其他“本地零点毫秒差 + ceil/floor”的同类写法；`utcDayDistance` 本就用 UTC，滚动 e1RM 窗口及相对反馈时间为时间戳口径，不改。
+   - seam：`src/features/dashboard/__tests__/model.test.ts` → `competition calendar days in Europe/London`：`across DST end`、`back across DST start`、`on the same day`、`after expiry`。
+   - 红：**2 failed / 14 passed / 16 total**，结束 DST 实际 32、预期 31；反向跨开始 DST 实际 −30、预期 −31。开始 DST 选择反向区间，因为未来正区间经旧 ceil 恰好正确，不能证明该缺陷；同日与普通过期例在旧实现已自然通过。
+   - 绿：**16 passed / 0 failed**。无既有 TZ 测试惯例，选择测试内 Date 构造边界代理（Intl 显式 Europe/London）及 now 的本地年月日 getter 注入；保留真实 UTC/static 操作，finally 恢复全局 Date，不新增生产注入参数，不依赖宿主时区。
+   - 日志：`/private/tmp/sweep-1-red.log`、`/private/tmp/sweep-1-green.log`。
+2. **聊天训练卡**：根因是标题列 `flex: 1` 的零基准宽度使卡片的固有宽度依赖 note/footer。改为 `flexBasis: 'auto'` + grow/shrink，按内容取得宽度并受外层原有 `maxWidth: '88%'` 约束，左右对齐不变。
+   - seam：`src/features/chat/__tests__/chat-set-card.test.tsx` → `card sizes its title from content without a note (outgoing: false/true)`，各覆盖带/不带视频；保留原有 5 例。
+   - 红：**2 failed / 5 passed / 7 total**（原样式只有 flex:1，缺内容基准）；绿：**7 passed / 0 failed**。
+   - 日志：`/private/tmp/sweep-2-red.log`、`/private/tmp/sweep-2-green.log`。
+3. **上传状态行**：根因是状态组与其文字允许收缩，Change/Delete 固定占宽时将状态/Retry 压成窄列。状态与 Retry 保持同组自然宽度、不收缩，沿用外层 wrap 使操作组空间不足时另起一行；preparing 同样禁止收缩。按钮标签 numberOfLines=1，最小宽高均用 minimumHitTarget；未动任何上传重试、超时或文案。
+   - seam：`src/features/training/video-upload/__tests__/set-video-player.test.tsx` → `video attachment status wraps as a group with single-line actions: failed/uploading/preparing/uploaded`。
+   - 红：**4 failed / 4 passed / 8 total**（组无不收缩约束）；绿：**8 passed / 0 failed**，包括现有 4 项播放器用例。测试验证卡指定的样式契约，不声称测过 Yoga 实际排版。
+   - 日志：`/private/tmp/sweep-3-red.log`、`/private/tmp/sweep-3-green.log`。
+4. **画面起手滚动（已被 Opus 实屏否决，以下仅保留上一轮实现记录）**：默认尺寸下画面起手向下拖动 400/1500ms 后 RPE 坐标均仍为 431，留白起手可变为 794；JS 转发未生效且不提供惯性。该方案已在文末“返修一”撤除，不能视为修好。根因见本节修前调查。上一轮实现使用 View 的 `GestureResponderHandlers`，取全局 pageX/pageY 与起始滚动偏移，仅在单指纵向超过 spacing.xs 且大于横向位移时接管，并调用原 viewport.scrollTo；中央按钮覆盖区域走同一处理，进度条与放大态不挂接。早期 PanResponder.create 被 react-hooks/refs 判为 render 内可能访问 ref，已改为直接 responder 回调，未添加 disable、改配置或引入依赖。点按/播放状态与宿主实例生命周期不变。
+   - 本项**无 Jest 原生滚动红例**，原因与交接验收按修前 seam 记录；没有新增与手势无关的测试冒充红例。既有中央播放/暂停/重播、缩放与系统返回同实例回归通过（并入全量）。`/private/tmp/sweep-4-regression.log` 为原有回归，不是拖动被吃掉的红绿证据。
+
+### 最终验证与审查
+
+- `npm test -- --runInBand`（全量）：**141 suites passed / 0 failed；1041 tests passed / 0 failed**。最终日志 `/private/tmp/sweep-final-test.log`；有既有 console warning，未声称零测试日志告警。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0。最终日志 `/private/tmp/sweep-final-lint.log`。开发中 refs 规则曾报 1 error，最终结构调整后通过。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`git diff --check` 通过。日志 `/private/tmp/sweep-final-tsc.log`。
+- `review-loop` 本地独立只读双轴：Standards **0 finding**；Spec **0 finding**。手势实现改为直接 responder 后，两轴均定向复核 0 项确定问题。原生触摸、滚动边界和视觉排版仍有设备验证限制，此结论不替代 Opus 验收。仓内缺 `docs/agents/issue-tracker.md`，未冒称跑过依赖 tracker 的完整 `code-review`；该流程后续需 David 调用 `$setup-matt-pocock-skills`。
+- Impeccable layout 按卡保持已有布局/视觉，机械扫描 0 finding；无新设计、导航或文案。开工已读取 Expo 57 版本文档 `https://docs.expo.dev/versions/v57.0.0/`。
+
+### 改动文件（共 9 个）
+
+- `src/features/dashboard/model.ts`
+- `src/features/dashboard/__tests__/model.test.ts`
+- `src/features/chat/ChatSetCard.tsx`
+- `src/features/chat/__tests__/chat-set-card.test.tsx`
+- `src/features/training/video-upload/VideoAttachmentControls.tsx`
+- `src/features/training/video-upload/SetVideoPlayer.tsx`
+- `src/features/training/video-upload/SetVideoPlayerHost.tsx`
+- `src/features/training/video-upload/__tests__/set-video-player.test.tsx`
+- `docs/CODEX-JOURNAL.md`（仅本卡末尾追加）
+
+代码 diff：`/private/tmp/sweep-implementation.diff`；原有未跟踪任务卡保留未改。不 commit、不 push；没有改 iOS、上传重试/超时、文案或正典台账。
+
+### 尚未覆盖的卡定验收
+
+- §1：模拟器 Europe/London Today 上 2026-10-03→2026-11-03 的实际 31 天显示及同日 0 天表现。
+- §2：收/发双侧、无 note/长 note、有/无视频的真实宽度和时间戳位置；Jest 只覆盖样式契约与既有内容回归。
+- §3：360×640dp、字体 1.3× 的实际无词内断行及默认尺寸外观；四种状态的真实排版仍待设备检查。
+- §4：按卡 adb swipe 从画面上下拖动、中央按钮起手让权、点按播放/暂停、进度条横向拖动与放大态行为，均待 Opus 实屏验收；本实现直接转交位移，没有新增惯性甩动行为。
+- 未构建/安装 Android 包，未生成设备截图；ADB 被当前沙箱监听限制阻断，未绕过权限。自动检查通过不代表上述设备验收通过。
+
+
+## 2026-10-03 · UNVERIFIED-SWEEP-FIXES · 返修一
+
+### 范围与实现
+
+- 本轮仅执行任务卡文末“返修一”。基线 `d433ef3` / `fix/unverified-sweep-20261003`，承接上一轮未提交工作树；不 commit、不 push。第 1、2、3 项已由 Opus 实屏验收，本轮不修改其实现与测试。5 个独立文件 SHA 校验一致；共享 `set-video-player.test.tsx` 中原上传状态行测试逐字保留。
+- 更正上一节第 4 项结论：宿主绝对定位画面与 ScrollView 是兄弟层，画面触摸不在滚动祖先链中；上一轮 JS responder → scrollTo 转发被 Opus 实屏否决。本轮删除 `picturePanHandlers`、`pictureDrag`、全部转发回调、`GestureResponderHandlers` 类型、无用 spacing import 和旧转发注释，无残留 scrollTo 转发。
+- 宿主内嵌覆盖层容器 `box-none`，视频画面与中央图标层 `none`。中央图标仅展示；ScrollView 内容中的 anchor 增加画面大小的 Pressable，底部排除实测控件条高度，沿现有 host/entry 通道调用当前 `togglePlayback`。未加载、失败或放大时锚点禁用。保持 Video 实例、播放状态和放大态按钮行为。
+- 初审发现失败态 Retry 也落入 `none` 子树。补红测试后将错误展示层移为画面 sibling：内嵌错误层 `box-none`、文字 `none`，Retry 可点；不改重试/超时逻辑。放大态错误层仍覆盖全屏。
+- 本轮仅修改：`src/features/training/video-upload/SetVideoPlayer.tsx`、`src/features/training/video-upload/SetVideoPlayerHost.tsx`、`src/features/training/video-upload/__tests__/set-video-player.test.tsx`、`docs/CODEX-JOURNAL.md`。任务卡未修改；正典台账未改。
+
+### 先红后绿（卡定组件 seam）
+
+| 测试名 | 红输出摘要 | 绿 |
+| --- | --- | --- |
+| `inline picture and central play display pass touches through while controls remain interactive` | 1 failed / 8 skipped；picture pointerEvents 预期 `none`，实际 undefined | 通过；同时验证中央图标非按钮、底部播放键及进度条 responder 的 seek |
+| `the inline anchor toggles playback from inside the ScrollView and excludes the controls` | 1 failed / 9 skipped；ScrollView 内无锚点按钮 | 通过；校验控件高度扣除、加载禁用、播放/暂停与重播、实例不重挂 |
+| `inline playback failure keeps Retry touchable outside the pass-through picture` | 审查返修前 1 failed / 11 skipped；Retry 祖先 pointerEvents 为 `none` | 通过；所有祖先均不禁用触摸，重试后 source 更新 |
+
+- 放大态回归 `the expanded picture accepts touches and its central button plays without remounting` 通过；这是保留行为的回归，不冒称红例。原中央播放/重播、放大/收起/系统返回实例保持以及第 3 项 4 个状态测试全部保留。
+- 定向最终：**1 suite / 12 tests passed，0 failed**。日志 `/private/tmp/sweep-rework1-green.log`。
+- 红日志：`/private/tmp/sweep-rework1-red-layer.log`、`/private/tmp/sweep-rework1-red-anchor.log`、`/private/tmp/sweep-rework1-red-retry.log`。每个变更先运行确认红例，再实现相应修复。
+
+### 最终检查与独立审查
+
+- `npm test -- --runInBand` 全量：**141 suites passed / 1045 tests passed / 0 failed**，退出 0；`/private/tmp/sweep-rework1-full-test.log`。保留既有 console warning，不宣称测试日志零警告。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/sweep-rework1-lint.log`。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/sweep-rework1-tsc.log`。`git diff --check` 通过。
+- `review-loop` 固定开工快照 diff，两个只读 reviewer 独立审查。Standards：初审 1 项 Retry 回归，定向修复后 0 未决。Spec：初审同一 Retry 回归，定向修复后 0 未决。不以本地审查替代 Opus 验收。
+- 仓内仍缺 `docs/agents/issue-tracker.md`；使用本地 `review-loop`，未声称执行依赖 tracker 的完整 `code-review`。若启用该流程，仍需 David 调用 `$setup-matt-pocock-skills`；不阻塞本次已授权返修。
+- 本轮改动 diff（相对开工脏树，不含第 1–3 项）：`/private/tmp/sweep-rework1.diff`。已读仓规指定 Expo 57 文档 `https://docs.expo.dev/versions/v57.0.0/`。
+
+### 未覆盖的验收项
+
+- Jest 使用 react-test-renderer / MockVideo，不能执行 Android 原生命中、ScrollView 拦截、惯性/回弹或拖动取消按压。pointerEvents 契约与回调测试不证明实际滚动成功。
+- 本轮未构建/安装 Android 包、未做模拟器截图或实屏验收。按卡由 Opus 用 `adb shell input swipe 200 1000 200 1500 400`（另测 1500ms 慢拖）及 `adb shell input swipe 1040 1000 1040 1300 300` 验收：画面起手必须使 RPE 坐标变化；默认及小屏上下拖动、惯性、无误触播放、轻点播放/暂停、进度条可拖与放大态均待设备确认。失败态 Retry 的真实点击同样待设备回归。
+- 第 1–3 项采用任务卡中 Opus 已通过的结论，不重新开启验收或改动。

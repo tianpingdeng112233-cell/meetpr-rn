@@ -1,6 +1,8 @@
 import { test, expect } from '@jest/globals';
 import {
   workoutDayState,
+  weekDayOrdinals,
+  dayCode,
   completedToday,
   cursorDay,
   currentWeekDays,
@@ -158,4 +160,14 @@ test('coach shifts change recommendation without moving the cursor and log windo
   expect(recommendedDate(p, p.days[0])).toBe('2026-09-10');
   expect(cursorDay(p.days)?.id).toBe('a');
   expect(planLogRange(p, new Date(2026, 8, 21, 12))).toEqual({ from: '2026-09-01', to: '2026-09-22', scope: 'plan' });
+});
+
+test('weekly labels count completed training days, not weekday slots, and reorder after insertion', () => {
+  const days = [day('sun', { day_of_week: 7 }), day('tue', { day_of_week: 2, completed_at: done }), day('sat', { day_of_week: 6 }), day('thu', { day_of_week: 4 })];
+  expect([...weekDayOrdinals(days)]).toEqual([['tue', 1], ['thu', 2], ['sat', 3], ['sun', 4]]);
+  expect(days.map(d => dayCode(d, days))).toEqual(['W1D4', 'W1D1', 'W1D3', 'W1D2']);
+  const expanded = [...days, day('mon')];
+  expect(days.map(d => dayCode(d, expanded))).toEqual(['W1D5', 'W1D2', 'W1D4', 'W1D3']);
+  expect(weekDayOrdinals([]).size).toBe(0);
+  expect([...weekDayOrdinals([days[1], days[1], days[3]])]).toEqual([['tue', 1], ['thu', 2]]);
 });

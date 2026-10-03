@@ -375,7 +375,7 @@ export function DashboardScreen() {
                   }}
                 >
                   {t('student.dashboardPrimaryAction.copy002', [
-                    dayCode(action.day),
+                    dayCode(action.day, vm.activePlan?.days ?? []),
                   ])}
                 </Text>
                 {action.canUndo ? (
@@ -407,7 +407,7 @@ export function DashboardScreen() {
                       }}
                     >
                       <Text style={{ ...font.mono(12), color: colors.gold500 }}>
-                        {t('student.dashboardPrimaryAction.copy004', [dayCode(action.nextDay)])}
+                        {t('student.dashboardPrimaryAction.copy004', [dayCode(action.nextDay, vm.activePlan?.days ?? [])])}
                       </Text>
                       <Text style={{ color: colors.textPrimary }}>
                         {dayName(action.nextDay, resolve)}
@@ -517,6 +517,8 @@ export function ProfileMetrics({
   onRetry: () => void;
 }) {
   const colors = useColors();
+  const router = useRouter();
+  const edit = (section: 'basics' | 'competition') => router.navigate({ pathname: '/(student)/profile', params: { edit: section, returnTo: 'today' } });
   const competitionDays =
     profile?.is_competing && profile.competition_date
       ? localCompetitionDays(profile.competition_date, now)
@@ -527,57 +529,61 @@ export function ProfileMetrics({
   return (
     <DashboardAsyncSection isError={profileError} onRetry={onRetry}>
       <View style={{ flexDirection: 'row', gap: 11 }}>
-        <Card
-          accessible
+        <Pressable style={{ flex: 1 }} onPress={() => edit('basics')}
+          accessibilityRole="button"
           accessibilityLabel={profile?.weight_kg
             ? t('student.dashboardProfileMetricsView.copy002', [bodyWeightText])
             : t('student.dashboardProfileMetricsView.copy011')}
-          style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3 }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <MaterialCommunityIcons name="scale-bathroom" size={13} color={profile?.weight_kg ? colors.textPrimary : colors.textDim} />
-            <Text style={{ color: profile?.weight_kg ? colors.textPrimary : colors.textMuted, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
-          </View>
-          {profile?.weight_kg ? <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-            <Text style={{ color: colors.textPrimary, ...font.mono(24, 'bold') }}>{formatKg(Number(profile.weight_kg))}</Text>
-            <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}> kg</Text>
-          </View> : <>
-            <Text style={{ color: colors.textMuted, ...font.body(18, 'bold'), marginTop: 3 }}>{t('student.dashboardProfileMetricsView.copy009')}</Text>
-            <Text style={{ color: colors.gold500, ...font.body(11, 'bold') }}>{t('student.dashboardProfileMetricsView.copy010')}</Text>
-          </>}
-        </Card>
+          <Card style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MaterialCommunityIcons name="scale-bathroom" size={13} color={profile?.weight_kg ? colors.textPrimary : colors.textDim} />
+              <Text style={{ color: profile?.weight_kg ? colors.textPrimary : colors.textMuted, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
+            </View>
+            {profile?.weight_kg ? <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text style={{ color: colors.textPrimary, ...font.mono(24, 'bold') }}>{formatKg(Number(profile.weight_kg))}</Text>
+              <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}> kg</Text>
+            </View> : <>
+              <Text style={{ color: colors.textMuted, ...font.body(18, 'bold'), marginTop: 3 }}>{t('student.dashboardProfileMetricsView.copy009')}</Text>
+              <Text style={{ color: colors.gold500, ...font.body(11, 'bold') }}>{t('student.dashboardProfileMetricsView.copy010')}</Text>
+            </>}
+          </Card>
+        </Pressable>
         {competitionDays !== null && competitionDays >= 0 ? (
-          <Card
-            accessible
+          <Pressable style={{ flex: 1 }} onPress={() => edit('competition')}
+            accessibilityRole="button"
             accessibilityLabel={t('student.dashboardProfileMetricsView.copy005', [
               competitionDays,
             ])}
-            style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3, overflow: 'hidden', borderWidth: 1, borderColor: `${colors.goldRGB}4D` }}
           >
-            <GradientFill direction="diagonal" stops={[{ color: colors.goldRGB, opacity: 0.13, offset: 0 }, { color: colors.surfaceCard, offset: 0.62 }, { color: colors.surfaceCard, offset: 1 }]} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MaterialCommunityIcons name="flag-outline" size={13} color={colors.gold500} />
-              <Text style={{ color: colors.textPrimary, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <MaterialCommunityIcons name="fire" size={16} color={colors.gold500} />
-              <Text style={{ color: colors.goldText, ...font.mono(24, 'bold') }}>{competitionDays}</Text>
-              <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}>{t('student.dashboardProfileMetricsView.copy004')}</Text>
-            </View>
-          </Card>
+            <Card style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3, overflow: 'hidden', borderWidth: 1, borderColor: `${colors.goldRGB}4D` }}>
+              <GradientFill direction="diagonal" stops={[{ color: colors.goldRGB, opacity: 0.13, offset: 0 }, { color: colors.surfaceCard, offset: 0.62 }, { color: colors.surfaceCard, offset: 1 }]} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialCommunityIcons name="flag-outline" size={13} color={colors.gold500} />
+                <Text style={{ color: colors.textPrimary, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <MaterialCommunityIcons name="fire" size={16} color={colors.gold500} />
+                <Text style={{ color: colors.goldText, ...font.mono(24, 'bold') }}>{competitionDays}</Text>
+                <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}>{t('student.dashboardProfileMetricsView.copy004')}</Text>
+              </View>
+            </Card>
+          </Pressable>
         ) : (
-          <Card accessible accessibilityLabel={t('student.dashboardProfileMetricsView.copy008')}
-            style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MaterialCommunityIcons name="flag-outline" size={13} color={colors.textDim} />
-              <Text style={{ color: colors.textMuted, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
-            </View>
-            <Text style={{ color: colors.textMuted, ...font.body(18, 'bold'), marginTop: 3 }}>{t('student.dashboardProfileMetricsView.copy006')}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <MaterialCommunityIcons name="plus" size={11} color={colors.gold500} />
-              <Text style={{ color: colors.gold500, ...font.body(11, 'bold') }}>{t('student.dashboardProfileMetricsView.copy007')}</Text>
-            </View>
-          </Card>
+          <Pressable style={{ flex: 1 }} onPress={() => edit('competition')} accessibilityRole="button" accessibilityLabel={t('student.dashboardProfileMetricsView.copy008')}
+          >
+            <Card style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 14, gap: 3 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialCommunityIcons name="flag-outline" size={13} color={colors.textDim} />
+                <Text style={{ color: colors.textMuted, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy003')}</Text>
+              </View>
+              <Text style={{ color: colors.textMuted, ...font.body(18, 'bold'), marginTop: 3 }}>{t('student.dashboardProfileMetricsView.copy006')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <MaterialCommunityIcons name="plus" size={11} color={colors.gold500} />
+                <Text style={{ color: colors.gold500, ...font.body(11, 'bold') }}>{t('student.dashboardProfileMetricsView.copy007')}</Text>
+              </View>
+            </Card>
+          </Pressable>
         )}
       </View>
     </DashboardAsyncSection>

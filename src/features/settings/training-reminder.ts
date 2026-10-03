@@ -1,15 +1,54 @@
+import type { PlanDetail } from '@/api/domains/plans';
+import { currentWeekDays, recommendedDate } from '@/domain/plan/sequence';
+import { configureNotificationHandler } from '@/notifications/handler';
 import { t, type TranslationKey } from '@/i18n';
 import { TRAINING_DAYS } from '@/features/onboarding/catalog';
+import { Platform } from 'react-native';
+import { requireOptionalNativeModule } from 'expo-modules-core';
+
+type ExactAlarmModule = {
+  canScheduleExactAlarms(): Promise<boolean>;
+  openSettings(): Promise<void>;
+};
+
+export async function canScheduleExactReminders(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try {
+    return await requireOptionalNativeModule<ExactAlarmModule>('TrainingReminderAlarm')?.canScheduleExactAlarms() === true;
+  } catch { return false; }
+}
+
+/** Opening settings is not a grant; the foreground check reads the user's decision. */
+export async function openExactReminderSettings(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try {
+    const module = requireOptionalNativeModule<ExactAlarmModule>('TrainingReminderAlarm');
+    if (!module) return false;
+    await module.openSettings();
+    return true;
+  } catch { return false; }
+}
+
 export type ReminderSettings = { enabled: boolean; weekdays: number[]; hour: number; minute: number };
 export const REMINDER_PREFIX = 'training-reminder-';
-export const REMINDER_CHANNEL = 'training-reminder';
+export const REMINDER_CHANNEL = 'training-reminder-v2';
 export const reminderWeekdays: readonly { weekday: number; key: TranslationKey }[] = [
   { weekday: 2, key: 'student.trainingReminderWeekday.copy001' }, { weekday: 3, key: 'student.trainingReminderWeekday.copy002' },
   { weekday: 4, key: 'student.trainingReminderWeekday.copy003' }, { weekday: 5, key: 'student.trainingReminderWeekday.copy004' },
   { weekday: 6, key: 'student.trainingReminderWeekday.copy005' }, { weekday: 7, key: 'student.trainingReminderWeekday.copy006' },
   { weekday: 1, key: 'student.trainingReminderWeekday.copy007' },
 ];
-export function defaultReminderSettings(trainingDays?: readonly string[] | null): ReminderSettings {
+export function defaultReminderSettings(
+  trainingDays?: readonly string[] | null,
+  plan?: PlanDetail | null,
+  saved?: ReminderSettings | null,
+): ReminderSettings {
+  if (saved) return saved;
+  if (plan?.status === 'published') {
+    const weekdays = currentWeekDays(plan.days).map(day =>
+      new Date(`${recommendedDate(plan, day)}T00:00:00Z`).getUTCDay() + 1);
+    if (weekdays.length) return { enabled: false, weekdays: [...new Set(weekdays)], hour: 20, minute: 0 };
+  }
   const weekdays = (trainingDays ?? []).flatMap((day) => { const index = TRAINING_DAYS.findIndex((token) => token === day); return index < 0 ? [] : [(index + 1) % 7 + 1]; });
   return { enabled: false, weekdays: weekdays.length ? [...new Set(weekdays)] : [2, 4, 6], hour: 20, minute: 0 };
 }
@@ -53,12 +92,12 @@ export function replaceReminders(settings: ReminderSettings): Promise<void> {
     const requests = reminderRequests(settings);
     if (!requests.length) return;
     const notifications = notificationCenter();
-    notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false }) });
-    await notifications.setNotificationChannelAsync(REMINDER_CHANNEL, { name: t('student.trainingReminderPreferenceRow.copy001'), importance: notifications.AndroidImportance.DEFAULT });
+    configureNotificationHandler();
+    await prepareReminderChannel();
     try {
       for (const { identifier, weekday, hour, minute } of requests) {
         await notifications.scheduleNotificationAsync({ identifier,
-          content: { title: t('student.trainingReminderCopy.copy003'), body: t('student.trainingReminderCopy.copy004') },
+          content: { title: t('student.trainingReminderCopy.copy003'), body: t('student.trainingReminderCopy.copy004'), sound: 'default', data: { category: 'training-reminder' } },
           trigger: { type: notifications.SchedulableTriggerInputTypes.WEEKLY, weekday, hour, minute, channelId: REMINDER_CHANNEL },
         });
       }
@@ -70,7 +109,17 @@ export function replaceReminders(settings: ReminderSettings): Promise<void> {
 }
 export async function requestReminderPermission(): Promise<boolean> {
   const notifications = notificationCenter();
-  await notifications.setNotificationChannelAsync(REMINDER_CHANNEL, { name: t('student.trainingReminderPreferenceRow.copy001'), importance: notifications.AndroidImportance.DEFAULT });
+  await prepareReminderChannel();
   const existing = await notifications.getPermissionsAsync();
   return existing.granted || (await notifications.requestPermissionsAsync()).granted;
+}
+
+async function prepareReminderChannel(): Promise<void> {
+  const notifications = notificationCenter();
+  await notifications.setNotificationChannelAsync(REMINDER_CHANNEL, {
+    name: t('student.trainingReminderPreferenceRow.copy001'),
+    importance: notifications.AndroidImportance.HIGH,
+    sound: 'default',
+  });
+  await notifications.deleteNotificationChannelAsync('training-reminder');
 }

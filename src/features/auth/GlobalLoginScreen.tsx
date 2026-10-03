@@ -35,24 +35,6 @@ export default function GlobalLoginScreen() {
     finally { submitting.current = false; setBusy(false); }
   };
   return <AuthForm brand title={'Better than\nyesterday'}>
-    <Pressable accessibilityRole="button" accessibilityLabel="Continue with Google" accessibilityState={{ disabled: busy }} disabled={busy}
-      style={{ height: 52, backgroundColor: colors.surfaceCard, borderRadius: 14, borderWidth: 1, borderColor: colors.borderSubtle, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }}
-      onPress={() => void run(async () => {
-        const idToken = await googleOAuth();
-        if (idToken) await useSessionStore.getState().loginWithGoogle({ idToken });
-      })}>
-      <Svg width={18} height={18} viewBox="0 0 24 24" accessible={false}>
-        <Circle cx={12} cy={12} r={9} stroke={colors.textPrimary} strokeWidth={1.8} fill="none" />
-        <Ellipse cx={12} cy={12} rx={4} ry={9} stroke={colors.textPrimary} strokeWidth={1.8} fill="none" />
-        <Path d="M3 12H21" stroke={colors.textPrimary} strokeWidth={1.8} />
-      </Svg>
-      <Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>Continue with Google</Text>
-    </Pressable>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <View style={{ flex: 1, height: 1, backgroundColor: colors.borderSubtle }} />
-      <Text style={{ ...font.mono(12), color: colors.textMuted }}>or</Text>
-      <View style={{ flex: 1, height: 1, backgroundColor: colors.borderSubtle }} />
-    </View>
     <EmailField value={email} onChangeText={setEmail} editable={!busy} />
     <GlobalAuthField label="PASSWORD" error={password.length > 0 && !isValidPassword(password) ? 'Use 8–72 characters' : undefined}
       secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="current-password" value={password} onChangeText={setPassword} editable={!busy} />
@@ -66,6 +48,24 @@ export default function GlobalLoginScreen() {
         <Text style={{ ...font.body(13, 'semibold'), color: colors.goldText }}>Forgot password?</Text>
       </Pressable>
     </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.borderSubtle }} />
+      <Text style={{ ...font.mono(12), color: colors.textMuted }}>or</Text>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.borderSubtle }} />
+    </View>
+    <Pressable accessibilityRole="button" accessibilityLabel="Continue with Google" accessibilityState={{ disabled: busy }} disabled={busy}
+      style={{ height: 52, backgroundColor: colors.surfaceCard, borderRadius: 14, borderWidth: 1, borderColor: colors.borderSubtle, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }}
+      onPress={() => void run(async () => {
+        const idToken = await googleOAuth();
+        if (idToken) await useSessionStore.getState().loginWithGoogle({ idToken });
+      })}>
+      <Svg width={18} height={18} viewBox="0 0 24 24" accessible={false}>
+        <Circle cx={12} cy={12} r={9} stroke={colors.textPrimary} strokeWidth={1.8} fill="none" />
+        <Ellipse cx={12} cy={12} rx={4} ry={9} stroke={colors.textPrimary} strokeWidth={1.8} fill="none" />
+        <Path d="M3 12H21" stroke={colors.textPrimary} strokeWidth={1.8} />
+      </Svg>
+      <Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>Continue with Google</Text>
+    </Pressable>
     <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>
       By continuing, you agree to our{' '}
       <Text accessibilityRole="link" style={{ color: colors.goldText, textDecorationLine: 'underline' }} onPress={() => {

@@ -2,6 +2,14 @@
 
 > **当前复刻基线(2026-09-21)**：iOS `beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea`，Global 轨。David 授权从本地 W3 `6429d50` 开始集成验收、视觉对齐并追齐 build 22。
 > 状态：☐ 未完成 / 🔨 已实装 / ✅ 有走查证据 / — 明确不做。历史 ✅ 只证明备注所述版本和场景，不能当作 build 22 全量验收。
+> **2026-09-25 全面核对：完整复刻未通过，新增 3 处功能遗漏、2 处界面差异。** 见 [核对报告与修复卡](docs/ios-parity-audit-2026-09-25.md) 和 [走查清单](docs/walkthrough-checklist-2026-09-25.md)。这些差异优先于旧记录中的局部 pass。
+> **2026-10-02：P2-12、P2-13、P2-14、P-33 已修复并通过模拟器收货**（[收货记录](docs/verification-r1r2-2026-10-02.md)，本地合成数据，未真机）；P1-7 视频剪辑仍未修，完整复刻结论不变。
+> **2026-10-02：已移植 iOS `beta/1.0-23` 的 e1RM 导入基线修复并追齐入选规则**（[收货记录](docs/verification-e1rm-baseline-2026-10-02.md)，模拟器合成数据，未真机）。其余 build 23 增量未评估。
+> **2026-10-02 真机走查**：David 在安卓真机上走完全流程，共记 30 条问题；已修并模拟器收货的有切后台丢录制预览、记组无反馈与上传兜底、训练提醒（前台展示 / 精确定时 / 横幅）、RPE 起手（[收货记录](docs/verification-walkthrough-behavior-2026-10-02.md)），均待真机复验。
+> **2026-10-02 走查小修九项**（金色竖条、Log 与摄像机同行、拍摄页全屏、杠铃片说明、视频行按钮、密码占位、中文日期、开关颜色、邀请码按钮）已修并模拟器收货（[收货记录](docs/verification-walkthrough-small-fixes-2026-10-02.md)），待真机复验。
+> **2026-10-02 spec 084 卡 A（两端新口径，非 build 22 复刻）**：W#D# 的 D 改为本周第几练、Today 体重 / Meetday 卡可点、删训练页 e1RM 横幅、提醒默认日取教练计划，另修 RPE 刻度大字体裁切；模拟器收货（[收货记录](docs/verification-spec084a-2026-10-02.md)），待真机复验。口径正典见 `specs/084-walkthrough-polish/SPEC.md`。
+> **2026-10-02 spec 084 卡 B**：登录页邮箱密码在上、Google 在下；训练页周条可翻周并区分"选中"与"当前训练日"，删除 Plan summary；模拟器收货（[收货记录](docs/verification-spec084b-2026-10-02.md)），待真机复验。
+> **2026-10-03 spec 084 卡 C**：Ask coach 一页选组、聊天训练卡并入气泡、组录入视频原地播放（倍速 / 全屏放大）、首次休息说明改弹层；模拟器收货（[收货记录](docs/verification-spec084c-2026-10-03.md)），待真机复验。
 > 当前处于 W3 集成验收；W4 尚未启动。2026-09-23 六流程状态矩阵与小屏修复已取证，Global 新服务联调仍受生产门禁阻塞。以下 W0–W2 和早期 W3 卡备注是历史记录；旧 ADB/未验措辞以 9/23 矩阵覆盖项为准，不外推未列状态。
 > [当前验收、截图与发布门禁](docs/verification-w3-2026-09-23.md)；[本轮范围](specs/build22-parity/SPEC.md)。旧参照包仍保留 `202e95db` 来源，新增差异按下表优先。
 
@@ -78,8 +86,8 @@
 | TrainingHistory | 🔨 | W1-g 复核(2026-09-05):v2 六块顺序、e1RM 卡四态、historyStats/chartBuckets、反馈归档入口、锁态;模拟器走查零训练态通过(v3 浅色/英文);W3-c 已接成长三图几何；W3-v 源码视觉对照 pass：mark/chat/header、卡头、进度行、section、stats/历史入口，lint/tsc/240 tests 通过；源码与任务描述差异见 JOURNAL，Android 截图验收仍待 ADB 环境恢复 |
 | FeedbackInbox / FeedbackDetail | 🔨 | W3-a:归档列表/详情路由、相对时间/未读态/关联视频三态、行内短链失败;markRead → URL → 开播放器 → markers,回填有 id + 会话守卫;Dashboard/训练页消息按钮直达反馈。复用现有反馈与视频读口,不改 DTO;lint/tsc/64 suites·396 tests/Android JS bundle 通过;ADB socket 被 sandbox 拒绝,待 AVD 截图验收 |
 | StudentChat(学员端教练聊天) | 🔨 | W3-s：全屏黑金会话、文本/训练分享/未看计划/反馈视频混排、分页定位/55%可见已读/pending重试/30s轮询；Dashboard/Training 页头及未读合计已接。Growth/Profile 按追加裁决待合流另卡；CHAT_BIND_REQUIRED 已按追加授权仅补 client.ts 错误码及 HTTP 测试。W3-s2：组分享已接（hero Ask coach / 聊天＋选组器 / staged 可选备注 / 视频等待与幂等发送 / 精确正典训练卡）；图片发送/推送深链另卡；77 suites·511 tests、lint/tsc 与 i18n/tokens 守卫通过，AVD 截图待验收，详见 JOURNAL W3-s / W3-s2 ；W3-r 实时通道接入,断线回落轮询（会话 3s／收件箱 30s，connected 暂停；已读游标本地推进）；83 suites·559 tests，原生联调待验收，详见 JOURNAL W3-r |
-| VideoUpload | ✅ | W1-h v2(#22,R1–R4):W1-d 入口接回、自建相机(录制/回放确认/相册偏好)、720p 直通/转码、静默多分片上传(legacy uploadTask,无 Content-Type)+ 持久化分片/退避、当天留存/组内回放、失败聚合通知；R4 冷启动服务端回填（按日已有 set log 归组、本地优先、远端删除清空，装载/切日/刷新触发，静默失败；自动测试通过，R4 AVD 走查因 ADB 权限受阻待补）。模拟器已走查:选片→懒建日志→initiate→PUT→complete,服务端 `GET /students/:id/videos` 出现附件;**录像本身模拟器不可验(QEMU 相机开录挂死),待真机**。已知偏差:无前台服务真后台续传、无烧录导出、帧率随设备 |
-| MyProfile | ✅ | W1-p(#21,integration/w1 模拟器已走查:七块、偏好三行、组间休息/训练提醒页、改密码/导出 CSV/注销确认页):v2/v3 七块资料卡、三态防困死兜底、复用向导行编辑且结构性锁 1RM、外观/分 RPE 休息/本地周提醒、改密码/全量 CSV/注销；lint/tsc/Jest 与离线 Android bundle 验证见 CODEX-JOURNAL。ADB 5037 被 sandbox 拒绝，端点已核本地 backend origin/staging 源码，Global 在线与模拟器截图待验收；W3-v：视觉对照 pass（逐项 iOS 源码核对：header/1RM kg 与 SBD/chip/组标题/外观与行字号）；39 suites / 294 tests、lint、tsc 绿。当前 worktree 的 Android 截图待验收（ADB sandbox 拒绝）；聊天未读源尚未接入，详见 JOURNAL |
+| VideoUpload | 🔨 | 9/25 确认相册/录制后的剪辑缺失（P1-7）；以下历史上传证据仍有效，但不代表视频链完整复刻。 W1-h v2(#22,R1–R4):W1-d 入口接回、自建相机(录制/回放确认/相册偏好)、720p 直通/转码、静默多分片上传(legacy uploadTask,无 Content-Type)+ 持久化分片/退避、当天留存/组内回放、失败聚合通知；R4 冷启动服务端回填（按日已有 set log 归组、本地优先、远端删除清空，装载/切日/刷新触发，静默失败；自动测试通过，R4 AVD 走查因 ADB 权限受阻待补）。模拟器已走查:选片→懒建日志→initiate→PUT→complete,服务端 `GET /students/:id/videos` 出现附件;**录像本身模拟器不可验(QEMU 相机开录挂死),待真机**。已知偏差:无前台服务真后台续传、无烧录导出、帧率随设备 |
+| MyProfile | 🔨 | 10/02 P2-12、P2-13 已修复并模拟器收货，编辑页标题同步对齐 iOS（见 verification-r1r2-2026-10-02）。9/25 发现比赛备注（P2-12）及单位/性别/生日编辑（P2-13）遗漏；七分区可达不等于字段齐全。W1-p(#21,integration/w1 模拟器已走查:七块、偏好三行、组间休息/训练提醒页、改密码/导出 CSV/注销确认页):v2/v3 七块资料卡、三态防困死兜底、复用向导行编辑且结构性锁 1RM、外观/分 RPE 休息/本地周提醒、改密码/全量 CSV/注销；lint/tsc/Jest 与离线 Android bundle 验证见 CODEX-JOURNAL。ADB 5037 被 sandbox 拒绝，端点已核本地 backend origin/staging 源码，Global 在线与模拟器截图待验收；W3-v：视觉对照 pass（逐项 iOS 源码核对：header/1RM kg 与 SBD/chip/组标题/外观与行字号）；39 suites / 294 tests、lint、tsc 绿。当前 worktree 的 Android 截图待验收（ADB sandbox 拒绝）；聊天未读源尚未接入，详见 JOURNAL |
 | 控件视觉纠偏 | 🔨 | W1-v;按 iOS 测试版实况收敛按钮变体、训练/仪表盘/绑定/隐私控件红色使用;静态检查与测试通过后待模拟器走查 |
 | Evaluation | — | 硬封存,不复刻 UI,仅 BindGate 跳过逻辑 |
 
@@ -105,14 +113,14 @@
 
 | 项 | 状态 | 当前证据与边界 |
 |---|---|---|
-| 学员全屏回放/打点/角标 | ✅ | 9/21 播放/倍速/seek/角标；9/22 Global 反馈关联回放；9/23 失败恢复及固定 iOS 对照。无烧录导出是既定范围，Android seek 不声明 iOS 同等容差。 |
+| 学员全屏回放/打点/角标 | ✅ | 9/21 播放/倍速/seek/角标；9/22 Global 反馈关联回放；9/23 失败恢复及固定 iOS 对照。烧录导出未实现，参照包仍列待拍范围（9/25 纠正旧“既定范围”表述）；Android seek 不声明 iOS 同等容差。 |
 | 教练视频工作台 | ✅ | Global 播放/打点/反馈、fixture失败重试；V04恢复打点卡，V05修深色控件对比，V06防就绪前查询悬挂；深浅色实屏。 |
 | 学员成长与来源/容量 | ✅ | 零数据、forming、成熟、容量锁定/有数据、缺来源降级和历史返回；iOS结构对照通过。 |
 | 教练成长/资料 | ✅ | 正常/无计划/成长空态、成长失败恢复、资料独立失败；固定iOS对照。 |
-| 学员流程矩阵 | ✅ | 登录注册找回、绑定/七步资料、训练补录完成、成长、Profile/账号、聊天视频；状态与fixture/Global边界逐行记录。 |
+| 学员流程矩阵 | 🔨 | 9/25 发现剪辑、资料编辑字段和历史入口差异，待修后复验； 登录注册找回、绑定/七步资料、训练补录完成、成长、Profile/账号、聊天视频；状态与fixture/Global边界逐行记录。 |
 | 教练流程矩阵 | 🔨 | 客户端空/错/搜索/申请Accept与Ignore/长姓名/邀请码/资料通过；P31新Global服务和教练改期为BLOCKED。 |
 | 弱网/恢复 | ✅ | Global跨日补录、五分片断网与进程重启恢复、聊天断线接收/Retry；fixture三组部分失败续写且旧日志保留。真后台/真机录制在W4。 |
-| 双端并排结构对照 | ✅ | 固定0748931参考与Android报告明列屏幕；V02–V05修复后实屏。数据种子/字体/平台控件不同，不声称像素一致。 |
+| 双端并排结构对照 | 🔨 | 9/25 追加细查发现五处不一致（含教练底栏数字角标）； 固定0748931参考与Android报告明列屏幕；V02–V05修复后实屏。数据种子/字体/平台控件不同，不声称像素一致。 |
 
 历史发现编号、旧源码核对和前置条件保留在 [JOURNAL](docs/CODEX-JOURNAL.md) 与 [9/21记录](docs/verification-w3-2026-09-21.md)。
 
@@ -148,3 +156,7 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 修复未设置比赛日期时整张倒计时卡消失的复刻遗漏，补齐固定 iOS 的 Not scheduled / Add a meet，并对齐体重未填写提示。保留有值显示和 Profile 编辑方式。浅色/深色模拟器亲验、131 suites / 910 tests、tsc/lint、Global Release 构建通过；独立 Standards 与 Spec 均 CLEAN。见 [验证与截图](docs/verification-meetday-2026-09-25.md)。
 
 同日 David 追加指定：英文卡片标题由 Meet in 改为 Meetday（空态和已有日期共用）。3 项相关测试与 Release 构建通过，模拟器亲验见 [截图](docs/evidence/meetday-20260925/renamed.png)。
+
+## 2026-09-25 全面功能与界面核对
+
+业务基线 d818bf8 对固定 iOS 0748931；重新取证两角色主屏和部分二级页面，完整清单明确区分本轮、既验、缺口、待验。学员 P1-7 视频剪辑、P2-12 比赛备注、P2-13 基础资料字段、P2-14 历史入口，以及教练 P-33 数字角标尚未修复。未改业务代码；Google/FCM/真机与生产门禁独立，旧局部通过不得外推为全部复刻。详见 [核对报告](docs/ios-parity-audit-2026-09-25.md)。

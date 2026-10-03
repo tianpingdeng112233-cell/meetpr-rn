@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import type { InviteCode } from '@/api/domains/invite-codes';
-import { AppButton, Card, Screen, font, useColors } from '@/design';
+import { AppButton, Card, Screen, font, spacing, useColors } from '@/design';
 import { InviteCodeFormat } from '@/domain/coach/invite-code-format';
 import { inviteCodeStatus, isDefunct, type InviteCodeStatus } from '@/domain/coach/invite-code-status';
 import { t } from '@/i18n';
@@ -21,6 +21,8 @@ function statusLabel(status: InviteCodeStatus) {
 
 export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
   const colors = useColors();
+  const { fontScale } = useWindowDimensions();
+  const createButtonStyle = { flexBasis: spacing.minimumHitTarget * 3 * fontScale, paddingHorizontal: spacing.sm };
   const { snapshot, model, now } = useInviteCodes(dependencies);
   const personal = inviteCardState(snapshot).code;
   const secondary = snapshot.codes.filter(code => code.type !== 'personal_permanent');
@@ -68,8 +70,8 @@ export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
           <ProfileText numberOfLines={1} adjustsFontSizeToFit style={font.mono(28, 'bold')}>{InviteCodeFormat.grouped(personal.code)}</ProfileText>
           <ProfileText style={{ ...font.body(12), color: colors.textSecondary }}>{t('coach.invites.usedCount %lld', [personal.used_count])}</ProfileText>
           <View style={profileStyles.actions}>
-            <InviteSecondaryButton disabled={snapshot.mutating} label={t(snapshot.copiedCodeID === personal.id ? 'coach.invites.copied' : 'coach.invites.copy')} onPress={() => void model.copyCode(personal.id, now)} />
-            <InviteSecondaryButton disabled={snapshot.mutating} label={t('coach.invites.regenerate')} onPress={() => setConfirm({ kind: 'regenerate' })} />
+            <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t(snapshot.copiedCodeID === personal.id ? 'coach.invites.copied' : 'coach.invites.copy')} onPress={() => void model.copyCode(personal.id, now)} />
+            <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t('coach.invites.regenerate')} onPress={() => setConfirm({ kind: 'regenerate' })} />
           </View>
         </> : <>
           <ProfileText style={{ color: colors.textSecondary }}>{t('coach.invites.noPermanentCode')}</ProfileText>
@@ -79,9 +81,9 @@ export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
       </Card>
       <ProfileText style={{ ...font.mono(12), color: colors.textTertiary }}>{t('coach.invites.secondarySection')}</ProfileText>
       <Card style={{ padding: 0, overflow: 'hidden' }}>
-        <View style={{ padding: 16, gap: 10, flexDirection: 'row', alignItems: 'stretch' }}>
-          <InviteSecondaryButton disabled={snapshot.mutating} label={t('coach.invites.singleUseCode')} onPress={() => setSheet('single_use')} />
-          <InviteSecondaryButton disabled={snapshot.mutating} label={t('coach.invites.timeLimitedCode')} onPress={() => setSheet('time_limited')} />
+        <View style={{ padding: spacing.base, gap: spacing.point10, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'stretch' }}>
+          <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t('coach.invites.singleUseCode')} onPress={() => setSheet('single_use')} />
+          <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t('coach.invites.timeLimitedCode')} onPress={() => setSheet('time_limited')} />
         </View>
         {live.map(row)}
       </Card>

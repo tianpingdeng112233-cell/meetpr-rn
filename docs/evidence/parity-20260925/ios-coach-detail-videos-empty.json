@@ -1,0 +1,30 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "0bxfzds",
+  "seq": 11,
+  "count": 44,
+  "targets": [
+    "e18|tap|button|Students||coach.detail.back",
+    "e21|tap|button|Message||coach.detail.chat",
+    "e29|tap|button|Overview||coach.detail.tab.overview",
+    "e30|tap|button|Videos||coach.detail.tab.videos",
+    "e31|tap|button|Progress||coach.detail.tab.growth",
+    "e32|tap|button|Feedback||coach.detail.tab.feedback",
+    "e33|tap|button|Profile||coach.detail.tab.profile"
+  ],
+  "scroll": [
+    "e27|swipe|scroll-view|||",
+    "e34|swipe|scroll-view|||"
+  ],
+  "text": [
+    "e20|text|text|Students||",
+    "e22|text|text|张以恒||",
+    "e23|text|text|Active||",
+    "e25|text|text|No plan yet||",
+    "e26|text|text|Create a plan for this student from planning||",
+    "e37|text|text|No student videos yet||",
+    "e38|text|text|Videos recorded during check-ins will appear here||"
+  ],
+  "udid": "D412AE31-0ED9-4A23-B0FD-FFFA4A5A5609"
+}

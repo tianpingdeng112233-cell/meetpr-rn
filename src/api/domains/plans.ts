@@ -126,11 +126,12 @@ async function detail(planId: string): Promise<PlanDetail> {
   return authenticatedRequest(`/plans/${id}`, { schema: PlanDetailSchema });
 }
 
-async function completeDay(dayId: string): Promise<DayCompletion> {
+async function completeDay(dayId: string, signal?: AbortSignal): Promise<DayCompletion> {
   const id = UuidSchema.parse(dayId);
   return authenticatedRequest(`/plans/days/${id}/complete`, {
     method: 'POST',
     schema: DayCompletionSchema,
+    signal,
   });
 }
 
@@ -173,10 +174,28 @@ export function usePlan(planId: string) {
 export function useDayCompletion(planId: string, undo = false) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (dayId: string) =>
-      undo
-        ? (await plansRepository.undoDayCompletion(dayId), null)
-        : plansRepository.completeDay(dayId),
+    mutationFn: async (dayId: string) => {
+      if (undo) {
+        await plansRepository.undoDayCompletion(dayId);
+        return null;
+      }
+      const controller = new AbortController();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        // Racing also settles locally if the transport ignores cancellation.
+        return await Promise.race([
+          plansRepository.completeDay(dayId, controller.signal),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+              reject(new Error('Day completion timed out'));
+              controller.abort();
+            }, 30_000);
+          }),
+        ]);
+      } finally {
+        clearTimeout(timer);
+      }
+    },
     onMutate: async (dayId) => {
       await queryClient.cancelQueries({ queryKey: planKeys.detail(planId) });
       const previous = queryClient.getQueryData<PlanDetail>(
@@ -222,6 +241,11 @@ export function useDayCompletion(planId: string, undo = false) {
           },
       );
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: planKeys.all }),
+    onSettled: () => {
+      const refresh = queryClient.invalidateQueries({ queryKey: planKeys.all });
+      // Completion acknowledgement/rollback must not wait for another request.
+      if (undo) return refresh;
+      void refresh;
+    },
   });
 }

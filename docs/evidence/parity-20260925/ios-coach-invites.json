@@ -1,0 +1,53 @@
+{
+  "type": "runtime-snapshot",
+  "rs": "1",
+  "screenHash": "1p6bplq",
+  "seq": 19,
+  "count": 86,
+  "targets": [
+    "e54|tap|button|XK7M PQ2 RVT, Single-use, · 给小明, Active||",
+    "e65|tap|button|GYMW EEK 26A, Time-limited, · 馆活动周, Expires in 6 days||",
+    "e15|tap|button|Back||BackButton",
+    "e35|tap|button|Copy||",
+    "e36|tap|button|Regenerate||",
+    "e47|tap|button|Single Use Code||",
+    "e48|tap|button|Time Limited Code||",
+    "e79|tap|button|Today||",
+    "e80|tap|button|Messages||",
+    "e83|tap|button|Students||",
+    "e86|tap|button|Profile||"
+  ],
+  "scroll": [
+    "e2|swipe|other|||",
+    "e3|swipe|other|||",
+    "e4|swipe|other|||",
+    "e5|swipe|other|||",
+    "e6|swipe|other|||",
+    "e10|swipe|other|||",
+    "e11|swipe|other|||",
+    "e12|swipe|other|||",
+    "e13|swipe|other|||",
+    "e17|swipe|other|||",
+    "e18|swipe|other|||",
+    "e19|swipe|other|||",
+    "e20|swipe|other|||",
+    "e21|swipe|other|||"
+  ],
+  "text": [
+    "e33|text|text|DEMO 2CO ACH||",
+    "e34|text|text|Used 23 times||",
+    "e55|text|text|XK7M PQ2 RVT||",
+    "e58|text|text|Active||",
+    "e56|text|text|Single-use||",
+    "e57|text|text|· 给小明||",
+    "e66|text|text|GYMW EEK 26A||",
+    "e69|text|text|Expires in 6 days||",
+    "e67|text|text|Time-limited||",
+    "e68|text|text|· 馆活动周||",
+    "e81|text|text|8||",
+    "e84|text|text|1||",
+    "e82|text|text|Messages||",
+    "e85|text|text|Students||"
+  ],
+  "udid": "D412AE31-0ED9-4A23-B0FD-FFFA4A5A5609"
+}

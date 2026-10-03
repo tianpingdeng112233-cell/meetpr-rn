@@ -60,3 +60,11 @@ test.each(['progress', 'currentWeek'] as const)('%s renders nothing for an empty
   });
   expect(renderer.toJSON()).toBeNull();
 });
+
+test('week cells expose the same ordinal in visible and accessible labels', async () => {
+  const sparse = cells.map((cell, index) => ({ ...cell, day: { ...cell.day, day_of_week: [2, 4, 6, 7][index] } }));
+  await act(async () => { renderer = create(<WeekCalendar headerStyle="currentWeek" weekNumber={2} cells={sparse} selectedDayID="day-2" onSelect={jest.fn()} />); });
+  const copy = renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
+  expect(copy.filter(text => /^D\d+$/.test(text))).toEqual(['D1', 'D2', 'D3', 'D4']);
+  expect(renderer.root.findAll(node => typeof node.type === 'string' && node.props.accessibilityRole === 'button').map(node => node.props.accessibilityLabel.split(' ')[0])).toEqual(['W2D1', 'W2D2', 'W2D3', 'W2D4']);
+});
