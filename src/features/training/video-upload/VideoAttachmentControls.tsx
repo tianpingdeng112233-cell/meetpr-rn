@@ -169,6 +169,10 @@ export function VideoAttachmentControls({
   const playable = Boolean(record.localUri || record.source?.uri || record.attachmentId);
   const preparing = isPreparing || record.status === 'preparing';
   const errorMessage = actionErrorMessage ?? record.errorMessage;
+  const percentage = Math.round(record.progress * 100);
+  const statusLabel = record.status === 'uploading'
+    ? t(percentage > 0 ? 'student.videoUpload.sendingProgress' : 'student.videoUpload.sending', [percentage])
+    : t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007');
   return (
     <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: spacing.point14, paddingVertical: spacing.point11, gap: spacing.space2 }}>
       {playable ? <VideoPlayback key={record.createdAt} inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => undefined} /> : null}
@@ -179,7 +183,7 @@ export function VideoAttachmentControls({
           <Text style={{ ...font.body(fontMetrics.size12, 'medium'), color: colors.textSecondary, flexShrink: 0 }}>{t('student.videoAttachmentV3Controls.copy003')}</Text>
         </View> : record.status !== 'none' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 0 }}>
           <Text style={{ ...font.body(fontMetrics.size12), color: record.status === 'failed' ? colors.danger : colors.textSecondary, flexShrink: 0 }}>
-            {t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007')}
+            {statusLabel}
           </Text>
           {record.status === 'failed' ? action('refresh', t('student.videoAttachmentV3Controls.copy009'), () => {
             setActionErrorMessage(null);

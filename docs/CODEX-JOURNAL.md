@@ -2034,6 +2034,63 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - if (!undo) { setRestSeconds(null); setCompletionPhase('celebration'); }
 ```
 - 周条 7 天日历格追加（2026-10-03）：仅按 SPEC 末尾 §4 修订与卡 B 追加实装；分页数据源增加训练／休息日历格，复用推荐日期与卡 A 序号，保留原训练日列表供进度／翻周；视图改为星期→状态→D 序号→单行短日期，休息格约 0.7 宽、不可点并有中英文读屏描述，7 格按容器分配宽度、超过 7 格横向滚动（溢出时换周滑动留在换周行，避免抢滚动）。约定 seam 新增四项测试：普通四练、后移超 7 天、同日双练、七天全练；前三项逐个红→绿（`/private/tmp/084b-calendar-{red1,green1,red2,green2,red3,green3}.log`），第四项确认已有实现自然通过，另覆盖锚定星期、跨月与 DST 日期；没有样式镜像测试。最终全量 `npx jest --runInBand` **138 suites / 1012 tests passed**、`npx tsc --noEmit`、`npm run lint`（0 errors / 0 warnings）均通过，日志 `/private/tmp/084b-calendar-{jest,tsc,lint}.log`；Impeccable layout 静态扫描 0 项。本地 review-loop 独立只读 Standards：0 项；Spec：0 项确定实现违规，另记需求边界：首／末依训练序列取推荐日期（与 SPEC 文字和 iOS 同步实现一致），非单调推荐日期可能使范围外训练日不显示，需 Opus 确认两端展示规则，本次未擅改 min/max；缺 tracker 配置，未运行依赖 tracker 的 Matt 流程。**未做设备验证**：沙箱无模拟器，未构建／安装／实屏截图，360dp、大字体、Light / Dark、读屏和原生滚动仍待实屏复验，不宣称验收通过。不 commit、不 push；未动用户原有两份 spec 修改及 eslint／TypeScript 配置；本任务路径 `git diff --check` 通过，全树检查仅命中用户既有 `SPEC.md:162` EOF 空行，保留未动。本次代码差异：`/private/tmp/084b-calendar.diff`。
+## 2026-10-03 · UPLOAD-PROGRESS-TIMEOUT：无进度超时与上传百分比
+
+- 任务：`specs/build22-parity/UPLOAD-PROGRESS-TIMEOUT-CARD.md`；排障依据：`docs/diagnose-upload-cellular-2026-10-03.md` Phase 4。开工基线 `fix/upload-progress-timeout` @ `eb6d6ae`，与 `feat/084c-chat-video-rest` 顶一致；无 CONTEXT.md。开工已有任务卡和诊断记录两个未跟踪文件，未改它们。未 commit、未 push；文档仅在本 JOURNAL 末尾追加本节。
+- 实现：每片连续 30 秒没有新增发送字节才超时，另设独立 10 分钟绝对上限；阈值放在 model 现有常量处，沿用 `PartUploadError(408)` 和原生取消路径。重复、倒退或非有限字节不续计时；结束后忽略迟到进度并清理计时器。
+- 进度：按实际字节汇总已完成/续传分片与全部并发分片，末片按真实大小计权。manager 将 `onProgress` 接入既有 `progress` 字段；已有 session 开始重传时恢复 `uploading`，使 reducer 接收进度。视频行上传中显示 `Sending · 42%` / `发送中 · 42%`，取整数，0% 仅显示 Sending / 发送中；其他状态文案保持原样。
+- 边界：分片仍为 5 MiB、并发数不变；没有改退避表、网络变化判定、压缩流程、后端契约、持久化结构、依赖或 eslint / TypeScript 配置。开工查阅 [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) 与 [FileSystem legacy 文档](https://docs.expo.dev/versions/v57.0.0/sdk/filesystem-legacy/)，并核对已安装 SDK 回调类型。
+
+### 红 → 绿与自动检查
+
+测试限定在卡片的 multipart 与视频行状态两个 seam。逐项先运行红测试，再实装：
+
+| 行为 | 本机证据 |
+| --- | --- |
+| 持续有进度的分片在 80 秒完成；原实现返回超时 | `/private/tmp/upload-slow-{red,green}.log` |
+| 30 秒无进度取消并返回 408 | `/private/tmp/upload-idle-{red,green}.log` |
+| 持续有进度仍在 10 分钟绝对上限取消 | `/private/tmp/upload-limit-{red,green}.log` |
+| 12 MiB 文件：5 MiB 已完成 + 两片并发，正确计入 2 MiB 末片 | `/private/tmp/upload-bytes-{red,green}.log` |
+| 中英文整数百分比、0% 不带百分比、等待态原文案 | `/private/tmp/upload-status-{red,green}.log` |
+| 原生回调经 multipart、manager、store 到真实视频行；新/已有 session 都更新为 42%，完成后 Delivered | `/private/tmp/upload-wiring-{red,green}.log` |
+
+接线测试最初缺 SafeArea 测试环境，补好环境后才记录有效行为红证据：原实现新 session 仍显示 Sending、已有 session 显示 Processing，均未出现 42%。另补重复/倒退字节不能延长超时、取消后迟到回调不更新进度及无残留定时器的回归。
+
+- 全量 `npx jest --runInBand`：**142 suites / 1029 tests passed**，含 i18n 守卫；`npx tsc --noEmit` 通过；`npm run lint` 通过（0 errors / 0 warnings）；`git diff --check` 通过。日志 `/private/tmp/upload-final-{jest,tsc,lint}.log`。Jest 输出包含既有测试环境 console 警告，未抑制它们。
+- 完整代码差异（含新增测试文件）：`/private/tmp/upload-progress-timeout.diff`。
+
+### Standards 自审
+
+主代理亲读最终 diff，并按 `review-loop` 执行独立只读 Standards 审查：**0 finding**，无硬性仓规违反或具实质影响的代码坏味道。缺少 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的完整 `code-review` 流程；将来使用该流程需 David 先调用 `$setup-matt-pocock-skills`，本次本地双轴审查不受影响。
+
+### Spec 自审
+
+独立只读 Spec 审查：**0 finding**。卡片的无进度超时、绝对上限、字节进度接线、中英文文案与约束均有实现及自动测试依据；未扩大到切网判定或压缩卡住问题。本结论是开发自测与审查，不替代 Opus 收货。
+
+**未做设备验证**：沙箱没有模拟器；未构建、安装或运行 Android 包，未取得设备截图。300 kbps 限速经虚拟网卡传 2.7 MB 分片、正常网速、分片挂住后约 30 秒超时并按既有退避重试成功，以及百分比真实显示与最终 Delivered，仍待 Opus 按原卡验收。没有宣称设备验收通过。
+
+## 2026-10-03 — UPLOAD-PROGRESS-TIMEOUT 修订一：整体无进度计时
+
+- 基线：`fix/upload-progress-timeout@9941e62`。仅实现任务卡文末「修订一」；未 commit、未 push。开工时卡片已有未提交修改，原样保留。本节只追加，不改已有记录或正典台账。
+- 改动：`src/features/training/video-upload/multipart.ts` 与 `src/features/training/video-upload/__tests__/multipart.test.ts`。每次 `uploadFileParts` 调用独立持有共享无进度计时器；任一在途分片新增字节或成功完成即重置。整体连续 30 秒无进展，记录 `PartUploadError(408)` 并沿原有 abort 路径取消所有在途任务。完成任务先移出在途集合，再等待 `onPart`；在途清空与调用收尾均清理计时器。
+- 保留每片 10 分钟硬上限、外部中止、百分比上报、退避时间表、并发数、分片大小、压缩参数及文案。
+- 按 `tdd` 在卡片批准的公开 seam 上逐轮验证；原生上传与时钟使用 mock / Jest 假定时器。
+
+| 测试名 | 红 → 绿证据 |
+| --- | --- |
+| `a part idle for 40 seconds succeeds while another part keeps making progress` | 改实现前：期望两片成功，实际 `Part upload returned 408`；1 failed / 24 passed。共享计时后：25 passed。日志 `/private/tmp/upload-revision1-red1.log`、`/private/tmp/upload-revision1-green1.log`。 |
+| `completing a part gives the remaining part 30 seconds before an idle timeout` | 补完成事件处理前：剩余片提前取消，期望取消次数 0，实际 1；1 failed / 26 passed。补处理后：27 passed。日志 `/private/tmp/upload-revision1-red2.log`、`/private/tmp/upload-revision1-green2.log`。 |
+| `30 seconds without progress on any part rejects with HTTP 408 and cancels both native tasks` | 新增守护用例直接通过（未宣称它曾红）：29,999 ms 两片均不取消，30,000 ms 返回 408，两片原生任务各取消一次，临时文件与计时器清理。 |
+
+验证：
+
+- `npm test -- --runInBand`：**142 suites / 1032 tests passed**（含原有用例）；日志 `/private/tmp/upload-revision1-full-test.log`。
+- `npm run lint`：退出码 0，**0 errors / 0 warnings**；日志 `/private/tmp/upload-revision1-lint.log`。
+- `npx tsc --noEmit`：退出码 0；日志 `/private/tmp/upload-revision1-tsc.log`。
+- `git diff --check`：通过。
+- 按 `review-loop` 对上述两个代码文件相对 HEAD 的 diff 做一轮独立只读审查。Standards：**0 finding**；Spec：**0 finding**。本仓仍缺 `docs/agents/issue-tracker.md`；完整 Matt tracker 流程需 `$setup-matt-pocock-skills`，本次使用无需 tracker 的本地双轴审查。按用户范围要求，审查记录仅写本节。
+
+未覆盖验收：ADB 启动报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱无法连接模拟器；未执行 `hang_parts: 1` 的超时重传至送达、`part_bytes_per_second` 限速无超时及百分比递增的设备验证。真机流量下 20–30 秒视频送达与百分比显示仍由 David 验收。上述结果是开发自测与自审，不替代 Opus 收货。
 
 ## 2026-10-03 · UNVERIFIED-SWEEP-FIXES（Opus T1 派工）
 
