@@ -2017,3 +2017,38 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 ```
 - 2026-10-03 · CARD-C 返修第 2 轮：仅修组录入播放器放大全屏的滚动偏移残留（RN Android Fabric 不恢复移除的原生动画属性；保持同一动画图，放大系数归零、缩小恢复，沿用 Modal 根层黑底及同一 Video 实例），补齐顶部 `Set n · 重量 × 次数 · RPE x`（缺项省略）；组信息挂载断言先红后绿，原同实例/播放与倍速/返回先缩小回归保留；全量 `npx jest --runInBand` 141 suites / 1019 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过，review-loop 独立 Standards / Spec 各 0 finding；证据 `/private/tmp/084c-android-r2-{red,green,jest,tsc,lint}.log`，本轮差异 `/private/tmp/084c-android-r2.diff`；原生偏移原因由代码支持，未做设备验证（沙箱无模拟器），全屏覆盖/系统栏/无黑帧仍待设备收货；保留其他 WIP，不 commit、不 push。
 - 2026-10-03 · CARD-C 追加改动（David 真机反馈）：仅改组录入播放器视图与对应测试；内嵌 / 放大态暂停时显示 56×56 半透明深色圆底白色播放按钮，播放隐藏，播完再次出现并从头重播，保留底部播放 / 暂停与现有无障碍文案。两种尺寸的挂载测试先红后绿，覆盖暂停恢复、结束 seek(0)、底部按钮及同一播放器实例；相关 2 suites / 7 tests、全量 `npx jest --runInBand` 141 suites / 1021 tests、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 均通过；review-loop 独立 Standards / Spec 各 0 finding（本地审查，不依赖缺失的 tracker 配置）。日志 `/private/tmp/084c-central-play-{red,green,jest,tsc,lint}.log`，代码差异 `/private/tmp/084c-central-play.diff`。未做设备验证（沙箱没有模拟器）；未改 eslint / TypeScript 配置，保留原有 CARD-C 文档修改，不 commit、不 push。
+
+## 2026-10-03 · UPLOAD-PROGRESS-TIMEOUT：无进度超时与上传百分比
+
+- 任务：`specs/build22-parity/UPLOAD-PROGRESS-TIMEOUT-CARD.md`；排障依据：`docs/diagnose-upload-cellular-2026-10-03.md` Phase 4。开工基线 `fix/upload-progress-timeout` @ `eb6d6ae`，与 `feat/084c-chat-video-rest` 顶一致；无 CONTEXT.md。开工已有任务卡和诊断记录两个未跟踪文件，未改它们。未 commit、未 push；文档仅在本 JOURNAL 末尾追加本节。
+- 实现：每片连续 30 秒没有新增发送字节才超时，另设独立 10 分钟绝对上限；阈值放在 model 现有常量处，沿用 `PartUploadError(408)` 和原生取消路径。重复、倒退或非有限字节不续计时；结束后忽略迟到进度并清理计时器。
+- 进度：按实际字节汇总已完成/续传分片与全部并发分片，末片按真实大小计权。manager 将 `onProgress` 接入既有 `progress` 字段；已有 session 开始重传时恢复 `uploading`，使 reducer 接收进度。视频行上传中显示 `Sending · 42%` / `发送中 · 42%`，取整数，0% 仅显示 Sending / 发送中；其他状态文案保持原样。
+- 边界：分片仍为 5 MiB、并发数不变；没有改退避表、网络变化判定、压缩流程、后端契约、持久化结构、依赖或 eslint / TypeScript 配置。开工查阅 [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) 与 [FileSystem legacy 文档](https://docs.expo.dev/versions/v57.0.0/sdk/filesystem-legacy/)，并核对已安装 SDK 回调类型。
+
+### 红 → 绿与自动检查
+
+测试限定在卡片的 multipart 与视频行状态两个 seam。逐项先运行红测试，再实装：
+
+| 行为 | 本机证据 |
+| --- | --- |
+| 持续有进度的分片在 80 秒完成；原实现返回超时 | `/private/tmp/upload-slow-{red,green}.log` |
+| 30 秒无进度取消并返回 408 | `/private/tmp/upload-idle-{red,green}.log` |
+| 持续有进度仍在 10 分钟绝对上限取消 | `/private/tmp/upload-limit-{red,green}.log` |
+| 12 MiB 文件：5 MiB 已完成 + 两片并发，正确计入 2 MiB 末片 | `/private/tmp/upload-bytes-{red,green}.log` |
+| 中英文整数百分比、0% 不带百分比、等待态原文案 | `/private/tmp/upload-status-{red,green}.log` |
+| 原生回调经 multipart、manager、store 到真实视频行；新/已有 session 都更新为 42%，完成后 Delivered | `/private/tmp/upload-wiring-{red,green}.log` |
+
+接线测试最初缺 SafeArea 测试环境，补好环境后才记录有效行为红证据：原实现新 session 仍显示 Sending、已有 session 显示 Processing，均未出现 42%。另补重复/倒退字节不能延长超时、取消后迟到回调不更新进度及无残留定时器的回归。
+
+- 全量 `npx jest --runInBand`：**142 suites / 1029 tests passed**，含 i18n 守卫；`npx tsc --noEmit` 通过；`npm run lint` 通过（0 errors / 0 warnings）；`git diff --check` 通过。日志 `/private/tmp/upload-final-{jest,tsc,lint}.log`。Jest 输出包含既有测试环境 console 警告，未抑制它们。
+- 完整代码差异（含新增测试文件）：`/private/tmp/upload-progress-timeout.diff`。
+
+### Standards 自审
+
+主代理亲读最终 diff，并按 `review-loop` 执行独立只读 Standards 审查：**0 finding**，无硬性仓规违反或具实质影响的代码坏味道。缺少 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的完整 `code-review` 流程；将来使用该流程需 David 先调用 `$setup-matt-pocock-skills`，本次本地双轴审查不受影响。
+
+### Spec 自审
+
+独立只读 Spec 审查：**0 finding**。卡片的无进度超时、绝对上限、字节进度接线、中英文文案与约束均有实现及自动测试依据；未扩大到切网判定或压缩卡住问题。本结论是开发自测与审查，不替代 Opus 收货。
+
+**未做设备验证**：沙箱没有模拟器；未构建、安装或运行 Android 包，未取得设备截图。300 kbps 限速经虚拟网卡传 2.7 MB 分片、正常网速、分片挂住后约 30 秒超时并按既有退避重试成功，以及百分比真实显示与最终 Delivered，仍待 Opus 按原卡验收。没有宣称设备验收通过。
