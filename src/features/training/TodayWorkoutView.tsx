@@ -4,8 +4,6 @@ import { SetRefEntryVisibility } from '@/features/chat/set-ref';
 import { SetRefSharePicker, loadTodaySetRefCandidates } from '@/features/chat/SetRefSharePicker';
 import {
   cursorDay,
-  currentWeekDays,
-  progressSegments,
   recommendedDate,
   sequenceDays,
   selectCurrentPlan,
@@ -13,7 +11,8 @@ import {
   workoutDayState,
   dayCode,
 } from '@/domain/plan/sequence';
-import { dayName } from '@/domain/plan/presentation';
+import { dayName, recommendedDateText } from '@/domain/plan/presentation';
+import { trainingWeekStrip } from '@/domain/plan/week-strip';
 import { prescriptionRestRPE } from '@/domain/plan/prescription';
 import { useOnboardingProfile } from '@/api/domains/onboarding';
 import { useMineBindRequest } from '@/api/domains/bind';
@@ -26,7 +25,7 @@ import { HoldToCompleteButton } from './HoldToCompleteButton';
 import { completionError } from './completion-errors';
 import { replayE1RMSeries } from '@/features/dashboard/model';
 import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
-import { WeekCalendar } from '@/features/dashboard/WeekCalendar';
+import { TrainingWeekStrip } from './TrainingWeekStrip';
 import { studentChatKeys, useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
 import {
@@ -69,7 +68,6 @@ import {
 import {
   buildE1RMSeries,
   E1RMRecorder,
-  type PRBreakthroughEvent,
 } from '@/domain/e1rm';
 import { useStudentTabsStore } from '@/features/student-tabs';
 
@@ -90,7 +88,6 @@ import type {
   WorkoutSetDraft,
 } from './model';
 import {
-  formatWeight,
   gymDayText,
   historyRangeStart,
   parseFiniteDecimal,
@@ -109,38 +106,10 @@ import {
   writeBoolean,
   writeReview,
 } from './storage';
-import { TrainingCalendarView } from './TrainingCalendarView';
 import { trackTrainingTabVisit } from './training-analytics';
 import { WorkoutBody } from './WorkoutBody';
 
-const recorder = new E1RMRecorder(trainingE1RMRepository);
 const EMPTY_E1RM_BY_EXERCISE: Record<string, number | null> = {};
-
-function PRBanner({
-  event,
-  exerciseName,
-}: {
-  event: PRBreakthroughEvent;
-  exerciseName: string;
-}) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <Card style={styles.prBanner}>
-      <Text style={styles.prTitle}>
-        🎉 {t('student.progression.prTitle', [exerciseName])}
-      </Text>
-      <Text style={styles.prValue}>
-        {formatWeight(event.breakthroughE1RMKg)} kg
-        {event.previousMaxE1RMKg > 0
-          ? t('student.progression.prPrevious', [
-              formatWeight(event.previousMaxE1RMKg),
-            ])
-          : t('student.progression.prFirst')}
-      </Text>
-    </Card>
-  );
-}
 
 export function TodayWorkoutView() {
   const colors = useColors();
@@ -195,13 +164,13 @@ export function TodayWorkoutView() {
     key: '',
     value: false,
   });
-  const [prEvent, setPREvent] = useState<PRBreakthroughEvent | null>(null);
   const [e1rmState, setE1rmState] = useState<{
     key: string;
     values: Record<string, number | null>;
   }>({ key: '', values: {} });
   const [initialCamera, setInitialCamera] = useState(false);
   const [videoRefresh, setVideoRefresh] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const saveQueue = useRef(new SerialTaskQueue());
   const jumpToken = useStudentTabsStore((state) => state.trainingJumpToken);
   const planRevision = useStudentTabsStore((state) => state.planRevision);
@@ -210,6 +179,11 @@ export function TodayWorkoutView() {
   const loadGeneration = useRef(new LoadGeneration());
   const queryClient = useQueryClient();
   const resolveExerciseMetadata = useExerciseMetadataResolver(studentId);
+  const resolveE1RMFamily = useCallback((exerciseId: string) =>
+    resolveExerciseMetadata(exerciseId)?.competitionFamily ?? null, [resolveExerciseMetadata]);
+  const recorder = useMemo(() => new E1RMRecorder(trainingE1RMRepository, {
+    resolveFamily: resolveE1RMFamily,
+  }), [resolveE1RMFamily]);
   const plansQuery = usePlans(studentId);
   const selectedPlan =
     editingPlan?.trainee_id === studentId
@@ -220,21 +194,8 @@ export function TodayWorkoutView() {
     editingPlan?.trainee_id === studentId ? editingPlan : planQuery.data;
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
-  const weekDays = currentWeekDays(plan?.days ?? []);
-  const weekNumber = weekDays[0]?.week_number;
-  const weekCells = plan
-    ? progressSegments(weekDays, cursor?.id).map(({ day, state }) => ({
-        day,
-        status: state,
-        date: recommendedDate(plan, day),
-        lift: null,
-        completion: state === 'done' ? 1 : 0,
-      }))
-    : [];
-  const planDay =
-    orderedDays.find((day) => day.id === requestedDayID) ??
-    cursor ??
-    orderedDays[orderedDays.length - 1];
+  const weekStrip = trainingWeekStrip(plan, requestedDayID);
+  const planDay = weekStrip.selectedDay;
   const selectedDayID = planDay?.id ?? null;
   const dayState = planDay
     ? workoutDayState(orderedDays, planDay, clockNow)
@@ -323,7 +284,10 @@ export function TodayWorkoutView() {
         void trainingE1RMRepository
           .unacknowledgedPRs(studentId)
           .then((events) => {
-            if (events[0] && active) setPREvent(events[0]);
+            if (!active || useSessionStore.getState().user?.id !== studentId) return;
+            return Promise.all(events.map(event => trainingE1RMRepository.acknowledgePR(event.id)));
+          }).catch(() => {
+            // Keep failed acknowledgements pending for the next visit.
           });
       }, TRAINING_LIMITS.prReplayDelayMs);
       return () => {
@@ -332,15 +296,6 @@ export function TodayWorkoutView() {
       };
     }, [studentId]),
   );
-
-  useEffect(() => {
-    if (!prEvent) return;
-    const timer = setTimeout(
-      () => setPREvent(null),
-      TRAINING_LIMITS.transientBannerMs,
-    );
-    return () => clearTimeout(timer);
-  }, [prEvent]);
 
   useEffect(() => {
     const generation = loadGeneration.current.begin('review');
@@ -422,6 +377,7 @@ export function TodayWorkoutView() {
   useFocusEffect(
     useCallback(() => {
       void refreshRef.current(throttle.current.refreshWhenReturning());
+      return () => setRequestedDayID(null);
     }, []),
   );
   useEffect(() => {
@@ -540,7 +496,12 @@ export function TodayWorkoutView() {
       setRecordingSetId(draft.stableSetId);
     }
   };
-  const selectDay = (id: string) => {
+  const selectDay = (id: string | null) => {
+    // Re-selecting the current day must not clear data whose load key is unchanged.
+    if ((id ?? weekStrip.todayDay?.id) === selectedDayID) {
+      setRequestedDayID(id);
+      return;
+    }
     loadGeneration.current.begin('review');
     loadGeneration.current.begin('e1rm');
     setReviewState({
@@ -554,17 +515,25 @@ export function TodayWorkoutView() {
     setEditingPlan(null);
     setRequestedDayID(id);
   };
+  const refreshToday = async () => {
+    if (refreshing) return;
+    selectDay(null);
+    setRefreshing(true);
+    try { await refresh(); }
+    finally { setRefreshing(false); }
+  };
   const completeDay = async (undo = false) => {
     if (!planDay || completion.isPending || undoCompletion.isPending) return;
     setRequestedDayID(planDay.id);
+    if (!undo) {
+      setRestSeconds(null);
+      setCompletionPhase('celebration');
+    }
     try {
       await (undo ? undoCompletion : completion).mutateAsync(planDay.id);
-      if (!undo) {
-        setRestSeconds(null);
-        setCompletionPhase('celebration');
-      }
       bumpCompletion();
     } catch (error) {
+      if (!undo) setCompletionPhase(null);
       Alert.alert(
         t('student.todayWorkoutScreen.copy001'),
         completionError(error, undo),
@@ -685,7 +654,7 @@ export function TodayWorkoutView() {
 
         if (!input.failed && completed) {
           const e1rm = await recordTrainingSetE1RM({
-            recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!) }) : recorder,
+            recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!), resolveFamily: resolveE1RMFamily }) : recorder,
             repository: trainingE1RMRepository,
             resolveExerciseMetadata,
             input: {
@@ -708,7 +677,9 @@ export function TodayWorkoutView() {
               },
             }));
           }
-          if (e1rm.pr && !input.quickLogDate) setPREvent(e1rm.pr);
+          if (e1rm.pr && !input.quickLogDate) {
+            await trainingE1RMRepository.acknowledgePR(e1rm.pr.id).catch(() => undefined);
+          }
           if (
             !input.quickLogDate && draft.status !== 'complete' &&
             nextDrafts.some((candidate) => !isDraftTerminal(candidate))
@@ -739,7 +710,7 @@ export function TodayWorkoutView() {
   const openQuickLog = () => {
     if (!plan || !planDay || !editable) return;
     const initial = makeQuickLogPlan({ plan, day: planDay, drafts: liveDrafts, logs: logsQuery.data?.logs ?? [], suggestedWeight: draft => outcomeForDraft(draft).suggestion?.weightKg ?? null });
-    setQuickLogContext({ dayCode: dayCode(planDay), subtitle: dayName(planDay, resolveExerciseMetadata) });
+    setQuickLogContext({ dayCode: dayCode(planDay, orderedDays), subtitle: dayName(planDay, resolveExerciseMetadata) });
     quickLogAttempt.current = new QuickLogAttempt({
       persist: async (row, date) => {
         const id = await commit({ stableSetId: row.draft.stableSetId, weightText: row.draft.weightText, repsText: row.draft.repsText, rpeText: row.draft.rpeText, failed: false, quickLogDate: date });
@@ -767,7 +738,7 @@ export function TodayWorkoutView() {
       const queryKey = studentChatKeys.conversations(studentId);
       await queryClient.cancelQueries({ queryKey });
       queryClient.setQueryData<{ conversations: Conversation[] }>(queryKey, previous => ({ conversations: [...(previous?.conversations ?? []).filter(item => item.id !== conversation.id), conversation] }));
-      if (generation === shareGeneration.current) setShareRoute({ conversationId: conversation.id, initialSetLogID: draft.sourceLog?.id, coachName: bound.coach_display_name ?? conversation.other_party.display_name });
+      if (generation === shareGeneration.current) setShareRoute({ conversationId: conversation.id, initialSetLogID: draft.sourceLog?.id ?? draft.exercise.sets.find(set => set.set_number === draft.setIndex + 1)?.id, coachName: bound.coach_display_name ?? conversation.other_party.display_name });
     } catch {
       if (generation === shareGeneration.current) Alert.alert(t('student.trainingShareConversationFailed'));
     } finally { preparingShareRef.current = false; setPreparingShare(false); }
@@ -811,23 +782,23 @@ export function TodayWorkoutView() {
         <View style={styles.navRow}>
           <Text style={styles.navTitle}>
             {planDay
-              ? dayCode(planDay)
+              ? dayCode(planDay, orderedDays)
               : plan
                 ? t('student.todayWorkoutView.copy011')
                 : 'W—'}
           </Text>
           <View style={styles.navActions}>
-            {cursor && selectedDayID !== cursor.id ? (
+            {weekStrip.showBackToToday ? (
               <AppButton
                 variant="link"
-                label={t('student.todayWorkoutView.copy010')}
-                onPress={() => selectDay(cursor.id)}
+                label={t('student.trainingWeekStrip.backToToday')}
+                onPress={() => selectDay(null)}
               />
-            ) : null}
+            ) : <>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('student.todayWorkoutScreen.copy005')}
-              onPress={() => void refresh()}
+              onPress={() => void refreshToday()}
               style={styles.navButton}
             >
               <View style={styles.navButtonFace}>
@@ -874,6 +845,7 @@ export function TodayWorkoutView() {
                 </View>
               ) : null}
             </Pressable>
+            </>}
           </View>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel={training22.history} onPress={() => router.push('/training-history')} style={styles.historyLink}>
@@ -883,22 +855,8 @@ export function TodayWorkoutView() {
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
-        {state.kind !== 'loading' && plan && weekNumber !== undefined ? (
-          <WeekCalendar
-            headerStyle="currentWeek"
-            weekNumber={weekNumber}
-            cells={weekCells}
-            selectedDayID={selectedDayID}
-            onSelect={selectDay}
-          />
-        ) : null}
-        {prEvent ? (
-          <PRBanner
-            event={prEvent}
-            exerciseName={exerciseTitle(
-              resolveExerciseMetadata(prEvent.exerciseId),
-            )}
-          />
+        {state.kind !== 'loading' && plan ? (
+          <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} />
         ) : null}
         {state.kind === 'loading' ? (
           <ActivityIndicator
@@ -917,7 +875,7 @@ export function TodayWorkoutView() {
                 ? state.error.message
                 : t('student.dashboardTodayScreen.copy008')}
             </Text>
-            <Pressable onPress={() => void refresh()}>
+            <Pressable onPress={() => void refreshToday()}>
               <Text style={styles.retry}>
                 {t('student.bindGateView.copy003')}
               </Text>
@@ -940,13 +898,13 @@ export function TodayWorkoutView() {
             <AppButton
               variant="link"
               label={t('student.todayWorkoutScreen.copy005')}
-              onPress={() => void refresh()}
+              onPress={() => void refreshToday()}
             />
           </Card>
         ) : null}
         {state.kind === 'loaded' || state.kind === 'recording' ? (
           <>
-            {dayState && dayState.kind !== 'current' ? (
+            {dayState?.kind === 'completed' ? (
               <View
                 style={[
                   styles.readOnly,
@@ -959,13 +917,9 @@ export function TodayWorkoutView() {
                 ]}
               >
                 <Text style={styles.readOnlyText}>
-                  {t(
-                    dayState.kind === 'completed'
-                      ? 'student.todayWorkoutScreen.copy024'
-                      : 'student.todayWorkoutScreen.copy026',
-                  )}
+                  {t('student.todayWorkoutScreen.copy024')}
                 </Text>
-                {dayState.kind === 'completed' && dayState.canUndo ? (
+                {dayState.canUndo ? (
                   <AppButton
                     variant="link"
                     label={t('student.todayWorkoutScreen.copy023')}
@@ -973,17 +927,16 @@ export function TodayWorkoutView() {
                     onPress={() => void completeDay(true)}
                   />
                 ) : null}
-                {dayState.kind === 'upcoming' && dayState.previousDay ? (
-                  <Text style={styles.emptySub}>
-                    {t('student.trainingCalendarLogic.copy012', [
-                      dayState.previousDay.week_number,
-                      dayName(dayState.previousDay, resolveExerciseMetadata),
-                    ])}
-                  </Text>
-                ) : null}
               </View>
             ) : null}
             <WorkoutBody
+              preview={dayState?.kind === 'upcoming' && plan ? {
+                recommendedDate: recommendedDateText(recommendedDate(plan, state.planDay)),
+                title: dayName(state.planDay, resolveExerciseMetadata),
+                unlockMessage: cursor ? t('student.trainingCalendarLogic.copy012', [
+                  cursor.week_number, `D${dayCode(cursor, orderedDays).split('D')[1]} · ${dayName(cursor, resolveExerciseMetadata)}`,
+                ]) : undefined,
+              } : undefined}
               onAskCoach={showsSetRefEntry ? draft => void openSetRefPicker(draft) : undefined}
               preparingShare={preparingShare}
               exercises={state.planDay.exercises}
@@ -1055,15 +1008,6 @@ export function TodayWorkoutView() {
             ) : null}
           </>
         ) : null}
-        {plan ? (
-          <TrainingCalendarView
-            key={plan.id}
-            plan={plan}
-            selectedDayID={selectedDayID}
-            onSelectDay={selectDay}
-            resolveExerciseMetadata={resolveExerciseMetadata}
-          />
-        ) : null}
       </ScrollView>
       {quickLogPlan ? <QuickLogSheet initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
         const outcome = await quickLogAttempt.current!.submit(input);
@@ -1073,7 +1017,7 @@ export function TodayWorkoutView() {
           setRestSeconds(null); setRecordingSetId(null); setCompletionPhase(null);
           const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan?.id ?? ''));
           setRequestedDayID(latest ? cursorDay(latest.days)?.id ?? input.dayId : null);
-          showToast(training22.saved(completed ? dayCode(completed) : ''), true);
+          showToast(training22.saved(completed ? dayCode(completed, orderedDays) : ''), true);
           await refresh();
         }
         return outcome;
@@ -1126,10 +1070,11 @@ export function TodayWorkoutView() {
         <WorkoutCompletionFlowView
           key={reviewKey}
           initialPhase={completionPhase}
+          sending={completion.isPending}
           presentation={workoutCompletionPresentation({
             planDay,
             drafts: liveDrafts,
-            weekCode: dayCode(planDay),
+            weekCode: dayCode(planDay, orderedDays),
             date: recommendedDate(plan, planDay),
             coachName: binding.data?.bind_request?.coach_display_name ?? null,
             exerciseNames: new Map(planDay.exercises.map(exercise => [exercise.exercise_id, exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))])),
@@ -1156,6 +1101,7 @@ export function TodayWorkoutView() {
             await writeReview(studentId, selectedDayID!, next);
             setReviewState({ key: reviewKey, status: 'loaded', value: next });
             setCompletionPhase(null);
+            setRequestedDayID(null);
             router.navigate('/(student)/today');
             await track(AnalyticsEvent.WorkoutLogSave, {
               date: today,
@@ -1243,12 +1189,4 @@ const createStyles = (colors: Colors) =>
       textAlign: 'center',
       ...typography.footnote,
     },
-    prBanner: {
-      backgroundColor: colors.successTint,
-      borderColor: colors.success,
-      gap: spacing.xs,
-      padding: spacing.base,
-    },
-    prTitle: { color: colors.textPrimary, ...typography.bodyEmphasis },
-    prValue: { color: colors.success, ...typography.footnote },
   });

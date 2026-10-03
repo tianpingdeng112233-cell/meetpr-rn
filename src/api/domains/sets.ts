@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { gymDayToday } from '@/domain/plan/workout-date-policy';
 
+import { ApiError } from '../client';
 import { authenticatedRequest } from '../session';
 import {
   DateTextSchema,
@@ -93,11 +94,23 @@ export type SetLogRange = z.input<typeof SetLogRangeSchema>;
 
 async function upsert(input: SetLogUpsertRequest): Promise<SetLogUpsertResponse> {
   const body = SetLogUpsertRequestSchema.parse(input);
-  return authenticatedRequest('/sets/log', {
-    method: 'POST',
-    body,
-    schema: SetLogUpsertResponseSchema,
-  });
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      authenticatedRequest('/sets/log', {
+        method: 'POST', body, schema: SetLogUpsertResponseSchema, signal: controller.signal,
+      }),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          reject(new ApiError('network', 'Set save timed out', { status: 408 }));
+          controller.abort();
+        }, 30_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function range(

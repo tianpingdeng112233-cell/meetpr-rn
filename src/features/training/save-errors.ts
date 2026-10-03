@@ -18,5 +18,6 @@ export function saveErrorCopy(error: unknown): string {
   ) {
     return t('student.todayWorkoutViewModelRecordingError.copy003', [error.code ?? error.status ?? 500]);
   }
+  if (error instanceof ApiError && error.kind === 'network') return t('student.setSaveRetry');
   return t('student.todayWorkoutViewModelRecordingError.copy004');
 }

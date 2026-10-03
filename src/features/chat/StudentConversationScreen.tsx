@@ -12,7 +12,7 @@ import { freshPlaybackURL } from '@/features/feedback/use-feedback-playback';
 import { FeedbackVideoUnavailable, PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
@@ -196,7 +196,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     } finally { sending.current.delete(intent.clientId); }
   }
   function sendDraft() {
-    if (staged) {
+    if (staged && !staged.autoSend) {
       const existing = setOperations.current.get(staged.clientId);
       const body = canonicalBody(staged.setRef, draftRef.current);
       if (!setRefBodyAllowed(body)) return;
@@ -211,6 +211,17 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     setDraft('');
     return send({ text, clientId: createUUID() });
   }
+  const sendPickerIntent = useEffectEvent((intent: SetRefSendIntent) => {
+    const operation = { intent: { ...intent }, note: '', controller: new AbortController() };
+    setOperations.current.set(intent.clientId, operation);
+    void send({ text: intent.body, clientId: intent.clientId, setIntent: operation.intent });
+  });
+  const attemptedPickerIntents = useRef(new Set<string>());
+  useEffect(() => {
+    if (!staged?.autoSend || attemptedPickerIntents.current.has(staged.clientId)) return;
+    attemptedPickerIntents.current.add(staged.clientId);
+    sendPickerIntent(staged);
+  }, [staged]);
   const items = useMemo(() => mergeStudentTimeline(messages, plan.planNotice, inbox.items), [messages, plan.planNotice, inbox.items]);
   const ready = !loading && !inbox.isLoading && !plan.isLoading;
   function markVisibleFeedback() {
@@ -249,8 +260,8 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     const frame = requestAnimationFrame(positionTimeline);
     return () => cancelAnimationFrame(frame);
   });
-  const stagedBody = staged ? canonicalBody(staged.setRef, draft) : '';
-  const canSend = staged ? setRefBodyAllowed(stagedBody) && !pending.some(item => item.clientId === staged.clientId && !item.failed) : Boolean(draft.trim());
+  const stagedBody = staged ? staged.autoSend ? staged.body : canonicalBody(staged.setRef, draft) : '';
+  const canSend = staged && !staged.autoSend ? setRefBodyAllowed(stagedBody) && !pending.some(item => item.clientId === staged.clientId && !item.failed) : Boolean(draft.trim());
   function discardStaged() {
     if (!staged) return;
     setOperations.current.get(staged.clientId)?.controller.abort();
@@ -306,9 +317,9 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
         <View style={{ flexDirection: 'row', gap: 8 }}><Text style={{ ...font.mono(10), color: setRefBodyAllowed(stagedBody) ? colors.textDim : colors.danger, flex: 1 }}>{!setRefBodyAllowed(stagedBody) ? t('student.studentBlackGoldChatView.copy005') : sendError}</Text><Text style={{ ...font.mono(10), color: colors.textDim }}>{stagedBody.length}/4000</Text></View>
       </View> : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy006')} onPress={() => setPickerVisible(true)} hitSlop={5} style={{ width: 34, height: 34, marginBottom: 6, borderRadius: 17, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy006')} disabled={Boolean(staged)} onPress={() => setPickerVisible(true)} hitSlop={5} style={{ width: 34, height: 34, marginBottom: 6, borderRadius: 17, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} /></Pressable>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', borderRadius: 20, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard, paddingLeft: 16, paddingRight: 6 }}>
-        <TextInput accessibilityLabel={t('student.studentBlackGoldChatView.copy008')} placeholder={t(staged ? 'student.studentBlackGoldChatView.copy009' : 'student.studentBlackGoldChatView.copy008')} placeholderTextColor={colors.textGhost} multiline maxLength={4000} value={draft} onChangeText={text => { draftRef.current = text.slice(0, 4000); setDraft(draftRef.current); }} style={{ ...font.body(14), color: colors.textPrimary, flex: 1, lineHeight: 20, maxHeight: 122, paddingVertical: 11 }} />
+        <TextInput accessibilityLabel={t('student.studentBlackGoldChatView.copy008')} placeholder={t(staged && !staged.autoSend ? 'student.studentBlackGoldChatView.copy009' : 'student.studentBlackGoldChatView.copy008')} placeholderTextColor={colors.textGhost} multiline maxLength={4000} value={draft} onChangeText={text => { draftRef.current = text.slice(0, 4000); setDraft(draftRef.current); }} style={{ ...font.body(14), color: colors.textPrimary, flex: 1, lineHeight: 20, maxHeight: 122, paddingVertical: 11 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy007')} disabled={!canSend} onPress={sendDraft} style={{ width: 34, height: 34, marginVertical: 6, borderRadius: 17, backgroundColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center', opacity: canSend ? 1 : 0.55 }}><MaterialCommunityIcons name="arrow-up" size={18} color={colors.ctaTopHighlight} /></Pressable>
       </View>
     </View>

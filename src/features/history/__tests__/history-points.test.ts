@@ -1,5 +1,6 @@
 import { expect, test } from '@jest/globals';
 import { InMemoryE1RMRepository, type E1RMHistoryPoint } from '@/domain/e1rm';
+import { replayE1RMHistoryPoints } from '@/features/dashboard/model';
 import { loadGrowthHistory } from '../history-points';
 import { buildGrowthCurves, growthSnapshot } from '../model';
 import type { SetLog } from '@/api/domains';
@@ -20,7 +21,7 @@ test('growth displays stored points even when their source logs are missing, ret
   expect(snapshot.currentKg).toBe(195);
 });
 
-test('imported server calibration retains both RPE sources and an existing saved point is never recalculated', async () => {
+test('replayed server calibration retains both RPE sources and an existing saved point is never recalculated', async () => {
   const log: SetLog = { id: 'log', student_id: 'student', plan_exercise_id: null, exercise_id: 'squat', set_index: 0,
     weight_kg: '152', reps: 5, rpe: '9', coach_rpe: '8', completed: true, failed: false, assumed: false, adhoc: true,
     logged_date: '2026-09-14', logged_at: '2026-09-14T12:00:00Z' };
@@ -28,6 +29,7 @@ test('imported server calibration retains both RPE sources and an existing saved
   const families = new Map([['squat', 'squat' as const]]);
   const points = await loadGrowthHistory(repository, 'student', [log], families);
   expect(points[0].e1RMKg).toBeCloseTo(194.8718, 4);
+  expect(points[0].origin).toBe('logged');
   expect(points[0].sourceRPE).toBe(9);
   expect(points[0].sourceCoachRPE).toBe(8);
   const reloaded = await loadGrowthHistory(repository, 'student', [{ ...log, weight_kg: '200' }], families);
@@ -42,4 +44,17 @@ test('a coach-calibrated stored point participates using its effective RPE witho
   };
   const curves = buildGrowthCurves([], new Map([['squat', 'squat']]), new Date('2026-09-21'), [point]);
   expect(growthSnapshot(curves.squat, 'all').currentKg).toBe(190);
+});
+
+test('replay admits only eligible real logs and breaks equal timestamps by set identity', () => {
+  const log: SetLog = { id: 'a', student_id: 'student', plan_exercise_id: null, exercise_id: 'deadlift', set_index: 0,
+    weight_kg: '100', reps: 1, rpe: '10', coach_rpe: null, completed: true, failed: false, assumed: false, adhoc: false,
+    logged_date: '2026-09-14', logged_at: '2026-09-14T12:00:00Z' };
+  const points = replayE1RMHistoryPoints([
+    { ...log, id: 'b', weight_kg: '150' }, log,
+    { ...log, id: 'assumed', assumed: true },
+    { ...log, id: 'high-reps', reps: 10 },
+  ], new Map([['deadlift', 'deadlift']]), 'deadlift');
+  expect(points.map(point => [point.setLogId, point.origin, point.confidence]))
+    .toEqual([['a', 'logged', 'normal'], ['b', 'logged', 'low']]);
 });

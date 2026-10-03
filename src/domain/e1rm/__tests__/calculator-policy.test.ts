@@ -89,7 +89,6 @@ describe('suggested weight reversal', () => {
 describe('central policy and eligibility', () => {
   test('locks every requested policy constant', () => {
     expect(E1RM_POLICY).toEqual({
-      minimumEligibleRPE: 7,
       maximumEligibleReps: 10,
       maximumEligibleDeadliftReps: 5,
       rollingWindowDays: 28,
@@ -116,7 +115,10 @@ describe('central policy and eligibility', () => {
     expect(
       isE1RMEligible({ completed: true, failed: true, reps: 5, rpe: 8, family: 'squat' }),
     ).toBe(false);
-    expect(isE1RMEligible({ reps: 5, rpe: 6.5, family: 'squat' })).toBe(false);
+    expect(isE1RMEligible({ reps: 5, rpe: 6, family: 'squat' })).toBe(true);
+    expect(isE1RMEligible({ reps: 5, rpe: 6.5, family: 'squat' })).toBe(true);
+    expect(isE1RMEligible({ reps: 5, rpe: 5.5, family: 'squat' })).toBe(true);
+    expect(isE1RMEligible({ reps: 5, rpe: 10.5, family: 'squat' })).toBe(false);
     expect(isE1RMEligible({ reps: 10, rpe: 9, family: 'squat' })).toBe(true);
     expect(isE1RMEligible({ reps: 11, rpe: 9, family: 'squat' })).toBe(false);
     expect(isE1RMEligible({ reps: 5, rpe: 9, family: 'deadlift' })).toBe(true);

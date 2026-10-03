@@ -7,19 +7,21 @@ import { t } from '@/i18n';
 import { uploadsRepository } from '@/api/domains/uploads';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
 import type { VideoBadgeInfo } from '@/features/video-player/types';
+import { SetVideoPlayer } from './SetVideoPlayer';
 import { selectPlaybackSource } from './local-retention';
 
 /** Source resolution only; the OverlayHost owner supplies the full-screen layer. */
-export function VideoPlayback({ localUri, attachmentId, onClose, badge }: {
+export function VideoPlayback({ localUri, attachmentId, onClose, badge, inline = false }: {
+  inline?: boolean;
   badge?: VideoBadgeInfo | null;
   localUri: string | null;
   attachmentId: string | null;
   onClose: () => void;
 }) {
-  return <ResolvedVideoPlayback key={`${attachmentId}:${localUri}`} localUri={localUri} attachmentId={attachmentId} onClose={onClose} badge={badge} />;
+  return <ResolvedVideoPlayback key={inline ? 'inline' : `${attachmentId}:${localUri}`} inline={inline} localUri={localUri} attachmentId={attachmentId} onClose={onClose} badge={badge} />;
 }
 
-function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge }: { localUri: string | null; attachmentId: string | null; onClose: () => void; badge?: VideoBadgeInfo | null }) {
+function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge, inline }: { inline: boolean; localUri: string | null; attachmentId: string | null; onClose: () => void; badge?: VideoBadgeInfo | null }) {
   const colors = useColors();
   const [uri, setUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -38,14 +40,16 @@ function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge }: { loc
       .catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
   }, [refreshURL, attempt]);
+  if (uri && inline) return <SetVideoPlayer uri={uri} refreshURL={refreshURL} badge={badge} />;
   if (uri) return <FeedbackVideoPlayer videoId={attachmentId ?? localUri ?? ''} url={uri} markers={null} badge={badge} refreshURL={refreshURL} onClose={onClose} />;
-  return <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
+  const Container = inline ? View : SafeAreaView;
+  return <Container style={inline ? { backgroundColor: colors.videoWorkbenchFill } : { flex: 1, backgroundColor: colors.bgBase }}>
     <View style={{ padding: spacing.base, gap: spacing.md }}>
-      <AppButton haptic="none" variant="secondary" label={t('chat.closePlayback')} onPress={onClose} />
+      {!inline ? <AppButton haptic="none" variant="secondary" label={t('chat.closePlayback')} onPress={onClose} /> : null}
       {failed ? <>
         <Text style={{ color: colors.textSecondary }}>{t('student.videoAttachmentSection.copy004')}</Text>
         <AppButton label={t('student.videoAttachmentSection.copy002')} onPress={() => { setFailed(false); setAttempt(value => value + 1); }} />
       </> : <ActivityIndicator color={colors.gold500} accessibilityLabel={t('chat.refreshing')} />}
     </View>
-  </SafeAreaView>;
+  </Container>;
 }

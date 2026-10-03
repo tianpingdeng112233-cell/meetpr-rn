@@ -1,4 +1,5 @@
 import { useCameraAvailability } from './video-upload/use-camera-availability';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
 import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -8,7 +9,7 @@ import { t } from '@/i18n';
 import { training22 } from './build22-strings';
 import type { PlanExercise } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
-import { AppButton, Card, GradientFill, font, useColors } from '@/design';
+import { AppButton, Card, GradientFill, font, radius, spacing, useColors } from '@/design';
 import {
   decodePrescription,
   intensityText,
@@ -42,6 +43,7 @@ function reference(logs: readonly SetLog[], exerciseId: string): string | null {
   return `${t('student.todayWorkoutPresentation.copy004', [Number(last.weight_kg), last.reps])} · ${t('student.todayWorkoutPresentation.copy005', [Number(best.weight_kg), best.reps])}`;
 }
 export function WorkoutBody({
+  preview,
   exercises,
   drafts,
   editable,
@@ -59,6 +61,7 @@ export function WorkoutBody({
   onAskCoach,
   preparingShare = false,
 }: {
+  preview?: { recommendedDate: string; title: string; unlockMessage?: string };
   onAskCoach?: (draft: WorkoutSetDraft) => void;
   preparingShare?: boolean;
   exercises: readonly PlanExercise[];
@@ -77,6 +80,7 @@ export function WorkoutBody({
   resolveExerciseMetadata: ExerciseMetadataResolver;
 }) {
   const colors = useColors();
+  const [accentSize, setAccentSize] = useState({ width: 0, height: 0 });
   const hasCamera = useCameraAvailability();
   const initiallyCompleted = exercises.filter(exercise => {
     const rows = drafts.filter(draft => draft.exercise.id === exercise.id);
@@ -136,12 +140,16 @@ export function WorkoutBody({
       >
         <View
           pointerEvents="none"
-          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 }}
+          onLayout={({ nativeEvent: { layout } }) => setAccentSize(current =>
+            current.width === layout.width && current.height === layout.height
+              ? current : { width: layout.width, height: layout.height })}
+          style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: spacing.point3 }}
         >
-          <GradientFill direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
+          <GradientFill size={accentSize} direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
         </View>
+        {preview ? <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.dashboardPrimaryAction.copy009', [preview.recommendedDate])}</Text> : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017')}</Text>
+          <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{preview?.title ?? (recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017'))}</Text>
           {editable && active && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
             <View style={{ minHeight: 36, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard }}>
               {preparingShare ? <ActivityIndicator size="small" color={colors.textTertiary} /> : <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.askCoach')}</Text>}
@@ -151,33 +159,32 @@ export function WorkoutBody({
         {!recording ? (
           <>
             <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
-              {t('student.todayWorkoutScreen.copy018', [groups.length])}
-              {t('student.todayWorkoutScreen.copy019', [drafts.length])}
+              {preview ? t('student.trainingWeekStrip.summary', [groups.length]) + t('student.todayWorkoutScreen.copy019', [drafts.length]) : <>
+                {t('student.todayWorkoutScreen.copy018', [groups.length])}
+                {t('student.todayWorkoutScreen.copy019', [drafts.length])}
+              </>}
             </Text>
             {groups.map((group, index) => (
-              <View key={group.exercise.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+              <View key={group.exercise.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 11, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
                 <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>
-                <Text
-                  style={{
-                    color: colors.textPrimary,
-                    ...font.body(14, 'bold'),
-                    flex: 1,
-                  }}
-                >
-                  {exerciseTitle(
-                    resolveExerciseMetadata(group.exercise.exercise_id),
-                  )}
-                </Text>
-                <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 1 }}>
-                  {prescriptionSummary(
-                    group.drafts.map((draft) => ({
-                      prescription: decodePrescription(draft.planSet),
-                      resolution: suggestionForDraft(draft).percentage,
-                    })),
-                  )}
-                </Text>
+                <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: spacing.xs }}>
+                  <Text style={{ color: colors.textPrimary, ...font.body(14, 'bold'), flexShrink: 0, maxWidth: '100%' }}>
+                    {exerciseTitle(
+                      resolveExerciseMetadata(group.exercise.exercise_id),
+                    )}
+                  </Text>
+                  <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 0, maxWidth: '100%' }}>
+                    {prescriptionSummary(
+                      group.drafts.map((draft) => ({
+                        prescription: decodePrescription(draft.planSet),
+                        resolution: suggestionForDraft(draft).percentage,
+                      })),
+                    )}
+                  </Text>
+                </View>
               </View>
             ))}
+            {preview?.unlockMessage ? <Text style={{ color: colors.textSecondary, ...font.body(13) }}>{preview.unlockMessage}</Text> : null}
             {editable && active ? (
               <AppButton
                 disabled={startLoading}
@@ -244,17 +251,21 @@ export function WorkoutBody({
               </View>
             ) : null}
             {editable ? (
-              <>
+              <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: spacing.point9 }}>
                 <AppButton
+                  style={{ flex: 1 }}
                   label={t('student.todayWorkoutScreen.copy015')}
                   onPress={() => onRecord(active)}
                 />
-                {hasCamera ? <AppButton
+                {hasCamera ? <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('student.todayWorkoutScreen.copy016')}
                   onPress={() => onVideo(active)}
-                  variant="secondary"
-                  label={t('student.todayWorkoutScreen.copy016')}
-                /> : null}
-              </>
+                  style={{ width: spacing.point52, minHeight: spacing.point52, aspectRatio: 1, borderRadius: radius.control, borderWidth: spacing.point1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <MaterialCommunityIcons name="video-outline" size={spacing.point22} color={colors.textTertiary} />
+                </Pressable> : null}
+              </View>
             ) : null}
           </>
         ) : null}

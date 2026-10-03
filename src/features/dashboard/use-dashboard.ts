@@ -303,7 +303,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
 
   return {
     now,
-    title: current ? dayCode(current) : activePlan?.days.length ? dayCode(sequenceDays(activePlan.days)[activePlan.days.length - 1]) : t('student.dashboardTodayScreen.copy001'),
+    title: current ? dayCode(current, activePlan?.days ?? []) : activePlan?.days.length ? dayCode(sequenceDays(activePlan.days)[activePlan.days.length - 1], activePlan.days) : t('student.dashboardTodayScreen.copy001'),
     activePlan,
     week: week.state,
     todayDay,
