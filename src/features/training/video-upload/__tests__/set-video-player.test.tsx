@@ -3,7 +3,7 @@ import { type ComponentProps } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ActivityIndicator, Modal, ScrollView, Text } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import Video from 'react-native-video';
+import Video, { type VideoRef } from 'react-native-video';
 import { FeedbackPressable } from '@/design/FeedbackPressable';
 import { setLocaleOverride, t } from '@/i18n';
 import { SetEntrySheet } from '../../SetEntrySheet';
@@ -11,6 +11,7 @@ import { day, set } from '@/domain/plan/test-fixtures';
 import { synthesizeDrafts } from '../../drafts';
 import { useVideoUploadStore } from '../store';
 import { EMPTY_VIDEO_UPLOAD } from '../model';
+import { SetVideoPlayer } from '../SetVideoPlayer';
 
 jest.mock('expo-media-library', () => ({}));
 jest.mock('react-native-compressor', () => ({}));
@@ -21,10 +22,12 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 const mockMounted = jest.fn();
 const mockUnmounted = jest.fn();
+const mockSeek = jest.fn();
 jest.mock('react-native-video', () => ({
   __esModule: true,
   default: function MockVideo(_props: ComponentProps<typeof Video>) {
     const React = jest.requireActual<typeof import('react')>('react');
+    React.useImperativeHandle(_props.ref, () => ({ seek: mockSeek }) as unknown as VideoRef);
     React.useEffect(() => { mockMounted(); return () => { mockUnmounted(); }; }, []);
     return null;
   },
@@ -35,6 +38,46 @@ afterEach(() => { act(() => renderer?.unmount()); jest.clearAllMocks(); useVideo
 function press(label: string) {
   act(() => renderer.root.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === label)!.props.onPress());
 }
+
+test.each([false, true])('the central play button resumes and replays video (expanded: %s)', async expanded => {
+  setLocaleOverride('en');
+  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}><SetVideoPlayer uri="file:///sample.mp4" refreshURL={async () => 'file:///sample.mp4'} /></SafeAreaInsetsContext.Provider>); });
+  const decoder = renderer.root.findByType(Video);
+  act(() => decoder.props.onLoad?.({ duration: 60 } as never));
+  if (expanded) press(t('training.previewExpand'));
+  const centralButtons = () => renderer.root.findAllByType(FeedbackPressable).filter(node => node.props.testID === 'set-video-central-play');
+  const playCentrally = () => {
+    expect(centralButtons()).toHaveLength(1);
+    expect(centralButtons()[0].props).toMatchObject({ accessibilityRole: 'button', accessibilityLabel: t('chat.playVideo') });
+    act(() => centralButtons()[0].props.onPress());
+  };
+
+  expect(decoder.props.paused).toBe(true);
+  playCentrally();
+  expect(decoder.props.paused).toBe(false);
+  expect(centralButtons()).toHaveLength(0);
+  act(() => decoder.props.onProgress?.({ currentTime: 24 } as never));
+  press(t('training.previewPause'));
+  expect(decoder.props.paused).toBe(true);
+  playCentrally();
+  expect(decoder.props.paused).toBe(false);
+  expect(mockSeek).not.toHaveBeenCalled();
+
+  act(() => decoder.props.onEnd?.());
+  expect(decoder.props.paused).toBe(true);
+  playCentrally();
+  expect(mockSeek).toHaveBeenCalledWith(0);
+  act(() => decoder.props.onSeek?.({ seekTime: 0 } as never));
+  expect(decoder.props.paused).toBe(false);
+  expect(centralButtons()).toHaveLength(0);
+  press(t('training.previewPause'));
+  const bottomPlay = renderer.root.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo') && node.props.testID !== 'set-video-central-play')!;
+  act(() => bottomPlay.props.onPress());
+  expect(decoder.props.paused).toBe(false);
+  expect(centralButtons()).toHaveLength(0);
+  expect(mockMounted).toHaveBeenCalledTimes(1);
+  expect(mockUnmounted).not.toHaveBeenCalled();
+});
 
 test.each([false, true])('the set-entry sheet keeps its player mounted across resize/back (playing: %s)', async playing => {
   setLocaleOverride('en');

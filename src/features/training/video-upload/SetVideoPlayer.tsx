@@ -56,14 +56,15 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
   function scrub(x: number) {
     if (trackWidth.current > 0) seek(x / trackWidth.current * state.duration);
   }
+  function togglePlayback() {
+    if (state.position >= state.duration) seek(0);
+    dispatch({ type: 'toggle' });
+  }
   const controls = <View onLayout={event => {
     setControlsHeight(event.nativeEvent.layout.height);
     if (!state.expanded) setInlineControlsHeight(event.nativeEvent.layout.height);
   }} style={{ backgroundColor: colors.modalShadow, paddingHorizontal: spacing.xs, paddingBottom: state.expanded ? Math.max(insets.bottom, spacing.sm) : spacing.xs, flexDirection: 'row', alignItems: 'center' }}>
-    <PlayerIconButton name={state.paused ? 'play' : 'pause'} label={t(state.paused ? 'chat.playVideo' : 'training.previewPause')} onPress={() => {
-      if (state.position >= state.duration) seek(0);
-      dispatch({ type: 'toggle' });
-    }} disabled={!loaded || failed} />
+    <PlayerIconButton name={state.paused ? 'play' : 'pause'} label={t(state.paused ? 'chat.playVideo' : 'training.previewPause')} onPress={togglePlayback} disabled={!loaded || failed} />
     <View style={{ flex: 1, minWidth: 0 }}>
       <View accessibilityRole="adjustable" accessibilityLabel={t('training.previewProgress')} accessibilityValue={{ min: 0, max: state.duration, now: state.position }}
         accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
@@ -123,6 +124,12 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
     </> : null}
     {controls}
     {state.expanded ? <StatusBar style="light" /> : null}
+    {state.paused && loaded && !failed ? <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { bottom: state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center' }]}>
+      <Pressable testID="set-video-central-play" accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={togglePlayback}
+        style={{ width: spacing.point56, height: spacing.point56, borderRadius: radius.pill, backgroundColor: colors.modalShadow, alignItems: 'center', justifyContent: 'center' }}>
+        <MaterialCommunityIcons name="play" size={spacing.xl} color={colors.inkOnCTAFill} />
+      </Pressable>
+    </View> : null}
     {ratesVisible ? <View style={{ position: 'absolute', bottom: controlsHeight, right: spacing.minimumHitTarget + spacing.xs, padding: spacing.xs, borderRadius: radius.control, backgroundColor: colors.videoWorkbenchFill }}>
         {setPlaybackRates.map(rate => <Pressable key={rate} accessibilityRole="button" accessibilityState={{ selected: state.rate === rate }} accessibilityLabel={`${rate}×`}
           onPress={() => { dispatch({ type: 'rate', rate }); setRatesVisible(false); }}
