@@ -268,7 +268,7 @@ test('a catalog failure does not hide the week grid or disable its CTA', () => {
   expect(copy).toContain('开始训练');
   expect(
     renderer?.root.find(
-      (node) => node.props?.accessibilityLabel?.startsWith('W1D7 '),
+      (node) => node.props?.accessibilityLabel?.startsWith('W1D1 '),
     ),
   ).toBeDefined();
 

@@ -34,8 +34,6 @@ const PLURAL_COUNT_INDEX: Record<string, number> = {
   'student.growthE1Rmcard.copy005': 1,
   'student.historyEntriesView.copy004': 1,
   'student.onboardingSummaryFormatter.copy005': 1,
-  'student.trainingCalendarView.copy002': 1,
-  'student.trainingCalendarView.copy003': 1,
   'student.todayWorkoutScreen.copy020': 2,
 };
 let localeOverride: Locale | null = null;

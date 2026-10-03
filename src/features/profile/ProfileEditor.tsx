@@ -18,7 +18,7 @@ const profileEditorTitles: Record<ProfileSection, TranslationKey> = {
   injuries: 'student.profileCardsSection.copy008',
 };
 const sections = { basics: BasicStep, background: BackgroundStep, environment: EnvironmentStep, recovery: RecoveryStep, muscles: MusclesSection, injuries: InjuriesSection, competition: CompetitionSection };
-export function ProfileEditor({ section, profile, onClose }: { section: ProfileSection; profile: OnboardingProfile; onClose: () => void }) {
+export function ProfileEditor({ section, profile, onClose }: { section: ProfileSection; profile: OnboardingProfile | null; onClose: () => void }) {
   const [form, setForm] = useState(() => formFromServer(profile));
   const [errorFields, setErrorFields] = useState<Set<keyof OnboardingForm>>(new Set());
   const [error, setError] = useState('');

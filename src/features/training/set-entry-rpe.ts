@@ -25,8 +25,13 @@ export function valueAtX(x: number, width: number, spacing: number): number {
 export type ScrubIntent = 'idle' | 'scrub' | 'scroll';
 
 export function intent(dx: number, dy: number, threshold = 6): ScrubIntent {
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < threshold) return 'idle';
-  return Math.abs(dx) >= Math.abs(dy) ? 'scrub' : 'scroll';
+  const horizontal = Math.abs(dx);
+  const vertical = Math.abs(dy);
+  if (horizontal >= threshold && horizontal > vertical) return 'scrub';
+  // RN reports dp: 24 dp covers the diagnosed 40 px start at 420 dpi.
+  // An equal diagonal stays undecided; clearly vertical movement still scrolls.
+  if (vertical >= 24 && vertical > horizontal) return 'scroll';
+  return 'idle';
 }
 
 export function lockedIntent(current: ScrubIntent, dx: number, dy: number): ScrubIntent {

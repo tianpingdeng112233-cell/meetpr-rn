@@ -184,7 +184,7 @@ test('valid training shares render their metrics and note, invalid snapshots fal
   const invalid = ChatMessageSchema.parse({ ...message(coachId, 2, coachId, 'broken'), kind: 'set_ref', set_ref: { v: 3 } });
   jest.mocked(chatRepository.messages).mockResolvedValue({ messages: [valid, invalid], meta: { has_more: false } });
   await renderScreen();
-  expect(copy()).toEqual(expect.arrayContaining(['Squat', '100.5kg × 5', '8.5', 'Keep the tempo', 'broken', t('chat.setPosition %@ of %@', [2, 3])]));
+  expect(copy()).toEqual(expect.arrayContaining(['Squat', 'Set 2 of 3 · 100.5kg × 5 · RPE 8.5', 'Keep the tempo', 'broken']));
 });
 
 test('feedback becomes read only when at least 55 percent of its height is visible, once per card', async () => {
@@ -356,7 +356,7 @@ test('oversized staged body disables sending and shows the canonical-inclusive U
   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy005'));
   expect(copy()).toContain(`${canonicalBody(staged.setRef, '😀'.repeat(2000)).length}/4000`);
 });
-test('chat plus opens the real picker and can stage a prescribed set', async () => {
+test('chat plus opens the real picker and sends a prescribed set in one step', async () => {
   const summary = plan([day(studentId, { exercises: [{ id: studentId, plan_day_id: studentId, exercise_id: coachId, sort_order: 0, is_main_lift: true, notes: null, sets: [set({ id: conversationId, plan_exercise_id: studentId })] }] })], { id: conversationId, trainee_id: studentId });
   plans = [summary];
   const previous = jest.mocked(authenticatedRequest).getMockImplementation()!;
@@ -368,10 +368,11 @@ test('chat plus opens the real picker and can stage a prescribed set', async () 
   });
   await renderScreen();
   await act(async () => { renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('student.studentBlackGoldChatView.copy006')).props.onPress(); });
-  await act(async () => { await renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.continueSelection')).props.onPress(); });
-  expect(copy()).toContain(t('chat.sendCurrentSetPlan'));
-  await act(async () => { await renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.continueToChat')).props.onPress(); });
-  expect(useSetRefStagingStore.getState().intents[conversationId]).toMatchObject({ setRef: { source: 'planned', planSetId: conversationId, exerciseName: 'Squat' } });
+  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress(); });
+  expect(copy()).toContain(t('chat.yourQuestion'));
+  jest.mocked(chatRepository.sendSetRef).mockResolvedValue({ message: message('sent', 1, studentId, 'shared') });
+  await act(async () => { await renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.sendToCoach')).props.onPress(); });
+  expect(chatRepository.sendSetRef).toHaveBeenCalledWith(conversationId, expect.objectContaining({ setRef: expect.objectContaining({ source: 'planned', planSetId: conversationId, exerciseName: 'Squat' }) }));
 });
 
 test('an upload session can renew its remote attachment id without replacing the selected local video', async () => {
