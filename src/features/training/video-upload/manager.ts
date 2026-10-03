@@ -41,6 +41,7 @@ type EnsureSetLog = () => Promise<string>;
 type ActiveJob = {
   controller: AbortController;
   compressionId: string | null;
+  networkChanged: boolean;
   done: Promise<void>;
 };
 const attachments = new Map<
@@ -212,6 +213,8 @@ async function run(
       if (sourceUri !== prepared.localUri) deleteLocalVideo(sourceUri);
     }
     check();
+    if (record.session)
+      dispatch(id, { type: 'uploadStarted', attachmentId: record.session.attachment_id });
     const attachmentId = await runPreparedVideoUpload({
       localUri: record.localUri!,
       setLogId,
@@ -234,7 +237,9 @@ async function run(
         await flushVideoUploads();
       },
       onInitiated: () => {},
-      onProgress: () => {},
+      onProgress: (progress) => {
+        if (!signal.aborted) dispatch(id, { type: 'progress', progress });
+      },
     });
     check();
     const original = recordFor(id)?.source?.uri;
@@ -247,7 +252,7 @@ async function run(
       attachment_id: attachmentId,
     });
   } catch (error) {
-    if (signal.aborted || error instanceof UploadCancelledError) return;
+    if (!job.networkChanged && (signal.aborted || error instanceof UploadCancelledError)) return;
     const record = recordFor(id);
     if (!record) return;
     const now = Date.now();
@@ -292,6 +297,7 @@ async function execute(
   const job: ActiveJob = {
     controller: new AbortController(),
     compressionId: null,
+    networkChanged: false,
     done: Promise.resolve(),
   };
   jobs.set(key, job);
@@ -313,7 +319,7 @@ async function execute(
   } finally {
     clearTimeout(deadline);
     if (jobs.get(key) === job) jobs.delete(key);
-    if (!job.controller.signal.aborted) resume(id);
+    if (!job.controller.signal.aborted || job.networkChanged) resume(id, job.networkChanged);
   }
 }
 async function stop(id: UploadIdentity): Promise<void> {
@@ -321,6 +327,8 @@ async function stop(id: UploadIdentity): Promise<void> {
   clearTimeout(timers.get(key));
   timers.delete(key);
   const job = jobs.get(key);
+  // Explicit removal/replacement takes precedence over a pending network retry.
+  if (job) job.networkChanged = false;
   job?.controller.abort();
   cancelVideoCompression(job?.compressionId ?? null);
   await job?.done;
@@ -439,11 +447,13 @@ export const videoUploadManager = {
     const resumeAll = (restored = false) => {
       if (disposed || !initialized || activeSession !== session) return;
       for (const key of Object.keys(useVideoUploadStore.getState().records)) {
-        if (key.startsWith(`${studentId}:`))
-          resume(
-            { studentId, stableSetId: key.slice(studentId.length + 1) },
-            restored,
-          );
+        if (!key.startsWith(`${studentId}:`)) continue;
+        const id = { studentId, stableSetId: key.slice(studentId.length + 1) };
+        const job = jobs.get(key);
+        if (restored && job && recordFor(id)?.status === 'uploading') {
+          job.networkChanged = true;
+          job.controller.abort();
+        } else resume(id, restored);
       }
     };
     void (async () => {
@@ -463,11 +473,13 @@ export const videoUploadManager = {
       resumeAll();
     })().catch(() => undefined);
     let connected: boolean | null = null;
+    let networkType: string | null = null;
     const unsubscribe = NetInfo.addEventListener((state) => {
       const next =
         state.isConnected === true && state.isInternetReachable !== false;
-      if (next && connected === false) resumeAll(true);
+      if (next && (connected === false || (networkType !== null && networkType !== state.type))) resumeAll(true);
       connected = next;
+      networkType = state.type;
     });
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') resumeAll();

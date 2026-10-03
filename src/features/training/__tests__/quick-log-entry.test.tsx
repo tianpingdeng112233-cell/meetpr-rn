@@ -21,7 +21,8 @@ jest.mock('@react-native-community/netinfo', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@react-native-community/netinfo/jest/netinfo-mock'));
 const mockNavigate = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }), useFocusEffect: () => {} }));
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: () => {} }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -54,6 +55,7 @@ let writes = 0;
 beforeEach(() => {
   setLocaleOverride('en');
   mockNavigate.mockClear();
+  mockPush.mockClear();
   failCompletion = false;
   storedLogs = []; writes = 0;
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -134,4 +136,39 @@ test('Android Back closes the number pad and preserves the quick-log draft', asy
   expect(copy()).not.toContain(training22.next);
   expect(copy()).toContain(training22.title('W1D1'));
   expect(writes).toBe(0);
+});
+
+test('training history has a visible text entry and opens the history stack', async () => {
+  await mount();
+  expect(copy()).toContain(training22.history);
+  await press(training22.history);
+  expect(mockPush).toHaveBeenCalledWith('/training-history');
+});
+
+test('browsing a future week is read-only and Back to today restores the current workout', async () => {
+  const futureDay = { ...plan.days[0], id: 'future-day', week_number: 2,
+    exercises: plan.days[0].exercises.map(exercise => ({ ...exercise, id: 'future-exercise', plan_day_id: 'future-day',
+      sets: exercise.sets.map(set => ({ ...set, id: 'future-set', plan_exercise_id: 'future-exercise' })),
+    })),
+  };
+  servedPlan = { ...plan, days: [...plan.days, futureDay] };
+  await mount();
+  expect(copy()).toContain('W1D1');
+  expect(copy()).toContain(t('student.todayWorkoutScreen.copy008'));
+  await press('Next week');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain('W2D1');
+  expect(copy()).toContain('Back to today');
+  expect(copy()).not.toContain(t('student.todayWorkoutScreen.copy008'));
+  expect(copy()).not.toContain(training22.entry);
+  expect(copy()).not.toContain('Plan summary');
+  expect(copy()).toContain('1 exercise total · 1 set');
+  expect(copy()).toContain(t('student.dashboardPrimaryAction.copy009', ['Tue, 9/8']));
+  expect(copy()).toContain('This session unlocks after W1 · D1 · Training day is completed.');
+  expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy005') })).toHaveLength(0);
+  await press('Back to today');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain('W1D1');
+  expect(copy()).toContain(t('student.todayWorkoutScreen.copy008'));
+  expect(copy()).not.toContain('Back to today');
 });

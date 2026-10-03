@@ -125,8 +125,17 @@ export function planLogRange(plan: PlanDetail, now = new Date()) {
     scope: 'plan' as const,
   };
 }
-export function dayCode(day: PlanDay): string {
-  return `W${day.week_number}D${day.day_of_week}`;
+/** A week keeps completed days in sequence; duplicate IDs identify the same day. */
+export function weekDayOrdinals(days: readonly PlanDay[]): Map<string, number> {
+  const ordinals = new Map<string, number>();
+  for (const day of sequenceDays(days)) {
+    if (!ordinals.has(day.id)) ordinals.set(day.id, ordinals.size + 1);
+  }
+  return ordinals;
+}
+export function dayCode(day: PlanDay, days: readonly PlanDay[]): string {
+  const ordinal = weekDayOrdinals(days.filter(candidate => candidate.week_number === day.week_number)).get(day.id);
+  return `W${day.week_number}D${ordinal ?? '—'}`;
 }
 export type WorkoutDayState =
   | { kind: 'current' }

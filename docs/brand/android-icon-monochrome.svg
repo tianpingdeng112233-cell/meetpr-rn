@@ -12,7 +12,7 @@
       <text font-family="Archivo" font-weight="700" font-size="4.6" letter-spacing="0.5" fill="#000000" text-rendering="geometricPrecision"><textPath href="#prArcMono" startOffset="50%" text-anchor="middle">PERSONAL RECORD</textPath></text>
     </mask>
   </defs>
-  <g transform="translate(50 50) scale(0.8) translate(-50 -50)">
+  <g transform="translate(50 50) scale(0.64) translate(-50 -50)">
     <rect width="100" height="100" fill="#000000" mask="url(#plate)"/>
   </g>
 </svg>

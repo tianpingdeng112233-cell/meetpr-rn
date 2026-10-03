@@ -21,7 +21,7 @@ const candidate: SetRefCandidate = { id, source: { source: 'logged', exerciseNam
 let renderer: ReactTestRenderer;
 const onClose = jest.fn(); const onStaged = jest.fn();
 const copy = () => renderer.root.findAllByType(Text).map(node => node.props.children);
-const press = async (key: 'chat.continueSelection' | 'chat.continueToChat' | 'chat.back') => {
+const press = async (key: 'chat.sendToCoach') => {
   await act(async () => { await renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t(key)).props.onPress(); });
 };
 async function mount(loadCandidates: () => Promise<SetRefCandidate[]>) {
@@ -40,18 +40,17 @@ test('load failure uses the localized unavailable state', async () => {
   await mount(async () => { throw new Error('offline'); });
   expect(copy()).toContain(t('chat.trainingLoadFailed'));
 });
-test('selection, back, confirmation stage a normalized snapshot with a fixed client id', async () => {
+test('selection and send stage a normalized snapshot with a fixed client id', async () => {
   await mount(async () => [candidate]);
-  await press('chat.continueSelection');
-  expect(copy()).toContain(t('chat.sendCurrentSetRecord'));
-  await press('chat.back'); expect(copy()).toContain(t('chat.completedSection'));
-  await press('chat.continueSelection'); await press('chat.continueToChat');
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress());
+  expect(copy()).toContain(t('chat.yourQuestion'));
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress()); await press('chat.sendToCoach');
   expect(useSetRefStagingStore.getState().intents[id]).toMatchObject({ conversationId: id, clientId: '20000000-0000-4000-8000-000000000000', setRef: { weightKg: '100', rpe: '8' }, body: '[训练分享] Squat 第1组 100kg×5 @RPE8 (2026-09-05)', video: null });
   expect(onStaged).toHaveBeenCalled(); expect(onClose).toHaveBeenCalled();
 });
 test.each(['uploading', 'failed'] as const)('%s video default and disabled state', async state => {
   await mount(async () => [{ ...candidate, video: state === 'failed' ? { state } : { state, attachmentId: null, recordKey: 'student:set', createdAt: 1 } }]);
-  await press('chat.continueSelection');
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress());
   expect(renderer.root.findByType(Switch).props.value).toBe(state === 'uploading');
   expect(renderer.root.findByType(Switch).props.disabled).toBe(state === 'failed');
 });
@@ -60,9 +59,9 @@ test('confirmation resolves an upload that completed while selecting and ignores
   const recordKey = 'student:set';
   const video = { state: 'uploading' as const, attachmentId: null, recordKey, createdAt: 10 };
   await mount(async () => [{ ...candidate, video }]);
-  await press('chat.continueSelection');
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress());
   useVideoUploadStore.setState({ records: { [recordKey]: { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded', createdAt: 10, attachmentId: id } } });
-  const confirm = renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.continueToChat')).props.onPress;
+  const confirm = renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.sendToCoach')).props.onPress;
   await act(async () => { confirm(); confirm(); });
   expect(useSetRefStagingStore.getState().intents[id]?.video).toEqual({ state: 'ready', videoId: id });
   expect(onStaged).toHaveBeenCalledTimes(1);

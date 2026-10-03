@@ -74,6 +74,16 @@ export function useTheme() {
   return useContext(ThemeContext);
 }
 
+/** Scope fixed-scheme surfaces without changing the saved app appearance. */
+export function ColorSchemeProvider({ scheme, children }: PropsWithChildren<{ scheme: Scheme }>) {
+  const parent = useTheme();
+  const value = useMemo(
+    () => ({ ...parent, scheme, colors: resolveColors(scheme) }),
+    [parent, scheme],
+  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
 export function useColors() {
   return useTheme().colors;
 }

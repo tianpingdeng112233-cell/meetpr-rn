@@ -12,7 +12,7 @@ export default function CoachTabs() {
   // W2-c owns the inbox count (pending videos + unread); the shell model is the fallback.
   const messagesBadge = Math.max(useCoachMessagesBadge(), selectMessagesBadge(videos, conversations));
   return <Tabs initialRouteName="today" detachInactiveScreens={false} screenOptions={{ headerShown: false, lazy: false, freezeOnBlur: false }} screenListeners={({ route }) => ({ focus: () => { void track(AnalyticsEvent.ScreenView, { screen: screens[route.name] }); } })}
-    tabBar={props => <TabBar {...props} icons={{ today: 'house', messages: 'message', students: 'students', profile: 'profile' }} selectedColor={colors.gold500} unselectedColor={colors.textDisabled} badgeColor={colors.danger} badgeDot />}>
+    tabBar={props => <TabBar {...props} icons={{ today: 'house', messages: 'message', students: 'students', profile: 'profile' }} selectedColor={colors.gold500} unselectedColor={colors.textDisabled} badgeColor={colors.danger} />}>
     <Tabs.Screen name="today" options={{ title: t('coach.shell.today') }} />
     <Tabs.Screen name="messages" options={{ title: t('coach.chat.messages'), tabBarBadge: messagesBadge }} />
     <Tabs.Screen name="students" options={{ title: t('coach.shell.students'), tabBarBadge: applications.length }} />

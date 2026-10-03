@@ -565,7 +565,7 @@
 },
 "student.dashboardTodayPresentation.copy004": {
 "en": "{0} · {1}",
-"zh": "{0} · 星期{1}"
+"zh": "{0} · {1}"
 },
 "student.dashboardTodayPresentation.copy005": {
 "en": "Mon",
@@ -2280,20 +2280,20 @@
 "zh": "相机发生错误，请重试"
 },
 "student.restTimerExplanationView.copy001": {
-"en": "Rest time is matched automatically",
-"zh": "休息时间会自动匹配"
+"en": "Rest time follows your RPE",
+"zh": "休息时间跟随你的 RPE"
 },
 "student.restTimerExplanationView.copy002": {
-"en": "Automatically matched to your logged RPE: 2 minutes below RPE 7, 3 minutes from RPE 7 to below 9, and 4 minutes at RPE 9 or above.",
-"zh": "按你记录的 RPE 自动匹配：RPE 低于 7 为 2 分钟，7 至 9 以下为 3 分钟，9 及以上为 4 分钟。"
+"en": "Your logged RPE sets the default rest time.",
+"zh": "默认休息时间由你记录的 RPE 决定。"
 },
 "student.restTimerExplanationView.copy003": {
 "en": "Sets with coach-prescribed rest times will use the coach's setting.",
 "zh": "教练指定过休息时长的组，会按教练设定。"
 },
 "student.restTimerExplanationView.copy004": {
-"en": "Change the default under Profile → Rest between sets.",
-"zh": "可在「我的 → 组间休息」修改默认行为。"
+"en": "If your coach set a rest time for a set, that one is used instead.",
+"zh": "如果教练为某组设置了休息时间，则优先使用教练设置的时长。"
 },
 "student.restTimerExplanationView.copy005": {
 "en": "Got it",
@@ -3215,10 +3215,6 @@
 "en": "Current · Ready to log",
 "zh": "当前 · 可记录"
 },
-"student.todayWorkoutScreen.copy026": {
-"en": "Upcoming · Preview only",
-"zh": "未轮到 · 仅预览"
-},
 "student.todayWorkoutScreen.copy027": {
 "en": "Target intensity",
 "zh": "目标强度"
@@ -3479,10 +3475,6 @@
 "en": "Cannot retry video",
 "zh": "视频无法重试"
 },
-"student.todayWorkoutView.copy010": {
-"en": "Today",
-"zh": "今日"
-},
 "student.todayWorkoutView.copy011": {
 "en": "Workout",
 "zh": "锻炼"
@@ -3571,41 +3563,45 @@
 "en": "Exercises: {0} · Sets: {1}",
 "zh": "{0} 个动作 · {1} 组"
 },
-"student.trainingCalendarView.copy001": {
-"en": "Plan summary",
-"zh": "计划汇总"
+"student.trainingWeekStrip.current": {
+"en": "Current week",
+"zh": "当前周"
 },
-"student.trainingCalendarView.copy002": {
-"en": "Completed {0} / {1} sessions",
-"zh": "已完成 {0} / {1} 节"
+"student.trainingWeekStrip.upcoming": {
+"en": "Upcoming",
+"zh": "待训练"
 },
-"student.trainingCalendarView.copy002.one": {
-"en": "Completed {0} / {1} session",
-"zh": "已完成 {0} / {1} 节"
+"student.trainingWeekStrip.completed": {
+"en": "Completed",
+"zh": "已完成"
 },
-"student.trainingCalendarView.copy003": {
-"en": "{0} / {1} sessions",
-"zh": "{0} / {1} 节"
+"student.trainingWeekStrip.previous": {
+"en": "Previous week",
+"zh": "上一周"
 },
-"student.trainingCalendarView.copy003.one": {
-"en": "{0} / {1} session",
-"zh": "{0} / {1} 节"
+"student.trainingWeekStrip.next": {
+"en": "Next week",
+"zh": "下一周"
 },
-"student.trainingCalendarView.copy004": {
-"en": "0 sessions",
-"zh": "0 节"
+"student.trainingWeekStrip.backToToday": {
+"en": "Back to today",
+"zh": "回到今日"
 },
-"student.trainingCalendarView.copy005": {
-"en": "{0} sessions · from {1}",
-"zh": "{0} 节 · {1} 起"
+"student.trainingWeekStrip.rest": {
+"en": "Rest",
+"zh": "休"
 },
-"student.trainingCalendarView.copy005.one": {
-"en": "{0} session · from {1}",
-"zh": "{0} 节 · {1} 起"
+"student.trainingWeekStrip.restAccessibility": {
+"en": "{0}, rest day",
+"zh": "{0}，休息日"
 },
-"student.trainingCalendarView.copy006": {
-"en": "This week",
-"zh": "本周"
+"student.trainingWeekStrip.summary": {
+"en": "{0} exercises total · ",
+"zh": "共 {0} 个动作 · "
+},
+"student.trainingWeekStrip.summary.one": {
+"en": "{0} exercise total · ",
+"zh": "共 {0} 个动作 · "
 },
 "student.trainingHistoryView.copy001": {
 "en": "e1RM vs training 1RM",
@@ -4078,6 +4074,10 @@
 "student.workoutCompletionPresentation.copy014": {
 "en": "Workout {0} this week",
 "zh": "本周第 {0} 练"
+},
+"student.workoutCompletionFlowView.sending": {
+"en": "Sending to your coach…",
+"zh": "正在发送给教练…"
 },
 "student.workoutCompletionPresentation.copy015": {
 "en": "Your coach received your training log",
