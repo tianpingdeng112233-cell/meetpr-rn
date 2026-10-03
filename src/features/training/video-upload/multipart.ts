@@ -3,6 +3,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import type { UploadCompleteRequest } from '@/api/domains/uploads';
 import {
   VIDEO_PART_SIZE_BYTES,
+  VIDEO_PART_IDLE_TIMEOUT_MS,
+  VIDEO_PART_MAX_DURATION_MS,
   VIDEO_UPLOAD_CONCURRENCY,
   VIDEO_UPLOAD_ERRORS,
 } from './model';
@@ -54,6 +56,13 @@ export async function uploadFileParts(
   )
     throw new Error('Invalid multipart URLs');
   const results = [...(options.completedParts ?? [])];
+  const partSize = (partNumber: number) =>
+    Math.min(VIDEO_PART_SIZE_BYTES, totalBytes - (partNumber - 1) * VIDEO_PART_SIZE_BYTES);
+  const sentByPart = new Map(results.map(part => [part.part_number, partSize(part.part_number)]));
+  const reportProgress = () => options.onProgress(
+    [...sentByPart.values()].reduce((sum, bytes) => sum + bytes, 0) / totalBytes,
+  );
+  reportProgress();
   const directory = partDirectory();
   directory.create({ intermediates: true, idempotent: true });
   const batch = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -77,7 +86,17 @@ export async function uploadFileParts(
           `${batch}-${part.part_number}.part`,
         );
         let timeout: ReturnType<typeof setTimeout> | undefined;
+        let absoluteTimeout: ReturnType<typeof setTimeout> | undefined;
         let timedOut = false;
+        let bytesSent = 0;
+        let acceptingProgress = true;
+        const resetTimeout = () => {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => {
+            timedOut = true;
+            cancelUpload!();
+          }, VIDEO_PART_IDLE_TIMEOUT_MS);
+        };
         let cancelUpload: (() => void) | undefined;
         try {
           const handle = file.open();
@@ -92,6 +111,14 @@ export async function uploadFileParts(
             uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
             // OSS signs without Content-Type. expo/fetch can infer a null header from File
             // bodies that Android NativeRequest rejects, even when headers are omitted.
+          }, ({ totalBytesSent }) => {
+            if (!acceptingProgress || controller.signal.aborted || timedOut || !Number.isFinite(totalBytesSent)) return;
+            const sent = Math.min(size, totalBytesSent);
+            if (sent <= bytesSent) return;
+            bytesSent = sent;
+            resetTimeout();
+            sentByPart.set(part.part_number, bytesSent);
+            reportProgress();
           });
           const cancelled = new Promise<never>((_resolve, reject) => {
             let cancellationRequested = false;
@@ -103,12 +130,16 @@ export async function uploadFileParts(
               void task.cancelAsync().catch(() => undefined);
             };
             controller.signal.addEventListener('abort', cancelUpload, { once: true });
-            timeout = setTimeout(() => {
+            resetTimeout();
+            absoluteTimeout = setTimeout(() => {
               timedOut = true;
               cancelUpload!();
-            }, 60_000);
+            }, VIDEO_PART_MAX_DURATION_MS);
           });
           const response = await Promise.race([task.uploadAsync(), cancelled]);
+          acceptingProgress = false;
+          clearTimeout(timeout);
+          clearTimeout(absoluteTimeout);
           if (timedOut) throw new PartUploadError(408);
           if (controller.signal.aborted) throw new UploadCancelledError();
           if (!response) throw new Error('Part upload returned no response');
@@ -121,11 +152,14 @@ export async function uploadFileParts(
           const completed = { part_number: part.part_number, etag };
           await options.onPart?.(completed);
           results.push(completed);
-          options.onProgress(results.length / count);
+          sentByPart.set(part.part_number, size);
+          reportProgress();
         } catch (error) {
           throw timedOut ? new PartUploadError(408) : error;
         } finally {
+          acceptingProgress = false;
           clearTimeout(timeout);
+          clearTimeout(absoluteTimeout);
           if (cancelUpload)
             controller.signal.removeEventListener('abort', cancelUpload);
           try {

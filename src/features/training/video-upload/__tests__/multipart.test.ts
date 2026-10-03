@@ -158,7 +158,7 @@ test.each(['ETag', 'etag', 'eTaG'])('PUT uploads the temporary URI without heade
   })).resolves.toEqual([{ part_number: 1, etag: '"part-etag"' }]);
   expect(mockCreateUploadTask).toHaveBeenCalledWith(
     'https://part/1', expect.stringMatching(/^file:\/\/\/cache\/video-parts\/.+-1\.part$/),
-    { httpMethod: 'PUT', uploadType: 0 },
+    { httpMethod: 'PUT', uploadType: 0 }, expect.any(Function),
   );
   expect([...mockFiles.keys()]).toEqual(['file:///source']);
 });
@@ -193,7 +193,7 @@ test.each(['success', 'delete', 'terminal'])(
     expect([...mockFiles.keys()]).toEqual(['file:///source']);
   },
 );
-test('a part timeout cancels the native task and rejects with HTTP 408', async () => {
+test('30 seconds without progress cancels the native task and rejects with HTTP 408', async () => {
   jest.useFakeTimers();
   try {
     mockFiles.clear();
@@ -206,7 +206,7 @@ test('a part timeout cancels the native task and rejects with HTTP 408', async (
       onProgress: () => {},
     });
     const outcome = pending.catch((error: unknown) => error);
-    await jest.advanceTimersByTimeAsync(59_999);
+    await jest.advanceTimersByTimeAsync(29_999);
     expect(mockCancelAsync).not.toHaveBeenCalled();
     await jest.advanceTimersByTimeAsync(1);
     expect(mockCancelAsync).toHaveBeenCalledTimes(1);
@@ -396,4 +396,131 @@ test('5 MiB chunks use at most three PUTs concurrently', async () => {
   releases.slice(1).forEach((release) => release());
   await expect(pending).resolves.toHaveLength(4);
   expect([...mockFiles.keys()]).toEqual(['file:///source']);
+});
+
+
+test('a part with increasing byte progress can finish after more than 60 seconds', async () => {
+  jest.useFakeTimers();
+  try {
+    mockFiles.clear();
+    mockFiles.set('file:///source', 100);
+    mockCreateUploadTask.mockClear();
+    mockCancelAsync.mockClear();
+    let finish!: (response: unknown) => void;
+    mockUploadAsync.mockReset().mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const pending = uploadFileParts('file:///source', session.part_urls, {
+      signal: new AbortController().signal,
+      onProgress: () => {},
+    }).catch((error: unknown) => error);
+    for (const totalBytesSent of [20, 40, 60, 80]) {
+      await jest.advanceTimersByTimeAsync(20_000);
+      const progress = mockCreateUploadTask.mock.calls[0][3] as
+        ((data: { totalBytesSent: number; totalBytesExpectedToSend: number }) => void) | undefined;
+      progress?.({ totalBytesSent, totalBytesExpectedToSend: 100 });
+    }
+    finish({ status: 200, headers: { ETag: 'slow-etag' }, body: '' });
+    expect(await pending).toEqual([{ part_number: 1, etag: 'slow-etag' }]);
+    expect(mockCancelAsync).not.toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+
+test('a part still times out at ten minutes despite continuing byte progress', async () => {
+  jest.useFakeTimers();
+  try {
+    mockFiles.clear();
+    mockFiles.set('file:///source', 100);
+    mockCreateUploadTask.mockClear();
+    mockCancelAsync.mockClear();
+    mockUploadAsync.mockReset().mockImplementation(() => new Promise(() => {}));
+    const outcome = uploadFileParts('file:///source', session.part_urls, {
+      signal: new AbortController().signal,
+      onProgress: () => {},
+    }).catch((error: unknown) => error);
+    const progress = mockCreateUploadTask.mock.calls[0][3] as
+      (data: { totalBytesSent: number; totalBytesExpectedToSend: number }) => void;
+    for (let bytes = 1; bytes <= 29; bytes++) {
+      await jest.advanceTimersByTimeAsync(20_000);
+      progress({ totalBytesSent: bytes, totalBytesExpectedToSend: 100 });
+    }
+    await jest.advanceTimersByTimeAsync(19_999);
+    expect(mockCancelAsync).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1);
+    expect(mockCancelAsync).toHaveBeenCalledTimes(1);
+    expect(await outcome).toMatchObject({ status: 408 });
+    expect([...mockFiles.keys()]).toEqual(['file:///source']);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+
+test('byte progress includes resumed parts and all active parts with a shorter final part', async () => {
+  const mib = 1024 * 1024;
+  mockFiles.clear();
+  mockFiles.set('file:///source', 12 * mib);
+  mockCreateUploadTask.mockClear();
+  const releases: ((response: unknown) => void)[] = [];
+  mockUploadAsync.mockReset().mockImplementation(() => new Promise(resolve => { releases.push(resolve); }));
+  const onProgress = jest.fn();
+  const pending = uploadFileParts('file:///source', [1, 2, 3].map(part_number => ({
+    part_number, url: `https://part/${part_number}`,
+  })), {
+    signal: new AbortController().signal,
+    completedParts: [{ part_number: 1, etag: 'saved' }],
+    onProgress,
+  });
+  const progress = mockCreateUploadTask.mock.calls.map(call => call[3] as
+    (data: { totalBytesSent: number; totalBytesExpectedToSend: number }) => void);
+  try {
+    expect(onProgress).toHaveBeenLastCalledWith(5 / 12);
+    progress[0]({ totalBytesSent: mib, totalBytesExpectedToSend: 5 * mib });
+    expect(onProgress).toHaveBeenLastCalledWith(0.5);
+    progress[1]({ totalBytesSent: mib, totalBytesExpectedToSend: 2 * mib });
+    expect(onProgress).toHaveBeenLastCalledWith(7 / 12);
+    releases[1]({ status: 200, headers: { ETag: 'last' } });
+    for (let tick = 0; tick < 6; tick++) await Promise.resolve();
+    expect(onProgress).toHaveBeenLastCalledWith(8 / 12);
+  } finally {
+    releases.forEach(release => release({ status: 200, headers: { ETag: 'etag' } }));
+    await pending;
+  }
+  expect(onProgress).toHaveBeenLastCalledWith(1);
+});
+
+
+test('repeated or regressing byte counts do not postpone the idle timeout', async () => {
+  jest.useFakeTimers();
+  try {
+    mockFiles.clear();
+    mockFiles.set('file:///source', 100);
+    mockCreateUploadTask.mockClear();
+    mockCancelAsync.mockClear();
+    mockUploadAsync.mockReset().mockImplementation(() => new Promise(() => {}));
+    const onProgress = jest.fn();
+    const outcome = uploadFileParts('file:///source', session.part_urls, {
+      signal: new AbortController().signal, onProgress,
+    }).catch((error: unknown) => error);
+    const progress = mockCreateUploadTask.mock.calls[0][3] as
+      (data: { totalBytesSent: number; totalBytesExpectedToSend: number }) => void;
+    await jest.advanceTimersByTimeAsync(20_000);
+    progress({ totalBytesSent: 40, totalBytesExpectedToSend: 100 });
+    await jest.advanceTimersByTimeAsync(29_999);
+    progress({ totalBytesSent: 40, totalBytesExpectedToSend: 100 });
+    progress({ totalBytesSent: 20, totalBytesExpectedToSend: 100 });
+    expect(onProgress).toHaveBeenLastCalledWith(0.4);
+    expect(mockCancelAsync).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1);
+    expect(mockCancelAsync).toHaveBeenCalledTimes(1);
+    expect(await outcome).toMatchObject({ status: 408 });
+    progress({ totalBytesSent: 80, totalBytesExpectedToSend: 100 });
+    expect(onProgress).toHaveBeenLastCalledWith(0.4);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
 });
