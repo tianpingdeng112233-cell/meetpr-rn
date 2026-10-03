@@ -21,7 +21,7 @@ export function ChatSetCard({ reference, note, message, outgoing, read, openVide
         {attachment.hasVideo ? <View style={{ width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, borderRadius: radius.micro, backgroundColor: colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' }}>
           <MaterialCommunityIcons name="play" size={spacing.lg} color={colors.textPrimary} />
         </View> : null}
-        <View style={{ flex: 1, gap: spacing.xs }}>
+        <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto', gap: spacing.xs }}>
           <Text style={{ ...font.body(fontMetrics.size14, 'semibold'), color: colors.textPrimary }}>{attachment.title}</Text>
           <Text style={{ ...font.body(fontMetrics.size12), color: colors.textSecondary }}>{attachment.subtitle}</Text>
         </View>

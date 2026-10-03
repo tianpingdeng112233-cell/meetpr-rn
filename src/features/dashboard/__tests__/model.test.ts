@@ -1,4 +1,4 @@
-import { beforeEach, afterEach, describe, expect, test } from '@jest/globals';
+import { beforeEach, afterEach, describe, expect, jest, test } from '@jest/globals';
 
 import { setLocaleOverride } from '@/i18n';
 import {
@@ -11,6 +11,7 @@ import {
 import type { E1RMSeries } from '@/domain/e1rm';
 
 import {
+  localCompetitionDays,
   chineseMonthDay,
   chineseWeekday,
   dashboardE1RMRange,
@@ -234,4 +235,38 @@ test('video feedback displays zero-based set index 1 as Set 2', () => {
   setLocaleOverride('en');
   expect(feedbackLabel({ video_id: 'video', video: { exercise_name: 'Competition squat', set_index: 1 } })).toBe('Competition squat · Set 2');
   expect(feedbackLabel({ video_id: 'video', video: { exercise_name: null, set_index: 0 } })).toBe('Training video · Set 1');
+});
+
+// Jest's process.env.TZ does not change its VM timezone. Model the Date boundary
+// explicitly with London offsets while retaining the real UTC/static operations.
+describe('competition calendar days in Europe/London', () => {
+  test.each([
+    ['across DST end', '2026-10-03', '2026-11-03', 31],
+    ['back across DST start', '2026-04-03', '2026-03-03', -31],
+    ['on the same day', '2026-10-03', '2026-10-03', 0],
+    ['after expiry', '2026-10-03', '2026-10-01', -2],
+  ])('%s', (_label, today, competition, expected) => {
+    const RealDate = Date;
+    const now = new RealDate(`${today}T12:00:00Z`);
+    const [year, month, day] = today.split('-').map(Number);
+    jest.spyOn(now, 'getFullYear').mockReturnValue(year);
+    jest.spyOn(now, 'getMonth').mockReturnValue(month - 1);
+    jest.spyOn(now, 'getDate').mockReturnValue(day);
+    global.Date = new Proxy(RealDate, {
+      construct(target, args) {
+        if (args.length !== 3) return Reflect.construct(target, args);
+        const midnight = target.UTC(args[0], args[1], args[2]);
+        const zone = new Intl.DateTimeFormat('en', {
+          timeZone: 'Europe/London', timeZoneName: 'shortOffset',
+        }).formatToParts(new target(midnight)).find(part => part.type === 'timeZoneName')?.value;
+        return new target(midnight - (zone === 'GMT+1' ? 3_600_000 : 0));
+      },
+    });
+    try {
+      expect(localCompetitionDays(competition, now)).toBe(expected);
+    } finally {
+      global.Date = RealDate;
+      jest.restoreAllMocks();
+    }
+  });
 });

@@ -159,10 +159,10 @@ export function VideoAttachmentControls({
     return (
       <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
         style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.point7, flexShrink: 0,
-          borderRadius: radius.control, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget,
+          borderRadius: radius.control, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget,
           borderWidth: spacing.point1, borderColor: `${colors.gold500}${disabled ? '1F' : '3D'}`, opacity: pressed ? 0.6 : 1 })}>
         <MaterialCommunityIcons name={icon} size={spacing.space5} color={color} />
-        <Text style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text>
+        <Text numberOfLines={1} style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text>
       </Pressable>
     );
   };
@@ -178,11 +178,11 @@ export function VideoAttachmentControls({
       {playable ? <VideoPlayback key={record.createdAt} inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => undefined} /> : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md }}>
         {!playable ? <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size16, 'medium') }}>{t('student.videoAttachmentSection.copy001')}</Text> : null}
-        {preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1 }}>
+        {preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 0 }}>
           <ActivityIndicator color={colors.gold500} />
-          <Text style={{ ...font.body(fontMetrics.size12, 'medium'), color: colors.textSecondary }}>{t('student.videoAttachmentV3Controls.copy003')}</Text>
-        </View> : record.status !== 'none' ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 1 }}>
-          <Text style={{ ...font.body(fontMetrics.size12), color: record.status === 'failed' ? colors.danger : colors.textSecondary, flexShrink: 1 }}>
+          <Text style={{ ...font.body(fontMetrics.size12, 'medium'), color: colors.textSecondary, flexShrink: 0 }}>{t('student.videoAttachmentV3Controls.copy003')}</Text>
+        </View> : record.status !== 'none' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 0 }}>
+          <Text style={{ ...font.body(fontMetrics.size12), color: record.status === 'failed' ? colors.danger : colors.textSecondary, flexShrink: 0 }}>
             {statusLabel}
           </Text>
           {record.status === 'failed' ? action('refresh', t('student.videoAttachmentV3Controls.copy009'), () => {

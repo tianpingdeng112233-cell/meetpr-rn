@@ -2091,3 +2091,101 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - 按 `review-loop` 对上述两个代码文件相对 HEAD 的 diff 做一轮独立只读审查。Standards：**0 finding**；Spec：**0 finding**。本仓仍缺 `docs/agents/issue-tracker.md`；完整 Matt tracker 流程需 `$setup-matt-pocock-skills`，本次使用无需 tracker 的本地双轴审查。按用户范围要求，审查记录仅写本节。
 
 未覆盖验收：ADB 启动报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱无法连接模拟器；未执行 `hang_parts: 1` 的超时重传至送达、`part_bytes_per_second` 限速无超时及百分比递增的设备验证。真机流量下 20–30 秒视频送达与百分比显示仍由 David 验收。上述结果是开发自测与自审，不替代 Opus 收货。
+
+## 2026-10-03 · UNVERIFIED-SWEEP-FIXES（Opus T1 派工）
+
+- 基线 `d433ef3`，分支 `fix/unverified-sweep-20261003`；仅卡内四项，不 commit、不 push。开工唯一未跟踪文件为本卡；文档仅追加本节，不改正典台账。
+
+### 第 4 项：修前根因与 seam
+
+- 代码确认：`SetEntrySheet` 将 `Animated.ScrollView` 放在 `SetVideoPlayerHost` 的 children 分支；`SetVideoPlayer` 在此分支只返回 anchor 占位。实际画面和中央播放按钮经 `host.update` 挂入宿主后绘制的绝对定位兄弟层。因此画面命中覆盖层时，ScrollView 不在触摸祖先链；视觉上的内嵌不是触摸树内嵌，也没有转交纵向位移的代码。左右留白命中下方 ScrollView，解释卡内两组 swipe 的差异。
+- 排查候选：①宿主兄弟覆盖层截断滚动祖先链（代码已确认）；②画面上的全屏 Pressable 抢占（排除：只有 56×56 中央按钮，外层 box-none）；③原生播放器启用触摸控制（`controls={false}`，本地 react-native-video 6.19.2 的 `setControls` 调用 `setUseController(false)`）；④进度条 responder（仅底部轨道，不覆盖画面）。故不是仅删进度条 responder 可以修复的问题。
+- 原生复验受阻：已执行 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices`，ADB 监听器报 `Operation not permitted`，无法连接模拟器。未声称实机/模拟器复现或动态排除所有原生因素。依据卡明确允许的代码调查路径继续修复已确认的宿主缺口；diagnosing-bugs 原生复现/最小化环节受该限制，卡内 Opus 的既有复现作为症状来源。
+- Jest seam 缺口：现有 react-test-renderer 将 Video 替换为 MockVideo，没有 Android 命中测试、原生 ScrollView 拦截或手势派发。直接调用 PanResponder/scrollTo 只能测试调用，无法让原版“画面起手不滚动”的真实症状变红；本项不新增这种充数测试。后续仍跑现有中央播放、暂停、缩放同实例回归，真实拖动按卡交 Opus 验收。
+- 修复方向（本段在改动前记录）：仅为内嵌画面及中央播放覆盖区域添加纵向 PanResponder，将位移转给既有 viewport.scrollTo；点击不抢，横向不抢，进度条不接该 responder；放大态不挂接。保留同一 Video 实例及现有宿主布局。
+
+### 实装结果与先红后绿
+
+1. **倒计时**：根因是本地两个零点的实际毫秒差包含 DST 的 23/25 小时日，`ceil` 不等于日历日差。改用 `Date.UTC` 投影本地年月日再相减，保留同日 0 与过期负数；只读核对 iOS `CompetitionCountdownPresenter.daysUntil` 的 calendar day 口径。已搜索整个 `src/features/dashboard/`，没有其他“本地零点毫秒差 + ceil/floor”的同类写法；`utcDayDistance` 本就用 UTC，滚动 e1RM 窗口及相对反馈时间为时间戳口径，不改。
+   - seam：`src/features/dashboard/__tests__/model.test.ts` → `competition calendar days in Europe/London`：`across DST end`、`back across DST start`、`on the same day`、`after expiry`。
+   - 红：**2 failed / 14 passed / 16 total**，结束 DST 实际 32、预期 31；反向跨开始 DST 实际 −30、预期 −31。开始 DST 选择反向区间，因为未来正区间经旧 ceil 恰好正确，不能证明该缺陷；同日与普通过期例在旧实现已自然通过。
+   - 绿：**16 passed / 0 failed**。无既有 TZ 测试惯例，选择测试内 Date 构造边界代理（Intl 显式 Europe/London）及 now 的本地年月日 getter 注入；保留真实 UTC/static 操作，finally 恢复全局 Date，不新增生产注入参数，不依赖宿主时区。
+   - 日志：`/private/tmp/sweep-1-red.log`、`/private/tmp/sweep-1-green.log`。
+2. **聊天训练卡**：根因是标题列 `flex: 1` 的零基准宽度使卡片的固有宽度依赖 note/footer。改为 `flexBasis: 'auto'` + grow/shrink，按内容取得宽度并受外层原有 `maxWidth: '88%'` 约束，左右对齐不变。
+   - seam：`src/features/chat/__tests__/chat-set-card.test.tsx` → `card sizes its title from content without a note (outgoing: false/true)`，各覆盖带/不带视频；保留原有 5 例。
+   - 红：**2 failed / 5 passed / 7 total**（原样式只有 flex:1，缺内容基准）；绿：**7 passed / 0 failed**。
+   - 日志：`/private/tmp/sweep-2-red.log`、`/private/tmp/sweep-2-green.log`。
+3. **上传状态行**：根因是状态组与其文字允许收缩，Change/Delete 固定占宽时将状态/Retry 压成窄列。状态与 Retry 保持同组自然宽度、不收缩，沿用外层 wrap 使操作组空间不足时另起一行；preparing 同样禁止收缩。按钮标签 numberOfLines=1，最小宽高均用 minimumHitTarget；未动任何上传重试、超时或文案。
+   - seam：`src/features/training/video-upload/__tests__/set-video-player.test.tsx` → `video attachment status wraps as a group with single-line actions: failed/uploading/preparing/uploaded`。
+   - 红：**4 failed / 4 passed / 8 total**（组无不收缩约束）；绿：**8 passed / 0 failed**，包括现有 4 项播放器用例。测试验证卡指定的样式契约，不声称测过 Yoga 实际排版。
+   - 日志：`/private/tmp/sweep-3-red.log`、`/private/tmp/sweep-3-green.log`。
+4. **画面起手滚动（已被 Opus 实屏否决，以下仅保留上一轮实现记录）**：默认尺寸下画面起手向下拖动 400/1500ms 后 RPE 坐标均仍为 431，留白起手可变为 794；JS 转发未生效且不提供惯性。该方案已在文末“返修一”撤除，不能视为修好。根因见本节修前调查。上一轮实现使用 View 的 `GestureResponderHandlers`，取全局 pageX/pageY 与起始滚动偏移，仅在单指纵向超过 spacing.xs 且大于横向位移时接管，并调用原 viewport.scrollTo；中央按钮覆盖区域走同一处理，进度条与放大态不挂接。早期 PanResponder.create 被 react-hooks/refs 判为 render 内可能访问 ref，已改为直接 responder 回调，未添加 disable、改配置或引入依赖。点按/播放状态与宿主实例生命周期不变。
+   - 本项**无 Jest 原生滚动红例**，原因与交接验收按修前 seam 记录；没有新增与手势无关的测试冒充红例。既有中央播放/暂停/重播、缩放与系统返回同实例回归通过（并入全量）。`/private/tmp/sweep-4-regression.log` 为原有回归，不是拖动被吃掉的红绿证据。
+
+### 最终验证与审查
+
+- `npm test -- --runInBand`（全量）：**141 suites passed / 0 failed；1041 tests passed / 0 failed**。最终日志 `/private/tmp/sweep-final-test.log`；有既有 console warning，未声称零测试日志告警。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0。最终日志 `/private/tmp/sweep-final-lint.log`。开发中 refs 规则曾报 1 error，最终结构调整后通过。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`git diff --check` 通过。日志 `/private/tmp/sweep-final-tsc.log`。
+- `review-loop` 本地独立只读双轴：Standards **0 finding**；Spec **0 finding**。手势实现改为直接 responder 后，两轴均定向复核 0 项确定问题。原生触摸、滚动边界和视觉排版仍有设备验证限制，此结论不替代 Opus 验收。仓内缺 `docs/agents/issue-tracker.md`，未冒称跑过依赖 tracker 的完整 `code-review`；该流程后续需 David 调用 `$setup-matt-pocock-skills`。
+- Impeccable layout 按卡保持已有布局/视觉，机械扫描 0 finding；无新设计、导航或文案。开工已读取 Expo 57 版本文档 `https://docs.expo.dev/versions/v57.0.0/`。
+
+### 改动文件（共 9 个）
+
+- `src/features/dashboard/model.ts`
+- `src/features/dashboard/__tests__/model.test.ts`
+- `src/features/chat/ChatSetCard.tsx`
+- `src/features/chat/__tests__/chat-set-card.test.tsx`
+- `src/features/training/video-upload/VideoAttachmentControls.tsx`
+- `src/features/training/video-upload/SetVideoPlayer.tsx`
+- `src/features/training/video-upload/SetVideoPlayerHost.tsx`
+- `src/features/training/video-upload/__tests__/set-video-player.test.tsx`
+- `docs/CODEX-JOURNAL.md`（仅本卡末尾追加）
+
+代码 diff：`/private/tmp/sweep-implementation.diff`；原有未跟踪任务卡保留未改。不 commit、不 push；没有改 iOS、上传重试/超时、文案或正典台账。
+
+### 尚未覆盖的卡定验收
+
+- §1：模拟器 Europe/London Today 上 2026-10-03→2026-11-03 的实际 31 天显示及同日 0 天表现。
+- §2：收/发双侧、无 note/长 note、有/无视频的真实宽度和时间戳位置；Jest 只覆盖样式契约与既有内容回归。
+- §3：360×640dp、字体 1.3× 的实际无词内断行及默认尺寸外观；四种状态的真实排版仍待设备检查。
+- §4：按卡 adb swipe 从画面上下拖动、中央按钮起手让权、点按播放/暂停、进度条横向拖动与放大态行为，均待 Opus 实屏验收；本实现直接转交位移，没有新增惯性甩动行为。
+- 未构建/安装 Android 包，未生成设备截图；ADB 被当前沙箱监听限制阻断，未绕过权限。自动检查通过不代表上述设备验收通过。
+
+
+## 2026-10-03 · UNVERIFIED-SWEEP-FIXES · 返修一
+
+### 范围与实现
+
+- 本轮仅执行任务卡文末“返修一”。基线 `d433ef3` / `fix/unverified-sweep-20261003`，承接上一轮未提交工作树；不 commit、不 push。第 1、2、3 项已由 Opus 实屏验收，本轮不修改其实现与测试。5 个独立文件 SHA 校验一致；共享 `set-video-player.test.tsx` 中原上传状态行测试逐字保留。
+- 更正上一节第 4 项结论：宿主绝对定位画面与 ScrollView 是兄弟层，画面触摸不在滚动祖先链中；上一轮 JS responder → scrollTo 转发被 Opus 实屏否决。本轮删除 `picturePanHandlers`、`pictureDrag`、全部转发回调、`GestureResponderHandlers` 类型、无用 spacing import 和旧转发注释，无残留 scrollTo 转发。
+- 宿主内嵌覆盖层容器 `box-none`，视频画面与中央图标层 `none`。中央图标仅展示；ScrollView 内容中的 anchor 增加画面大小的 Pressable，底部排除实测控件条高度，沿现有 host/entry 通道调用当前 `togglePlayback`。未加载、失败或放大时锚点禁用。保持 Video 实例、播放状态和放大态按钮行为。
+- 初审发现失败态 Retry 也落入 `none` 子树。补红测试后将错误展示层移为画面 sibling：内嵌错误层 `box-none`、文字 `none`，Retry 可点；不改重试/超时逻辑。放大态错误层仍覆盖全屏。
+- 本轮仅修改：`src/features/training/video-upload/SetVideoPlayer.tsx`、`src/features/training/video-upload/SetVideoPlayerHost.tsx`、`src/features/training/video-upload/__tests__/set-video-player.test.tsx`、`docs/CODEX-JOURNAL.md`。任务卡未修改；正典台账未改。
+
+### 先红后绿（卡定组件 seam）
+
+| 测试名 | 红输出摘要 | 绿 |
+| --- | --- | --- |
+| `inline picture and central play display pass touches through while controls remain interactive` | 1 failed / 8 skipped；picture pointerEvents 预期 `none`，实际 undefined | 通过；同时验证中央图标非按钮、底部播放键及进度条 responder 的 seek |
+| `the inline anchor toggles playback from inside the ScrollView and excludes the controls` | 1 failed / 9 skipped；ScrollView 内无锚点按钮 | 通过；校验控件高度扣除、加载禁用、播放/暂停与重播、实例不重挂 |
+| `inline playback failure keeps Retry touchable outside the pass-through picture` | 审查返修前 1 failed / 11 skipped；Retry 祖先 pointerEvents 为 `none` | 通过；所有祖先均不禁用触摸，重试后 source 更新 |
+
+- 放大态回归 `the expanded picture accepts touches and its central button plays without remounting` 通过；这是保留行为的回归，不冒称红例。原中央播放/重播、放大/收起/系统返回实例保持以及第 3 项 4 个状态测试全部保留。
+- 定向最终：**1 suite / 12 tests passed，0 failed**。日志 `/private/tmp/sweep-rework1-green.log`。
+- 红日志：`/private/tmp/sweep-rework1-red-layer.log`、`/private/tmp/sweep-rework1-red-anchor.log`、`/private/tmp/sweep-rework1-red-retry.log`。每个变更先运行确认红例，再实现相应修复。
+
+### 最终检查与独立审查
+
+- `npm test -- --runInBand` 全量：**141 suites passed / 1045 tests passed / 0 failed**，退出 0；`/private/tmp/sweep-rework1-full-test.log`。保留既有 console warning，不宣称测试日志零警告。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/sweep-rework1-lint.log`。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/sweep-rework1-tsc.log`。`git diff --check` 通过。
+- `review-loop` 固定开工快照 diff，两个只读 reviewer 独立审查。Standards：初审 1 项 Retry 回归，定向修复后 0 未决。Spec：初审同一 Retry 回归，定向修复后 0 未决。不以本地审查替代 Opus 验收。
+- 仓内仍缺 `docs/agents/issue-tracker.md`；使用本地 `review-loop`，未声称执行依赖 tracker 的完整 `code-review`。若启用该流程，仍需 David 调用 `$setup-matt-pocock-skills`；不阻塞本次已授权返修。
+- 本轮改动 diff（相对开工脏树，不含第 1–3 项）：`/private/tmp/sweep-rework1.diff`。已读仓规指定 Expo 57 文档 `https://docs.expo.dev/versions/v57.0.0/`。
+
+### 未覆盖的验收项
+
+- Jest 使用 react-test-renderer / MockVideo，不能执行 Android 原生命中、ScrollView 拦截、惯性/回弹或拖动取消按压。pointerEvents 契约与回调测试不证明实际滚动成功。
+- 本轮未构建/安装 Android 包、未做模拟器截图或实屏验收。按卡由 Opus 用 `adb shell input swipe 200 1000 200 1500 400`（另测 1500ms 慢拖）及 `adb shell input swipe 1040 1000 1040 1300 300` 验收：画面起手必须使 RPE 坐标变化；默认及小屏上下拖动、惯性、无误触播放、轻点播放/暂停、进度条可拖与放大态均待设备确认。失败态 Retry 的真实点击同样待设备回归。
+- 第 1–3 项采用任务卡中 Opus 已通过的结论，不重新开启验收或改动。
