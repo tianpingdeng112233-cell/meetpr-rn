@@ -4075,6 +4075,10 @@
 "en": "Workout {0} this week",
 "zh": "本周第 {0} 练"
 },
+"student.workoutCompletionFlowView.sending": {
+"en": "Sending to your coach…",
+"zh": "正在发送给教练…"
+},
 "student.workoutCompletionPresentation.copy015": {
 "en": "Your coach received your training log",
 "zh": "教练已收到你的训练日志"

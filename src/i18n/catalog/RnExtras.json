@@ -1,4 +1,12 @@
 {
+"student.videoUpload.sending": {
+"en": "Sending",
+"zh": "发送中"
+},
+"student.videoUpload.sendingProgress": {
+"en": "Sending · {0}%",
+"zh": "发送中 · {0}%"
+},
 "student.trainingReminderExactAlarmSettings": {
 "en": "Allow alarms and reminders",
 "zh": "允许闹钟和提醒"

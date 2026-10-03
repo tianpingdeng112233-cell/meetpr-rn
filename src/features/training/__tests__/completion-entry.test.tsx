@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { useSetRefStagingStore } from '@/features/chat/set-ref-staging';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { ApiError } from '@/api/client';
 import { Alert, Text, TextInput } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
@@ -89,6 +90,7 @@ afterEach(async () => {
   useSessionStore.setState({ user: null });
   setLocaleOverride(null);
   jest.restoreAllMocks();
+  jest.useRealTimers();
   await AsyncStorage.clear();
 });
 
@@ -160,4 +162,114 @@ test('Ask coach conversation failure uses the training share alert and stays on 
   await mount(); await press(t('student.askCoach'));
   expect(Alert.alert).toHaveBeenCalledWith(t('student.trainingShareConversationFailed'));
   expect(mockNavigate).not.toHaveBeenCalled();
+});
+
+function delayCompletion() {
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const gate = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/complete') && options?.method === 'POST') await gate;
+    return original(path, options);
+  });
+  return { resolve, reject, restore: () => jest.mocked(authenticatedRequest).mockImplementation(original) };
+}
+
+const complete = async () => {
+  await act(async () => {
+    renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction();
+  });
+};
+
+test('completion immediately celebrates while sending, then acknowledges the coach after success', async () => {
+  const request = delayCompletion();
+  await mount();
+  await complete();
+  expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+  expect(copy()).toContain('Sending to your coach…');
+  expect(copy()).not.toContain('Your coach received your training log');
+  await act(async () => { request.resolve(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain('Your coach received your training log');
+  expect(copy()).not.toContain('Sending to your coach…');
+});
+
+const expectRetryable = () => {
+  expect(copy()).not.toContain(t('student.workoutCompletionFlowView.copy001'));
+  expect(copy()).not.toContain(t('student.todayWorkoutScreen.copy024'));
+  expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.accessibilityState.disabled).toBe(false);
+  expect(copy()).toContain('80');
+  expect(Alert.alert).toHaveBeenCalledWith(t('student.todayWorkoutScreen.copy001'), t('student.todayWorkoutViewModel.copy001'));
+};
+
+test('a 503 closes celebration, restores completion eligibility and keeps the recorded set for retry', async () => {
+  const request = delayCompletion();
+  await mount();
+  await complete();
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain(t('student.todayWorkoutScreen.copy024'));
+  await act(async () => { request.reject(new ApiError('server', 'Unavailable', { status: 503 })); });
+  expectRetryable();
+  request.restore();
+  await complete();
+  expect(copy()).toContain('Your coach received your training log');
+});
+
+test('30 seconds without a response closes celebration and rolls back, ignoring late success', async () => {
+  const request = delayCompletion();
+  await mount();
+  jest.useFakeTimers();
+  await complete();
+  await act(async () => { await jest.advanceTimersByTimeAsync(29_999); });
+  expect(copy()).toContain('Sending to your coach…');
+  expect(copy()).toContain(t('student.todayWorkoutScreen.copy024'));
+  await act(async () => { await jest.advanceTimersByTimeAsync(1); });
+  expectRetryable();
+  await act(async () => { request.resolve(); await jest.advanceTimersByTimeAsync(1); });
+  expectRetryable();
+});
+
+test('coach receipt follows the completion response without waiting for the plan refresh', async () => {
+  const request = delayCompletion();
+  await mount();
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  let releaseRefresh!: () => void;
+  const refresh = new Promise<void>(resolve => { releaseRefresh = resolve; });
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === `/plans/${plan.id}`) await refresh;
+    return original(path, options);
+  });
+  await complete();
+  await act(async () => { request.resolve(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  try {
+    expect(copy()).toContain('Your coach received your training log');
+    expect(copy()).not.toContain('Sending to your coach…');
+  } finally {
+    await act(async () => { releaseRefresh(); });
+  }
+});
+
+
+test('failure after leaving celebration rolls back without reopening it or losing recorded sets', async () => {
+  const request = delayCompletion();
+  await mount();
+  await complete();
+  await press(t('student.workoutCompletionFlowView.copy003'));
+  expect(mockNavigate).toHaveBeenCalledWith('/(student)/today');
+  await act(async () => { request.reject(new Error('Offline')); });
+  expectRetryable();
+});
+
+test('Chinese celebration shows sending until the completion response', async () => {
+  setLocaleOverride('zh');
+  const request = delayCompletion();
+  await mount();
+  await complete();
+  expect(copy()).toContain('正在发送给教练…');
+  await act(async () => { request.resolve(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain('教练已收到你的训练日志');
+  expect(copy()).not.toContain('正在发送给教练…');
 });
