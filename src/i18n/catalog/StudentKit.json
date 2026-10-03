@@ -3587,6 +3587,14 @@
 "en": "Back to today",
 "zh": "回到今日"
 },
+"student.trainingWeekStrip.rest": {
+"en": "Rest",
+"zh": "休"
+},
+"student.trainingWeekStrip.restAccessibility": {
+"en": "{0}, rest day",
+"zh": "{0}，休息日"
+},
 "student.trainingWeekStrip.summary": {
 "en": "{0} exercises total · ",
 "zh": "共 {0} 个动作 · "

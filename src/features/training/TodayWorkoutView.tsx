@@ -194,7 +194,7 @@ export function TodayWorkoutView() {
     editingPlan?.trainee_id === studentId ? editingPlan : planQuery.data;
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
-  const weekStrip = trainingWeekStrip(orderedDays, requestedDayID);
+  const weekStrip = trainingWeekStrip(plan, requestedDayID);
   const planDay = weekStrip.selectedDay;
   const selectedDayID = planDay?.id ?? null;
   const dayState = planDay
