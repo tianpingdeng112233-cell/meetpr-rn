@@ -31,3 +31,7 @@
 ## 自动检查
 
 收货方复跑：`npx jest --runInBand` 138 suites / 1008 tests、`npx tsc --noEmit`、`npm run lint` 通过。
+
+## 追加：7 天日历格（2026-10-03）
+
+David 真机复验反馈"看不出哪天休息"，§4 修订为连续日历格（SPEC 末尾）。模拟器收货通过：合成计划第 3 周训练日在周一、周四，周条显示 7 格——Mon D1、Tue / Wed Rest、Thu D2、Fri / Sat / Sun Rest；休息格较窄、灰底、不可点；翻到第 4 周同样 7 格；360×640 dp @1.3× 下一行放下不截断。[默认](evidence/spec084b-20261002/week-strip-seven-days.png)、[小屏大字](evidence/spec084b-20261002/week-strip-seven-days-360dp-1.3x.png)。跨度超过 7 天时横向滚动只有单测覆盖。Codex 提示：推荐日期与训练日顺序不一致时首末范围可能漏格——正常计划不会出现，记为已知边界。

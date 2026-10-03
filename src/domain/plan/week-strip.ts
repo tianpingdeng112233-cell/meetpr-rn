@@ -1,5 +1,5 @@
-import type { PlanDay } from '@/api/domains/plans';
-import { cursorDay, sequenceDays, weekDayOrdinals, type ProgressState } from './sequence';
+import type { PlanDay, PlanSummary } from '@/api/domains/plans';
+import { cursorDay, recommendedDate, sequenceDays, weekDayOrdinals, type ProgressState } from './sequence';
 
 export type TrainingWeekCell = {
   day: PlanDay;
@@ -8,33 +8,53 @@ export type TrainingWeekCell = {
   isCurrent: boolean;
   isSelected: boolean;
 };
+export type TrainingCalendarCell = { date: string; weekday: number } & (
+  | ({ kind: 'training' } & TrainingWeekCell)
+  | { kind: 'rest' }
+);
 export type TrainingWeek = {
   number: number;
   status: 'completed' | 'current' | 'upcoming';
   completed: number;
   cells: TrainingWeekCell[];
+  calendarCells: TrainingCalendarCell[];
 };
 
 /** Selection is transient; absent or removed selections follow the completion cursor. */
-export function trainingWeekStrip(days: readonly PlanDay[], selectedDayID?: string | null) {
-  const sorted = sequenceDays(days);
+export function trainingWeekStrip(plan: (Pick<PlanSummary, 'start_date' | 'anchor_weekday'> & { days: readonly PlanDay[] }) | undefined, selectedDayID?: string | null) {
+  const sorted = sequenceDays(plan?.days ?? []);
   const current = cursorDay(sorted);
   const todayDay = current ?? sorted.at(-1) ?? null;
   const selectedDay = sorted.find(day => day.id === selectedDayID) ?? todayDay;
   const weeks: TrainingWeek[] = [...new Set(sorted.map(day => day.week_number))].map(number => {
     const weekDays = sorted.filter(day => day.week_number === number);
     const ordinals = weekDayOrdinals(weekDays);
+    const cells: TrainingWeekCell[] = weekDays.map(day => ({
+      day,
+      ordinal: ordinals.get(day.id)!,
+      status: day.completed_at != null ? 'done' : day.id === current?.id ? 'current' : 'upcoming',
+      isCurrent: day.id === current?.id,
+      isSelected: day.id === selectedDay?.id,
+    }));
+    const datedCells = cells.map(cell => ({ ...cell, date: recommendedDate(plan!, cell.day) }));
+    const start = new Date(`${datedCells[0].date}T00:00:00Z`);
+    const end = new Date(`${datedCells.at(-1)!.date}T00:00:00Z`);
+    const dayCount = Math.max(7, (end.getTime() - start.getTime()) / 86_400_000 + 1);
+    const calendarCells = Array.from({ length: dayCount }, (_, offset) => {
+      const date = new Date(start);
+      date.setUTCDate(date.getUTCDate() + offset);
+      const dateText = date.toISOString().slice(0, 10);
+      const training = datedCells.filter(cell => cell.date === dateText);
+      const weekday = date.getUTCDay();
+      return training.length
+        ? training.map((cell): TrainingCalendarCell => ({ ...cell, kind: 'training', weekday }))
+        : [{ kind: 'rest', date: dateText, weekday } satisfies TrainingCalendarCell];
+    }).flat();
     return {
       number,
       status: !current || number < current.week_number ? 'completed' : number === current.week_number ? 'current' : 'upcoming',
       completed: weekDays.filter(day => day.completed_at != null).length,
-      cells: weekDays.map(day => ({
-        day,
-        ordinal: ordinals.get(day.id)!,
-        status: day.completed_at != null ? 'done' : day.id === current?.id ? 'current' : 'upcoming',
-        isCurrent: day.id === current?.id,
-        isSelected: day.id === selectedDay?.id,
-      })),
+      cells, calendarCells,
     };
   });
   const weekIndex = weeks.findIndex(candidate => candidate.number === selectedDay?.week_number);
