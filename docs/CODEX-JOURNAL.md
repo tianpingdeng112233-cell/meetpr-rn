@@ -2193,3 +2193,10 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 ## 2026-10-03 · T0 视频行 Replace 文案（Opus 派单）
 - `fix/video-row-replace-copy` 基于 `0d74b64`：仅将 `StudentKit.json` 的 `student.videoAttachmentV3Controls.copy004.en` 从 `Change` 改为 `Replace`，中文“更换”不变；唯一运行时使用点为 `VideoAttachmentControls.tsx:198` 更换按钮，另见正式词库与 `docs/w0-reference/i18n/StudentKit.json:3838` 历史定义；测试无硬编码 `Change` 断言。
 - 验证：全量 `npm test -- --runInBand` 142 suites / 1056 tests 全通过；`npm run lint` 0 errors / 0 warnings；词库差异校验通过。日志：`/private/tmp/video-row-replace-test.log`、`/private/tmp/video-row-replace-lint.log`。未做模拟器视觉验收；未 commit/push。
+## 2026-10-03 — Opus 合并冲突卡：integration/land-main-20261003
+
+- 当前 HEAD `0d74b64`，合并目标 origin/main / MERGE_HEAD `2bf4842`；仅处理两个冲突文件并追加本记录，不 add、commit、push 或 abort。
+- `.github/workflows/ci.yml` 冲突取 origin/main 三行（含注释）：fetch base branch 后以 `git merge-base` 计算 BASE，保留 #12 后由 #15 修正的 docs-only 判断，避免旧 PR base.sha 导致误判。
+- `src/api/auth.ts` 冲突取 HEAD 三行：phone nullable、email nullable/optional、name nullish，保留 Global 邮箱账号无手机号的形状。
+- 核对 #19（`640a3bf`）：auth.ts 的 UserSchema.id 与 domains/shared.ts 的 UuidSchema 均保留非 RFC 4122 GUID 正则；domains/exercises.ts 保留 movement_pattern 数组 / 旧字符串 / null 兼容；domain-schemas.test.ts 两项回归仍在。无 #19 改动被覆盖，无需额外修改；其余自动合并文件未动。
+- 验证：`npm test` 全量 142 suites / 1056 tests passed，0 failed；`npm run lint` 0 errors / 0 warnings；`npx tsc --noEmit` 0 errors，三项退出码均 0。原始日志：`/private/tmp/land-main-test.log`、`/private/tmp/land-main-lint.log`、`/private/tmp/land-main-tsc.log`。

@@ -22,7 +22,9 @@ jobs:
         name: Detect docs-only change
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
+            # base.sha can lag behind the base branch; diff against the real merge-base instead.
+            git fetch --no-tags --depth=200 origin "${{ github.base_ref }}" >/dev/null 2>&1 || true
+            BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
           else
             BASE="${{ github.event.before }}"
           fi
