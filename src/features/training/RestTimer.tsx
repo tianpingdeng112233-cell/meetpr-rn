@@ -1,9 +1,13 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, StyleSheet, Text, Vibration, View } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
+import { useRestPreference } from '@/features/settings/storage';
+import { restExplanationRows } from './rest-explanation';
 import { AppButton, Card, useColors, type Colors, font, radius, spacing, typography } from '@/design';
 
 import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
@@ -24,6 +28,7 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [endAt, setEndAt] = useState(
     () => Date.now() + (durationSeconds ?? 0) * 1_000,
   );
@@ -42,7 +47,7 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
   }, [durationSeconds, studentId]);
 
   useEffect(() => {
-    if (durationSeconds === null || showExplanation) return;
+    if (durationSeconds === null || showExplanation || showSettings) return;
     const update = () => {
       const next = Math.max(0, Math.ceil((endAt - Date.now()) / 1_000));
       setRemaining(next);
@@ -55,7 +60,7 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
     update();
     const interval = setInterval(update, 250);
     return () => clearInterval(interval);
-  }, [durationSeconds, endAt, onClose, showExplanation]);
+  }, [durationSeconds, endAt, onClose, showExplanation, showSettings]);
 
   if (durationSeconds === null) return null;
   const progress = Math.max(0, Math.min(1, remaining / Math.max(1, durationSeconds)));
@@ -99,10 +104,13 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
         transparent
         visible={showExplanation}>
         <View style={styles.modalBackdrop}>
-          <Card style={styles.explanation}>
+          <SafeAreaView edges={['bottom']} style={{ backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal, maxHeight: '100%' }}><ScrollView><Card style={styles.explanation}>
             <Text style={styles.explanationTitle}>{t('student.restTimerExplanationView.copy001')}</Text>
             <Text style={styles.explanationText}>{t('student.restTimerExplanationView.copy002')}</Text>
-            <Text style={styles.explanationText}>{t('student.restTimerExplanationView.copy003')}</Text>
+            {restExplanationRows().map(row => <View key={row.label} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.base }}>
+              <Text style={[styles.explanationText, { flex: 1 }]}>{row.label}</Text>
+              <Text style={{ ...typography.bodyEmphasis, color: colors.textPrimary }}>{row.duration}</Text>
+            </View>)}
             <Text style={styles.explanationText}>{t('student.restTimerExplanationView.copy004')}</Text>
             <AppButton
               label={t('student.restTimerExplanationView.copy005')}
@@ -111,9 +119,15 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
                 void writeBoolean(STORAGE_KEYS.restExplanation(studentId), true);
               }}
             />
-          </Card>
+            <Pressable accessibilityRole="link" accessibilityLabel={t('training.restSettingsLink')}
+              onPress={() => { setShowExplanation(false); setShowSettings(true); void writeBoolean(STORAGE_KEYS.restExplanation(studentId), true); }}
+              style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
+              <Text style={{ ...typography.footnote, textAlign: 'center', color: colors.goldText }}>{t('training.restSettingsLink')}</Text>
+            </Pressable>
+          </Card></ScrollView></SafeAreaView>
         </View>
       </Modal>
+      {showSettings ? <RestSettingsDestination studentId={studentId} onClose={() => setShowSettings(false)} /> : null}
     </>
   );
 }
@@ -145,8 +159,18 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   skipText: { color: colors.goldText, ...font.body(13) },
   progressTrack: { backgroundColor: colors.borderDefault, height: 4, borderRadius: radius.pill, overflow: 'hidden', marginTop: 4 },
   progressFill: { backgroundColor: colors.gold500, height: 4, borderRadius: radius.pill },
-  modalBackdrop: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'center', padding: spacing.lg },
+  modalBackdrop: { backgroundColor: colors.numberPadScrim, flex: 1, justifyContent: 'flex-end' },
   explanation: { gap: spacing.base, padding: spacing.lg },
   explanationTitle: { color: colors.textPrimary, ...typography.headline },
   explanationText: { color: colors.textSecondary, lineHeight: 23, ...typography.body },
 });
+
+function RestSettingsDestination({ studentId, onClose }: { studentId: string; onClose: () => void }) {
+  const preference = useRestPreference(studentId);
+  const colors = useColors();
+  if (preference.data) return <RestTimerSettingsScreen studentId={studentId} initial={preference.data} onClose={onClose} />;
+  return <Modal visible onRequestClose={onClose}><SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase, padding: spacing.base, gap: spacing.base }}>
+    <AppButton variant="secondary" label={t('chat.close')} onPress={onClose} />
+    {preference.isError ? <AppButton label={t('student.videoAttachmentSection.copy002')} onPress={() => void preference.refetch()} /> : <ActivityIndicator color={colors.gold500} />}
+  </SafeAreaView></Modal>;
+}

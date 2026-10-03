@@ -35,9 +35,10 @@ export function DayCompletionBanner({ count, onPress }: { count: number; onPress
 
 export type WorkoutCompletionFlowPhase = 'celebration' | 'review';
 
-export function WorkoutCompletionFlowView({ presentation, initialPhase, initialReflection, onReflectionChange, onFinish }: {
+export function WorkoutCompletionFlowView({ presentation, initialPhase, initialReflection, onReflectionChange, onFinish, sending = false }: {
   presentation: WorkoutCompletionPresentation;
   initialPhase: WorkoutCompletionFlowPhase;
+  sending?: boolean;
   initialReflection?: SessionReflection;
   onReflectionChange: (reflection: SessionReflection) => Promise<void>;
   onFinish: (reflection: SessionReflection) => Promise<void>;
@@ -71,7 +72,7 @@ export function WorkoutCompletionFlowView({ presentation, initialPhase, initialR
     <Modal animationType="none" presentationStyle="fullScreen" visible onRequestClose={() => void finish()}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
         {phase === 'celebration'
-          ? <WorkoutCelebrationView presentation={presentation} streak={null} saving={saving} onOpenReview={() => setPhase('review')} onFinish={() => void finish()} />
+          ? <WorkoutCelebrationView sending={sending} presentation={presentation} streak={null} saving={saving} onOpenReview={() => setPhase('review')} onFinish={() => void finish()} />
           : <SessionSummaryView presentation={presentation} reflection={reflection} onReflectionChange={changeReflection} onFinish={() => void finish()} saving={saving} />}
       </SafeAreaView>
     </Modal>

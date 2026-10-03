@@ -1,9 +1,9 @@
 /**
  * All e1RM formula boundaries and product thresholds live here. Values are
- * mirrored from iOS release/1.0 @ 3799f67 and must not be duplicated in UI.
+ * mirrored from iOS release/1.0 @ 3799f67; eligibility follows 03021ff6.
+ * Do not duplicate them in UI.
  */
 export const E1RM_POLICY = Object.freeze({
-  minimumEligibleRPE: 7,
   maximumEligibleReps: 10,
   maximumEligibleDeadliftReps: 5,
   rollingWindowDays: 28,

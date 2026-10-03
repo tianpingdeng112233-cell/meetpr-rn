@@ -1,13 +1,7 @@
+import { configureNotificationHandler } from '@/notifications/handler';
 import * as Notifications from 'expo-notifications';
 import { t } from '@/i18n';
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: false,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+configureNotificationHandler();
 let timer: ReturnType<typeof setTimeout> | undefined;
 export function notifyUploadFailures(count: () => number): void {
   clearTimeout(timer);
