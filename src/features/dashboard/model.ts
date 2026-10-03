@@ -323,9 +323,9 @@ export function buildNotifications(input: {
 
 export function localCompetitionDays(dateText: string, now: Date): number {
   const [year, month, day] = dateText.split('-').map(Number);
-  const target = new Date(year, month - 1, day);
-  const localToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.ceil((target.getTime() - localToday.getTime()) / E1RM_MATH.millisecondsPerDay);
+  const target = Date.UTC(year, month - 1, day);
+  const localToday = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return (target - localToday) / E1RM_MATH.millisecondsPerDay;
 }
 
 export function chineseMonthDay(dateText: string): string {

@@ -1,12 +1,13 @@
 import { CoachedSetLogRequestSchema } from '@/api/domains/sets';
 import { gymDayText, formatWeight, normalizeDecimalInput, parseFiniteDecimal, plateLoadout } from './policy';
 import { VideoAttachmentControls } from './video-upload/VideoAttachmentControls';
+import { SetVideoPlayerHost, type SetVideoPlayerHostHandle } from './video-upload/SetVideoPlayerHost';
 import { OverlayHostProvider, type OverlayHostHandle } from './OverlayHost';
 import { decodePrescription } from '@/domain/plan/prescription';
 import { entryPrefill } from './suggestion-gating';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -111,6 +112,8 @@ export function SetEntrySheet({
   suggestionReason,
 }: Props) {
   const overlayHost = useRef<OverlayHostHandle>(null);
+  const videoHost = useRef<SetVideoPlayerHostHandle>(null);
+  const [scrollY] = useState(() => new Animated.Value(0));
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const prescription = decodePrescription(draft.planSet);
@@ -197,12 +200,14 @@ export function SetEntrySheet({
   };
 
   return (
-    <Modal animationType="slide" visible transparent={false} onShow={() => setPresented(true)} onRequestClose={() => {
+    <Modal animationType="slide" visible transparent={false} statusBarTranslucent navigationBarTranslucent onShow={() => setPresented(true)} onRequestClose={() => {
       if (overlayHost.current?.requestClose()) return;
+      if (videoHost.current?.requestClose()) return;
       if (numberPad) setNumberPad(null);
       else close();
     }}>
       <OverlayHostProvider ref={overlayHost}>
+        <SetVideoPlayerHost ref={videoHost} viewport={scroll} scrollY={scrollY} obscured={numberPad !== null}>
         <SafeAreaView style={styles.root}>
           <View style={styles.root} importantForAccessibility={numberPad ? 'no-hide-descendants' : 'auto'}>
             <View style={styles.nav}>
@@ -212,8 +217,10 @@ export function SetEntrySheet({
               <Text numberOfLines={1} style={styles.navTitle}>{t('student.setEntrySheet.copy005', [exerciseName, draft.setIndex + 1])}</Text>
               <View style={styles.navSpacer} />
             </View>
-            <ScrollView ref={scroll} scrollEnabled={!rpeGestureActive} contentContainerStyle={styles.content}
+            <Animated.ScrollView ref={scroll} onLayout={() => videoHost.current?.measure()} scrollEventThrottle={16}
+              onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })} scrollEnabled={!rpeGestureActive} contentContainerStyle={styles.content}
               onContentSizeChange={() => {
+                videoHost.current?.measure();
                 if (initialCamera && !scrolledToVideo.current) {
                   scroll.current?.scrollToEnd({ animated: false });
                   scrolledToVideo.current = true;
@@ -287,7 +294,7 @@ export function SetEntrySheet({
                   }
                 />
               </View>
-            </ScrollView>
+            </Animated.ScrollView>
             <View style={styles.footer}>
               <Pressable accessibilityRole="button" disabled={!editable || saving || !validWeight} accessibilityState={{ busy: saving, disabled: !editable || saving || !validWeight }} onPress={() => void save(false)}
                 style={({ pressed }) => [styles.completeButton, pressed && styles.footerPressed, !validWeight && styles.footerDisabled]}>
@@ -311,6 +318,7 @@ export function SetEntrySheet({
               setNumberPad(null);
             }} /> : null}
         </SafeAreaView>
+        </SetVideoPlayerHost>
       </OverlayHostProvider>
     </Modal>
   );
