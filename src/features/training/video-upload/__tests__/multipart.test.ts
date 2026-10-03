@@ -144,6 +144,90 @@ jest.mock('expo-file-system/legacy', () => ({
   FileSystemUploadType: { BINARY_CONTENT: 0 },
   createUploadTask: (...args: unknown[]) => mockCreateUploadTask(...args),
 }));
+function startTwoPartUpload() {
+  mockFiles.clear();
+  mockFiles.set('file:///source', 10 * 1024 * 1024);
+  const tasks = [1, 2].map(part_number => {
+    let finish!: (response: unknown) => void;
+    let progress!: (data: { totalBytesSent: number }) => void;
+    const response = new Promise(resolve => { finish = resolve; });
+    const cancelAsync = jest.fn(async () => {});
+    mockCreateUploadTask.mockImplementationOnce((...args: unknown[]) => {
+      progress = args[3] as typeof progress;
+      return { uploadAsync: jest.fn(() => response), cancelAsync };
+    });
+    return {
+      cancelAsync,
+      progress: (bytes: number) => progress({ totalBytesSent: bytes }),
+      finish: () => finish({ status: 200, headers: { ETag: `etag-${part_number}` } }),
+    };
+  });
+  const outcome = uploadFileParts('file:///source', [1, 2].map(part_number => ({
+    part_number, url: `https://part/${part_number}`,
+  })), {
+    signal: new AbortController().signal,
+    onProgress: () => {},
+    concurrency: 2,
+  }).catch((error: unknown) => error);
+  return { tasks, outcome };
+}
+
+test('a part idle for 40 seconds succeeds while another part keeps making progress', async () => {
+  jest.useFakeTimers();
+  try {
+    const { tasks, outcome } = startTwoPartUpload();
+    for (const bytes of [10, 20, 30, 40]) {
+      await jest.advanceTimersByTimeAsync(10_000);
+      tasks[1].progress(bytes);
+    }
+    tasks.forEach(task => task.finish());
+    expect(await outcome).toEqual([
+      { part_number: 1, etag: 'etag-1' },
+      { part_number: 2, etag: 'etag-2' },
+    ]);
+    tasks.forEach(task => expect(task.cancelAsync).not.toHaveBeenCalled());
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('30 seconds without progress on any part rejects with HTTP 408 and cancels both native tasks', async () => {
+  jest.useFakeTimers();
+  try {
+    const { tasks, outcome } = startTwoPartUpload();
+    await jest.advanceTimersByTimeAsync(29_999);
+    tasks.forEach(task => expect(task.cancelAsync).not.toHaveBeenCalled());
+    await jest.advanceTimersByTimeAsync(1);
+    expect(await outcome).toBeInstanceOf(PartUploadError);
+    expect(await outcome).toMatchObject({ status: 408 });
+    tasks.forEach(task => expect(task.cancelAsync).toHaveBeenCalledTimes(1));
+    expect([...mockFiles.keys()]).toEqual(['file:///source']);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('completing a part gives the remaining part 30 seconds before an idle timeout', async () => {
+  jest.useFakeTimers();
+  try {
+    const { tasks, outcome } = startTwoPartUpload();
+    await jest.advanceTimersByTimeAsync(20_000);
+    tasks[0].finish();
+    await jest.advanceTimersByTimeAsync(29_999);
+    tasks.forEach(task => expect(task.cancelAsync).not.toHaveBeenCalled());
+    await jest.advanceTimersByTimeAsync(1);
+    expect(await outcome).toMatchObject({ status: 408 });
+    expect(tasks[0].cancelAsync).not.toHaveBeenCalled();
+    expect(tasks[1].cancelAsync).toHaveBeenCalledTimes(1);
+    expect([...mockFiles.keys()]).toEqual(['file:///source']);
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test.each(['ETag', 'etag', 'eTaG'])('PUT uploads the temporary URI without headers and returns %s', async (header) => {
   mockFiles.clear();
   mockFiles.set('file:///source', 350912);

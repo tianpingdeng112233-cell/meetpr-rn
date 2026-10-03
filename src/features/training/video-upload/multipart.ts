@@ -72,6 +72,16 @@ export async function uploadFileParts(
   if (options.signal.aborted) abort();
   let cursor = 0;
   let firstError: unknown;
+  const activeUploads = new Set<() => void>();
+  let idleTimeout: ReturnType<typeof setTimeout> | undefined;
+  const resetIdleTimeout = () => {
+    clearTimeout(idleTimeout);
+    if (activeUploads.size === 0 || controller.signal.aborted) return;
+    idleTimeout = setTimeout(() => {
+      firstError ??= new PartUploadError(408);
+      controller.abort();
+    }, VIDEO_PART_IDLE_TIMEOUT_MS);
+  };
   const worker = async () => {
     try {
       while (cursor < urls.length) {
@@ -85,18 +95,10 @@ export async function uploadFileParts(
           directory,
           `${batch}-${part.part_number}.part`,
         );
-        let timeout: ReturnType<typeof setTimeout> | undefined;
         let absoluteTimeout: ReturnType<typeof setTimeout> | undefined;
         let timedOut = false;
         let bytesSent = 0;
         let acceptingProgress = true;
-        const resetTimeout = () => {
-          clearTimeout(timeout);
-          timeout = setTimeout(() => {
-            timedOut = true;
-            cancelUpload!();
-          }, VIDEO_PART_IDLE_TIMEOUT_MS);
-        };
         let cancelUpload: (() => void) | undefined;
         try {
           const handle = file.open();
@@ -116,7 +118,7 @@ export async function uploadFileParts(
             const sent = Math.min(size, totalBytesSent);
             if (sent <= bytesSent) return;
             bytesSent = sent;
-            resetTimeout();
+            resetIdleTimeout();
             sentByPart.set(part.part_number, bytesSent);
             reportProgress();
           });
@@ -130,7 +132,8 @@ export async function uploadFileParts(
               void task.cancelAsync().catch(() => undefined);
             };
             controller.signal.addEventListener('abort', cancelUpload, { once: true });
-            resetTimeout();
+            activeUploads.add(cancelUpload);
+            if (activeUploads.size === 1) resetIdleTimeout();
             absoluteTimeout = setTimeout(() => {
               timedOut = true;
               cancelUpload!();
@@ -138,7 +141,6 @@ export async function uploadFileParts(
           });
           const response = await Promise.race([task.uploadAsync(), cancelled]);
           acceptingProgress = false;
-          clearTimeout(timeout);
           clearTimeout(absoluteTimeout);
           if (timedOut) throw new PartUploadError(408);
           if (controller.signal.aborted) throw new UploadCancelledError();
@@ -149,6 +151,9 @@ export async function uploadFileParts(
             ([name]) => name.toLowerCase() === 'etag',
           )?.[1];
           if (!etag) throw new Error('Part response omitted ETag');
+          activeUploads.delete(cancelUpload!);
+          controller.signal.removeEventListener('abort', cancelUpload!);
+          resetIdleTimeout();
           const completed = { part_number: part.part_number, etag };
           await options.onPart?.(completed);
           results.push(completed);
@@ -158,10 +163,12 @@ export async function uploadFileParts(
           throw timedOut ? new PartUploadError(408) : error;
         } finally {
           acceptingProgress = false;
-          clearTimeout(timeout);
           clearTimeout(absoluteTimeout);
-          if (cancelUpload)
+          if (cancelUpload) {
+            activeUploads.delete(cancelUpload);
             controller.signal.removeEventListener('abort', cancelUpload);
+          }
+          if (activeUploads.size === 0) clearTimeout(idleTimeout);
           try {
             if (temporary.exists) temporary.delete();
           } catch (cause) {
@@ -193,6 +200,7 @@ export async function uploadFileParts(
     if (firstError) throw firstError;
     return results.sort((a, b) => a.part_number - b.part_number);
   } finally {
+    clearTimeout(idleTimeout);
     options.signal.removeEventListener('abort', abort);
   }
 }

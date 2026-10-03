@@ -2052,3 +2052,26 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 独立只读 Spec 审查：**0 finding**。卡片的无进度超时、绝对上限、字节进度接线、中英文文案与约束均有实现及自动测试依据；未扩大到切网判定或压缩卡住问题。本结论是开发自测与审查，不替代 Opus 收货。
 
 **未做设备验证**：沙箱没有模拟器；未构建、安装或运行 Android 包，未取得设备截图。300 kbps 限速经虚拟网卡传 2.7 MB 分片、正常网速、分片挂住后约 30 秒超时并按既有退避重试成功，以及百分比真实显示与最终 Delivered，仍待 Opus 按原卡验收。没有宣称设备验收通过。
+
+## 2026-10-03 — UPLOAD-PROGRESS-TIMEOUT 修订一：整体无进度计时
+
+- 基线：`fix/upload-progress-timeout@9941e62`。仅实现任务卡文末「修订一」；未 commit、未 push。开工时卡片已有未提交修改，原样保留。本节只追加，不改已有记录或正典台账。
+- 改动：`src/features/training/video-upload/multipart.ts` 与 `src/features/training/video-upload/__tests__/multipart.test.ts`。每次 `uploadFileParts` 调用独立持有共享无进度计时器；任一在途分片新增字节或成功完成即重置。整体连续 30 秒无进展，记录 `PartUploadError(408)` 并沿原有 abort 路径取消所有在途任务。完成任务先移出在途集合，再等待 `onPart`；在途清空与调用收尾均清理计时器。
+- 保留每片 10 分钟硬上限、外部中止、百分比上报、退避时间表、并发数、分片大小、压缩参数及文案。
+- 按 `tdd` 在卡片批准的公开 seam 上逐轮验证；原生上传与时钟使用 mock / Jest 假定时器。
+
+| 测试名 | 红 → 绿证据 |
+| --- | --- |
+| `a part idle for 40 seconds succeeds while another part keeps making progress` | 改实现前：期望两片成功，实际 `Part upload returned 408`；1 failed / 24 passed。共享计时后：25 passed。日志 `/private/tmp/upload-revision1-red1.log`、`/private/tmp/upload-revision1-green1.log`。 |
+| `completing a part gives the remaining part 30 seconds before an idle timeout` | 补完成事件处理前：剩余片提前取消，期望取消次数 0，实际 1；1 failed / 26 passed。补处理后：27 passed。日志 `/private/tmp/upload-revision1-red2.log`、`/private/tmp/upload-revision1-green2.log`。 |
+| `30 seconds without progress on any part rejects with HTTP 408 and cancels both native tasks` | 新增守护用例直接通过（未宣称它曾红）：29,999 ms 两片均不取消，30,000 ms 返回 408，两片原生任务各取消一次，临时文件与计时器清理。 |
+
+验证：
+
+- `npm test -- --runInBand`：**142 suites / 1032 tests passed**（含原有用例）；日志 `/private/tmp/upload-revision1-full-test.log`。
+- `npm run lint`：退出码 0，**0 errors / 0 warnings**；日志 `/private/tmp/upload-revision1-lint.log`。
+- `npx tsc --noEmit`：退出码 0；日志 `/private/tmp/upload-revision1-tsc.log`。
+- `git diff --check`：通过。
+- 按 `review-loop` 对上述两个代码文件相对 HEAD 的 diff 做一轮独立只读审查。Standards：**0 finding**；Spec：**0 finding**。本仓仍缺 `docs/agents/issue-tracker.md`；完整 Matt tracker 流程需 `$setup-matt-pocock-skills`，本次使用无需 tracker 的本地双轴审查。按用户范围要求，审查记录仅写本节。
+
+未覆盖验收：ADB 启动报 `could not install *smartsocket* listener: Operation not permitted`，当前沙箱无法连接模拟器；未执行 `hang_parts: 1` 的超时重传至送达、`part_bytes_per_second` 限速无超时及百分比递增的设备验证。真机流量下 20–30 秒视频送达与百分比显示仍由 David 验收。上述结果是开发自测与自审，不替代 Opus 收货。
