@@ -2,6 +2,7 @@ import type { VideoBadgeInfo } from '@/features/video-player/types';
 import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { CameraRecorder } from './CameraRecorder';
+import { VideoTrimView } from './VideoTrimView';
 import { VideoPlayback } from './VideoPlayback';
 import { useOverlayHost } from '../OverlayHost';
 import { useCameraAvailability } from './use-camera-availability';
@@ -16,8 +17,8 @@ import { useColors, radius, spacing, font, fontMetrics } from '@/design';
 
 import { requestVideoUploadConsent } from './consent';
 import { videoUploadManager } from './manager';
-import { pickTrainingVideo, VideoNativeError, type VideoSource } from './native';
-import { selectVideoUpload, useVideoUploadStore } from './store';
+import { deleteLocalVideo, pickTrainingVideo, VideoNativeError, type VideoSource } from './native';
+import { preserveVideoAttachment, selectVideoUpload, useVideoUploadStore } from './store';
 
 type Props = {
   badge?: VideoBadgeInfo | null;
@@ -70,6 +71,14 @@ export function VideoAttachmentControls({
   const colors = useColors();
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [choosing, setChoosing] = useState(false);
+  const [videoToTrim, setVideoToTrim] = useState<SelectedVideo | null>(null);
+  const pickedUri = useRef<string | null>(null);
+  const releaseOriginal = useRef<(() => void) | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; releaseOriginal.current?.(); deleteLocalVideo(pickedUri.current); };
+  }, []);
   const [isPreparing, setIsPreparing] = useState(false);
   useEffect(() => useVideoUploadStore.subscribe((next, previous) => {
     const select = selectVideoUpload(studentId, stableSetId);
@@ -96,6 +105,7 @@ export function VideoAttachmentControls({
   const identity = { studentId, stableSetId };
   const choose = async (source: VideoSource) => {
     if (!editable || choosing || isPreparing) return;
+    let trimming = false;
     setChoosing(true);
     setActionErrorMessage(null);
     try {
@@ -122,11 +132,18 @@ export function VideoAttachmentControls({
         );
         return;
       }
+      releaseOriginal.current = preserveVideoAttachment(studentId, stableSetId);
       const video = await pickTrainingVideo();
-      if (video) attach(video);
+      if (video) {
+        if (!mounted.current) { deleteLocalVideo(video.uri); return; }
+        trimming = true;
+        pickedUri.current = video.uri;
+        setVideoToTrim(video);
+      }
     } catch (error) {
       showActionError(error);
     } finally {
+      if (!trimming) { releaseOriginal.current?.(); releaseOriginal.current = null; }
       setChoosing(false);
     }
   };
@@ -153,19 +170,6 @@ export function VideoAttachmentControls({
       showActionError(error);
     }
   };
-  const action = (icon: ComponentProps<typeof MaterialCommunityIcons>['name'], label: string, onPress: () => void, unavailable = false) => {
-    const disabled = !editable || choosing || isPreparing || unavailable;
-    const color = `${colors.gold500}${disabled ? '4D' : 'B8'}`;
-    return (
-      <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
-        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.point7, flexShrink: 0,
-          borderRadius: radius.control, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget,
-          borderWidth: spacing.point1, borderColor: `${colors.gold500}${disabled ? '1F' : '3D'}`, opacity: pressed ? 0.6 : 1 })}>
-        <MaterialCommunityIcons name={icon} size={spacing.space5} color={color} />
-        <Text numberOfLines={1} style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text>
-      </Pressable>
-    );
-  };
   const playable = Boolean(record.localUri || record.source?.uri || record.attachmentId);
   const preparing = isPreparing || record.status === 'preparing';
   const errorMessage = actionErrorMessage ?? record.errorMessage;
@@ -185,25 +189,49 @@ export function VideoAttachmentControls({
           <Text style={{ ...font.body(fontMetrics.size12), color: record.status === 'failed' ? colors.danger : colors.textSecondary, flexShrink: 0 }}>
             {statusLabel}
           </Text>
-          {record.status === 'failed' ? action('refresh', t('student.videoAttachmentV3Controls.copy009'), () => {
+          {record.status === 'failed' ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable || choosing || isPreparing} onPress={() => {
             setActionErrorMessage(null);
             void videoUploadManager.retry(identity, ensureSetLog).catch(showActionError);
-          }) : null}
+          }} /> : null}
         </View> : <View style={{ flex: 1 }} />}
         {!preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point10, marginLeft: 'auto', flexShrink: 0 }}>
           {record.status === 'none' ? <>
-            {action('video', t('student.videoAttachmentV3Controls.copy001'), () => void choose('camera'), !hasCamera)}
-            {action('image', t('student.videoAttachmentV3Controls.copy002'), () => void choose('library'))}
+            <VideoAction icon="video" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing || !hasCamera} onPress={() => void choose('camera')} />
+            <VideoAction icon="image" label={t('student.videoAttachmentV3Controls.copy002')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
           </> : <>
-            {action('image', t('student.videoAttachmentV3Controls.copy004'), () => void choose('library'))}
-            {action('trash-can-outline', t('student.videoAttachmentV3Controls.copy005'), () => void remove())}
+            <VideoAction icon="image" label={t('student.videoAttachmentV3Controls.copy004')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
+            <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable || choosing || isPreparing} onPress={() => void remove()} />
           </>}
         </View> : null}
       </View>
       {errorMessage ? <Text style={{ ...font.body(fontMetrics.size11, 'medium'), color: colors.danger }}>{errorMessage}</Text> : null}
+      {videoToTrim ? <VideoTrimView uri={videoToTrim.uri} onOutcome={outcome => {
+        releaseOriginal.current?.();
+        releaseOriginal.current = null;
+        deleteLocalVideo(pickedUri.current);
+        pickedUri.current = null;
+        setVideoToTrim(null);
+        if (outcome.type === 'saved') attach({ ...videoToTrim, ...outcome.video, mimeType: 'video/mp4', fileName: null });
+        else if (outcome.type === 'failed') showActionError(new Error('Trim failed'));
+      }} /> : null}
       {overlay.isFallback && fallbackNode !== null ? (
         <Modal visible animationType="slide" onRequestClose={dismiss}>{fallbackNode}</Modal>
       ) : null}
     </View>
   );
+}
+
+
+function VideoAction({ icon, label, onPress, disabled }: {
+  icon: ComponentProps<typeof MaterialCommunityIcons>['name']; label: string; onPress: () => void; disabled: boolean;
+}) {
+  const colors = useColors();
+  const color = `${colors.gold500}${disabled ? '4D' : 'B8'}`;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
+    style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.point7, flexShrink: 0,
+      borderRadius: radius.control, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget,
+      borderWidth: spacing.point1, borderColor: `${colors.gold500}${disabled ? '1F' : '3D'}`, opacity: pressed ? 0.6 : 1 })}>
+    <MaterialCommunityIcons name={icon} size={spacing.space5} color={color} />
+    <Text numberOfLines={1} style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text>
+  </Pressable>;
 }

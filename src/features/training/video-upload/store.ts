@@ -88,6 +88,22 @@ async function persist(
 
 let persistChain: Promise<void> = Promise.resolve();
 const remoteRequests = new Map<string, symbol>();
+const attachmentEdits = new Map<string, Set<symbol>>();
+
+/** Picker/trim is provisional: refreshes must not replace its original attachment. */
+export function preserveVideoAttachment(studentId: string, stableSetId: string): () => void {
+  const key = uploadKey(studentId, stableSetId);
+  const token = Symbol('attachment edit');
+  const edits = attachmentEdits.get(key) ?? new Set<symbol>();
+  edits.add(token);
+  attachmentEdits.set(key, edits);
+  remoteRequests.delete(key);
+  return () => {
+    if (!edits.delete(token)) return;
+    remoteRequests.delete(key);
+    if (edits.size === 0) attachmentEdits.delete(key);
+  };
+}
 
 function schedulePersist(records: Record<string, VideoUploadRecord>): void {
   persistChain = persistChain
@@ -178,7 +194,7 @@ export async function hydrateRemoteVideoAttachments(
     for (const { stableSetId, setLogId } of sets) {
       const key = uploadKey(studentId, stableSetId);
       // Local mutations and newer refreshes win over an in-flight response.
-      if (remoteRequests.get(key) !== request) continue;
+      if (remoteRequests.get(key) !== request || attachmentEdits.has(key)) continue;
       const remote = bySetLog.get(setLogId) ?? [];
       const current = records[key];
       if (current) {
@@ -216,6 +232,7 @@ export async function hydrateRemoteVideoAttachments(
 export function resetVideoUploadStoreForTests(): void {
   persistChain = Promise.resolve();
   remoteRequests.clear();
+  attachmentEdits.clear();
   useVideoUploadStore.setState({ hydrated: false, records: {} });
 }
 
