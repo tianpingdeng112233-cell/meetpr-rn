@@ -69,3 +69,9 @@ SPEC「验收清单」1–11 由 Opus 在模拟器执行，12 由 David 真机�
 - 本工作树没有 `android/`；资源与 Kotlin 由 Opus 在验收树编译，真机由 Opus 用 adb 验。把新增的资源文件与用到的 `RemoteViews` 方法列在 JOURNAL。
 - 不 commit、不 push。JOURNAL 追加"D-16 返修三"一节。
 - 结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`，贴条数。
+
+---
+
+## 返修四（2026-10-04 晚，小修）
+
+依据 SPEC「增补三 · 修订」。只做一件事：结束定时从 `setAlarmClock` 改回 `setExactAndAllowWhileIdle`（有精确定时权限时）/ `setAndAllowWhileIdle`（没有或抛 `SecurityException` 时），删掉 `AlarmClockInfo` 相关代码与不再使用的导入。其余一行不动。不 commit、不 push；JOURNAL 追加两三行。结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`。

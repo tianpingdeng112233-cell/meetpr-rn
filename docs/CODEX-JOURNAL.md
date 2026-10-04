@@ -2602,3 +2602,7 @@ adb -s SERIAL shell cmd uimode night yes
 - 35：浅/深模式分别看收起和展开、长动作名与空动作名，确认文字/数字可读。
 - 36：vivo 保持“允许后台高耗电”关闭；记录计时、两个按钮、锁屏、结束提醒到达与否。若 AlarmClock 仍被删，按 SPEC 记录该机无结束提醒，不追加机制。
 - 37：按原清单重做前台、页内 Skip/下一组、系统关通知权限路径。38：原生 Gradle/APK 编译由 Opus 补证据。
+
+### D-16 返修四（2026-10-04）
+- 仅将结束定时改为 `setExactAndAllowWhileIdle(RTC_WAKEUP, endAt, intent)`；保留无权限或 `SecurityException` 时的 `setAndAllowWhileIdle`。已移除 `AlarmClockInfo` 调用，无多余导入；未 commit/push。
+- 全量 `npm test`：147 suites / 1084 tests 通过；lint：0 errors / 0 warnings；tsc：0 errors（三项均退出 0，日志 `/private/tmp/d16-r4-{test,lint,tsc}.log`）。本树无原生单测基础设施及 android/，未做原生编译或设备验收，沿用卡中 Opus 验收树安排。

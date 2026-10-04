@@ -264,7 +264,7 @@ internal object RestTimerNotifications {
     alarm.cancel(intent)
     try {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarm.canScheduleExactAlarms()) {
-        alarm.setAlarmClock(AlarmManager.AlarmClockInfo(endAt, openIntent(context)), intent)
+        alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endAt, intent)
         return
       }
     } catch (_: SecurityException) { /* Permission may have been revoked since the check. */ }
