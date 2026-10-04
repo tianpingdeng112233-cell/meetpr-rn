@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Linking, Modal, StyleSheet, Text, View } from 'react-native';
+import { Linking, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -53,7 +53,9 @@ export function PrivacyNoticeSheet({
         style={styles.backdrop}>
         <View style={styles.sheet}>
           <Text style={styles.title}>{t('appShell.privacy.analytics.title')}</Text>
-          <Text style={styles.body}>{t('appShell.privacy.analytics.body')}</Text>
+          <ScrollView style={styles.bodyScroll}>
+            <Text style={styles.body}>{t('appShell.privacy.analytics.body')}</Text>
+          </ScrollView>
           <Pressable
             accessibilityRole="link"
             onPress={openPrivacyPolicy}
@@ -80,6 +82,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.72)',
   },
   sheet: {
+    maxHeight: '90%',
     backgroundColor: colors.bgInset,
     borderColor: colors.borderDefault,
     borderTopLeftRadius: radius.xl,
@@ -92,6 +95,10 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   title: {
     color: colors.textPrimary,
     ...typography.headline,
+  },
+  bodyScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
   },
   body: {
     color: colors.textSecondary,

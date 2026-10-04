@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-10-03 使用数据告知授权差异**：按 [任务卡](specs/build22-parity/USAGE-NOTICE-COPY-CARD.md)，`appShell.privacy.analytics.body` 中英文改为 Global 美国 DigitalOcean / 账号存续期间保留口径，有意区别于 iOS 历史参照；正文可滚动、链接与确认按钮固定，已实装，模拟器验收待 Opus，证据见 `docs/CODEX-JOURNAL.md` 本卡节。
 
 > **当前复刻基线(2026-09-21)**：iOS `beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea`，Global 轨。David 授权从本地 W3 `6429d50` 开始集成验收、视觉对齐并追齐 build 22。
 > 状态：☐ 未完成 / 🔨 已实装 / ✅ 有走查证据 / — 明确不做。历史 ✅ 只证明备注所述版本和场景，不能当作 build 22 全量验收。

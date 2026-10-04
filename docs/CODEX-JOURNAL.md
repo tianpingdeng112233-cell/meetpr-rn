@@ -2200,3 +2200,42 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - `src/api/auth.ts` 冲突取 HEAD 三行：phone nullable、email nullable/optional、name nullish，保留 Global 邮箱账号无手机号的形状。
 - 核对 #19（`640a3bf`）：auth.ts 的 UserSchema.id 与 domains/shared.ts 的 UuidSchema 均保留非 RFC 4122 GUID 正则；domains/exercises.ts 保留 movement_pattern 数组 / 旧字符串 / null 兼容；domain-schemas.test.ts 两项回归仍在。无 #19 改动被覆盖，无需额外修改；其余自动合并文件未动。
 - 验证：`npm test` 全量 142 suites / 1056 tests passed，0 failed；`npm run lint` 0 errors / 0 warnings；`npx tsc --noEmit` 0 errors，三项退出码均 0。原始日志：`/private/tmp/land-main-test.log`、`/private/tmp/land-main-lint.log`、`/private/tmp/land-main-tsc.log`。
+
+## 2026-10-03 — Opus T1：Global 使用数据告知文案与正文滚动
+
+### 范围与实现
+
+- 卡：`specs/build22-parity/USAGE-NOTICE-COPY-CARD.md`；分支 `fix/usage-notice-copy`，开工 HEAD / 基线 `integration/land-main-20261003@9636521`。卡文件为开工已有的未跟踪输入，未修改。未 commit、push、暂存或改动其他工作树。
+- `src/i18n/catalog/AppShell.json` 仅替换 `appShell.privacy.analytics.body` 的 en/zh，直接取卡中两段原文；独立逐字核对通过（en 639 / zh 182 字符）。标题与所有其他键值不变。
+- `src/analytics/PrivacyNoticeSheet.tsx` 正文放入可收缩、不主动撑高的 ScrollView；sheet 限高 90%，标题、Privacy Policy 链接、Got it 按钮在滚动容器之外。原 tokens、间距、主题和确认流程保留；无溢出时随内容高度展示。
+- 新增 `src/i18n/__tests__/usage-notice.test.ts` 与 `src/analytics/__tests__/PrivacyNoticeSheet.test.tsx`，使用卡内指定 seam。组件测试还验证链接 URL、确认回调与确认状态持久化；使用真实应用组件，仅 mock 原生存储/链接系统边界。
+- `PARITY.md` 仅新增一行授权差异。仓内未发现 RN catalog 与 iOS 参照全目录逐键比对测试或 Meetday 白名单；测试中引用 `docs/w0-reference` 的仅 `src/i18n/__tests__/t.test.ts` 中 StudentKit 一个格式化用例。沿 Meetday 的台账登记方式处理，未新增豁免、未删测试、未修改参照包。
+
+### 红 → 绿证据
+
+1. `usage notice uses the approved Global copy verbatim in en` / `… in zh`：先运行两条失败，原因是正文包含 `90` / `Alibaba` / `阿里云`；替换文案后两条通过，同时断言含 DigitalOcean 且与定稿逐字一致。日志：`/private/tmp/usage-notice-copy-red.log`、`/private/tmp/usage-notice-copy-green.log`。
+2. `privacy notice scrolls the full body while keeping the policy link and confirmation outside the scroll area`：先失败 `No instances found with node type: "ScrollView"`，随后添加滚动容器与限高；运行中修正测试的确认状态函数导入（从公开 analytics 入口读取），定向最终 **2 suites / 3 tests passed，0 failed**。日志：`/private/tmp/usage-notice-layout-red.log`、`/private/tmp/usage-notice-green.log`。
+3. 首轮全量测试通过，tsc 暴露新增参数化用例 `as const` readonly tuple 与 Jest 回调签名不兼容，改为 `satisfies [Locale, string][]`，未改变测试行为；最终重新跑全量、lint、tsc 均通过。
+
+### “90 天”排查与历史参照更正指针
+
+- 全仓检索 `90\s*(天|days)`，并补搜 `retained for 90` / `保留\s*90\s*天` / `Alibaba Cloud` / `自建阿里云`。运行时使用数据旧表述只在本次已替换的 AppShell 正文，无其他运行时代码或文案需要同步。
+- `docs/w0-reference/i18n/AppShell.json:87–88` 保留旧 en/zh：卡明确要求不改 iOS 历史参照。
+- **更正 `docs/w1-reference/peripheral-screens.md:121` 的使用数据正文适用性**：其中“阿里云 / 不出境 / 90 天”是历史 CN 参照，已不适用于 RN Global；本卡定稿与 `src/i18n/catalog/AppShell.json` 为当前正文，美国 DigitalOcean、账号存续期间保留、删号后断开关联成为匿名记录。遵本次“仅 JOURNAL 末尾追加、PARITY 一行例外”的硬约束，原文未编辑，待 Opus 同步正典参照说明。
+- 任务卡背景中的旧表述用于说明被修问题，保留不改。其余 StudentKit 的“90 days / 90天”、成长/历史测试、w1 训练/成长参照、既有 JOURNAL 及截图 XML 命中均是成长曲线时间窗口，不是使用数据保留期，不改。
+
+### 最终验证与开发自审
+
+- `npm test -- --runInBand`：**144 suites / 1059 tests passed，0 failed**，退出 0；`/private/tmp/usage-notice-full-test.log`。既有测试输出警告不作零警告承诺。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/usage-notice-lint.log`。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/usage-notice-tsc.log`。`git diff --check` 通过。
+- `review-loop` 一轮独立只读双轴自审：Standards **0 项实质问题**；Spec **0 项实现问题 / 0 项越界**，模拟器证据缺口另列。固定 diff `/private/tmp/usage-notice-review.diff`（测试随后仅修复上述 TypeScript 类型标注）。自审不替代 Opus 收货。
+- 仓内无 `docs/agents/issue-tracker.md`；本次执行不依赖 tracker 的本地 review-loop，未声称执行完整 tracker code-review。若启用后者需 David 调用 `$setup-matt-pocock-skills`，不影响本卡实现。
+- 开工已读 Expo 57 指定文档 `https://docs.expo.dev/versions/v57.0.0/`。本卡只涉及 RN 现有 ScrollView 与文案，没有新增依赖。
+
+### 未覆盖的验收项
+
+- ADB 探测失败：`adb devices` 启动 daemon 时报告 `could not install *smartsocket* listener: Operation not permitted` / `cannot connect to daemon`，当前沙箱不允许提权。没有安装 fixture 包、清除应用数据或运行模拟器交互，也没有截图证据。
+- 卡验收 1 未覆盖：全新安装首启英文最后一句可读、Got it 进入登录页、再次启动不再弹。Jest 的确认持久化和回调通过不等于设备流程通过。
+- 卡验收 2 未覆盖：360×640dp、系统字体 1.3× 下实际滚动、正文无截断、Privacy Policy 与 Got it 可点；默认尺寸外观仍须实屏对照。react-test-renderer 不执行原生排版，结构断言不证明几何尺寸或触摸命中。
+- 卡验收 3 自动检查已通过，最终是否收货由 Opus 按原卡判断。
