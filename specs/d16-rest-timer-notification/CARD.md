@@ -28,3 +28,17 @@
 SPEC「验收清单」1–11 由 Opus 在模拟器执行，12 由 David 真机执行。实装方不得删减或改写验收项。
 
 结束前跑 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`，贴条数。
+
+---
+
+## 返修一 / 增补（2026-10-04，David 真机验收后）
+
+依据：SPEC 文末「增补一」全文。这是在已提交的第一版（`ea5be38`）之上的增量，不要重写第一版已通过的逻辑。
+
+- 范围：`modules/rest-timer-notification`（Kotlin、Manifest、`build.gradle`、新增 `res/drawable-*` 图标）、`src/features/training/rest-timer-session.ts`、`rest-timer-notification.ts`、`RestTimer.tsx`、`TodayWorkoutView.tsx`（只为把动作名与开始时间传下去）、相关测试、`RnExtras.json`（如需新增渠道名文案）。
+- 顺序：先核实 `androidx.core` 里兼容 API 是否存在并把结论写进 JOURNAL，再写 JS 侧会红的测试，最后改原生。
+- 进程被回收后的 `TICK`、Skip、+30s、`END` 仍然只能依赖原生侧已存的数据（开始时间、终点、正文、token 都要落 `SharedPreferences`）。
+- 本工作树没有 `android/`；Kotlin 与 gradle 由 Opus 在验收树编译。把你对兼容 API 的每一处调用列在 JOURNAL，方便编译失败时对照。
+- 页内计时条的外观、文案、交互不变。不使用前台服务。除 `POST_PROMOTED_NOTIFICATIONS` 外不新增权限。不新增第三方依赖（`androidx.core` 版本声明除外）。
+- 不 commit、不 push。JOURNAL 追加"D-16 返修一"一节；`PARITY.md` 对应行补一句。
+- 结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`，贴条数。

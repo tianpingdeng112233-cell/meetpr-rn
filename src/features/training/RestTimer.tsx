@@ -17,6 +17,7 @@ import { restNotificationPermission, restTimerNotifications } from './rest-timer
 
 type Props = {
   durationSeconds: number | null;
+  exerciseName?: string;
   studentId: string;
   onClose: () => void;
 };
@@ -29,7 +30,7 @@ export function RestTimer(props: Props) {
   return props.durationSeconds === null ? null : <RestTimerContent key={`${props.studentId}:${props.durationSeconds}`} {...props} />;
 }
 
-function RestTimerContent({ durationSeconds, onClose, studentId }: Props) {
+function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
@@ -66,7 +67,7 @@ function RestTimerContent({ durationSeconds, onClose, studentId }: Props) {
 
   useEffect(() => {
     session.setPaused(true);
-    session.start(durationSeconds ?? 0);
+    session.start(durationSeconds ?? 0, exerciseName);
     const update = (vibrate = true) => {
       if (!session.canTick()) return;
       if (session.tick()) {
@@ -89,7 +90,7 @@ function RestTimerContent({ durationSeconds, onClose, studentId }: Props) {
       if (dismissTimer.current) clearTimeout(dismissTimer.current);
       session.close();
     };
-  }, [close, durationSeconds, session]);
+  }, [close, durationSeconds, exerciseName, session]);
 
   useEffect(() => {
     session.setPaused(!explanationLoaded || showExplanation || showSettings);

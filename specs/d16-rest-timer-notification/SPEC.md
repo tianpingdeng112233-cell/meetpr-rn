@@ -1,6 +1,6 @@
 # spec D-16 — 安卓休息倒计时通知（切后台 / 锁屏可见）
 
-- **状态**：已确认（David 2026-10-04），实装中。
+- **状态**：已确认（David 2026-10-04）。第一版已实装（PR #79）；真机验收后 David 追加「2A」（见文末「增补一」），返修中。
 - **拍板**：2026-10-02 David 定"安卓做常驻通知（锁屏、切后台可见倒计时）"；2026-10-04 细节 1A / 2A / 3A（见"行为"）。
 - **级别 / 节奏**：T2（新原生能力 + 新的用户可见行为）；P1。PR 开好后等 David 放行。
 - **范围**：仅安卓（meetpr-rn）。iOS 对应能力是 spec 073 Live Activity，不在本 spec。零后端。
@@ -73,3 +73,63 @@
 - 声音提示。
 - iOS（spec 073）。
 - 训练提醒通知（已有，另一条链路）。
+
+---
+
+## 增补一（2026-10-04，David 真机验收后拍板「2A」）
+
+真机（vivo）反馈两点：通知只有一行标题加倒计时，过于简陋，希望接近打车软件那种实时卡片；另外锁屏上没有出现倒计时通知（通知中心里有，被归在静默一组）。本节**覆盖**上文与之冲突的条目，其余不变。
+
+### 行为
+
+**A. Android 16 及以上：实时更新通知（Live Update）**
+- 倒计时通知以系统的"实时更新"形态发出。系统允许时：
+  - 状态栏出现一个胶囊，里面是 MeetPR 图标和每秒跳动的倒计时；在任何 App 里都能看到。
+  - 通知栏与锁屏上，这条通知排在最前并默认展开：标题、正文、进度条、Skip / +30s 两个按钮。
+- 样式由系统决定，不使用自定义布局。
+- 用户在系统设置里关掉了 MeetPR 的"实时更新"，或系统没有把它提升：退回 B 的形态，不报错、不弹任何请求。
+
+**B. 其他系统版本（以及 A 未被提升时）：标准通知**
+- 仍是一条进行中通知，但内容与 A 一致：标题、正文、进度条、两个按钮。
+
+**A 与 B 共同的内容**
+- 图标：MeetPR 标志的单色小图标（不再是系统闹钟图标）；强调色用品牌金。
+- 标题："Rest between sets" / 「组间休息」（不变）。
+- 正文：刚记完这一组所属的动作名（如 "Competition Deadlift"）。拿不到动作名时不显示正文。
+- 倒计时：系统计时控件，每秒跳动（不变）。
+- 进度条：已休息时间占本次休息总时长的比例。后台期间约每 10 秒前进一次，尽力而为；系统推迟刷新时进度条可以滞后，但倒计时数字必须始终准确。点 +30s 后按新的总时长重新计算。
+- 结束提醒 "Rest complete" 也换成 MeetPR 图标，其余不变。
+
+**C. 锁屏可见、不再归入静默组**
+- 倒计时通知改用"默认重要度、无声音、无震动"的渠道：出现在锁屏上，在通知中心里不再被折进静默组；仍然不响铃、不震动、不弹横幅。
+- 旧渠道已经在装过上一版包的手机上建好且重要度改不了，所以换用新的渠道 id，并删除旧渠道。
+
+### 技术方案
+- 仍在 `modules/rest-timer-notification` 内，不使用前台服务。
+- 形态 A 的要求以官方文档为准：https://developer.android.com/develop/ui/views/notifications/live-update 。要点：模块 Manifest 声明 `android.permission.POST_PROMOTED_NOTIFICATIONS`（普通权限，无弹窗；这是对原"不新增权限"的唯一放宽）；通知 `setOngoing(true)`、有标题、`setRequestPromotedOngoing(true)`、样式用 `ProgressStyle`、不设自定义视图、不 colorized、渠道重要度高于 MIN。胶囊文字不设 `setShortCriticalText`，让系统用计时控件显示倒计时。
+- 用 `androidx.core` 的兼容 API（`NotificationCompat.ProgressStyle`、`setRequestPromotedOngoing`，需要 core ≥ 1.17.0；工程 compileSdk 已是 36）。在模块 `build.gradle` 显式声明所需的 core 版本。开工先在本机 gradle 缓存里的 core 构件中核实这些 API 确实存在；若兼容库里没有，改为在 `Build.VERSION.SDK_INT >= 36` 分支内直接用平台 API，并在 JOURNAL 写明。
+- 低于 Android 16 的系统上 `ProgressStyle` 的表现以兼容库为准；若兼容库在旧系统上不画进度条，改用 `setProgress(max, progress, false)`，保证 B 形态有进度条。
+- 进度刷新：原生侧在倒计时期间每 10 秒用 `AlarmManager` 触发一次模块内 Receiver 的 `TICK` 动作，重发同一条通知（`setOnlyAlertOnce`，不出声）。有精确定时权限用精确定时，否则用非精确定时。`hide()`、Skip、走完时一并取消；`TICK` 必须校验当前 token，旧倒计时遗留的 `TICK` 不得复活通知，也不得影响 `END` 定时。
+- `show` 增加两个入参：本次休息的开始时间（墙钟毫秒，用于算进度）与正文。JS 侧由休息计时的状态模块给出开始时间；动作名从触发休息的那一组所属动作取。
+- 小图标素材由 Opus 提供，在本机 `/Users/david/Projects/scratch/rn-d16-rest-notif-20261004/icon/drawable-*/ic_stat_meetpr.png`（白色透明底，mdpi–xxxhdpi 五档）。原样拷入模块 `android/src/main/res/` 对应目录，不要重画、不要改名。
+- 渠道：倒计时用新 id（如 `rest-timer-v2`），`IMPORTANCE_DEFAULT`、`setSound(null, null)`、`enableVibration(false)`、锁屏可见；创建渠道时删除旧的 `rest-timer`。结束提醒渠道不变。
+
+### 测试 seam（先红后绿）
+1. `rest-timer-session.ts`：进后台时产出的 `show` 带上本次休息的开始时间与终点；页内加减时间后再进后台，开始时间不变、终点变化。
+2. `RestTimer` / `TodayWorkoutView`：触发休息的那一组的动作名被传到通知正文；没有动作名时传空。
+3. 原生部分无 jest seam：在 JOURNAL 给出 adb 验证步骤（`dumpsys notification --noredact` 里看 `FLAG_PROMOTED_ONGOING` / 渠道 id / 进度值；`am broadcast` 触发 `TICK`）。
+
+### 验收清单（追加，Opus 收货）
+13. Android 16 模拟器：切后台后状态栏出现带倒计时的胶囊；下拉通知栏，MeetPR 这条在最前并展开，有标题、动作名、进度条、Skip、+30s。
+14. Android 16 模拟器锁屏：同一条通知可见。
+15. Android 15 模拟器：标准通知里有 MeetPR 图标、动作名、进度条、两个按钮；不在静默组；锁屏可见。
+16. 后台停留 30 秒以上：进度条前进过，且与倒计时大致对应；点 +30s 后进度条按新总时长回退。
+17. Skip / 回前台 / 走完之后，`dumpsys alarm` 里没有残留的 `TICK`。
+18. 在系统设置里关掉 MeetPR 的"实时更新"（Android 16）：退回标准通知，App 不崩、不弹请求。
+19. 验收清单 1–11 全部重跑通过（这次改动不得弄坏第一版已通过的条目）。
+20. 真机（David，vivo）：胶囊、锁屏、通知中心各看一眼。vivo 的系统是否把它显示成胶囊 / 卡片以真机为准。
+
+### Out of Scope（追加）
+- vivo 原子通知 / 原子岛等厂商专有接入。
+- 自定义通知布局、进度条上的图标、通知里的下一组处方信息。
+- 前台服务。

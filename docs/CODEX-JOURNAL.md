@@ -2348,3 +2348,101 @@ adb shell am broadcast -n com.meetpr.app/com.meetpr.resttimer.RestTimerReceiver 
 - SPEC **11**：三项 JS 检查已通过；Gradle 原生整包编译仍由 Opus 在另一工作树执行，当前未覆盖。
 - SPEC **12**：David 的 vivo 真机 1/2/6/10 全部未覆盖，尤其厂商后台定时限制。
 - **SPEC“不可滑动清除”存在已证实的平台差异**：Android 14 起，普通 `setOngoing(true)` 通知在解锁状态下仍可被用户单独划除；锁屏及 Clear all 除外。[Android 官方说明](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)。本实现忠实使用 SPEC 指定 ongoing 原生方案，不用伪装电话/媒体通知或新增服务/权限绕过。该要求不能宣布全平台满足；请 Opus/David 决定验收口径。SPEC 原文未擅改，其余已授权实现未因此停工。
+
+## D-16 返修一（2026-10-04，增补一；开发自测）
+
+### 开工 API 核实（先于测试与实现）
+
+- 基线 `feat/d16-rest-timer-notification@ea5be38`；开工 WIP 仅 SPEC/CARD，本轮保留，不 commit/push。未发现 CONTEXT/FOLLOWUPS；CLAUDE 仅引用 AGENTS。
+- 已读 [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) 与 [Android Live Update 官方要求](https://developer.android.com/develop/ui/views/notifications/live-update)。
+- 本机 Gradle 缓存 `androidx.core/core/1.17.0/1eb461d3499f5bb832dd45edd3982471a11a3f95/core-1.17.0.aar` 解出 classes.jar，经 JDK 21 `javap` 核实包含 `NotificationCompat.ProgressStyle`、`Builder.setRequestPromotedOngoing(boolean)`，无需平台 API fallback。证据 `/private/tmp/d16-core-api/api.txt`。
+- `javap -c` 核实 `ProgressStyle.apply`：SDK >=36 转平台 ProgressStyle；SDK <36 调平台 `Builder.setProgress(max, min(progress,max), indeterminate)`，会画标准进度条，无需额外 fallback 分支。证据 `/private/tmp/d16-core-api/bytecode.txt`。模块将显式声明 `androidx.core:core:1.17.0`。
+
+### 增量实现与兼容 API 调用清单
+
+- JS：`TodayWorkoutView` 在真实记组触发休息时取得该组 `draft.exercise.exercise_id` 的已解析名称，缺失传空（不使用通用动作占位文案），通过 `RestTimer.exerciseName` → `RestTimerSession.start(seconds, body)` → 通知 adapter → Expo `show(endAtEpochMs, startedAtEpochMs, body, labels)`。开始时间只在 start 写入；页内加减、原生 +30s 回前台、反复前后台均不重置开始时间。
+- Kotlin：`startedAt/endAt/body/token` 全存 SharedPreferences；每次 publish 用 `(now-startedAt)/(endAt-startedAt)` 算已休息比例，截断到 0–1000。+30s 保留 startedAt，扩大分母，剩余上限仍为 900 秒。图标五档原样拷贝且逐字节核对相同。
+- 新增或变更的兼容 API 都在 `RestTimerNotifications.kt`：
+  1. `publish` → `NotificationCompat.Builder.setRequestPromotedOngoing(true)`，交由系统决定是否提升，不读权限后弹请求、不设 shortCriticalText。
+  2. `publish` → `NotificationCompat.ProgressStyle()`、`ProgressStyle.Segment(PROGRESS_MAX)`、`Segment.setColor(BRAND_GOLD)`、`ProgressStyle.addProgressSegment(...)`、`ProgressStyle.setProgress(progress)`、`Builder.setStyle(...)`。单段总长 1000，core 在 <36 内部调用标准 setProgress；代码没有直接平台 ProgressStyle 调用。
+  3. `publish` → `Builder.setContentText(body.takeIf { it.isNotBlank() })`、`setColor(BRAND_GOLD)`、`setSmallIcon(R.drawable.ic_stat_meetpr)`、`setPriority(PRIORITY_DEFAULT)`、`setSound(null)`、`setVibrate(longArrayOf(0))`。移除 setSilent，避免兼容库自动分入 silent group；渠道负责默认重要度且无声无震。
+  4. `receive/END` → `Builder.setSmallIcon(R.drawable.ic_stat_meetpr)`；结束提醒的其余 builder 配置不变。
+- 沿用兼容调用：`isPermissionGranted` 的 `NotificationManagerCompat.from(...).areNotificationsEnabled()`；倒计时 builder 的 setContentTitle / setContentIntent / setWhen / setShowWhen / setUsesChronometer / setChronometerCountDown / setOngoing / setOnlyAlertOnce / setTimeoutAfter / setVisibility / addAction（两处）/ build；END builder 的 setContentTitle / setContentText / setContentIntent / setAutoCancel / setVisibility / setPriority / setSound / setVibrate / build。均经本机 core 1.17.0 classpath 独立 Kotlin 编译核对。
+- 新渠道 `rest-timer-v2`：IMPORTANCE_DEFAULT、sound=null、vibration=false、VISIBILITY_PUBLIC；创建时删除旧 `rest-timer`；结束提醒渠道不变。品牌金沿用 tokens.gold500.light = #D97706。Manifest 唯一新增权限 POST_PROMOTED_NOTIFICATIONS；Receiver 仍 exported=false；所有 PendingIntent 仍 FLAG_IMMUTABLE；无前台服务、无其他新依赖。
+- `RestTimer` 的页内 JSX、样式、文案、按钮处理均未修改。`RnExtras.json` 无需改动。
+
+### 红 → 绿（公开 seam）
+
+按三轮纵向推进，每轮先执行测试证实失败再实现：
+
+1. `background progress keeps the original start across foreground time adjustments`：初跑期望 show(121000,1000,'')，实际只有 show(121000)；1 failed / 8 passed → 9 passed。日志 `/private/tmp/d16-r1-red-session.log`、`d16-r1-green-session.log`。
+2. `background notification receives the rest start and exercise body (%s)`：参数 `Competition Deadlift` 和 `undefined`；初跑缺 startedAt/body，2 failed / 10 passed → 两个相关 suite 共 21 passed。日志 `/private/tmp/d16-r1-red-body.log`、`d16-r1-green-body.log`。
+3. `saved set supplies its exercise name to the background rest notification (%s)`：真实 TodayWorkoutView 记组至原生边界；有名称案例初跑收到空串，1 failed / 11 passed → 12 passed。无名称案例初跑即绿，是空正文回归覆盖，不谎称该案例红过。日志 `/private/tmp/d16-r1-red-save.log`、`d16-r1-green-save.log`。
+
+### TICK 排程、取消与 END 隔离
+
+- `show` 先 hide 旧会话、写新 token，publish → schedule END + scheduleTick。`ADD_30` 写新终点后同一路径，重排 END 与 TICK。TICK 使用 action `com.meetpr.resttimer.TICK` / requestCode 4；END 使用独立 action / requestCode 3。
+- `scheduleTick` 先取消旧 TICK，若 now+10000 < endAt，排单次 RTC_WAKEUP。精确定时可用时 setExactAndAllowWhileIdle，否则 setAndAllowWhileIdle；精确权限竞态被拒绝也回退非精确。每次有效 TICK 的 publish(rescheduleEnd=false) 后续排自己。Doze/厂商节流可令 10 秒更新延后，墙钟终点和系统 chronometer 不依赖刷新频率。
+- Receiver 先读持久化 token/endAt，与 Intent token 不符直接 return，绝不取消或重排当前会话任何 alarm。到期 TICK 仅 cancelTick 并 return，保留 END 和持久化状态，让迟到的 END 发结束提醒。
+- hide、Skip、END、进入前台（含冷启动）、JS close/卸载/页内跳过或减至零，均走 hide 取消 TICK；hide 同时删除 token，已排队的旧 TICK 即使到达也无效。publish 检测通知权限撤回也 hide。
+
+### 自测、构建范围与自动链接
+
+- `npm test -- --runInBand`：**146 suites / 1082 tests passed，0 failed**；`/private/tmp/d16-r1-full-test.log`。保留仓内既有 React/Expo 测试警告，不声称零测试 warning。
+- `npm run lint`：**0 errors / 0 warnings**；`/private/tmp/d16-r1-lint.log`。
+- `npx tsc --noEmit`：**0 errors**；`/private/tmp/d16-r1-tsc.log`。首跑发现新增测试监听器 string 比 AppStateStatus 宽，改为系统声明类型后通过。
+- 独立原生检查：Android 36 AAPT2 编译五档真实 res、链接模块 Manifest（仅在临时副本补 package 供独立链接）、生成 R.java 并 javac；以真实 R class + Android 36 / core 1.17.0 / 现有 Expo/RN classpath 编译三份 Kotlin，**退出 0，0 errors / 0 warnings**。产物及脚本 `/private/tmp/d16-r1-native/`。这不等于 Gradle dependency resolution、Manifest merge 或 APK 构建通过。
+- 本树仍无 android/，未运行 prebuild 或改验收树。模块注册及 expo-module.config.json 未变；验收树若第一版已经 autolink，只需同步 JS 与整个模块（包括 build.gradle、Manifest、res）并重新构建原生包，通常无需重新 prebuild。新树则按原 Expo prebuild/autolinking 生成工程。不能只 reload JS 使用旧原生包，因为 show 签名已改变。
+- 本地 review-loop 双轴独立只读审查：Standards **0 硬违反 / 0 实质坏味道**；Spec **0 实现问题**。固定代码快照 `/private/tmp/d16-r1-review.diff`；审查后仅修正测试类型和追加交付记录，无产品语义变化。非 Opus 验收结论。仓缺 issue-tracker 配置，未声称执行 tracker code-review；后续该流程需 David 调用 `$setup-matt-pocock-skills`。
+
+### Opus 的 adb 验证入口（未执行）
+
+按 SPEC 原清单 13–19 收货，不替换或缩小验收范围。Android 16 和 15 各安装重新构建的包，由训练页真实记组开始休息后 Home：
+
+```sh
+adb shell input keyevent KEYCODE_HOME
+adb shell cmd statusbar expand-notifications
+adb shell dumpsys notification --noredact | rg -A60 'com.meetpr.app|rest-timer-v2|rest-timer|16001'
+adb shell dumpsys alarm | rg -A20 'com.meetpr.resttimer|com.meetpr.app'
+adb shell run-as com.meetpr.app cat shared_prefs/rest-timer-notification.xml
+```
+
+检查新渠道 importance=3、sound=null、无震动、旧渠道删除；通知为 MeetPR icon + 动作名/空正文 + 两按钮。检查 android.progress / android.progressMax 及 progress segments；Android 16 检查 FLAG_PROMOTED_ONGOING（dump 可能只输出 flags 十六进制，可按该 AVD SDK 的 FLAG_PROMOTED_ONGOING 常量解码），并亲看胶囊倒计时与锁屏。关闭系统实时更新后重复，确认标准通知、不崩溃、不弹请求。
+
+等待 >30 秒再抓 notification/alarm，核对 progress 前进、chronometer 的 when 始终为原 endAt；+30s 后 progress 回退、startedAt 不变、END 的终点更新。Receiver exported=false，普通 shell broadcast 会被系统拒绝；不可为验证导出 Receiver。仅可 root 的 AVD：执行 `adb root` 且 `adb shell id` 确认为 uid=0，读取当前 token 后：
+
+```sh
+adb shell am broadcast -n com.meetpr.app/com.meetpr.resttimer.RestTimerReceiver -a com.meetpr.resttimer.TICK --es token '<当前 token>'
+adb shell dumpsys alarm | rg -A20 'com.meetpr.resttimer|com.meetpr.app'
+# 当前 END 必须保持同一终点；TICK 续排。旧 token 必须不刷新、不改 END 或当前 TICK。
+adb shell am broadcast -n com.meetpr.app/com.meetpr.resttimer.RestTimerReceiver -a com.meetpr.resttimer.TICK --es token '<上一轮 token>'
+```
+
+分别 Skip / 回前台 / 自然走完后查 dumpsys alarm 无 TICK；再次广播旧 token，确认通知不复活。对 TICK 晚于终点、END 非精确定时迟到的场景，确认 TICK 不吞结束提醒。进程回收与原清单 1–11 依原 D-16 步骤执行，不用 force-stop 冒充系统回收。
+
+### 未覆盖验收
+
+- **13、14、15、16、17、18：设备验收全部未执行**。代码/API/资源自测不证明系统提升、排序展开、锁屏、实际进度刷新、alarm 残留清理或用户关闭提升后的设备表现。
+- **19：部分覆盖**。原 11 的 Jest/lint/tsc 已全量通过；原 1–10 未复跑，11 的 Gradle 原生整包编译未执行，不能宣布 19 通过。卡指定 Opus 在验收树编译与收货。
+- 20 的 vivo 真机未执行，仍由 David 负责。
+
+### 本轮改动文件（18 个，另有用户原有 SPEC/CARD WIP 未改写）
+
+- `modules/rest-timer-notification/android/build.gradle`
+- `modules/rest-timer-notification/android/src/main/AndroidManifest.xml`
+- `modules/rest-timer-notification/android/src/main/java/com/meetpr/resttimer/RestTimerNotificationModule.kt`
+- `modules/rest-timer-notification/android/src/main/java/com/meetpr/resttimer/RestTimerNotifications.kt`
+- `modules/rest-timer-notification/android/src/main/res/drawable-mdpi/ic_stat_meetpr.png`
+- `modules/rest-timer-notification/android/src/main/res/drawable-hdpi/ic_stat_meetpr.png`
+- `modules/rest-timer-notification/android/src/main/res/drawable-xhdpi/ic_stat_meetpr.png`
+- `modules/rest-timer-notification/android/src/main/res/drawable-xxhdpi/ic_stat_meetpr.png`
+- `modules/rest-timer-notification/android/src/main/res/drawable-xxxhdpi/ic_stat_meetpr.png`
+- `src/features/training/rest-timer-session.ts`
+- `src/features/training/rest-timer-notification.ts`
+- `src/features/training/RestTimer.tsx`
+- `src/features/training/TodayWorkoutView.tsx`
+- `src/features/training/__tests__/rest-timer-session.test.ts`
+- `src/features/training/__tests__/rest-timer.test.tsx`
+- `src/features/training/__tests__/set-save.test.tsx`
+- `docs/CODEX-JOURNAL.md`（仅追加本节）
+- `PARITY.md`（原 D-16 行按卡追加一句）

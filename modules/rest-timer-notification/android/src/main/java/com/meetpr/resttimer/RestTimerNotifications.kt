@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.graphics.Color
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import java.util.UUID
@@ -17,7 +18,12 @@ internal object RestTimerNotifications {
   private const val SKIP = "com.meetpr.resttimer.SKIP"
   private const val ADD_30 = "com.meetpr.resttimer.ADD_30"
   private const val END = "com.meetpr.resttimer.END"
-  private const val TIMER_CHANNEL = "rest-timer"
+  private const val TICK = "com.meetpr.resttimer.TICK"
+  private const val TIMER_CHANNEL = "rest-timer-v2"
+  private const val TICK_INTERVAL_MS = 10_000L
+  private const val PROGRESS_MAX = 1_000
+  // Brand gold500 (light), matching src/design/tokens.ts.
+  private val BRAND_GOLD = Color.rgb(217, 119, 6)
   private const val COMPLETE_CHANNEL = "rest-complete"
   private const val TIMER_ID = 16001
   private const val COMPLETE_ID = 16002
@@ -36,12 +42,13 @@ internal object RestTimerNotifications {
   }
   @Synchronized fun leaveForeground() { foreground = false }
 
-  @Synchronized fun show(context: Context, endAt: Long, labels: Map<String, String>) {
+  @Synchronized fun show(context: Context, endAt: Long, startedAt: Long, body: String, labels: Map<String, String>) {
     if (foreground || !isPermissionGranted(context)) return
     hide(context)
     if (endAt <= System.currentTimeMillis()) return
     val editor = prefs(context).edit().clear()
-      .putLong("endAt", endAt).putString("token", UUID.randomUUID().toString())
+      .putLong("endAt", endAt).putLong("startedAt", startedAt).putString("body", body)
+      .putString("token", UUID.randomUUID().toString())
     labels.forEach { (key, value) -> editor.putString(key, value) }
     editor.commit()
     publish(context)
@@ -52,7 +59,8 @@ internal object RestTimerNotifications {
     manager(context).cancel(TIMER_ID)
     manager(context).cancel(COMPLETE_ID)
     alarms(context).cancel(receiverIntent(context, END, 3))
-    prefs(context).edit().remove("endAt").remove("token").commit()
+    cancelTick(context)
+    prefs(context).edit().remove("endAt").remove("startedAt").remove("body").remove("token").commit()
   }
 
   @Synchronized fun consumeState(context: Context): Map<String, Any?> {
@@ -82,6 +90,13 @@ internal object RestTimerNotifications {
         state.edit().putLong("endAt", next).putLong("changedEndAt", next).putBoolean("skipped", false).commit()
         publish(context)
       }
+      TICK -> {
+        if (foreground) { hide(context); return }
+        // END owns completion, including when its inexact alarm arrives late.
+        // Never cancel or replace END from a progress-only update.
+        if (System.currentTimeMillis() >= endAt) { cancelTick(context); return }
+        publish(context, rescheduleEnd = false)
+      }
       END -> {
         // An already queued alarm for an earlier end cannot complete an extended rest.
         if (intent.getLongExtra("endAt", 0) != endAt) return
@@ -89,7 +104,7 @@ internal object RestTimerNotifications {
         hide(context)
         if (!foreground && isPermissionGranted(context)) {
           val notification = NotificationCompat.Builder(context, COMPLETE_CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(R.drawable.ic_stat_meetpr)
             .setContentTitle(state.getString("completeTitle", ""))
             .setContentText(state.getString("completeBody", ""))
             .setContentIntent(openIntent(context))
@@ -105,15 +120,26 @@ internal object RestTimerNotifications {
     }
   }
 
-  private fun publish(context: Context) {
+  private fun publish(context: Context, rescheduleEnd: Boolean = true) {
     val state = prefs(context)
     val endAt = state.getLong("endAt", 0)
-    val remaining = endAt - System.currentTimeMillis()
-    if (remaining <= 0 || !isPermissionGranted(context)) { hide(context); return }
+    val now = System.currentTimeMillis()
+    val remaining = endAt - now
+    if (!isPermissionGranted(context)) { hide(context); return }
+    if (remaining <= 0) { cancelTick(context); return }
+    val startedAt = state.getLong("startedAt", now)
+    val total = (endAt - startedAt).coerceAtLeast(1L)
+    val progress = (((now - startedAt).coerceIn(0L, total).toDouble() / total) * PROGRESS_MAX).toInt()
     createChannels(context)
     val notification = NotificationCompat.Builder(context, TIMER_CHANNEL)
-      .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+      .setSmallIcon(R.drawable.ic_stat_meetpr)
       .setContentTitle(state.getString("title", ""))
+      .setContentText(state.getString("body", "")?.takeIf { it.isNotBlank() })
+      .setColor(BRAND_GOLD)
+      .setRequestPromotedOngoing(true)
+      .setStyle(NotificationCompat.ProgressStyle()
+        .addProgressSegment(NotificationCompat.ProgressStyle.Segment(PROGRESS_MAX).setColor(BRAND_GOLD))
+        .setProgress(progress))
       .setContentIntent(openIntent(context))
       .setWhen(endAt)
       .setShowWhen(true)
@@ -121,22 +147,25 @@ internal object RestTimerNotifications {
       .setChronometerCountDown(true)
       .setOngoing(true)
       .setOnlyAlertOnce(true)
-      .setSilent(true)
+      .setSound(null)
+      .setVibrate(longArrayOf(0))
       .setTimeoutAfter(remaining)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-      .setPriority(NotificationCompat.PRIORITY_LOW)
+      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
       .addAction(0, state.getString("skip", ""), receiverIntent(context, SKIP, 1))
       .addAction(0, state.getString("add", ""), receiverIntent(context, ADD_30, 2))
       .build()
     notify(context, TIMER_ID, notification)
-    schedule(context, endAt)
+    if (rescheduleEnd) schedule(context, endAt)
+    scheduleTick(context, endAt)
   }
 
   private fun createChannels(context: Context) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
     val state = prefs(context)
+    manager(context).deleteNotificationChannel("rest-timer")
     manager(context).createNotificationChannels(listOf(
-      NotificationChannel(TIMER_CHANNEL, state.getString("timerChannel", ""), NotificationManager.IMPORTANCE_LOW).apply {
+      NotificationChannel(TIMER_CHANNEL, state.getString("timerChannel", ""), NotificationManager.IMPORTANCE_DEFAULT).apply {
         setSound(null, null)
         enableVibration(false)
         lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
@@ -166,16 +195,29 @@ internal object RestTimerNotifications {
   }
 
   private fun schedule(context: Context, endAt: Long) {
+    scheduleAlarm(context, endAt, receiverIntent(context, END, 3))
+  }
+
+  private fun cancelTick(context: Context) {
+    alarms(context).cancel(receiverIntent(context, TICK, 4))
+  }
+
+  private fun scheduleTick(context: Context, endAt: Long) {
+    cancelTick(context)
+    val next = System.currentTimeMillis() + TICK_INTERVAL_MS
+    if (next < endAt) scheduleAlarm(context, next, receiverIntent(context, TICK, 4))
+  }
+
+  private fun scheduleAlarm(context: Context, at: Long, intent: PendingIntent) {
     val alarm = alarms(context)
-    val intent = receiverIntent(context, END, 3)
     alarm.cancel(intent)
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarm.canScheduleExactAlarms()) {
       try {
-        alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endAt, intent)
+        alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
         return
       } catch (_: SecurityException) { /* Permission may have been revoked since the check. */ }
     }
-    alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endAt, intent)
+    alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
   }
 
   private fun notify(context: Context, id: Int, notification: android.app.Notification) {

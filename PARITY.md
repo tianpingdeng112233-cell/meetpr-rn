@@ -1,5 +1,5 @@
 # PARITY — 1:1 复刻台账
-> **2026-10-04 D-16 授权差异**：David 2026-10-02 拍板安卓后台/锁屏休息通知（iOS build 22 基线无此能力）；按 [SPEC](specs/d16-rest-timer-notification/SPEC.md) 实装原生倒计时、Skip/+30s 与结束提醒，不用前台服务，覆盖本页旧“前台服务通知待定”表述；开发自测已过，Gradle/模拟器/真机待 Opus/David，Android 14 解锁态可单独划除的系统差异待裁决，见 `docs/CODEX-JOURNAL.md` D-16 节。
+> **2026-10-04 D-16 授权差异**：David 2026-10-02 拍板安卓后台/锁屏休息通知（iOS build 22 基线无此能力）；按 [SPEC](specs/d16-rest-timer-notification/SPEC.md) 实装原生倒计时、Skip/+30s 与结束提醒，不用前台服务，覆盖本页旧“前台服务通知待定”表述；开发自测已过，Gradle/模拟器/真机待 Opus/David，Android 14 解锁态可单独划除的系统差异待裁决，见 `docs/CODEX-JOURNAL.md` D-16 节。 返修一已按 SPEC 增补一加入 Live Update 兼容请求、动作名/进度、10 秒 TICK、新渠道与 MeetPR 图标；开发自测及未覆盖验收见 JOURNAL「D-16 返修一」，设备收货待 Opus。
 > **2026-10-03 使用数据告知授权差异**：按 [任务卡](specs/build22-parity/USAGE-NOTICE-COPY-CARD.md)，`appShell.privacy.analytics.body` 中英文改为 Global 美国 DigitalOcean / 账号存续期间保留口径，有意区别于 iOS 历史参照；正文可滚动、链接与确认按钮固定，已实装，模拟器验收待 Opus，证据见 `docs/CODEX-JOURNAL.md` 本卡节。
 
 > **当前复刻基线(2026-09-21)**：iOS `beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea`，Global 轨。David 授权从本地 W3 `6429d50` 开始集成验收、视觉对齐并追齐 build 22。

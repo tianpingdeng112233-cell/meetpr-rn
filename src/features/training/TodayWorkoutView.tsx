@@ -153,6 +153,7 @@ export function TodayWorkoutView() {
     value: false,
   });
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restExerciseName, setRestExerciseName] = useState('');
   const [restGeneration, setRestGeneration] = useState(0);
   const trainingFocused = useRef(true);
   const restRevision = useRef(0);
@@ -704,6 +705,8 @@ export function TodayWorkoutView() {
               STORAGE_KEYS.restPreference(studentId),
             );
             if (!trainingFocused.current || restRevision.current !== restRevisionAtSave) return response.id;
+            const restExercise = resolveExerciseMetadata(draft.exercise.exercise_id);
+            setRestExerciseName(restExercise ? exerciseTitle(restExercise) : '');
             setRestGeneration(value => value + 1);
             setRestSeconds(
               resolveRestSeconds({
@@ -1132,6 +1135,7 @@ export function TodayWorkoutView() {
         <RestTimer
           key={restGeneration}
           durationSeconds={restSeconds}
+          exerciseName={restExerciseName}
           studentId={studentId}
           onClose={endRest}
         />

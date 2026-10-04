@@ -29,8 +29,8 @@ class RestTimerNotificationModule : Module() {
       requested
     }
     Function("isPermissionGranted") { RestTimerNotifications.isPermissionGranted(context) }
-    Function("show") { endAtEpochMs: Double, labels: Map<String, String> ->
-      RestTimerNotifications.show(context, endAtEpochMs.toLong(), labels)
+    Function("show") { endAtEpochMs: Double, startedAtEpochMs: Double, body: String, labels: Map<String, String> ->
+      RestTimerNotifications.show(context, endAtEpochMs.toLong(), startedAtEpochMs.toLong(), body, labels)
     }
     Function("hide") { RestTimerNotifications.hide(context) }
     Function("consumeState") { RestTimerNotifications.consumeState(context) }
