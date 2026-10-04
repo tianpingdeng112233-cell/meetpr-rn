@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeAll, beforeEach, expect, jest, test } from '@jest/globals';
 import { ColorSchemeProvider, resolveColors } from '@/design/theme';
 import { StatusBar, StyleSheet } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
@@ -66,6 +66,14 @@ jest.mock('expo-file-system', () => ({
 const uri = 'file:///recorded.mp4';
 let renderer: ReactTestRenderer;
 let changeState: (state: AppStateStatus) => void;
+beforeAll(async () => {
+  // Pay the first-mount module loading cost here; tests keep Jest's default timeout.
+  try {
+    await mountCamera();
+  } finally {
+    await act(async () => { renderer?.unmount(); });
+  }
+}, 30_000);
 beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();

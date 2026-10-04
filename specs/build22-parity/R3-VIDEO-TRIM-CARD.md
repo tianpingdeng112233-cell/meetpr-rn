@@ -296,3 +296,12 @@ Codex 一轮交付，无返修。150 suites / 1144 tests、lint、tsc 通过（�
 - **App 的明暗不跟系统走**，由 Profile → Appearance 决定，默认 Light。在深色系统上不改这项设置，看到的仍是浅色页面。
 - 深色模式下右上角 "Retry" 的文字对比度偏低（沿用的链接按钮样式），能看清但不醒目。
 - `camera-review.test.tsx` 第一条测试在机器负载高时会超过 5 秒超时（CI 出现过一次，本机与编译并行时出现过一次，单跑 0.2 秒）。属于测试冷启动问题，不是产品缺陷，下一张卡顺手给该文件放宽冷启动超时。
+
+---
+
+## 小修（2026-10-04 晚）：`camera-review.test.tsx` 冷启动超时
+
+`src/features/training/video-upload/__tests__/camera-review.test.tsx` 的第一条测试在机器负载高时会超过 jest 默认的 5 秒（CI 出现过一次、本机与 gradle 并行时出现过一次；单跑约 0.2 秒）。慢的是这个文件第一次加载相机 / 视频相关模块，不是被测逻辑。
+
+- 只改这个测试文件：把首次加载的开销挪到 `beforeAll`（预热一次挂载或预先 `require` 重模块），并给 `beforeAll` 一个宽松的超时（如 30 秒）；各条测试自身的超时保持默认，这样真正的卡死仍会被 5 秒抓到。不要用"把整个文件的超时调大"糊过去。
+- 不改任何产品代码。不 commit、不 push；JOURNAL 追加两三行。结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`。
