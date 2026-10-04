@@ -2525,3 +2525,80 @@ rg -n -A12 'com.meetpr.app|resttimer|frozen' /tmp/d16-alarm.txt
 - `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/d16-r2-lint.log`。
 - `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/d16-r2-tsc.log`。
 - `git diff --check`：通过。独立 Kotlin/AAPT2 检查已过，完整 Gradle/APK 和设备验收仍未执行。
+
+## D-16 返修三 — 系统倒计时、自定义卡片与 AlarmClock（2026-10-04）
+
+### 边界与文件
+
+- 依据：`specs/d16-rest-timer-notification/SPEC.md` 全文，增补三整体取代增补二；`CARD.md` 返修三。接手 `feat/d16-rest-timer-notification@a771b52`，仅 SPEC/CARD 有 Opus 未提交修改，本轮未改这两文件。不 commit、不 push、不 stage。
+- 修改 12 文件：`PARITY.md`、本 JOURNAL；模块 `android/src/main/AndroidManifest.xml`、`java/com/meetpr/resttimer/RestTimerNotificationModule.kt`、`RestTimerNotifications.kt`；`src/features/training/rest-timer-notification.ts`、`rest-timer-session.ts`；同目录 `__tests__/rest-timer-notification.test.ts`、`rest-timer-session.test.ts`、`rest-timer.test.tsx`、`set-save.test.tsx`；`src/i18n/catalog/RnExtras.json`。
+- 新增 2 文件：模块 `android/src/main/res/layout/rest_timer_compact.xml`、`rest_timer_expanded.xml`。
+- 删除 1 文件：模块 `android/src/main/java/com/meetpr/resttimer/RestTimerService.kt`。一并删除 Manifest 服务声明、specialUse 属性、FOREGROUND_SERVICE / FOREGROUND_SERVICE_SPECIAL_USE 权限；POST_PROMOTED_NOTIFICATIONS 保留。删除每秒刷新、TICK、ProgressStyle、进度计算、startedAt 整条传参、标题模板键、短文本计时、PARITY 的 Play 前台服务申报备注。历史 JOURNAL 保留原始事实，本节取代返修二的当前交付说明。
+- `RestTimer.tsx`、`RestTimerNotificationSession.tsx`、`TodayWorkoutView.tsx` 无改动；页内外观和交互不变。JS show/hide/consumeState 调用条件与顺序不变，仅 show 缩为 `show(endAtEpochMs, body, labels)`，Expo Module 同步更新。依赖与锁文件无变化。
+
+### 提升判断与失效
+
+- `show` 先 hide 旧会话，再持久化 endAt/body/labels/token，排 END 并发布。低于 API 36 直接自定义卡片。API 36+ 首发无自定义视图的标准样式，带 requestPromotedOngoing、标题与页眉 Chronometer；同次发布调用安排主线程 Handler **仅一次 200ms 延迟**读取 `NotificationManager.getActiveNotifications()`，按 id=16001、tag=null 找实际 `Notification.FLAG_PROMOTED_ONGOING`。
+- 已提升保留标准样式；未提升立即以同 id 重发 DecoratedCustomViewStyle，保留 onlyAlertOnce。没有厂商分支、轮询或周期刷新。200ms 是请求延迟，尚未设备测量实际调度延迟，不将源码值当作 ≤500ms 的实测证据。
+- `cancelPromotionCheck()` 移除 callback 并递增 publication；hide/Skip/完成均经 clearTimer 调它，新 show 经 hide 调它，+30s 重发也调它。callback 在同一把锁内核对 publication、持久化 token、endAt，并检查前台/权限/终点；旧 callback 即使已出队也不能复活通知或覆盖新计时。
+- **+30s 不等待 callback**：取消旧检查后同步读取当前实际提升 flag，有则标准、无则自定义，在 Receiver.onReceive 返回前发布完。这样杀进程后的冷 Receiver 不依赖进程稍后继续存活；endAt/changedEndAt/900 秒上限及 consumeState 契约保留。
+
+### 布局与系统计时
+
+- 两份 XML 均只用 RemoteViews 支持的 `LinearLayout`、`TextView`、`Chronometer`：水平一行，左侧加权列显示标题与动作名，右侧倒计时垂直居中；缺动作名时正文 GONE。左侧文字单行省略，左右间距 12dp。
+- 收起/展开同结构，倒计时分别 **28sp / 36sp**，最小高度 48dp / 64dp；`fontFamily="monospace"`、`fontFeatureSettings="tnum"` 提供等宽数字。标题和数字用 `TextAppearance.Compat.Notification.Title`，正文用 `TextAppearance.Compat.Notification`，不设文字颜色或自定义背景，由系统通知主题提供明暗颜色。仍需实际浅色/深色截图确认可读性。
+- RemoteViews 方法完整列表：`setTextViewText`（标题/正文）、`setViewVisibility`（空正文）、`setChronometer(id, base, null, true)`、`setChronometerCountDown(id, true)`；base 为 elapsedRealtime + 当前剩余毫秒。NotificationCompat 使用 `DecoratedCustomViewStyle`、`setCustomContentView`、`setCustomBigContentView`，标准页眉与 Skip/+30s actions 保留。
+- 页眉仍用 setWhen(endAt)、setShowWhen(true)、setUsesChronometer(true)、setChronometerCountDown(true)；两种样式都有 setTimeoutAfter(remaining)。系统负责每秒显示与终点移除，不需 App 定期执行。MeetPR 图标、品牌金强调色与现有通知渠道不变。
+
+### 结束定时的两条路径
+
+1. API <31 或 canScheduleExactAlarms() 为真：`setAlarmClock(AlarmClockInfo(endAt, openIntent), END PendingIntent)`。状态栏可能有闹钟图标，尚未设备观察。
+2. 精确权限为假，或检查/排 AlarmClock 抛 SecurityException：`setAndAllowWhileIdle(RTC_WAKEUP, endAt, END PendingIntent)`，可能迟到，不申请权限。
+
+每次 +30s 先取消旧 END、按新终点重排，同时重算 Chronometer base 与 timeout。hide/Skip/完成取消 END；完成前清 token，同锁下防重复提醒。Receiver 验 token 和 endAt，旧 END 不得提前结束已延长的休息。冻结系统是否保留 AlarmClock 仍待 vivo 实测，测不过如实记录，不另加保活机制。
+
+### 红 → 绿与检查证据
+
+- 已批准 seam：SPEC 增补三的 JS 原生调用契约，以及原有 session/组件/记组集成测试；不新增原生测试基础设施或源码字符串断言。
+- `passes a static localized title without a countdown template (en)`、`(zh)`：先 **2 failed**（旧代码仍传 titleTemplate），删除桥接参数和文案键后 **2 passed**。日志 `/private/tmp/d16-r3-red-title.log`、`d16-r3-green-title.log`。
+- `background notification receives only the adjusted endpoint and exercise body`：先 **1 failed / 8 passed**（旧代码多传 startedAt），删除 session/adapter/Module 中无用开始时间并更新旧签名断言后，相关 **3 suites / 23 tests passed**。日志 `/private/tmp/d16-r3-red-endpoint.log`、`d16-r3-green-endpoint.log`。
+- 首次全量 **2 failed / 1082 passed**：`saved set supplies its exercise name to the background rest notification (Competition Deadlift/undefined)` 仍断言旧 startedAt 参数；只更新这两个参数化集成断言后，全量 **147 suites / 1084 tests passed，0 failed**，16.278s。首次 `/private/tmp/d16-r3-test.log`，最终 `/private/tmp/d16-r3-test-final.log`。测试日志含仓内既有 React/Expo warning，不声称日志零警告。
+- `npm run lint`：退出 0，0 errors / 0 warnings；`npx tsc --noEmit`：退出 0，0 errors。日志 `/private/tmp/d16-r3-lint.log`、`d16-r3-tsc.log`。`git diff --check` 通过。
+- 本机 API 36 android.jar 经 javap 确认 FLAG_PROMOTED_ONGOING、RemoteViews 的两个 Chronometer 方法；已缓存 core 1.17.0 经 javap 确认 setRequestPromotedOngoing、自定义视图方法及 DecoratedCustomViewStyle。AAPT2 36 `compile --dir .../res` 退出 0，输出 `/private/tmp/d16-r3-res.zip`。这只证明资源编译及 API 存在，**未执行 Kotlin 编译、资源链接、完整 Gradle/APK 或设备运行**。
+- 参考：[Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/)、[Live Update 的样式及实际 flag](https://developer.android.com/develop/ui/views/notifications/live-update)、[通知自定义布局/文字主题](https://developer.android.com/develop/ui/views/notifications/custom-notification)、[RemoteViews](https://developer.android.com/reference/android/widget/RemoteViews)、[AlarmManager](https://developer.android.com/reference/android/app/AlarmManager)。
+
+### 本地双轴自审（不是 Opus 收货）
+
+- 两个独立只读 reviewer，固定点 a771b52，审 `git diff a771b52 --` 工作区增量，并另读两个 untracked XML；无新增提交。沿用 code-review 双轴，仓缺 `docs/agents/issue-tracker.md`，使用用户明确给出的本地 SPEC，不私建 tracker；后续若启用 tracker 流程需 David 调用 `$setup-matt-pocock-skills`。
+- Standards：0 硬违规 / 0 实质 smell。Spec 初审 1 项 P2：冷 Receiver 的 +30s 异步降级可能在 onReceive 返回后被系统终止；已改为同步读取既有提升 flag 并发布，定向复审 **0 未决 finding**。审查不替代模拟器、vivo 或原生编译。
+
+### Opus 验收入口与未覆盖条目
+
+本树无 android/，按卡由 Opus 在验收树构建。模块路径、namespace 与 `expo-module.config.json` 未变，仍自动链接 `com.meetpr.resttimer.RestTimerNotificationModule`；同步本次模块目录时要真的删除 RestTimerService.kt（不能只覆盖复制），同步 JS 与文案后重建 APK。已有已链接的 Android 工程不因本次变化必须重新 prebuild；无 Android 工程的验收树才需正常 prebuild。Gradle 必须重新合并模块 Manifest 和资源，不能用旧 APK/仅 Metro 刷新验证本次原生能力。
+
+**30–36 均未完成设备验收；37 只有 Jest 行为覆盖、未做系统权限与通知的设备回归；38 的三项 JS 检查已通过，原生编译未覆盖。** 不宣告任何整项验收通过。未缩小原清单，以下只是获取其证据的命令：
+
+```sh
+# 指定验收设备 serial；从真实训练页记组开始休息，再 Home。
+adb -s SERIAL shell input keyevent KEYCODE_HOME
+adb -s SERIAL shell dumpsys notification --noredact > /tmp/d16-r3-notification.txt
+adb -s SERIAL shell dumpsys alarm > /tmp/d16-r3-alarm.txt
+adb -s SERIAL shell dumpsys activity services com.meetpr.app > /tmp/d16-r3-services.txt
+adb -s SERIAL shell cmd statusbar expand-notifications
+adb -s SERIAL exec-out screencap -p > /tmp/d16-r3-before-kill.png
+adb -s SERIAL shell am kill com.meetpr.app
+adb -s SERIAL shell pidof com.meetpr.app
+adb -s SERIAL exec-out screencap -p > /tmp/d16-r3-killed-1.png
+sleep 4
+adb -s SERIAL exec-out screencap -p > /tmp/d16-r3-killed-2.png
+# 分别系统设置浅/深主题，每次重做真实记组与后台通知，截图对比。
+adb -s SERIAL shell cmd uimode night no
+adb -s SERIAL shell cmd uimode night yes
+```
+
+- 30/31：通知 dump 查自定义 contentView/bigContentView 或 PROMOTED_ONGOING flag；Android 16 开关实时更新后重新 show，各留胶囊/排序/大号计时截图。services 查无 RestTimerService，alarm 查无模块 TICK，通知无进度。回 App 对比剩余误差 ≤1 秒。
+- 32/33：确认 am kill 后 pidof 无进程；两次截图计时仍跳动。分别冷进程点击真实 +30s/Skip，核对终点/超时/闹钟重设或全部取消，回 App 后状态一致。不能用 force-stop 替代 am kill。Receiver exported=false，shell `am broadcast` 不可当验收入口，也不为验证改 exported；过期 token/END 和 hide→新 show 竞态需同 UID instrumentation/debugger。
+- 34：有精确权限时 dump 中的 `Next alarm clock`（或版本对应字段）应指向 MeetPR；等终点记录 id=16002、准时性、单次震动与闹钟图标。另关精确权限，核对非精确 fallback、不弹请求。hide/Skip/完成后 END 消失；只看最终一个 id 不能证明没有重复震动，需观察或录屏。
+- 35：浅/深模式分别看收起和展开、长动作名与空动作名，确认文字/数字可读。
+- 36：vivo 保持“允许后台高耗电”关闭；记录计时、两个按钮、锁屏、结束提醒到达与否。若 AlarmClock 仍被删，按 SPEC 记录该机无结束提醒，不追加机制。
+- 37：按原清单重做前台、页内 Skip/下一组、系统关通知权限路径。38：原生 Gradle/APK 编译由 Opus 补证据。

@@ -8,11 +8,14 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.view.View
+import android.widget.RemoteViews
 import android.graphics.Color
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
-import java.util.Locale
 import java.util.UUID
 
 /** All entry points share a lock, including the JS thread and Android's main-thread receiver. */
@@ -21,20 +24,19 @@ internal object RestTimerNotifications {
   private const val SKIP = "com.meetpr.resttimer.SKIP"
   private const val ADD_30 = "com.meetpr.resttimer.ADD_30"
   private const val END = "com.meetpr.resttimer.END"
-  private const val TICK = "com.meetpr.resttimer.TICK"
   private const val TIMER_CHANNEL = "rest-timer-v2"
-  private const val TICK_INTERVAL_MS = 10_000L
-  private const val PROGRESS_MAX = 1_000
+  private const val PROMOTION_CHECK_DELAY_MS = 200L
   // Brand gold500 (light), matching src/design/tokens.ts.
   private val BRAND_GOLD = Color.rgb(217, 119, 6)
   private const val COMPLETE_CHANNEL = "rest-complete"
-  const val TIMER_ID = 16001
+  private const val TIMER_ID = 16001
   private const val COMPLETE_ID = 16002
   // Mirrors TRAINING_LIMITS.restMaximumSeconds; the receiver must also work without JS.
   private const val MAX_REMAINING_MS = 900_000L
   private var foreground = false
-  // Never persist ownership: a receiver in a new process must be able to finish the rest.
-  private var service: RestTimerService? = null
+  private val handler = Handler(Looper.getMainLooper())
+  private var promotionCheck: Runnable? = null
+  private var publication = 0L
   private fun prefs(context: Context) = context.getSharedPreferences("rest-timer-notification", Context.MODE_PRIVATE)
   private fun manager(context: Context) = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
   private fun alarms(context: Context) = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -47,32 +49,22 @@ internal object RestTimerNotifications {
   }
   @Synchronized fun leaveForeground() { foreground = false }
 
-  @Synchronized fun show(context: Context, endAt: Long, startedAt: Long, body: String, labels: Map<String, String>) {
-    if (foreground || !isPermissionGranted(context)) return
+  @Synchronized fun show(context: Context, endAt: Long, body: String, labels: Map<String, String>) {
     hide(context)
-    if (endAt <= System.currentTimeMillis()) return
+    if (foreground || !isPermissionGranted(context) || endAt <= System.currentTimeMillis()) return
     val editor = prefs(context).edit().clear()
-      .putLong("endAt", endAt).putLong("startedAt", startedAt).putString("body", body)
+      .putLong("endAt", endAt).putString("body", body)
       .putString("token", UUID.randomUUID().toString())
     labels.forEach { (key, value) -> editor.putString(key, value) }
     editor.commit()
     createChannels(context)
-    val token = prefs(context).getString("token", null) ?: return
-    val notification = buildNotification(context, serviceOwned = true)
     schedule(context, endAt)
-    try {
-      ContextCompat.startForegroundService(context, Intent(context, RestTimerService::class.java)
-        .putExtra("token", token).putExtra("notification", notification))
-    } catch (_: RuntimeException) {
-      // Includes ForegroundServiceStartNotAllowedException and SecurityException.
-      startFailed(context, token)
-    }
+    publish(context)
   }
 
   /** Preserve pending button state until JS consumes it, even if Android resumes first. */
   @Synchronized fun hide(context: Context) {
     clearTimer(context)
-    stopService(context)
     manager(context).cancel(TIMER_ID)
     manager(context).cancel(COMPLETE_ID)
   }
@@ -103,100 +95,29 @@ internal object RestTimerNotifications {
         val next = minOf(endAt + 30_000L, now + MAX_REMAINING_MS)
         state.edit().putLong("endAt", next).putLong("changedEndAt", next).putBoolean("skipped", false).commit()
         schedule(context, next)
-        val owner = service
-        if (owner != null) owner.refreshAfter(0) else publishFallback(context)
-      }
-      TICK -> {
-        if (foreground) { hide(context); return }
-        if (service != null) { cancelTick(context); return }
-        // END owns completion, including when its inexact alarm arrives late.
-        // Never cancel or replace END from a progress-only update.
-        if (System.currentTimeMillis() >= endAt) { cancelTick(context); return }
-        publishFallback(context)
+        // A cold receiver must finish publication before onReceive returns.
+        publish(context, checkPromotion = false)
       }
       END -> {
         // An already queued alarm for an earlier end cannot complete an extended rest.
         if (intent.getLongExtra("endAt", 0) != endAt) return
         if (System.currentTimeMillis() < endAt) { schedule(context, endAt); return }
-        val owner = service
-        if (owner != null) owner.refreshAfter(0) else complete(context)
+        complete(context)
       }
     }
   }
 
-  /** Called only after onStartCommand has promoted its prebuilt notification. */
-  @Synchronized fun serviceStarted(owner: RestTimerService, token: String?, startId: Int) {
-    val state = prefs(owner)
-    if (token == null || state.getString("token", null) != token || foreground || !isPermissionGranted(owner)) {
-      // A queued start must neither revive a hidden timer nor stop a newer owner.
-      val current = service
-      if (current != null) refreshService(current) else {
-        owner.finish(startId)
-        manager(owner).cancel(TIMER_ID)
-        // A newer start may already have fallen back. Removing this stale FGS also
-        // removes the shared notification ID, so restore the current timer immediately.
-        startFailed(owner, state.getString("token", null))
-      }
-      return
-    }
-    service = owner
-    cancelTick(owner)
-    refreshService(owner)
-  }
-
-  @Synchronized fun serviceStartFailed(owner: RestTimerService, token: String?, startId: Int) {
-    val current = service
-    if (prefs(owner).getString("token", null) != token && current != null) {
-      refreshService(current)
-      return
-    }
-    if (service === owner) service = null
-    owner.finish(startId)
-    startFailed(owner, prefs(owner).getString("token", null))
-  }
-
-  private fun startFailed(context: Context, token: String?) {
-    if (token == null || prefs(context).getString("token", null) != token) return
-    if (foreground || !isPermissionGranted(context)) { hide(context); return }
-    if (System.currentTimeMillis() >= prefs(context).getLong("endAt", 0)) complete(context)
-    else publishFallback(context)
-  }
-
-  @Synchronized fun refreshService(owner: RestTimerService) {
-    if (service !== owner) return
-    if (foreground || !isPermissionGranted(owner)) { hide(owner); return }
-    val remaining = prefs(owner).getLong("endAt", 0) - System.currentTimeMillis()
-    if (remaining <= 0) { complete(owner); return }
-    notify(owner, TIMER_ID, buildNotification(owner, serviceOwned = true))
-    // Align with ceil(remaining / 1000), including the exact endpoint.
-    owner.refreshAfter(((remaining - 1) % 1000) + 1)
-  }
-
-  @Synchronized fun serviceDestroyed(owner: RestTimerService) {
-    if (service === owner) service = null
-    // Keep the persisted timer and END alarm available to a cold receiver.
-  }
-
-  @Synchronized fun taskRemoved(owner: RestTimerService) {
-    if (service === owner) {
-      service = null
-      owner.finish()
-      manager(owner).cancel(TIMER_ID)
-    }
-  }
-
-  private fun stopService(context: Context) {
-    val owner = service
-    service = null
-    if (owner != null) owner.finish()
-    else context.stopService(Intent(context, RestTimerService::class.java))
+  private fun cancelPromotionCheck() {
+    publication += 1
+    promotionCheck?.let { handler.removeCallbacks(it) }
+    promotionCheck = null
   }
 
   private fun clearTimer(context: Context) {
-    // Invalidate before publishing completion: service and END share this monitor.
-    prefs(context).edit().remove("endAt").remove("startedAt").remove("body").remove("token").commit()
+    // Invalidate before publishing completion; all entry points share this monitor.
+    cancelPromotionCheck()
+    prefs(context).edit().remove("endAt").remove("body").remove("token").commit()
     alarms(context).cancel(receiverIntent(context, END, 3))
-    cancelTick(context)
   }
 
   private fun complete(context: Context) {
@@ -217,39 +138,62 @@ internal object RestTimerNotifications {
         .build()
       notify(context, COMPLETE_ID, notification)
     }
-    stopService(context)
     manager(context).cancel(TIMER_ID)
   }
 
-  private fun publishFallback(context: Context) {
-    val endAt = prefs(context).getLong("endAt", 0)
-    if (!isPermissionGranted(context)) { hide(context); return }
-    if (endAt <= System.currentTimeMillis()) { cancelTick(context); return }
-    notify(context, TIMER_ID, buildNotification(context, serviceOwned = false))
-    scheduleTick(context, endAt)
-  }
+  private fun isPromoted(context: Context): Boolean = Build.VERSION.SDK_INT >= 36 &&
+    manager(context).activeNotifications.any {
+      it.id == TIMER_ID && it.tag == null &&
+        (it.notification.flags and Notification.FLAG_PROMOTED_ONGOING) != 0
+    }
 
-  private fun buildNotification(context: Context, serviceOwned: Boolean): Notification {
+  private fun publish(context: Context, checkPromotion: Boolean = true) {
+    cancelPromotionCheck()
+    if (foreground || !isPermissionGranted(context)) { hide(context); return }
     val state = prefs(context)
     val endAt = state.getLong("endAt", 0)
-    val now = System.currentTimeMillis()
-    val remaining = (endAt - now).coerceAtLeast(0)
-    val seconds = (remaining + 999) / 1000
-    val time = String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60)
-    val shortTime = String.format(Locale.ROOT, "%d:%02d", seconds / 60, seconds % 60)
-    val startedAt = state.getLong("startedAt", now)
-    val total = (endAt - startedAt).coerceAtLeast(1L)
-    val progress = (((now - startedAt).coerceIn(0L, total).toDouble() / total) * PROGRESS_MAX).toInt()
+    val token = state.getString("token", null) ?: return
+    if (endAt <= System.currentTimeMillis()) return
+    if (Build.VERSION.SDK_INT < 36 || !checkPromotion) {
+      notify(context, TIMER_ID, buildNotification(context, custom = !isPromoted(context)))
+      return
+    }
+
+    // Probe actual system promotion, never the device brand or eligibility alone.
+    notify(context, TIMER_ID, buildNotification(context, custom = false))
+    val expectedPublication = publication
+    val appContext = context.applicationContext
+    val check = Runnable {
+      synchronized(this) {
+        val current = prefs(appContext)
+        if (publication != expectedPublication || current.getString("token", null) != token ||
+          current.getLong("endAt", 0) != endAt) return@synchronized
+        promotionCheck = null
+        if (foreground || !isPermissionGranted(appContext)) { hide(appContext); return@synchronized }
+        if (endAt <= System.currentTimeMillis()) return@synchronized
+        if (!isPromoted(appContext)) notify(appContext, TIMER_ID, buildNotification(appContext, custom = true))
+      }
+    }
+    promotionCheck = check
+    // A single short wait initiated by this publication, never a periodic refresh.
+    handler.postDelayed(check, PROMOTION_CHECK_DELAY_MS)
+  }
+
+  private fun buildNotification(context: Context, custom: Boolean): Notification {
+    val state = prefs(context)
+    val endAt = state.getLong("endAt", 0)
+    val remaining = (endAt - System.currentTimeMillis()).coerceAtLeast(1L)
     val builder = NotificationCompat.Builder(context, TIMER_CHANNEL)
       .setSmallIcon(R.drawable.ic_stat_meetpr)
-      .setContentTitle(if (serviceOwned) state.getString("titleTemplate", "{0}")?.replace("{0}", time)
-        else state.getString("title", ""))
+      .setContentTitle(state.getString("title", ""))
       .setContentText(state.getString("body", "")?.takeIf { it.isNotBlank() })
       .setColor(BRAND_GOLD)
-      .setRequestPromotedOngoing(true)
-      .setStyle(NotificationCompat.ProgressStyle()
-        .addProgressSegment(NotificationCompat.ProgressStyle.Segment(PROGRESS_MAX).setColor(BRAND_GOLD))
-        .setProgress(progress))
+      .setRequestPromotedOngoing(!custom)
+      .setWhen(endAt)
+      .setShowWhen(true)
+      .setUsesChronometer(true)
+      .setChronometerCountDown(true)
+      .setTimeoutAfter(remaining)
       .setContentIntent(openIntent(context))
       .setOngoing(true)
       .setOnlyAlertOnce(true)
@@ -259,14 +203,25 @@ internal object RestTimerNotifications {
       .setPriority(NotificationCompat.PRIORITY_DEFAULT)
       .addAction(0, state.getString("skip", ""), receiverIntent(context, SKIP, 1))
       .addAction(0, state.getString("add", ""), receiverIntent(context, ADD_30, 2))
-    if (serviceOwned) {
-      builder.setShowWhen(false).setShortCriticalText(shortTime)
-        .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-    } else {
-      builder.setWhen(endAt).setShowWhen(true).setUsesChronometer(true)
-        .setChronometerCountDown(true).setTimeoutAfter(remaining)
+    if (custom) {
+      val base = SystemClock.elapsedRealtime() + remaining
+      builder.setStyle(NotificationCompat.DecoratedCustomViewStyle())
+        .setCustomContentView(contentView(context, R.layout.rest_timer_compact, base))
+        .setCustomBigContentView(contentView(context, R.layout.rest_timer_expanded, base))
     }
     return builder.build()
+  }
+
+  private fun contentView(context: Context, layout: Int, base: Long): RemoteViews {
+    val state = prefs(context)
+    val body = state.getString("body", "").orEmpty()
+    return RemoteViews(context.packageName, layout).apply {
+      setTextViewText(R.id.rest_title, state.getString("title", ""))
+      setTextViewText(R.id.rest_body, body)
+      setViewVisibility(R.id.rest_body, if (body.isBlank()) View.GONE else View.VISIBLE)
+      setChronometer(R.id.rest_countdown, base, null, true)
+      setChronometerCountDown(R.id.rest_countdown, true)
+    }
   }
 
   private fun createChannels(context: Context) {
@@ -304,29 +259,16 @@ internal object RestTimerNotifications {
   }
 
   private fun schedule(context: Context, endAt: Long) {
-    scheduleAlarm(context, endAt, receiverIntent(context, END, 3))
-  }
-
-  private fun cancelTick(context: Context) {
-    alarms(context).cancel(receiverIntent(context, TICK, 4))
-  }
-
-  private fun scheduleTick(context: Context, endAt: Long) {
-    cancelTick(context)
-    val next = System.currentTimeMillis() + TICK_INTERVAL_MS
-    if (next < endAt) scheduleAlarm(context, next, receiverIntent(context, TICK, 4))
-  }
-
-  private fun scheduleAlarm(context: Context, at: Long, intent: PendingIntent) {
     val alarm = alarms(context)
+    val intent = receiverIntent(context, END, 3)
     alarm.cancel(intent)
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarm.canScheduleExactAlarms()) {
-      try {
-        alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
+    try {
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarm.canScheduleExactAlarms()) {
+        alarm.setAlarmClock(AlarmManager.AlarmClockInfo(endAt, openIntent(context)), intent)
         return
-      } catch (_: SecurityException) { /* Permission may have been revoked since the check. */ }
-    }
-    alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
+      }
+    } catch (_: SecurityException) { /* Permission may have been revoked since the check. */ }
+    alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endAt, intent)
   }
 
   private fun notify(context: Context, id: Int, notification: android.app.Notification) {

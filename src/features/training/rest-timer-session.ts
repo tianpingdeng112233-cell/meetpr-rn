@@ -3,13 +3,12 @@ import { TRAINING_LIMITS } from './constants';
 /** Native calls are synchronous so foreground reconciliation cannot race a new rest. */
 export type RestTimerNativeState = { endAtEpochMs: number | null; skipped: boolean };
 export type RestTimerNotifications = {
-  show(endAtEpochMs: number, startedAtEpochMs: number, body: string): void;
+  show(endAtEpochMs: number, body: string): void;
   hide(): void;
   consumeState(): RestTimerNativeState;
 };
 
 export class RestTimerSession {
-  private startedAt = 0;
   private body = '';
   private endAt: number | null = null;
   private active = true;
@@ -21,8 +20,7 @@ export class RestTimerSession {
 
   start(seconds: number, body = '') {
     this.body = body;
-    this.startedAt = this.now();
-    this.endAt = this.startedAt + seconds * 1_000;
+    this.endAt = this.now() + seconds * 1_000;
     this.finished = false;
     this.sync();
   }
@@ -44,7 +42,7 @@ export class RestTimerSession {
   private sync() {
     if (!this.permitted) return;
     if (this.paused || this.endAt === null || this.remainingSeconds() === 0) this.notifications.hide();
-    else if (!this.active) this.notifications.show(this.endAt, this.startedAt, this.body);
+    else if (!this.active) this.notifications.show(this.endAt, this.body);
   }
   adjust(delta: number) {
     const seconds = Math.max(0, Math.min(TRAINING_LIMITS.restMaximumSeconds, this.remainingSeconds() + delta));
@@ -64,6 +62,6 @@ export class RestTimerSession {
     }
     this.active = active;
     this.permitted = permitted;
-    if (!active && permitted && !this.paused && this.remainingSeconds() > 0) this.notifications.show(this.endAt!, this.startedAt, this.body);
+    if (!active && permitted && !this.paused && this.remainingSeconds() > 0) this.notifications.show(this.endAt!, this.body);
   }
 }

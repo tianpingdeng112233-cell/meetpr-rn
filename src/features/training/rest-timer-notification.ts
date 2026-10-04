@@ -3,7 +3,7 @@ import { t } from '@/i18n';
 import type { RestTimerNativeState, RestTimerNotifications } from './rest-timer-session';
 
 type NativeRestTimer = {
-  show(endAtEpochMs: number, startedAtEpochMs: number, body: string, labels: Record<string, string>): void;
+  show(endAtEpochMs: number, body: string, labels: Record<string, string>): void;
   hide(): void;
   consumeState(): RestTimerNativeState;
   isPermissionGranted(): boolean;
@@ -18,9 +18,8 @@ export function restNotificationPermission(): boolean {
   return nativeModule()?.isPermissionGranted() ?? false;
 }
 export const restTimerNotifications: RestTimerNotifications = {
-  show: (endAtEpochMs, startedAtEpochMs, body) => nativeModule()?.show(endAtEpochMs, startedAtEpochMs, body, {
+  show: (endAtEpochMs, body) => nativeModule()?.show(endAtEpochMs, body, {
     title: t('training.restNotification.title'),
-    titleTemplate: t('training.restNotification.titleTemplate'),
     completeTitle: t('student.restTimerOverlay.copy003'),
     completeBody: t('training.restNotification.completeBody'),
     skip: t('student.restTimerOverlay.copy001'),

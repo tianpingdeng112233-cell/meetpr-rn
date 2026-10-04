@@ -56,3 +56,16 @@ SPEC「验收清单」1–11 由 Opus 在模拟器执行，12 由 David 真机�
 - 本工作树没有 `android/`；Kotlin 与 Manifest 由 Opus 在验收树编译，真机由 Opus 用 adb 验（设备 Android 16 / OriginOS 6）。把每个新增的 Manifest 条目与权限列在 JOURNAL。
 - 不 commit、不 push。JOURNAL 追加"D-16 返修二"一节；`PARITY.md` 对应行更新。
 - 结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`，贴条数。
+
+---
+
+## 返修三（2026-10-04 晚，David 拍板「A」：数字交回系统渲染）
+
+依据：SPEC 文末「增补三」全文。它整体取代增补二。在 `a771b52` 之上做增量，目标是**净删代码**：前台服务、每秒刷新、`TICK`、进度、标题模板都删干净，不留死代码与无用权限。
+
+- 范围：`modules/rest-timer-notification`（删 `RestTimerService.kt`；改 `RestTimerNotifications.kt`、Manifest；新增 `res/layout/` 两份布局）、`src/features/training/rest-timer-notification.ts` 与相关测试、`RnExtras.json`（删标题模板键）、`rest-timer-session.ts`（仅当 `startedAt` 不再有用途时删）、发布清单备注、`PARITY.md`。
+- 设计前提写在 SPEC 里：切后台后进程随时被冻结。**任何依赖"稍后在进程里再做一步"的逻辑都不可靠**——提升判断必须在 `show` 的调用链里 500 毫秒内完成。
+- 自定义布局必须在明暗两种系统通知主题下可读，不写死颜色。不要引入 `RemoteViews` 不支持的控件。
+- 本工作树没有 `android/`；资源与 Kotlin 由 Opus 在验收树编译，真机由 Opus 用 adb 验。把新增的资源文件与用到的 `RemoteViews` 方法列在 JOURNAL。
+- 不 commit、不 push。JOURNAL 追加"D-16 返修三"一节。
+- 结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`，贴条数。

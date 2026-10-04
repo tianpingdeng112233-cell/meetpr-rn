@@ -15,7 +15,7 @@ test('running rest publishes its wall-clock end only on entering background', ()
   expect(native.show).not.toHaveBeenCalled();
   at(31_000);
   session.setActive(false, true);
-  expect(native.show).toHaveBeenCalledWith(121_000, 1_000, '');
+  expect(native.show).toHaveBeenCalledWith(121_000, '');
   expect(session.remainingSeconds()).toBe(90);
 });
 
@@ -26,10 +26,10 @@ test('adjustments clamp remaining rest to zero and fifteen minutes and replace b
   at(31_000);
   session.adjust(-30);
   expect(session.remainingSeconds()).toBe(60);
-  expect(native.show).toHaveBeenLastCalledWith(91_000, 1_000, '');
+  expect(native.show).toHaveBeenLastCalledWith(91_000, '');
   session.adjust(900);
   expect(session.remainingSeconds()).toBe(900);
-  expect(native.show).toHaveBeenLastCalledWith(931_000, 1_000, '');
+  expect(native.show).toHaveBeenLastCalledWith(931_000, '');
   session.adjust(-930);
   expect(session.remainingSeconds()).toBe(0);
   expect(native.hide).toHaveBeenCalledTimes(1);
@@ -62,7 +62,7 @@ test('pause, skip and expiry never publish a non-running rest', () => {
   session.setActive(false, true);
   expect(native.show).not.toHaveBeenCalled();
   session.setPaused(false);
-  expect(native.show).toHaveBeenCalledWith(121_000, 1_000, '');
+  expect(native.show).toHaveBeenCalledWith(121_000, '');
   session.close();
   expect(session.isClosed()).toBe(true);
   native.show.mockClear();
@@ -104,16 +104,16 @@ test('repeated non-active events cannot overwrite a native extension', () => {
 });
 
 
-test('background progress keeps the original start across foreground time adjustments', () => {
+test('background notification receives only the adjusted endpoint and exercise body', () => {
   const { session, native, at } = setup();
-  session.start(120);
+  session.start(120, 'Competition Deadlift');
   at(31_000);
   session.setActive(false, true);
-  expect(native.show).toHaveBeenLastCalledWith(121_000, 1_000, '');
+  expect(native.show).toHaveBeenLastCalledWith(121_000, 'Competition Deadlift');
   session.setActive(true, true);
   session.adjust(30);
   session.adjust(-10);
   at(41_000);
   session.setActive(false, true);
-  expect(native.show).toHaveBeenLastCalledWith(141_000, 1_000, '');
+  expect(native.show).toHaveBeenLastCalledWith(141_000, 'Competition Deadlift');
 });

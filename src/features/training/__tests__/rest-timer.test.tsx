@@ -110,7 +110,7 @@ test('changing duration replaces the end and unmount cancels native notification
   await act(async () => renderer.update(<RestTimer durationSeconds={180} studentId="student" onClose={jest.fn()} />));
   expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('3:00');
   act(() => appStateChanged('background'));
-  expect(mockNative.show).toHaveBeenLastCalledWith(Date.now() + 180_000, Date.now(), '', expect.objectContaining({ title: 'Rest between sets', skip: 'Skip', add: '+30s' }));
+  expect(mockNative.show).toHaveBeenLastCalledWith(Date.now() + 180_000, '', expect.objectContaining({ title: 'Rest between sets', skip: 'Skip', add: '+30s' }));
   mockNative.hide.mockClear();
   act(() => renderer.unmount());
   expect(mockNative.hide).toHaveBeenCalledTimes(1);
@@ -127,9 +127,9 @@ test('returning after background expiry clears notifications without a second vi
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
-test.each(['Competition Deadlift', undefined])('background notification receives the rest start and exercise body (%s)', async exerciseName => {
-  const startedAt = Date.now();
+test.each(['Competition Deadlift', undefined])('background notification receives the endpoint and exercise body (%s)', async exerciseName => {
+  const endAt = Date.now() + 120_000;
   await act(async () => { renderer = create(<RestTimer durationSeconds={120} exerciseName={exerciseName} studentId="student" onClose={jest.fn()} />); });
   act(() => { jest.advanceTimersByTime(30_000); appStateChanged('background'); });
-  expect(mockNative.show).toHaveBeenLastCalledWith(startedAt + 120_000, startedAt, exerciseName ?? '', expect.objectContaining({ title: 'Rest between sets' }));
+  expect(mockNative.show).toHaveBeenLastCalledWith(endAt, exerciseName ?? '', expect.objectContaining({ title: 'Rest between sets' }));
 });

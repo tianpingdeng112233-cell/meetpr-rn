@@ -269,5 +269,5 @@ test.each(['Competition Deadlift', undefined])('saved set supplies its exercise 
   await openSet();
   await act(async () => saveButton().props.onPress());
   act(() => listeners.forEach(listener => listener('background')));
-  expect(native.show).toHaveBeenLastCalledWith(expect.any(Number), expect.any(Number), name ?? '', expect.objectContaining({ title: 'Rest between sets' }));
+  expect(native.show).toHaveBeenLastCalledWith(expect.any(Number), name ?? '', expect.objectContaining({ title: 'Rest between sets' }));
 });

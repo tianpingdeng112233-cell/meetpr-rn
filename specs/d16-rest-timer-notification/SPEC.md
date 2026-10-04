@@ -190,3 +190,61 @@
 
 - vivo 状态栏"岛" / 原子通知接入。
 - 训练提醒在被冻结系统上的可靠性（另案 D-47）。
+
+---
+
+## 增补三（2026-10-04 晚，前台服务版真机失败后 David 拍板「A」）
+
+### 为什么又改
+
+- 增补二（前台服务 + 每秒自己刷新标题）在 vivo（Android 16 / OriginOS 6）上失败：带前台服务的进程照样在切后台后被冻结，标题卡在 `Rest 02:53` 不动，进度不动，没有结束提醒。卡住的数字比没有数字更糟。
+- 用户在系统里打开"允许后台高耗电"后一切正常，但 **David 明确：不能引导用户去开这个开关**。
+- 所以设计前提改为：**App 切到后台后随时会被冻结，冻结期间进程里的任何代码都不执行，普通定时器会被系统删除。** 仍然成立的只有系统自己渲染的东西——通知里的系统计时控件在这台手机上是会走的（第一版实测）。
+
+本节**整体取代增补二**，并取代增补一里的进度条、`ProgressStyle`、`TICK` 定时。其余不变。
+
+### 行为
+
+- **倒计时数字一律由系统计时控件渲染**，App 进程不参与刷新。通知里不再有任何需要 App 定期更新才正确的内容：**没有进度条，标题里不写时间**。
+- **卡片用自定义布局**（系统标准页眉 + 自定义内容区 + 系统标准按钮）：
+  - 内容区一行：左侧两行文字——"Rest between sets" / 「组间休息」，下面是动作名（没有就只有一行）；右侧一个**大号倒计时**（系统计时控件，分:秒，等宽数字），垂直居中。
+  - 展开态与收起态结构相同，展开态的倒计时字号更大。
+  - 文字颜色跟随系统通知的明暗（用系统通知文字样式，不写死颜色）；不使用品牌色做文字。
+  - 按钮仍是 Skip 与 +30s。小图标仍是 MeetPR 标志，强调色品牌金。
+- 页眉也保留系统计时控件（某些系统不渲染自定义内容区时，至少页眉有数字）。
+- **Android 16 的实时更新**：系统真的把它提升时（原生 Android 16 等），用系统标准样式（不能带自定义布局），状态栏胶囊由系统计时控件显示倒计时；系统没有提升时（如 vivo），用上面的自定义布局。判断以"发出后系统是否给了提升标记"为准，不按厂商名判断。
+- 倒计时通知在终点由系统自动移除（通知自带的超时）。
+- **结束提醒**：App 被冻结时自己发不出来。改用闹钟级定时（系统对闹钟的保留通常最强）在终点触发原有的结束提醒；副作用是休息期间状态栏可能出现闹钟图标。没有精确定时权限时退回原有的非精确定时。**该定时在会冻结的系统上是否幸免，以真机实测为准；测不过就如实记录"这类手机上没有结束提醒"，不再追加别的机制。**
+- 通知上的 Skip / +30s：行为不变。+30s 之后倒计时、超时、结束定时都按新终点重设。
+- 去掉前台服务、去掉每秒刷新、去掉 `TICK`。App 在前台时没有通知（3A 不变）。
+
+### 技术方案
+
+- 删除 `RestTimerService` 及其 Manifest 条目、`FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_SPECIAL_USE` 权限、标题模板文案键与相关 JS 传参、`TICK` 全部代码、进度相关代码（含 `startedAt` 若不再有用途）。`POST_PROMOTED_NOTIFICATIONS` 保留。发布清单里关于前台服务申报的备注一并删除。
+- 自定义布局：模块 `res/layout/` 下两份 XML（收起 / 展开），`RemoteViews` + `NotificationCompat.DecoratedCustomViewStyle`，`setCustomContentView` 与 `setCustomBigContentView`。倒计时用 `Chronometer`：`setChronometer(id, base, null, true)` + `setChronometerCountDown(id, true)`，`base = SystemClock.elapsedRealtime() + 剩余毫秒`。布局里只用 `RemoteViews` 支持的控件；文字样式用 `TextAppearance.Compat.Notification.*`，数字加大字号并开等宽数字。
+- 提升判断：先按"可提升"的标准样式发出（`setRequestPromotedOngoing(true)`、页眉计时控件、无自定义视图），随后在同一进程内尽快读取 `NotificationManager.getActiveNotifications()` 里这条通知的 flags；带提升标记则保持；否则立刻用自定义布局重发同一个 id（`setOnlyAlertOnce`，不出声）。低于 Android 16 直接用自定义布局。这一步必须在 `show` 的同一次调用链里完成，不能依赖稍后的定时或回调（进程几秒后就可能被冻结）；读取需要的短暂等待用主线程 `Handler` 延迟一次（≤ 500 毫秒），并保证被 `hide` / 新的 `show` 作废。
+- 结束定时：`AlarmManager.setAlarmClock(AlarmClockInfo(endAt, 打开 App 的 PendingIntent), END 的 PendingIntent)`；`canScheduleExactAlarms()` 为假或抛 `SecurityException` 时退回 `setAndAllowWhileIdle`。`hide` / Skip / 走完都要取消。
+- Receiver 的状态、token 校验、`consumeState` 契约不变。
+
+### 测试 seam（先红后绿）
+
+1. JS：原生调用契约的变化（去掉标题模板等）在现有测试里体现；`show` / `hide` / `consumeState` 的时机测试保持通过。
+2. 原生无 jest seam：JOURNAL 给出 adb 步骤——`dumpsys notification --noredact` 里看 `contentView` / `bigContentView` 非空或提升标记；`am kill` 之后相隔几秒截图两次，数字仍在变化；`dumpsys alarm` 里 "Next alarm clock" 指向本应用。
+
+### 验收清单（Opus 收货；取代 21–29）
+
+30. Android 15 模拟器：切后台后是自定义卡片——大号倒计时每秒在走、动作名、Skip / +30s；回到 App 与页内计时条一致（误差 ≤ 1 秒）；没有进度条；`dumpsys activity services` 里没有本应用的服务；没有 `TICK` 定时。
+31. Android 16 模拟器：被提升，状态栏胶囊有倒计时、卡片排最前；关掉本应用的实时更新后退回自定义卡片。
+32. **冻结等价测试**：切后台后 `am kill` 杀掉进程，相隔数秒两次截图，卡片上的数字仍在走。
+33. 杀进程后点 +30s / Skip 仍然有效。
+34. 走完：有精确定时权限时 "Rest complete" 准点出现且只有一条；记录状态栏是否出现闹钟图标。
+35. 系统浅色与深色下，卡片文字与数字都清晰可读。
+36. **真机（vivo，"允许后台高耗电"关闭）**：通知中心里数字在走；+30s / Skip 有效；结束提醒是否到达、锁屏是否显示，如实记录。
+37. 回归：前台不发通知；App 内 Skip / 记下一组后切后台无通知；关通知权限无通知、不崩溃。
+38. `npm test` 全量、`npm run lint`、`npx tsc --noEmit` 通过；原生编译通过。
+
+### Out of Scope（追加）
+
+- 进度条、标题内时间、前台服务。
+- 为保活而引导用户修改系统电池 / 后台设置。
+- 训练提醒在被冻结系统上的可靠性（D-47，另案，方向是服务端推送）。
