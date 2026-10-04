@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, StatusBar, StyleSheet, Text, View } from 'react-native';
 import Video from 'react-native-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import { font, spacing, useColors } from '@/design';
+import { font, radius, spacing, useColors } from '@/design';
+import { useTheme } from '@/design/theme';
+import { TrimPlayButton } from './TrimPlayButton';
 import { t } from '@/i18n';
 import { trainingVideoTrim } from './trim-native';
 import { type TrimOutcome } from './trim-session';
@@ -13,6 +15,7 @@ import { useTrimSource, warnTrimPreparation } from './useTrimSource';
 
 export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (outcome: TrimOutcome) => void }) {
   const colors = useColors();
+  const { scheme } = useTheme();
   const { session, workingUri, thumbnails, playback } = useTrimSource(uri, onOutcome);
   const { player, selection, ready, playing, setPlaying } = playback;
   const [exporting, setExporting] = useState(false);
@@ -39,9 +42,10 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
   };
   return (
     <Modal visible presentationStyle="fullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.space2, backgroundColor: colors.surfaceCard }}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('student.cameraRecorderView.copy005')} disabled={exporting} onPress={close} style={styles.toolbarButton}>
+      <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
+      <SafeAreaView testID="trim-page" style={{ flex: 1, backgroundColor: colors.bgBase }}>
+        <View testID="trim-header" style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.base, backgroundColor: colors.bgBase }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('student.cameraRecorderView.copy005')} disabled={exporting} onPress={close} style={[styles.toolbarButton, { borderRadius: radius.pill, backgroundColor: colors.surfaceRaised }]}>
             <MaterialCommunityIcons name="close" size={22} color={colors.textPrimary} />
           </Pressable>
           <Text numberOfLines={1} adjustsFontSizeToFit style={{ flex: 1, textAlign: 'center', color: colors.textPrimary, ...font.body(17, 'semibold') }}>{t('student.videoTrimView.copy002')}</Text>
@@ -49,8 +53,7 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
             {exporting ? <ActivityIndicator color={colors.gold500} /> : <Text style={{ color: colors.gold500, opacity: ready ? 1 : 0.4, ...font.body(16, 'semibold') }}>{t('student.videoTrimView.copy003')}</Text>}
           </Pressable>
         </View>
-        <TrimTimeline selection={selection} thumbnails={thumbnails} enabled={ready && !exporting} onMove={move} />
-        <View style={{ flex: 1, backgroundColor: '#000' }}>
+        <View testID="trim-video" style={{ flex: 1, minHeight: 180, marginHorizontal: spacing.base, backgroundColor: colors.chatImageBackground }}>
           {workingUri ? <Video ref={player} source={{ uri: workingUri }} paused={!playing} resizeMode="contain" style={StyleSheet.absoluteFill}
             progressUpdateInterval={50} onLoad={playback.onLoad} onError={event => {
               warnTrimPreparation('player.onError', event.error ? {
@@ -60,13 +63,13 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
               session.current?.failed();
             }}
             onSeek={playback.onSeek} onProgress={playback.onProgress} onEnd={playback.onEnd} /> : null}
-          {!ready ? <View style={styles.loading}><ActivityIndicator color="#fff" /><Text style={{ color: '#fff', ...font.body(14) }}>{t('student.videoTrimView.copy001')}</Text></View> : null}
+          {!ready ? <View style={styles.loading}><ActivityIndicator color={colors.inkOnCTAFill} /><Text style={{ color: colors.inkOnCTAFill, ...font.body(14) }}>{t('student.videoTrimView.copy001')}</Text></View> : null}
+          <View style={{ position: 'absolute', bottom: spacing.base, alignSelf: 'center' }}>
+            <TrimPlayButton playing={playing} disabled={!ready || exporting} onPress={() => { if (ready && !exportingRef.current) playback.toggle(); }} />
+          </View>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={t(playing ? 'student.videoTrimView.copy004' : 'student.videoTrimView.copy005')}
-          disabled={!ready || exporting} style={styles.playback} onPress={playback.toggle}>
-          <MaterialCommunityIcons name={playing ? 'pause' : 'play'} size={22} color={colors.gold500} />
-          <Text style={{ color: colors.gold500, ...font.body(16, 'semibold') }}>{t(playing ? 'student.videoTrimView.copy004' : 'student.videoTrimView.copy005')}</Text>
-        </Pressable>
+        <TrimTimeline selection={selection} thumbnails={thumbnails} enabled={ready && !exporting} onMove={move}
+          position={playback.position} onScrub={(seconds, exact) => { if (ready && !exportingRef.current) playback.scrub(seconds, exact); }} />
       </SafeAreaView>
     </Modal>
   );
@@ -75,5 +78,4 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
 const styles = StyleSheet.create({
   toolbarButton: { minWidth: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.space2 },
-  playback: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.space2 },
 });

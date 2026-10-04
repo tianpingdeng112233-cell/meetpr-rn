@@ -2494,3 +2494,78 @@ seam 全部是卡内批准的 CameraRecorder 组件，native / 文件系统 / �
 - **5e：未覆盖 360×640dp / 字体 1.3× 的实际排版、完整文案、触摸可达与实测视频区域高度。**
 - **5g：原相册测试全部未改且绿、时间轴主体原样抽取；未覆盖设备逐像素与手势/播放回归。**
 - **5h：全量 test/lint/tsc 已覆盖。** 以上仅开发自测，不宣布卡片通过收货。
+
+## R3 返修四（2026-10-04，Codex 开发自测；待 Opus 收货）
+
+- 现场 `feat/r3-video-trim@61fa6b8`，开工仅任务卡未提交。完整读取 AGENTS 与任务卡，以文末「返修四 / 定稿 A」为唯一增量；原任务卡改动保留原样。不 commit、不 push。
+- 无新增颜色值、文案键、依赖或原生改动。两页共用 `TrimTimeline`、`TrimPlayButton` 与 `useTrimPlayback`；Use、Retry、导出、清理、相册入口和既有持久化流程保持原实现。
+- 本轮文件：`CameraRecorder.tsx`、`VideoTrimView.tsx`、`TrimTimeline.tsx`、新增 `TrimPlayButton.tsx`、`useTrimPlayback.ts`、`trim-gesture.ts`；测试 `camera-review.test.tsx`、`attachment-trim.test.tsx`、`trim-gesture.test.ts`、新增 `trim-playback.test.tsx` / `trim-timeline.test.tsx`；本 JOURNAL 与 `PARITY.md`。代码和测试位于 `src/features/training/video-upload/`。
+
+### 主题令牌（均由当前 useColors 解析）
+
+| 界面元素 | 浅色令牌 | 深色令牌 |
+|---|---|---|
+| 两页页面、顶栏、底部面板 | bgBase | bgBase |
+| 顶栏圆形关闭按钮底 / 图标；独立页标题 | surfaceRaised / textPrimary；textPrimary | surfaceRaised / textPrimary；textPrimary |
+| Retry（沿用 AppButton link） | textMuted | textMuted |
+| Save 与保存转圈 | gold500 | gold500 |
+| 视频画面留边 | chatImageBackground | chatImageBackground |
+| 圆形播放按钮底 / 白色图标 | numberPadScrim / inkOnCTAFill | numberPadScrim / inkOnCTAFill |
+| 视频加载转圈与文字 | inkOnCTAFill | inkOnCTAFill |
+| 缩略图占位 | surfaceRaised | surfaceRaised |
+| 选框、把手 / 把手竖线 | gold500 / inkOnGold | gold500 / inkOnGold |
+| 区间外遮罩 | bgBase，View opacity 0.62 | bgBase，View opacity 0.62 |
+| 播放头填色 / 描边 | inkOnCTAFill / borderStrong | inkOnCTAFill / borderStrong |
+| 时间气泡底 / 等宽文字 | gold500 / inkOnGold | gold500 / inkOnGold |
+| 起止时间 / Selected | textTertiary / gold500 | textTertiary / gold500 |
+| 裁剪提示气泡底与尖角 / 文案、关闭和不再提醒 | surfaceRaised / textSecondary | surfaceRaised / textSecondary |
+| 错误文字 | danger | danger |
+| Save to Photos 文字 | textPrimary | textPrimary |
+| 开关开 / 关轨道；开 / 关滑块 | gold500 / borderStrong；gold200 / textMuted | gold500 / borderStrong；gold200 / textMuted |
+| Use 主按钮底 / 字与转圈 | ctaBackground / ctaText | ctaBackground / ctaText |
+| 状态栏图标（系统枚举，非颜色值） | dark-content | light-content |
+
+黑底只留在视频画面；回看页不再用固定深色 provider。`inkOnCTAFill` 仅用于卡片要求保持白色的媒体图标、播放头及黑底加载提示，不用于页面文字。相机录制态原黑底与白字展示仍保留。气泡原来的透明结构样式不是新增色值。两页顶部按钮与视频水平边距均为 spacing.base；独立页时间轴移至视频下方并删除文字播放条；回看页把顶栏移出视频浮层。视频区域 minHeight 180dp，时间气泡单独预留 32dp 行。
+
+### 手势、播放头与节流
+
+- 胶片上有一个空的绝对定位 responder 层，后渲染的两个把手覆盖它，各自保持 minimumHitTarget=44dp 的命中宽度。播放头 responder 另外排除两端 ±22dp，故落在把手热区时不会开始 scrub；视觉播放头 pointerEvents=none。
+- 按下时由 pageX−locationX 标定胶片原点，随后所有 move/release 使用 pageX 的绝对位置，经共享 `trimSecondsAtTouch` 换算并夹到整段 [0, duration]；不累计 dx，不受 responder 接管延迟影响。把手保持原有触点与中心偏移规则、即时精确 seek 和推动另一端的区间算法。
+- 播放头每次事件立即更新位置、暂停，裁剪区间不动。拖动 seek 首次立即发出，此后按 100ms 窗口只保留最新目标，容差 0.1s。松手或手势终止清除 timer/排队目标，发容差 0 的精确 seek；reset/unmount 同样取消 timer。
+- 只有最新精确 seek 的匹配 onSeek 才解锁进度；拖动期间、等待 seek 期间及暂停时的旧 onProgress 不会拉走播放头。播放时随进度前进；区间内从播放头续播，区间外回起点；终点回起点后，回看继续、独立页暂停。
+- 播放头 adjustable 使用现有 timeline 标签，增减 1 秒并夹到整段。时间气泡使用 `MM:SS.hh` 与 mono 字体，水平位置夹在轨道容器内；拖把手取当前该端、拖播放头取当前播放位置。回看提示仅在拖动期间隐藏，松手恢复，不修改提示持久化状态。
+
+### 红 → 绿测试与原始日志
+
+seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失败再实现。首轮测试桩导入顺序问题先修正，再确认行为性失败；未将测试环境故障充作功能红测。
+
+| 测试名 | 红测 → 绿测 | 原始日志（/private/tmp/） |
+|---|---|---|
+| `playhead touch covers the whole source and clamps at both ends` | 缺函数 → 4s / 0s / 8s | r4-gesture-red.log / r4-gesture-green.log |
+| `time bubble formats %s as %s`（3 条） | 缺函数 → 00:00.00 / 00:06.11 / 01:15.50 | 同上 |
+| `scrubbing pauses playback and moves the playhead outside the selection without changing its bounds` | 无 scrub → 2–6s 区间不变、播放头到 7s 且暂停 | r4-playback-red.log / r4-playback-green.log |
+| `drag seeks are throttled to the latest target and release seeks exactly without a late timer` | 3 次事件发 3 次 seek → 窗口内只发首次与最新，松手精确且无晚到 timer | r4-throttle-red.log / r4-throttle-green.log |
+| `filmstrip taps and drags scrub the whole source while handle targets take priority` | 无 scrub responder → 胶片点拖、把手热区排除、时间气泡显示/消失 | r4-timeline-red.log / r4-timeline-green.log |
+| `trim presentation uses %s theme tokens and icon-only playback`（两页 × 明暗，共 4 条） | 新布局关键节点缺失 → 主题、状态栏、无文字播放条、点击跳转、气泡金底与提示恢复成立 | r4-theme-red.log / r4-theme-green.log |
+| `paused progress cannot pull the released playhead away from its exact target` | 4.25s 被旧 3.9s progress 拉走 → 保持 4.25s | r4-paused-red.log / r4-paused-green.log |
+
+实现后追加、直接绿（不宣称先红）：区间内 / 外续播各 1 条；各页 progress 与终点规则各 1 条；reset/unmount 取消队列 1 条；adjustable 一秒步长、边界与禁用 1 条。新增共 2 suites / 18 tests。
+
+原 `attachment-trim` / `camera-review` 的行为断言未删除或修改，仅 mount helper 接受主题参数并包裹主题 provider，新加上述两页双主题测试。首轮把节流也用于把手导致四条跟手测试失败，已恢复把手即时精确 seek，原四条断言原样通过；只有新增播放头使用节流。没有以改弱旧断言让测试变绿。
+
+### 独立审查与验收边界
+
+- `review-loop` 两个只读 reviewer 对固定 `/private/tmp/r4-review.diff` 独立审查：Standards **0 findings**；Spec **0 findings**。review 后仅追加无障碍边界测试及本文记录，无运行时代码变化。缺 Matt tracker 配置，已说明完整 tracker 流程需 `$setup-matt-pocock-skills`；未私建配置。本次本地双轴使用批准卡片为源。
+- ADB `devices` 无法启动 smartsocket listener：`Operation not permitted`。本树没有 android/，本轮无装包、原生 build、改后截图或设备操作证据；不以旧截图或组件树代替实屏。
+- **6a、6b 未覆盖实屏**：已测两页双主题关键令牌与状态栏，不证明与定稿 A 的实屏观感、系统切主题及真实缩略图对比度。
+- **6c–6f 未覆盖设备层**：已测点拖、绝对位置、把手优先、气泡、seek 节流/精确 release、区间内外续播、循环/暂停与旧把手跟手；未实测原生画面跳转精度、连续进度的视觉平滑或手指下的实际跟手。
+- **6g 未覆盖实屏复跑**：旧 Use 三路径、Photos 参数、Retry、D-19、提示持久化、相册取消/保存及清理测试保留通过；5b/5c/5d/5f/5g 的真实录制、导出上传、相册落盘、系统后台恢复以及 360×640dp + 1.3× 双主题实际排版仍待 Opus 收货。
+- **6h**：最终全量检查见下。以上只报告开发自测，不宣布产品验收通过。
+
+### 最终全量检查
+
+- `npm test -- --runInBand`：**150 suites / 1144 tests passed，0 failed**，16.284s；`/private/tmp/r4-final-test.log`。
+- `npm run lint`：**0 errors / 0 warnings**；`/private/tmp/r4-final-lint.log`。
+- `npx tsc --noEmit`：**0 errors**；`/private/tmp/r4-final-tsc.log`。
+- `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
+- 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。

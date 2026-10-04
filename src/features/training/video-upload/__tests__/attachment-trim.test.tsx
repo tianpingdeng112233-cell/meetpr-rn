@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { ColorSchemeProvider, resolveColors } from '@/design/theme';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import Video from 'react-native-video';
 import * as Compressor from 'react-native-compressor';
 import { File } from 'expo-file-system';
 import { videosRepository } from '@/api/domains/videos';
 import { prepareTrainingVideo, cleanOrphanVideos } from '../native';
-import { Image, Modal, Text, View } from 'react-native';
+import { Image, Modal, StatusBar, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ExpoModules from 'expo-modules-core';
 import * as ImagePicker from 'expo-image-picker';
@@ -85,10 +86,10 @@ const press = async (label: string) => {
     button.props.onPress();
   });
 };
-const mount = async (replace = false) => {
+const mount = async (replace = false, scheme: 'light' | 'dark' = 'light') => {
   if (replace) useVideoUploadStore.setState({ records: { 'trim-student:trim-set': { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded', localUri: 'file:///documents/existing.mp4' } } });
-  await act(async () => { renderer = create(<VideoAttachmentControls studentId="trim-student" stableSetId="trim-set"
-    editable ensureSetLog={async () => 'log'} buildLogRequest={() => { throw new Error('not used'); }} />); });
+  await act(async () => { renderer = create(<ColorSchemeProvider scheme={scheme}><VideoAttachmentControls studentId="trim-student" stableSetId="trim-set"
+    editable ensureSetLog={async () => 'log'} buildLogRequest={() => { throw new Error('not used'); }} /></ColorSchemeProvider>); });
   await press(t(replace ? 'student.videoAttachmentV3Controls.copy004' : 'student.videoAttachmentV3Controls.copy002'));
 };
 
@@ -399,4 +400,36 @@ test.each([
     durationMs: duration * 1000, mimeType: 'video/mp4', fileName: null, codec: null, rotationDegrees: 0 },
   { signal: new AbortController().signal, setCompressionCancellationId: () => {} }))
     .rejects.toThrow('The video exceeds the 120-second limit');
+});
+
+
+test.each(['light', 'dark'] as const)('trim presentation uses %s theme tokens and icon-only playback', async scheme => {
+  await mount(false, scheme);
+  await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 8 }));
+  const colors = resolveColors(scheme);
+  const node = (id: string) => renderer.root.findAll(n => n.props.testID === id)[0];
+  const style = (id: string) => StyleSheet.flatten(node(id).props.style);
+  expect(style('trim-page').backgroundColor).toBe(colors.bgBase);
+  expect(style('trim-header').backgroundColor).toBe(colors.bgBase);
+  expect(style('trim-video').backgroundColor).toBe(colors.chatImageBackground);
+  expect(style('trim-play-button').backgroundColor).toBe(colors.numberPadScrim);
+  expect(node('trim-play-icon').props.color).toBe(colors.inkOnCTAFill);
+  expect(style('trim-playhead')).toMatchObject({ backgroundColor: colors.inkOnCTAFill, borderColor: colors.borderStrong });
+  expect(style('trim-outside-start')).toMatchObject({ backgroundColor: colors.bgBase, opacity: 0.62 });
+  expect(style('trim-selection').borderColor).toBe(colors.gold500);
+  expect(renderer.root.findByType(StatusBar).props.barStyle).toBe(scheme === 'dark' ? 'light-content' : 'dark-content');
+  const texts = renderer.root.findAllByType(Text).map(n => n.props.children);
+  expect(texts).not.toContain(t('student.videoTrimView.copy004'));
+  expect(texts).not.toContain(t('student.videoTrimView.copy005'));
+  act(() => renderer.root.findAllByType(View).find(n => n.props.onLayout && n.props.style?.height === 64)!.props.onLayout({ nativeEvent: { layout: { width: 444 } } }));
+  const scrubber = node('trim-scrubber');
+  const touch = { nativeEvent: { pageX: 322, locationX: 222 } };
+  mockSeek.mockClear();
+  act(() => { expect(scrubber.props.onStartShouldSetResponder(touch)).toBe(true); scrubber.props.onResponderGrant(touch); });
+  expect(mockSeek).toHaveBeenCalledTimes(1);
+  expect(renderer.root.findByType(Video).props.paused).toBe(true);
+  expect(style('trim-time-bubble').backgroundColor).toBe(colors.gold500);
+  expect(node('trim-time-bubble').findAllByType(Text)[0].props.style.color).toBe(colors.inkOnGold);
+  act(() => scrubber.props.onResponderRelease(touch));
+  expect(renderer.root.findAllByProps({ testID: 'trim-time-bubble' })).toHaveLength(0);
 });

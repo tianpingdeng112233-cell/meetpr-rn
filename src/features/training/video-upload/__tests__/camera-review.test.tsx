@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { ColorSchemeProvider, resolveColors } from '@/design/theme';
+import { StatusBar, StyleSheet } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, Modal, Text, View, ToastAndroid, type AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -95,11 +97,11 @@ const press = async (label: string) => {
     node.props.onPress();
   });
 };
-const mountCamera = async () => {
+const mountCamera = async (scheme: 'light' | 'dark' = 'light') => {
   const onUse = jest.fn();
   const onClose = jest.fn(() => renderer.unmount());
   await act(async () => {
-    renderer = create(<CameraRecorder onClose={onClose} onUse={onUse} />);
+    renderer = create(<ColorSchemeProvider scheme={scheme}><CameraRecorder onClose={onClose} onUse={onUse} /></ColorSchemeProvider>);
   });
   return { onUse, onClose };
 };
@@ -437,4 +439,39 @@ test('pausing during preparation stays paused when metadata becomes ready', asyn
   await press(t('student.videoTrimView.copy004'));
   await act(async () => { finish({ durationMs: 3000, videoTrackCount: 1 }); });
   expect(renderer.root.findByType(Video).props.paused).toBe(true);
+});
+
+
+test.each(['light', 'dark'] as const)('trim presentation uses %s theme tokens and icon-only playback', async scheme => {
+  await mountCamera(scheme);
+  await completeRecording();
+  await loadReview();
+  const colors = resolveColors(scheme);
+  const node = (id: string) => renderer.root.findAll(n => n.props.testID === id)[0];
+  const style = (id: string) => StyleSheet.flatten(node(id).props.style);
+  expect(style('trim-page').backgroundColor).toBe(colors.bgBase);
+  expect(style('trim-header').backgroundColor).toBe(colors.bgBase);
+  expect(style('trim-video').backgroundColor).toBe(colors.chatImageBackground);
+  expect(style('trim-play-button').backgroundColor).toBe(colors.numberPadScrim);
+  expect(node('trim-play-icon').props.color).toBe(colors.inkOnCTAFill);
+  expect(style('trim-playhead')).toMatchObject({ backgroundColor: colors.inkOnCTAFill, borderColor: colors.borderStrong });
+  expect(style('trim-outside-start')).toMatchObject({ backgroundColor: colors.bgBase, opacity: 0.62 });
+  expect(style('trim-selection').borderColor).toBe(colors.gold500);
+  expect(renderer.root.findByType(StatusBar).props.barStyle).toBe(scheme === 'dark' ? 'light-content' : 'dark-content');
+  const texts = renderer.root.findAllByType(Text).map(n => n.props.children);
+  expect(texts).not.toContain(t('student.videoTrimView.copy004'));
+  expect(texts).not.toContain(t('student.videoTrimView.copy005'));
+  act(() => renderer.root.findAllByType(View).find(n => n.props.onLayout && n.props.style?.height === 64)!.props.onLayout({ nativeEvent: { layout: { width: 444 } } }));
+  const scrubber = node('trim-scrubber');
+  const touch = { nativeEvent: { pageX: 322, locationX: 222 } };
+  mockSeek.mockClear();
+  act(() => { expect(scrubber.props.onStartShouldSetResponder(touch)).toBe(true); scrubber.props.onResponderGrant(touch); });
+  expect(mockSeek).toHaveBeenCalledTimes(1);
+  expect(renderer.root.findByType(Video).props.paused).toBe(true);
+  expect(style('trim-time-bubble').backgroundColor).toBe(colors.gold500);
+  expect(node('trim-time-bubble').findAllByType(Text)[0].props.style.color).toBe(colors.inkOnGold);
+  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.cameraRecorderComponents.copy007'));
+  act(() => scrubber.props.onResponderRelease(touch));
+  expect(renderer.root.findAllByProps({ testID: 'trim-time-bubble' })).toHaveLength(0);
+  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain(t('student.cameraRecorderComponents.copy007'));
 });

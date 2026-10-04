@@ -8,7 +8,8 @@ import Video from 'react-native-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton, IconButton, font, radius, spacing, useColors } from '@/design';
 import { BrandSwitch } from '@/design/BrandSwitch';
-import { ColorSchemeProvider } from '@/design/theme';
+import { useTheme } from '@/design/theme';
+import { TrimPlayButton } from './TrimPlayButton';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { t } from '@/i18n';
 import { deleteLocalVideo } from './native';
@@ -28,16 +29,14 @@ type CameraRecorderProps = {
   maxDurationSeconds?: number;
 };
 
-export function CameraRecorder(props: CameraRecorderProps) {
-  return <ColorSchemeProvider scheme="dark"><CameraRecorderContent {...props} /></ColorSchemeProvider>;
-}
-
-function CameraRecorderContent({
+export function CameraRecorder({
   onClose,
   onUse,
   maxDurationSeconds = VIDEO_MAX_DURATION_SECONDS,
 }: CameraRecorderProps) {
   const colors = useColors();
+  const { scheme } = useTheme();
+  const [dragging, setDragging] = useState(false);
   const camera = useRef<CameraView>(null);
   const [permission, setPermission] = useState<
     'loading' | 'granted' | 'denied'
@@ -244,11 +243,41 @@ function CameraRecorderContent({
     setTrimHintVisible(false);
     void AsyncStorage.setItem(TRIM_HINT_DISMISSED_KEY, 'true').catch(() => undefined);
   };
+  const toolbar = (
+          <View testID="trim-header" pointerEvents="box-none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: spacing.base, backgroundColor: review ? colors.bgBase : undefined }}>
+            <IconButton
+              haptic="none"
+              accessibilityLabel={t('student.cameraRecorderComponents.copy011')}
+              disabled={using}
+              onPress={close}
+              style={{ backgroundColor: review ? colors.surfaceRaised : colors.numberPadScrim }}
+              icon={({ size }) => <MaterialCommunityIcons name="close" size={size} color={review ? colors.textPrimary : colors.inkOnCTAFill} />}
+            />
+            {review ? <AppButton variant="link" disabled={using} label={t('student.cameraRecorderView.copy009')} onPress={() => {
+              if (usingRef.current) return;
+              session.current?.dispose();
+              deleteLocalVideo(review);
+              ownedUri.current = null;
+              setReview(null);
+              setReady(false);
+              setError(false);
+            }} /> : null}
+            {permission === 'granted' && !review ? (
+              <View style={{ alignItems: 'flex-end', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.control, backgroundColor: colors.numberPadScrim }}>
+                <Text style={{ color: colors.inkOnCTAFill, ...font.mono(18) }}>{clockText(elapsed)}</Text>
+                <Text style={{ color: colors.inkOnCTAFill, ...font.body(12) }}>
+                  {t('student.cameraRecorderComponents.copy002', [maxDurationSeconds - elapsed])}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+  );
   return (
     <Modal visible presentationStyle="fullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
-      <StatusBar barStyle="light-content" />
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.chatImageBackground }}>
-        <View style={{ flex: 1, minHeight: review ? 180 : undefined }}>
+      <StatusBar barStyle={review && scheme === 'light' ? 'dark-content' : 'light-content'} />
+      <SafeAreaView testID="trim-page" style={{ flex: 1, backgroundColor: review ? colors.bgBase : colors.chatImageBackground }}>
+        {review ? toolbar : null}
+        <View testID="trim-video" style={{ flex: 1, minHeight: review ? 180 : undefined, marginHorizontal: review ? spacing.base : 0, backgroundColor: colors.chatImageBackground }}>
           {permission === 'granted' ? review ? (
             <Video
               source={{ uri: review }}
@@ -280,41 +309,10 @@ function CameraRecorderContent({
               }}
             />
           ) : null}
-          <View pointerEvents="box-none" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: spacing.base }}>
-            <IconButton
-              haptic="none"
-              accessibilityLabel={t('student.cameraRecorderComponents.copy011')}
-              disabled={using}
-              onPress={close}
-              style={{ backgroundColor: colors.numberPadScrim }}
-              icon={({ size }) => <MaterialCommunityIcons name="close" size={size} color={colors.inkOnCTAFill} />}
-            />
-            {review ? <AppButton variant="link" disabled={using} label={t('student.cameraRecorderView.copy009')} onPress={() => {
-              if (usingRef.current) return;
-              session.current?.dispose();
-              deleteLocalVideo(review);
-              ownedUri.current = null;
-              setReview(null);
-              setReady(false);
-              setError(false);
-            }} /> : null}
-            {permission === 'granted' && !review ? (
-              <View style={{ alignItems: 'flex-end', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.control, backgroundColor: colors.numberPadScrim }}>
-                <Text style={{ color: colors.inkOnCTAFill, ...font.mono(18) }}>{clockText(elapsed)}</Text>
-                <Text style={{ color: colors.inkOnCTAFill, ...font.body(12) }}>
-                  {t('student.cameraRecorderComponents.copy002', [maxDurationSeconds - elapsed])}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+          {!review ? toolbar : null}
           {review ? <View pointerEvents="box-none" style={{ position: 'absolute', bottom: spacing.base, left: spacing.base, right: spacing.base, alignItems: 'center', gap: spacing.space2 }}>
-            <Pressable accessibilityRole="button" accessibilityLabel={t(playing ? 'student.videoTrimView.copy004' : 'student.videoTrimView.copy005')}
-              disabled={using} onPress={() => { if (!usingRef.current) toggle(); }}
-              style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.base, borderRadius: radius.pill, backgroundColor: colors.numberPadScrim, flexDirection: 'row', alignItems: 'center', gap: spacing.space2 }}>
-              <MaterialCommunityIcons name={playing ? 'pause' : 'play'} size={22} color={colors.gold500} />
-              <Text style={{ color: colors.gold500, ...font.body(16, 'semibold') }}>{t(playing ? 'student.videoTrimView.copy004' : 'student.videoTrimView.copy005')}</Text>
-            </Pressable>
-            {trimHintVisible && !hintClosed && status === 'ready' ? <View style={{ alignSelf: 'stretch', borderRadius: radius.sm, backgroundColor: colors.surfaceRaised, padding: spacing.space2 }}>
+            <TrimPlayButton playing={playing} disabled={using} onPress={() => { if (!usingRef.current) toggle(); }} />
+            {trimHintVisible && !hintClosed && !dragging && status === 'ready' ? <View style={{ alignSelf: 'stretch', borderRadius: radius.sm, backgroundColor: colors.surfaceRaised, padding: spacing.space2 }}>
               <IconButton accessibilityLabel={t('student.cameraRecorderView.copy005')} onPress={() => setHintClosed(true)}
                 style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'transparent', zIndex: 1 }}
                 icon={({ size }) => <MaterialCommunityIcons name="close" size={size} color={colors.textSecondary} />} />
@@ -351,12 +349,14 @@ function CameraRecorderContent({
         </View>
         {permission === 'granted' && review ? (
           <View style={{ padding: spacing.base, gap: spacing.md }}>
-            {status !== 'failed' ? <TrimTimeline selection={selection} thumbnails={thumbnails} enabled={status === 'ready' && trimReady && !using} onMove={(edge, seconds) => {
+            {status !== 'failed' ? <TrimTimeline selection={selection} thumbnails={thumbnails} enabled={status === 'ready' && trimReady && !using} position={playback.position} onDraggingChange={setDragging}
+              onScrub={(seconds, exact) => { if (status === 'ready' && trimReady && !usingRef.current) playback.scrub(seconds, exact); }}
+              onMove={(edge, seconds) => {
               if (status === 'ready' && trimReady && !usingRef.current) { trimTouched.current = true; move(edge, seconds); }
             }} /> : null}
             {error ? <Text style={{ color: colors.danger }}>{t('student.cameraRecorderView.copy008')}</Text> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
-              <Text style={{ color: colors.inkOnCTAFill, ...font.body(16), flexShrink: 1 }}>{t('student.cameraRecorderComponents.copy006')}</Text>
+              <Text style={{ color: colors.textPrimary, ...font.body(16), flexShrink: 1 }}>{t('student.cameraRecorderComponents.copy006')}</Text>
               <BrandSwitch
                 accessibilityLabel={t('student.cameraRecorderComponents.copy006')}
                 disabled={!preferenceLoaded || using}
