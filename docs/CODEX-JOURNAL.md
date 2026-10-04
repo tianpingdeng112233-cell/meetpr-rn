@@ -2239,3 +2239,112 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - 卡验收 1 未覆盖：全新安装首启英文最后一句可读、Got it 进入登录页、再次启动不再弹。Jest 的确认持久化和回调通过不等于设备流程通过。
 - 卡验收 2 未覆盖：360×640dp、系统字体 1.3× 下实际滚动、正文无截断、Privacy Policy 与 Got it 可点；默认尺寸外观仍须实屏对照。react-test-renderer 不执行原生排版，结构断言不证明几何尺寸或触摸命中。
 - 卡验收 3 自动检查已通过，最终是否收货由 Opus 按原卡判断。
+
+## 2026-10-04 — Opus T2：D-16 安卓休息倒计时通知
+
+### 范围与交付状态
+
+- 输入：`specs/d16-rest-timer-notification/SPEC.md`、同目录 `CARD.md` 全文；当前分支 `feat/d16-rest-timer-notification`，HEAD `13c7eb1`，实现基线 `main@cab3b40`。开工工作树干净，未 commit、push、暂存或修改别的工作树。不存在仓内 CONTEXT.md / FOLLOWUPS.md / 更深层 AGENTS；CLAUDE.md 仅引用 AGENTS.md。
+- 仅开发实装与自测完成，不宣布 Opus 验收通过。页内计时条的 JSX 布局、样式、文案、按钮规格保持原样；Skip handler 接入统一关闭。原说明/设置弹层继续暂停计时轮询，保留原墙钟终点口径。未新增依赖、权限或前台服务，未改变已有 expo-notifications 训练提醒/上传失败链路。
+- 本树无 `android/`，依卡未生成原生工程、未安装或操控模拟器。读取了指定 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。
+
+### 改动文件清单（20 个）
+
+- 原生模块（新增 6）：`modules/rest-timer-notification/expo-module.config.json`、`android/build.gradle`、`android/src/main/AndroidManifest.xml`、`android/src/main/java/com/meetpr/resttimer/RestTimerNotificationModule.kt`、同目录 `RestTimerNotifications.kt`、`RestTimerReceiver.kt`（后五项均相对该模块目录）。
+- 状态与接线（新增 3、修改 3）：`src/features/training/rest-timer-session.ts`、`rest-timer-notification.ts`、`RestTimerNotificationSession.tsx`；同目录 `RestTimer.tsx`、`TodayWorkoutView.tsx`；`src/app/_layout.tsx`。
+- 文案（修改 1）：`src/i18n/catalog/RnExtras.json`，新增通知标题、结束正文、两个渠道名、+30s 五个 en/zh 键，Skip / Rest complete 复用现有键。
+- 测试（新增 2、修改 3）：`src/features/training/__tests__/rest-timer-session.test.ts`、`rest-notification-routing.test.tsx`；同目录 `rest-timer.test.tsx`、`set-save.test.tsx`；`src/analytics/__tests__/root-layout.test.tsx`（仅补 router 系统 mock）。
+- 记录（修改 2）：本 JOURNAL 末尾与 `PARITY.md` 一行授权差异。SPEC/CARD 未改。
+
+### 全部“休息结束或终点变化”接线
+
+| 路径 | 接线与结果 |
+| --- | --- |
+| 正常记组成功，且仍有未完成组 | 原有时长计算不变；递增 restGeneration 重新挂载会话，即使时长与上次相同也获得新终点；旧实例 cleanup 取消原通知。最后一次异步读取后校验焦点与 restRevision，旧保存回调不能复活已取消休息。 |
+| 页内 -30s / +30s | `RestTimerSession.adjust` 更新墙钟终点，剩余夹在 0–900 秒；后台状态同步 show，降到 0 同步 hide。 |
+| 页内 Skip | `close` 一次性关闭自身，立即 hide，然后只调用一次父 `endRest`。 |
+| 前台走完 | `tick` 一次性发完成事件，hide，原 80 ms 轻震、Rest complete 文案和 3 秒自动关闭保留。 |
+| 后台走完 | JS 不震动、不卸载、不取消原生闹钟；Receiver END 取消倒计时并发送结束通知。回前台清通知，计时条显示完成并自动关闭，不补第二次震动。 |
+| 通知 Skip | Receiver 原子取消通知/闹钟、持久化 skipped；前台 consume 后关闭计时条，onClose 一次。 |
+| 通知 +30s | Receiver 用持久化 endAt 加 30 秒并夹在 now+900 秒内，重发倒计时/闹钟并保存 changedEndAt；前台先 consume 再 hide，再按新终点计算剩余。 |
+| 打开下一组（openDraft） | 先 `endRest` 再打开记录 sheet，因此打开下一组后切后台无上一段休息通知；本组成功保存仍按既有规则开始下一段休息。 |
+| 完成当天 completeDay（非 undo） | 原清理点统一走 `endRest`，发请求前即结束休息；undo 不主动开启休息。 |
+| quick-log 全部完成 | 原清理点统一走 `endRest`。 |
+| 切换不同训练日（selectDay） | `endRest`，重复选择同一天保持现状。 |
+| Training 跳转 handoff / jumpToken | 清录入状态时一并 `endRest`，使旧保存回调失效。 |
+| 离开训练页（focus cleanup） | `endRest` + 焦点 false；失焦并返回也不会让旧异步回调重开休息。 |
+| 页面卸载、退出登录、父级移除计时条、durationSeconds 变 null/变值 | RestTimer effect cleanup 取消间隔/自动消失任务并 hide；新实例不恢复旧原生状态。 |
+| 首次说明与其休息设置弹层 | 初始存储读完且两弹层均关闭才解除 paused；未在走时后台不 show。保持原有墙钟终点，不另造冻结/延后时长行为。 |
+| AppState 非 active / active | 非 active 且在走且已授权才 show；重复非 active 事件不覆盖原生 +30s。active 先 consume 三态再 hide；权限未授予不 show/hide/consume，也不请求权限。原生 foreground 生命周期额外及时清理通知/闹钟，保留待消费按钮状态。 |
+
+### 红 → 绿证据（公开 seam）
+
+1. 纯状态 `rest-timer-session.ts`：
+   - `running rest publishes its wall-clock end only on entering background`：首次模块缺失导致 suite 红（0 tests executed），最小实现后 1/1 绿。`/private/tmp/d16-session-1-{red,green}.log`。
+   - `adjustments clamp remaining rest to zero and fifteen minutes and replace background notification`：缺 adjust → 1 failed/1 passed → 2 passed；`d16-session-2-{red,green}.log`。
+   - `foreground consumes unchanged / extended / skipped native state before hiding notifications`：缺消费/关闭状态 → 3 failed/2 passed → 5 passed；`d16-session-3-{red,green}.log`。
+   - `pause, skip and expiry never publish a non-running rest`：缺 setPaused → 1 failed/5 passed → 6 passed；`d16-session-4-{red,green}.log`。
+   - `repeated non-active events cannot overwrite a native extension`：show 收到 2 次而要求 1 次 → 1 failed/7 passed → 8 passed；`d16-session-5-{red,green}.log`。
+   - `denied notification permission leaves every native operation untouched` 为补充约束用例，加入时已有权限门控，直接绿，未冒称独立红证据。最终该 seam 8/8 通过。
+2. RestTimer 组件 seam：
+   - `foreground remaining time follows the notification extension`：显示 2:00 而非 2:30 → 1 failed/4 passed → 5 passed；`d16-component-1-{red,green}.log`。初次测试的原生 mock 配置错误先修正，最终红日志为行为断言失败。
+   - `notification Skip closes the overlay and calls onClose exactly once on foreground`：onClose 0 次 → 1 failed/5 passed → 两 seam 合跑 13 passed；`d16-component-2-{red,green}.log`。
+   - `returning after background expiry clears notifications without a second vibration`：实际多震动一次 → 1 failed/9 passed → 10 passed；`d16-component-3-{red,green}.log`。
+   - 补充通过：原四条前台外观/交互/震动/卸载回归，background expiry 无 JS 震动/关闭，说明弹层阻止后台通知，duration 变更与卸载取消。现有设置弹层亦接同一 paused 判定，但没有新增该弹层的独立交互测试。最终该 seam 10/10 通过。
+3. 附加接线 seam：
+   - `cold and warm notification taps open training only after student bootstrap and are consumed once`：新会话模块缺失导致 suite 红 → 1 passed；`d16-routing-{red,green}.log`。
+   - `recording the next set closes the previous rest before returning to background`：打开下一组后仍见 Skip → 1 failed/7 passed → 8 passed；`d16-next-set-{red,green}.log`。
+   - `a rest preference read cannot revive rest after leaving Training (return first: false / true)`：离页后两个分支均重现旧 Skip → 2 failed/8 passed → 10 passed；`d16-save-race-{red,green}.log`。先修正 AsyncStorage mock 递归，再取得该行为红证据。
+4. 原生 Receiver seam：仓内现有两个本地 Android 模块没有 JUnit/Robolectric/仪器测试基础设施；本次未新增依赖或虚构 Receiver 自动化测试。+30 上限、skip 持久化、进程死亡后继续工作仍须 Opus 用设备验证，步骤见下。
+
+### 原生实现与自动链接
+
+- 模块结构、Gradle plugin 与现有两个本地模块一致；`expo-module.config.json` 注册 `com.meetpr.resttimer.RestTimerNotificationModule`。Expo 默认扫描 `./modules`，[官方自动链接说明](https://docs.expo.dev/modules/autolinking/)；现场 `npx expo-modules-autolinking resolve --platform android --json` 已解析本树 sourceDir、模块名与 classifier，输出 `/private/tmp/d16-autolinking.json`。
+- 已有验收树的 `android/settings.gradle` 使用 `expoAutolinking.useExpoModules()`。同步完整模块目录及本次 JS 改动后重新跑 Gradle 即可发现新模块并合并 Manifest；不需要仅为此重新 prebuild。若验收树还没有 android，则先按该树原流程生成。必须重建并安装原生包，Metro reload/OTA 不能添加 Kotlin 模块。
+- `NotificationCompat` 来自现有 expo-modules-core 的 `api androidx.core:core-ktx:1.17.0`，无新增 Maven/npm 依赖。模块 Manifest 只声明 `exported=false` Receiver，所有 PendingIntent 都是 IMMUTABLE。POST_NOTIFICATIONS / SCHEDULE_EXACT_ALARM 已由现有工程声明；现有生成的 app Manifest 也已有 VIBRATE，本卡未新增权限。
+- SharedPreferences 保存终点、按钮变更、全部本地化文字和会话 token。Receiver 不调用 JS；相同锁串行化原生读写，过期 token 和旧终点 END 不影响新计时。foreground 清理保留未消费按钮状态；冷启动清理通知，不恢复页内计时。
+- 缓存 Kotlin 2.1.20 编译器 + Android 36 android.jar + 本机已有 Expo/RN/AndroidX classpath，独立编译三份 Kotlin 源：退出 **0，0 errors，0 warnings**，class 输出 `/private/tmp/d16-kotlin/classes`。命令脚本 `/private/tmp/d16-compile-kotlin.py`，日志 `/private/tmp/d16-kotlin-compile.log`。这只证明 Kotlin/API 类型自洽，不等于 Manifest/Gradle/APK 整包构建通过。
+
+### 开发自审与最终检查
+
+- 本地 `review-loop` 独立 Standards / Spec 两轴初审均找到同一 P2：偏好读取 await 后复活已取消休息。补两条红测试、统一 endRest + revision 后，第二轮定向复审 Standards **0 剩余代码问题**，Spec **0 剩余代码问题**；平台差异与设备未验另列。快照 `/private/tmp/d16-review.diff`、`/private/tmp/d16-review-final.diff`。这是开发自审，不是 Opus 收货终审。
+- 仓无 `docs/agents/issue-tracker.md`；本次跑无需 tracker 的本地 review-loop，没有声称执行 tracker code-review。若另启后者需 David 调用 `$setup-matt-pocock-skills`。
+- `npm test -- --runInBand` 全量：**146 suites / 1077 tests passed，0 failed**，退出 0；`/private/tmp/d16-full-test.log`。有仓内既有 React/Expo 测试警告，不声称零测试 warning。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/d16-lint.log`。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/d16-tsc.log`。
+- 首轮全量暴露根布局旧 router mock 缺 useRouter，补系统边界 mock 后通过。首轮 lint/tsc 暴露 effect/ref 和测试显式 Jest imports，均已修正；未降低 lint 或测试门槛。
+- `git diff --check` 通过。所有日志均不含账号/凭证。
+
+### 原生 Receiver / 模拟器验证入口（未执行）
+
+遵 SPEC 原验收 1–11，不另定验收范围。安装新原生包后，从训练页真实记组开始倒计时再 Home：
+
+```sh
+adb shell input keyevent KEYCODE_HOME
+adb shell dumpsys notification --noredact | rg -A30 'com.meetpr.app|rest-timer|rest-complete'
+adb shell dumpsys alarm | rg -A15 'com.meetpr.resttimer|com.meetpr.app'
+adb shell cmd statusbar expand-notifications
+# 在通知上实际点 +30s / Skip；回 App 对照页内计时。
+# debug 包可查看按钮的持久化状态；其中没有账号凭证。
+adb shell run-as com.meetpr.app cat shared_prefs/rest-timer-notification.xml
+# 返回后台后杀后台进程（不能用 force-stop；force-stop 会禁用闹钟，与回收不同）。
+adb shell am kill com.meetpr.app
+```
+
+验证 Receiver action 的可选工程方法：`exported=false` 是硬约束，普通 `adb shell am broadcast` 会被系统拒绝，不能据此说按钮坏了，也不能为了测试把 Receiver 导出。优先用通知按钮自身的 PendingIntent。仅在可 root 的 AVD：`adb root` 后确认 `adb shell id` 为 uid=0，读取当前 prefs 的 token/endAt，再触发（每次新 rest 都须重新读取 token）：
+
+```sh
+adb shell am broadcast -n com.meetpr.app/com.meetpr.resttimer.RestTimerReceiver -a com.meetpr.resttimer.ADD_30 --es token '<当前 token>'
+adb shell am broadcast -n com.meetpr.app/com.meetpr.resttimer.RestTimerReceiver -a com.meetpr.resttimer.SKIP --es token '<当前 token>'
+# END 要当前 endAt 且真正已到终点；提前触发只会重新安排，不伪造提前完成。
+adb shell am broadcast -n com.meetpr.app/com.meetpr.resttimer.RestTimerReceiver -a com.meetpr.resttimer.END --es token '<当前 token>' --el endAt '<当前 endAt>'
+```
+
+连点 +30s 后从 prefs 及通知对照不超过 900 秒；Skip 后查通知/闹钟均无残留、prefs skipped=true，回前台消费后 cleared。进程被杀后的按钮与结束提醒也按 SPEC 10 真实点击/等待。结束提醒精确定时权限未授权时允许晚到，不触发权限请求；锁屏用真实电源键/模拟器锁屏验证。
+
+### 未覆盖的验收与需 Opus/David 判断的系统差异
+
+- SPEC **1–10** 的模拟器实测均未执行：通知原生每秒跳动、≤1秒同步、锁屏可见、前台清理、按钮/上限、震动/横幅/路由、前台外观、权限关闭、最近任务划掉与回收后行为，都不能以 Jest 或独立 Kotlin 编译替代。以上代码自测仅提供对应 seam 证据。
+- SPEC **11**：三项 JS 检查已通过；Gradle 原生整包编译仍由 Opus 在另一工作树执行，当前未覆盖。
+- SPEC **12**：David 的 vivo 真机 1/2/6/10 全部未覆盖，尤其厂商后台定时限制。
+- **SPEC“不可滑动清除”存在已证实的平台差异**：Android 14 起，普通 `setOngoing(true)` 通知在解锁状态下仍可被用户单独划除；锁屏及 Clear all 除外。[Android 官方说明](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications)。本实现忠实使用 SPEC 指定 ongoing 原生方案，不用伪装电话/媒体通知或新增服务/权限绕过。该要求不能宣布全平台满足；请 Opus/David 决定验收口径。SPEC 原文未擅改，其余已授权实现未因此停工。

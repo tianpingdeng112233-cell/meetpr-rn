@@ -28,7 +28,7 @@ jest.mock('@react-native-community/netinfo', () =>
 const mockNavigate = jest.fn();
 const mockPush = jest.fn();
 let mockFocused = false;
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: (effect: () => void | (() => void)) => { jest.requireActual<typeof import('react')>('react').useEffect(() => mockFocused ? effect() : undefined, [effect]); } }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: (effect: () => void | (() => void)) => { jest.requireActual<typeof import('react')>('react').useEffect(() => mockFocused ? effect() : undefined, [effect, mockFocused]); } }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -208,4 +208,43 @@ test('reentering Training silently drains all pending PRs at the replay time, le
   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
   await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
   expect(renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ')).not.toMatch(/🎉|First record|new e1RM/i);
+});
+
+test('recording the next set closes the previous rest before returning to background', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
+  await openSet();
+  await act(async () => saveButton().props.onPress());
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(t('student.restTimerOverlay.copy001'));
+  const body = renderer.root.findByType(WorkoutBody);
+  await act(async () => body.props.onRecord(body.props.drafts[1]));
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.restTimerOverlay.copy001'));
+});
+
+
+test.each([false, true])('a rest preference read cannot revive rest after leaving Training (return first: %s)', async returnFirst => {
+  mockFocused = true;
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
+  await openSet();
+  let release!: () => void;
+  let reading!: () => void;
+  const enteredRead = new Promise<void>(resolve => { reading = resolve; });
+  const original = jest.mocked(AsyncStorage.getItem).getMockImplementation()!;
+  jest.spyOn(AsyncStorage, 'getItem').mockImplementation(async key => {
+    if (key === `restTimer.preference.${studentId}`) {
+      reading();
+      await new Promise<void>(resolve => { release = resolve; });
+    }
+    return original(key);
+  });
+  let save: Promise<void>;
+  await act(async () => { save = saveButton().props.onPress(); await enteredRead; });
+  mockFocused = false;
+  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  if (returnFirst) {
+    mockFocused = true;
+    await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  }
+  await act(async () => { release(); await save; });
+  jest.mocked(AsyncStorage.getItem).mockImplementation(original);
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.restTimerOverlay.copy001'));
 });

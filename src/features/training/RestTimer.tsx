@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Modal, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -12,6 +12,8 @@ import { AppButton, Card, useColors, type Colors, font, radius, spacing, typogra
 
 import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
 import { readBoolean, writeBoolean } from './storage';
+import { RestTimerSession } from './rest-timer-session';
+import { restNotificationPermission, restTimerNotifications } from './rest-timer-notification';
 
 type Props = {
   durationSeconds: number | null;
@@ -23,58 +25,83 @@ function formatClock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
+export function RestTimer(props: Props) {
+  return props.durationSeconds === null ? null : <RestTimerContent key={`${props.studentId}:${props.durationSeconds}`} {...props} />;
+}
+
+function RestTimerContent({ durationSeconds, onClose, studentId }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
   const [showExplanation, setShowExplanation] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [endAt, setEndAt] = useState(
-    () => Date.now() + (durationSeconds ?? 0) * 1_000,
-  );
-  const finished = useRef(false);
+  const [closed, setClosed] = useState(false);
+  const closedRef = useRef(false);
+  const [explanationLoaded, setExplanationLoaded] = useState(false);
+  const [session] = useState(() => {
+    return new RestTimerSession(restTimerNotifications);
+  });
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => {
+  const close = useCallback(() => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    setClosed(true);
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
-  }, []);
+    session.close();
+    onCloseRef.current();
+  }, [session]);
 
   useEffect(() => {
-    if (durationSeconds === null) return;
+    let disposed = false;
     void readBoolean(STORAGE_KEYS.restExplanation(studentId)).then((seen) => {
-      if (!seen) setShowExplanation(true);
+      if (disposed) return;
+      setShowExplanation(!seen);
+      setExplanationLoaded(true);
     });
+    return () => { disposed = true; };
   }, [durationSeconds, studentId]);
 
   useEffect(() => {
-    if (durationSeconds === null || showExplanation || showSettings) return;
-    const update = () => {
-      const next = Math.max(0, Math.ceil((endAt - Date.now()) / 1_000));
-      setRemaining(next);
-      if (next === 0 && !finished.current) {
-        finished.current = true;
-        Vibration.vibrate(80);
-        dismissTimer.current = setTimeout(onClose, TRAINING_LIMITS.transientBannerMs);
+    session.setPaused(true);
+    session.start(durationSeconds ?? 0);
+    const update = (vibrate = true) => {
+      if (!session.canTick()) return;
+      if (session.tick()) {
+        if (vibrate) Vibration.vibrate(80);
+        dismissTimer.current = setTimeout(close, TRAINING_LIMITS.transientBannerMs);
       }
+      setRemaining(session.remainingSeconds());
     };
-    update();
+    const changeState = (state: string) => {
+      session.setActive(state === 'active', restNotificationPermission());
+      if (state === 'active' && session.isClosed()) close();
+      else if (state === 'active') update(false);
+    };
+    changeState(AppState.currentState ?? 'active');
+    const subscription = AppState.addEventListener('change', changeState);
     const interval = setInterval(update, 250);
-    return () => clearInterval(interval);
-  }, [durationSeconds, endAt, onClose, showExplanation, showSettings]);
+    return () => {
+      subscription.remove();
+      clearInterval(interval);
+      if (dismissTimer.current) clearTimeout(dismissTimer.current);
+      session.close();
+    };
+  }, [close, durationSeconds, session]);
 
-  if (durationSeconds === null) return null;
+  useEffect(() => {
+    session.setPaused(!explanationLoaded || showExplanation || showSettings);
+  }, [explanationLoaded, session, showExplanation, showSettings]);
+
+  if (durationSeconds === null || closed) return null;
   const progress = Math.max(0, Math.min(1, remaining / Math.max(1, durationSeconds)));
 
   const adjust = (delta: number) => {
     if (dismissTimer.current) clearTimeout(dismissTimer.current);
-    const current = Math.max(0, Math.ceil((endAt - Date.now()) / 1_000));
-    const next = Math.max(
-      0,
-      Math.min(TRAINING_LIMITS.restMaximumSeconds, current + delta),
-    );
-    setEndAt(Date.now() + next * 1_000);
-    finished.current = false;
-    setRemaining(next);
+    session.adjust(delta);
+    setRemaining(session.remainingSeconds());
   };
 
   return (
@@ -88,7 +115,7 @@ export function RestTimer({ durationSeconds, onClose, studentId }: Props) {
               <View style={styles.spacer} />
               <View style={styles.actions}>
                 <Pressable accessibilityRole="button" accessibilityLabel="-30s" onPress={() => adjust(-30)} style={styles.action}><Text style={styles.actionText}>-30s</Text></Pressable>
-                <Pressable accessibilityRole="button" accessibilityLabel={t('student.restTimerOverlay.copy001')} onPress={onClose} style={styles.action}><Text style={styles.skipText}>{t('student.restTimerOverlay.copy001')}</Text></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel={t('student.restTimerOverlay.copy001')} onPress={close} style={styles.action}><Text style={styles.skipText}>{t('student.restTimerOverlay.copy001')}</Text></Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel="+30s" onPress={() => adjust(30)} style={styles.action}><Text style={styles.actionText}>+30s</Text></Pressable>
               </View>
             </View>

@@ -27,6 +27,7 @@ import {
   track,
 } from '@/analytics';
 import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
+import { RestTimerNotificationSession } from '@/features/training/RestTimerNotificationSession';
 import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
@@ -159,6 +160,7 @@ function ThemedRoot() {
         <RootNavigator />
         <TrainingReminderSession />
         <PlanNotificationSession />
+        <RestTimerNotificationSession />
         <Toast />
         <PrivacyNoticeSheet
           onConfirmed={() => setPrivacyNoticeVisible(false)}

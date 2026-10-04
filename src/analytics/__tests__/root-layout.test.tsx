@@ -61,6 +61,7 @@ jest.mock('expo-router', () => {
   Stack.Screen = Screen;
   Stack.Protected = Protected;
   return {
+    useRouter: () => ({ navigate: jest.fn() }),
     DarkTheme: { colors: {} },
     DefaultTheme: { colors: {} },
     Stack,
