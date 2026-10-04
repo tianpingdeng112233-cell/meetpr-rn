@@ -153,6 +153,14 @@ export function TodayWorkoutView() {
     value: false,
   });
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restExerciseName, setRestExerciseName] = useState('');
+  const [restGeneration, setRestGeneration] = useState(0);
+  const trainingFocused = useRef(true);
+  const restRevision = useRef(0);
+  const endRest = useCallback(() => {
+    restRevision.current += 1;
+    setRestSeconds(null);
+  }, []);
   const [reviewState, setReviewState] = useState<{
     key: string;
     status: 'loading' | 'loaded';
@@ -376,9 +384,14 @@ export function TodayWorkoutView() {
   }, [refresh]);
   useFocusEffect(
     useCallback(() => {
+      trainingFocused.current = true;
       void refreshRef.current(throttle.current.refreshWhenReturning());
-      return () => setRequestedDayID(null);
-    }, []),
+      return () => {
+        trainingFocused.current = false;
+        endRest();
+        setRequestedDayID(null);
+      };
+    }, [endRest]),
   );
   useEffect(() => {
     const listener = AppState.addEventListener('change', (state) => {
@@ -404,11 +417,12 @@ export function TodayWorkoutView() {
         );
         setRequestedDayID(handoff.dayID);
       } else setRequestedDayID(null);
+      endRest();
       setRecordingSetId(null);
       setEditingPlan(null);
       void refreshRef.current(throttle.current.refreshWhenReturning());
     });
-  }, [handoff, jumpToken, queryClient, studentId]);
+  }, [endRest, handoff, jumpToken, queryClient, studentId]);
   useEffect(() => {
     if (planRevision === previousRevision.current) return;
     previousRevision.current = planRevision;
@@ -491,6 +505,7 @@ export function TodayWorkoutView() {
   const suggestion = suggestionOutcome?.suggestion ?? null;
   const openDraft = (draft: WorkoutSetDraft) => {
     if (editable && plan) {
+      endRest();
       setEditingPlan(plan);
       setRequestedDayID(draft.exercise.plan_day_id);
       setRecordingSetId(draft.stableSetId);
@@ -502,6 +517,7 @@ export function TodayWorkoutView() {
       setRequestedDayID(id);
       return;
     }
+    endRest();
     loadGeneration.current.begin('review');
     loadGeneration.current.begin('e1rm');
     setReviewState({
@@ -526,7 +542,7 @@ export function TodayWorkoutView() {
     if (!planDay || completion.isPending || undoCompletion.isPending) return;
     setRequestedDayID(planDay.id);
     if (!undo) {
-      setRestSeconds(null);
+      endRest();
       setCompletionPhase('celebration');
     }
     try {
@@ -550,6 +566,7 @@ export function TodayWorkoutView() {
     attachmentOnly?: boolean;
     quickLogDate?: string;
   }): Promise<string | undefined> => {
+    const restRevisionAtSave = restRevision.current;
     const operation = async () => {
       const draft = liveDrafts.find(
         (candidate) => candidate.stableSetId === input.stableSetId,
@@ -681,12 +698,16 @@ export function TodayWorkoutView() {
             await trainingE1RMRepository.acknowledgePR(e1rm.pr.id).catch(() => undefined);
           }
           if (
-            !input.quickLogDate && draft.status !== 'complete' &&
+            trainingFocused.current && !input.quickLogDate && draft.status !== 'complete' &&
             nextDrafts.some((candidate) => !isDraftTerminal(candidate))
           ) {
             const preference = await readNumber(
               STORAGE_KEYS.restPreference(studentId),
             );
+            if (!trainingFocused.current || restRevision.current !== restRevisionAtSave) return response.id;
+            const restExercise = resolveExerciseMetadata(draft.exercise.exercise_id);
+            setRestExerciseName(restExercise ? exerciseTitle(restExercise) : '');
+            setRestGeneration(value => value + 1);
             setRestSeconds(
               resolveRestSeconds({
                 prescribed: draft.planSet.rest_seconds,
@@ -1014,7 +1035,7 @@ export function TodayWorkoutView() {
         if (outcome.kind === 'completed') {
           const completed = plan?.days.find(day => day.id === input.dayId);
           setQuickLogPlan(null); quickLogAttempt.current = null;
-          setRestSeconds(null); setRecordingSetId(null); setCompletionPhase(null);
+          endRest(); setRecordingSetId(null); setCompletionPhase(null);
           const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan?.id ?? ''));
           setRequestedDayID(latest ? cursorDay(latest.days)?.id ?? input.dayId : null);
           showToast(training22.saved(completed ? dayCode(completed, orderedDays) : ''), true);
@@ -1112,9 +1133,11 @@ export function TodayWorkoutView() {
       ) : null}
       {restSeconds !== null ? (
         <RestTimer
+          key={restGeneration}
           durationSeconds={restSeconds}
+          exerciseName={restExerciseName}
           studentId={studentId}
-          onClose={() => setRestSeconds(null)}
+          onClose={endRest}
         />
       ) : null}
     </Screen>

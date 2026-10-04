@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { E1RMRecorder } from '@/domain/e1rm';
 import { trainingE1RMRepository } from '../storage';
+import { STORAGE_KEYS } from '../constants';
 import { WorkoutBody } from '../WorkoutBody';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
 import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
@@ -9,7 +10,7 @@ import { SetEntrySheet } from '../SetEntrySheet';
 import type { SetLog } from '@/api/domains/sets';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, ActivityIndicator, Text } from 'react-native';
+import { Alert, ActivityIndicator, AppState, Text, type AppStateStatus } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
@@ -28,7 +29,7 @@ jest.mock('@react-native-community/netinfo', () =>
 const mockNavigate = jest.fn();
 const mockPush = jest.fn();
 let mockFocused = false;
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: (effect: () => void | (() => void)) => { jest.requireActual<typeof import('react')>('react').useEffect(() => mockFocused ? effect() : undefined, [effect]); } }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockPush }), useFocusEffect: (effect: () => void | (() => void)) => { jest.requireActual<typeof import('react')>('react').useEffect(() => mockFocused ? effect() : undefined, [effect, mockFocused]); } }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -208,4 +209,65 @@ test('reentering Training silently drains all pending PRs at the replay time, le
   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
   await act(async () => { await jest.advanceTimersByTimeAsync(1500); });
   expect(renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ')).not.toMatch(/🎉|First record|new e1RM/i);
+});
+
+test('recording the next set closes the previous rest before returning to background', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
+  await openSet();
+  await act(async () => saveButton().props.onPress());
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(t('student.restTimerOverlay.copy001'));
+  const body = renderer.root.findByType(WorkoutBody);
+  await act(async () => body.props.onRecord(body.props.drafts[1]));
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.restTimerOverlay.copy001'));
+});
+
+
+test.each([false, true])('a rest preference read cannot revive rest after leaving Training (return first: %s)', async returnFirst => {
+  mockFocused = true;
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
+  await openSet();
+  let release!: () => void;
+  let reading!: () => void;
+  const enteredRead = new Promise<void>(resolve => { reading = resolve; });
+  const original = jest.mocked(AsyncStorage.getItem).getMockImplementation()!;
+  jest.spyOn(AsyncStorage, 'getItem').mockImplementation(async key => {
+    if (key === `restTimer.preference.${studentId}`) {
+      reading();
+      await new Promise<void>(resolve => { release = resolve; });
+    }
+    return original(key);
+  });
+  let save: Promise<void>;
+  await act(async () => { save = saveButton().props.onPress(); await enteredRead; });
+  mockFocused = false;
+  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  if (returnFirst) {
+    mockFocused = true;
+    await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  }
+  await act(async () => { release(); await save; });
+  jest.mocked(AsyncStorage.getItem).mockImplementation(original);
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.restTimerOverlay.copy001'));
+});
+
+
+test.each(['Competition Deadlift', undefined])('saved set supplies its exercise name to the background rest notification (%s)', async name => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/exercises' && name) return { exercises: [{ id: plan.days[0].exercises[0].exercise_id, name, name_en: name, main_lift_family: null, is_competition_lift: false, competition_stance: null }] } as never;
+    return original(path, options);
+  });
+  const native = { show: jest.fn(), hide: jest.fn(), isPermissionGranted: () => true };
+  jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(native);
+  const listeners = new Set<(state: AppStateStatus) => void>();
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    listeners.add(listener);
+    return { remove: () => { listeners.delete(listener); } };
+  });
+  await AsyncStorage.setItem(STORAGE_KEYS.restExplanation(studentId), 'true');
+  await openSet();
+  await act(async () => saveButton().props.onPress());
+  act(() => listeners.forEach(listener => listener('background')));
+  expect(native.show).toHaveBeenLastCalledWith(expect.any(Number), name ?? '', expect.objectContaining({ title: 'Rest between sets' }));
 });

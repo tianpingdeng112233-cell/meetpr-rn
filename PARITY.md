@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-10-04 D-16 授权差异**：David 2026-10-02 拍板安卓后台/锁屏休息通知（iOS build 22 基线无此能力）。返修三按 [SPEC 增补三](specs/d16-rest-timer-notification/SPEC.md) 将数字交由系统 Chronometer 渲染；Android 16 实际提升时保留标准样式，否则使用自定义大号倒计时卡片。结束定时改为 AlarmClock，无精确权限时退回非精确定时；删除前台服务及其权限、进度、TICK 与标题模板。保留动作名、Skip/+30s、渠道与 MeetPR 图标。覆盖本页旧“前台服务通知待定”表述；开发证据及未覆盖验收见 `docs/CODEX-JOURNAL.md`「D-16 返修三」，原生构建/设备收货待 Opus/David。
 > **2026-10-03 使用数据告知授权差异**：按 [任务卡](specs/build22-parity/USAGE-NOTICE-COPY-CARD.md)，`appShell.privacy.analytics.body` 中英文改为 Global 美国 DigitalOcean / 账号存续期间保留口径，有意区别于 iOS 历史参照；正文可滚动、链接与确认按钮固定，已实装，模拟器验收待 Opus，证据见 `docs/CODEX-JOURNAL.md` 本卡节。
 
 > **当前复刻基线(2026-09-21)**：iOS `beta/1.0-22@0748931563fefea14e7f50a7c9ee7330b5501bea`，Global 轨。David 授权从本地 W3 `6429d50` 开始集成验收、视觉对齐并追齐 build 22。
