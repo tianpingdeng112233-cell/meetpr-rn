@@ -4,6 +4,7 @@ import { videosRepository, type StudentVideo } from '@/api/domains/videos';
 import type { VideoUploadStatus } from '../model';
 import {
   flushVideoUploads,
+  preserveVideoAttachment,
   hydrateRemoteVideoAttachments,
   resetVideoUploadStoreForTests,
   selectVideoUpload,
@@ -144,5 +145,23 @@ test('the newer refresh wins when responses arrive out of order', async () => {
   await hydrateRemoteVideoAttachments('student', sets);
   resolve({ videos: [video] });
   await first;
+  expect(read().status).toBe('none');
+});
+
+
+test('a refresh started during Replace cannot erase the original after cancellation, but a later refresh can', async () => {
+  const original = seedLocal('uploaded');
+  const release = preserveVideoAttachment('student', 'set-2');
+  let finish!: (value: { videos: StudentVideo[] }) => void;
+  jest.mocked(videosRepository.list).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const pending = hydrateRemoteVideoAttachments('student', sets);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  release();
+  release();
+  finish({ videos: [] });
+  await pending;
+  expect(read()).toEqual(original);
+  jest.mocked(videosRepository.list).mockResolvedValueOnce({ videos: [] });
+  await hydrateRemoteVideoAttachments('student', sets);
   expect(read().status).toBe('none');
 });
