@@ -2431,3 +2431,66 @@ docs/verification-w3-2026-09-23.md. No production deployment/migration/merge.
 - `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/r3-repair2-lint.log`。
 - `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/r3-repair2-tsc.log`。首跑 1 处新增测试 key:string 与翻译键联合类型不符，已改成 Parameters<typeof t>[0]；原日志 `/private/tmp/r3-repair2-tsc-first.log`。修正后以上三项全部重跑通过。
 - `git diff --check`：通过；无临时 DEBUG 日志、无依赖变化、无 commit/push。前两轮未提交改动完整保留。
+
+## R3 返修三（2026-10-04，Codex 开发自测；待 Opus 收货）
+
+- 现场：`feat/r3-video-trim@1bca4a8`。开工时只有 `specs/build22-parity/R3-VIDEO-TRIM-CARD.md` 的返修三内容未提交，保留原样。本轮不 commit、不 push。
+- 范围只覆盖卡片返修三：录制回看页直接剪辑，删 Edit/Duration/系统 controls；原片自动播放，区间循环，Use 按最终范围决定是否导出。无新增依赖、文案键、原生模块修改。已读取仓规、完整卡片、Expo SDK 57 版本文档。
+
+### 文件与共用边界
+
+本轮新增：`src/features/training/video-upload/TrimTimeline.tsx`、`useTrimPlayback.ts`、`useTrimSource.ts`。
+本轮修改：同目录 `CameraRecorder.tsx`、`VideoTrimView.tsx`、`__tests__/camera-review.test.tsx`，以及本 JOURNAL、`PARITY.md` 的 VideoUpload 行。
+
+- `TrimTimeline`：原胶片、把手、遮罩、选中框、时间标签及绝对触点接线原样移出。脚本逐字比对组件主体（除 export）为 True；继续使用原 `trim-gesture`，不另写算法。
+- `useTrimPlayback`：共用原 `trim-selection`、拖动暂停/seek、最新 seek 完成门禁、播放区间检查。standalone 到终点暂停并回起点；review 到终点回起点继续。每次新录制 reset；metadata ready 不覆盖用户准备期的 Pause。
+- `useTrimSource`：共用工作副本、轨道读取、10 张缩略图、脱敏警告、`TrimSession` 所有权。standalone 仍允许缩略图生成失败后继续；review 准备失败则隐藏时间轴和气泡，Use 交原片；缩略图尚未完成期间把手禁用、Use 交原片。
+- 独立页顶栏、视频画面、底栏与样式不变；保存/失败/取消结算不变。`attachment-trim.test.tsx` 和相册入口未改，34 条原测试通过；独立页逐像素实屏回归仍待验。
+- 原 CameraRecorder D-19 回归保留，仅将已经被本卡覆盖的 controls 预期改成无系统 controls；旧 Edit 场景测试由 inline trim 场景替换。
+
+### 红 → 绿证据
+
+seam 全部是卡内批准的 CameraRecorder 组件，native / 文件系统 / 播放器事件为外部边界桩。逐个行为写测试、执行失败后再实现。日志 `/private/tmp/r3-{red,green}-1.log` 至 `-9.log`；绿日志 1/6/7 含相册回归。
+
+| 次序 | 测试名 | 红测现象 → 绿测结果 |
+|---|---|---|
+| 1 | `review shows the shared timeline and Selected without Edit, Duration or native controls` | 找不到 Selected 0:03；出现 Edit/Duration/controls → inline 时间轴与自动播放成立。原四条 D-19 的 controls 新预期也先红后绿 |
+| 2 | `moving handles then Use exports the selected range, saves that file to Photos and releases the original` | trim 调用 0 次 → [1000,2000]ms 导出，Photos/onUse 都收到导出文件，原片/缩略图回收，真裁剪后持久化 |
+| 3 | `review Play loops within the selection, ignores stale progress and preserves paused bounds across background` | 无 Play 胶囊 → 拖动保持暂停、后台返回保留区间，旧进度不提前回卷，终点回起点继续 |
+| 4 | `hint bubble closes for this review only, while do-not-remind persists across reviews` | 旧提示仅单行 → 完整三行可缩放气泡；× 本次关闭、Retry 后再现；不再提醒持久化 |
+| 5 | `export locks Retry, Close, back, handles, Play and Photos until completion` | Close 未禁用，Retry handler 可绕过 disabled → UI 禁用且处理器同步 ref 守卫，返回键无效 |
+| 6 | `%s preparation failure hides trim tools and Use delivers the original`（thumbnails） | 缩略图失败后时间轴仍可用 → 隐藏剪辑工具、Use 原片。metadata 同行为先已绿 |
+| 7 | `Retry resets the previous selection and keeps handles disabled while the next clip is preparing` | 下次录制准备时把手沿用旧 ready → 重置范围/loaded，新片 onLoad 后才可拖 |
+| 8 | `Use during thumbnail preparation delivers the original and cleans late thumbnails without exporting` | 缩略图准备期间可拖 → 准备期禁拖、Use 不导出，晚到缩略图仍回收 |
+| 9 | `pausing during preparation stays paused when metadata becomes ready` | metadata 到达覆盖手动 Pause → 保留暂停 |
+
+另补边界测试（实现后直接绿，不冒称先红）：导出失败提示 copy011 并保留原片/范围，重试同区间；Retry/Close/unmount 处理晚到缩略图；export/Photos 两个异步窗口卸载不交付且删除输出；不动把手 Use 无导出、不持久化提示。CameraRecorder 最终 29 tests。
+
+### 临时文件清理点
+
+| 路径 | 清理与保留 |
+|---|---|
+| Retry | handler 先 `session.dispose()`，取消该工作 URI 导出，删工作副本/缩略图；删 owned 原片，再回相机。晚到文件由已结束 session 的 `own()` 立即删除 |
+| 顶部 × / 系统返回 | 非 exporting/using 时 `close()` 使录制 generation 失效、停止录制，dispose 会话、删除 owned 原片后通知 onClose；导出期间无效 |
+| Use 未裁剪或准备未完成/失败 | 不调用 trim；Photos/onUse 用原片。dispose 会话清工作副本/缩略图；原片所有权移交 onUse，组件不再删除它 |
+| Use 裁剪成功 | 导出返回后立即 `current.own(output)`；Photos 完成后 `current.saved(output)` 保留输出并删工作副本/缩略图，再删原片、移交输出给 onUse；成功才持久化提示 |
+| 组件卸载 | hook effect dispose 会话并 cancelTrim；CameraRecorder effect 删除 owned 原片；进行中的导出若稍后返回，own() 因会话已结束即删输出。等待 Photos 期间卸载同样删已 own 输出，不触发 onUse |
+| 导出失败 | 沿用未改的 `VideoTrimExporter.fail()`：取消工作/Transformer 并删 job.output，再 reject。JS 不结算会话、不删原片/工作副本/缩略图，保留范围供重试；解除 using 并显示现有 copy011。最终离开仍走上述清理 |
+
+### 气泡布局与自审
+
+- Play 与气泡位于视频区域底部同一个绝对定位的纵向 View，间隔 space2；气泡出现自然将 Play 上推。容器 pointerEvents=box-none，不是 Modal，不挤占底部面板；气泡底部三角指向时间轴。
+- 提示完整字符串，允许三行并 adjustsFontSizeToFit，ellipsizeMode=clip 禁止省略号；关闭按钮用既有 copy005。照片开关、把手、Play、Use 在气泡可见时仍可用；视频区域 minHeight=180dp。真实字体缩放下完整排版尚无实屏证据。
+- review-loop 两位只读 reviewer 独立审查：Standards **0 未决 finding**；Spec **0 findings**，包含准备期 Pause 修复后的增量复核。固定初审快照 `/private/tmp/r3-review.diff`。仓内 Matt tracker 配置缺失，本地双轴审查以批准卡片为源，未私建配置；完整 tracker 流程需 David 日后调用 `$setup-matt-pocock-skills`。
+
+### 最终检查与未覆盖验收
+
+- `npm test -- --runInBand`：**148 suites / 1126 tests passed，0 failed**，退出 0，16.39s；`/private/tmp/r3-full-test.log`。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/r3-lint.log`。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/r3-tsc.log`。
+- `git diff --check`：通过。首轮 tsc 的测试 mock 参数类型、lint 对嵌套 ref 推断及 effect 同步 setState 的问题已修正；以上是修正后的最终全量结果。
+- ADB `devices` 因无法创建本地 smartsocket listener（Operation not permitted）失败，本树无 android/，本轮没有装包、原生重编译、屏幕截图或设备验收。没有请求放宽沙箱。
+- **5a–5d、5f：组件层有上述行为覆盖；未覆盖真录制、原生播放实际循环、导出后挂载/时长、Photos 相册实际新增、系统后台恢复及气泡实屏。**
+- **5e：未覆盖 360×640dp / 字体 1.3× 的实际排版、完整文案、触摸可达与实测视频区域高度。**
+- **5g：原相册测试全部未改且绿、时间轴主体原样抽取；未覆盖设备逐像素与手势/播放回归。**
+- **5h：全量 test/lint/tsc 已覆盖。** 以上仅开发自测，不宣布卡片通过收货。

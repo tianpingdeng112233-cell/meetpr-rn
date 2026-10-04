@@ -13,7 +13,9 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { t } from '@/i18n';
 import { deleteLocalVideo } from './native';
 import { VIDEO_MAX_DURATION_SECONDS } from './model';
-import { VideoTrimView } from './VideoTrimView';
+import { TrimTimeline } from './TrimTimeline';
+import { useTrimSource, warnTrimPreparation } from './useTrimSource';
+import { trainingVideoTrim } from './trim-native';
 const SAVE_TO_PHOTOS_KEY = 'training.video.saveToPhotos.v1';
 const TRIM_HINT_DISMISSED_KEY = 'training.video.trimHintDismissed.v1';
 const clockText = (seconds: number) =>
@@ -44,13 +46,16 @@ function CameraRecorderContent({
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [review, setReview] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [reviewDuration, setReviewDuration] = useState(0);
   const [trimHintVisible, setTrimHintVisible] = useState(false);
+  const [hintClosed, setHintClosed] = useState(false);
   const [saveToPhotos, setSaveToPhotos] = useState(true);
   const [preferenceLoaded, setPreferenceLoaded] = useState(false);
   const [using, setUsing] = useState(false);
+  const usingRef = useRef(false);
+  const trimTouched = useRef(false);
   const [error, setError] = useState(false);
+  const { session, workingUri, thumbnails, status, playback } = useTrimSource(review, () => {}, 'review');
+  const { player, selection, ready: trimReady, playing, setPlaying, move, toggle, onLoad, onSeek, onProgress, onEnd } = playback;
   const generation = useRef(0);
   const ownedUri = useRef<string | null>(null);
   const startedAt = useRef(0);
@@ -168,7 +173,8 @@ function CameraRecorderContent({
       }
       if (!video?.uri) throw new Error('Recording incomplete');
       ownedUri.current = video.uri;
-      setReviewDuration(Math.max(0, (Date.now() - startedAt.current) / 1000));
+      setHintClosed(false);
+      trimTouched.current = false;
       setReview(video.uri);
     } catch {
       if (current === generation.current && !closed.current) setError(true);
@@ -179,41 +185,83 @@ function CameraRecorderContent({
     }
   };
   const use = async () => {
-    if (!review || using) return;
+    if (!review || usingRef.current || closed.current) return;
+    usingRef.current = true;
     setUsing(true);
+    const current = session.current;
+    const changed = trimTouched.current && status === 'ready' &&
+      (selection.startSeconds > 0 || selection.endSeconds < selection.sourceDurationSeconds);
+    let result: { uri: string; durationMs: number } | null = null;
+    if (changed && workingUri && current?.active) {
+      setPlaying(false);
+      try {
+        result = await trainingVideoTrim().trim(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
+        // Own before awaiting Photos so unmount also reclaims an export in that window.
+        current.own(result.uri);
+        if (!current.active || closed.current) return;
+      } catch (error) {
+        warnTrimPreparation('export', error);
+        if (!closed.current && current.active) {
+          ToastAndroid.show(t('student.cameraRecorderView.copy011'), ToastAndroid.LONG);
+          usingRef.current = false;
+          setUsing(false);
+        }
+        return;
+      }
+    }
+    const output = result?.uri ?? review;
     if (saveToPhotos) {
       try {
         if (!(await requestPhotos())) throw new Error('Photos denied');
-        await MediaLibrary.Asset.create(review);
+        if (closed.current) return;
+        await MediaLibrary.Asset.create(output);
       } catch {
-        ToastAndroid.show(
-          t('student.cameraRecorderView.copy013'),
-          ToastAndroid.LONG,
-        );
+        if (!closed.current) ToastAndroid.show(t('student.cameraRecorderView.copy013'), ToastAndroid.LONG);
       }
     }
     if (closed.current) return;
+    if (result) {
+      current?.saved(result);
+      deleteLocalVideo(ownedUri.current);
+      dismissTrimHint();
+    } else {
+      current?.dispose();
+    }
     ownedUri.current = null;
-    onUse(review);
+    onUse(output);
+  };
+  const close = () => {
+    if (usingRef.current) return;
+    closed.current = true;
+    generation.current++;
+    camera.current?.stopRecording();
+    session.current?.dispose();
+    deleteLocalVideo(ownedUri.current);
+    ownedUri.current = null;
+    onClose();
   };
   const dismissTrimHint = () => {
     setTrimHintVisible(false);
     void AsyncStorage.setItem(TRIM_HINT_DISMISSED_KEY, 'true').catch(() => undefined);
   };
   return (
-    <Modal visible presentationStyle="fullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
+    <Modal visible presentationStyle="fullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
       <StatusBar barStyle="light-content" />
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.chatImageBackground }}>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minHeight: review ? 180 : undefined }}>
           {permission === 'granted' ? review ? (
             <Video
               source={{ uri: review }}
-              repeat
-              controls
-              paused={editing || using}
+              ref={player}
+              repeat={!trimReady}
+              paused={!playing || using}
               resizeMode="contain"
               style={StyleSheet.absoluteFill}
-              onLoad={({ duration }) => setReviewDuration(duration)}
+              onLoad={onLoad}
+              progressUpdateInterval={50}
+              onSeek={onSeek}
+              onProgress={onProgress}
+              onEnd={onEnd}
               onError={() => setError(true)}
             />
 
@@ -236,11 +284,14 @@ function CameraRecorderContent({
             <IconButton
               haptic="none"
               accessibilityLabel={t('student.cameraRecorderComponents.copy011')}
-              onPress={onClose}
+              disabled={using}
+              onPress={close}
               style={{ backgroundColor: colors.numberPadScrim }}
               icon={({ size }) => <MaterialCommunityIcons name="close" size={size} color={colors.inkOnCTAFill} />}
             />
             {review ? <AppButton variant="link" disabled={using} label={t('student.cameraRecorderView.copy009')} onPress={() => {
+              if (usingRef.current) return;
+              session.current?.dispose();
               deleteLocalVideo(review);
               ownedUri.current = null;
               setReview(null);
@@ -256,6 +307,25 @@ function CameraRecorderContent({
               </View>
             ) : null}
           </View>
+          {review ? <View pointerEvents="box-none" style={{ position: 'absolute', bottom: spacing.base, left: spacing.base, right: spacing.base, alignItems: 'center', gap: spacing.space2 }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t(playing ? 'student.videoTrimView.copy004' : 'student.videoTrimView.copy005')}
+              disabled={using} onPress={() => { if (!usingRef.current) toggle(); }}
+              style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.base, borderRadius: radius.pill, backgroundColor: colors.numberPadScrim, flexDirection: 'row', alignItems: 'center', gap: spacing.space2 }}>
+              <MaterialCommunityIcons name={playing ? 'pause' : 'play'} size={22} color={colors.gold500} />
+              <Text style={{ color: colors.gold500, ...font.body(16, 'semibold') }}>{t(playing ? 'student.videoTrimView.copy004' : 'student.videoTrimView.copy005')}</Text>
+            </Pressable>
+            {trimHintVisible && !hintClosed && status === 'ready' ? <View style={{ alignSelf: 'stretch', borderRadius: radius.sm, backgroundColor: colors.surfaceRaised, padding: spacing.space2 }}>
+              <IconButton accessibilityLabel={t('student.cameraRecorderView.copy005')} onPress={() => setHintClosed(true)}
+                style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'transparent', zIndex: 1 }}
+                icon={({ size }) => <MaterialCommunityIcons name="close" size={size} color={colors.textSecondary} />} />
+              <Text numberOfLines={3} adjustsFontSizeToFit ellipsizeMode="clip" style={{ paddingRight: spacing.minimumHitTarget, color: colors.textSecondary, ...font.body(12) }}>{t('student.cameraRecorderComponents.copy007')}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('student.cameraRecorderComponents.copy008')} onPress={dismissTrimHint}
+                style={{ alignSelf: 'flex-end', minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
+                <Text style={{ color: colors.textSecondary, ...font.body(11, 'semibold') }}>{t('student.cameraRecorderComponents.copy008')}</Text>
+              </Pressable>
+              <View pointerEvents="none" style={{ position: 'absolute', bottom: -8, alignSelf: 'center', borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: colors.surfaceRaised }} />
+            </View> : null}
+          </View> : null}
           {permission === 'denied' ? (
             <View style={{ padding: spacing.xl, gap: spacing.base }}>
               <Text style={{ color: colors.inkOnCTAFill }}>{t('student.cameraRecorderView.copy002')}</Text>
@@ -281,7 +351,9 @@ function CameraRecorderContent({
         </View>
         {permission === 'granted' && review ? (
           <View style={{ padding: spacing.base, gap: spacing.md }}>
-            <Text style={{ textAlign: 'center', color: colors.textSecondary, ...font.mono(12, 'semibold') }}>{t('student.cameraRecorderComponents.copy005', [clockText(Math.round(reviewDuration))])}</Text>
+            {status !== 'failed' ? <TrimTimeline selection={selection} thumbnails={thumbnails} enabled={status === 'ready' && trimReady && !using} onMove={(edge, seconds) => {
+              if (status === 'ready' && trimReady && !usingRef.current) { trimTouched.current = true; move(edge, seconds); }
+            }} /> : null}
             {error ? <Text style={{ color: colors.danger }}>{t('student.cameraRecorderView.copy008')}</Text> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
               <Text style={{ color: colors.inkOnCTAFill, ...font.body(16), flexShrink: 1 }}>{t('student.cameraRecorderComponents.copy006')}</Text>
@@ -290,27 +362,16 @@ function CameraRecorderContent({
                 disabled={!preferenceLoaded || using}
                 value={saveToPhotos}
                 onValueChange={value => {
+                  if (usingRef.current) return;
                   setSaveToPhotos(value);
                   void AsyncStorage.setItem(SAVE_TO_PHOTOS_KEY, String(value)).catch(() => undefined);
                 }}
               />
             </View>
-            {trimHintVisible ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.space1 }}>
-              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, color: colors.textTertiary, ...font.body(11) }}>{t('student.cameraRecorderComponents.copy007')}</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel={t('student.cameraRecorderComponents.copy008')} onPress={dismissTrimHint} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center', flexShrink: 1 }}>
-                <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: colors.textSecondary, ...font.body(11, 'semibold') }}>{t('student.cameraRecorderComponents.copy008')}</Text>
-              </Pressable>
-            </View> : null}
             <View style={{ flexDirection: 'row', gap: spacing.base }}>
               <AppButton
                 style={{ flex: 1 }}
-                disabled={using}
-                variant="secondary"
-                label={t('student.cameraRecorderComponents.copy009')}
-                onPress={() => setEditing(true)}
-              />
-              <AppButton
-                style={{ flex: 1 }}
+                loading={using}
                 disabled={using || !preferenceLoaded || error}
                 label={t('student.cameraRecorderComponents.copy010')}
                 onPress={() => void use()}
@@ -319,19 +380,6 @@ function CameraRecorderContent({
           </View>
         ) : null}
       </SafeAreaView>
-      {editing && review ? <VideoTrimView key={review} uri={review} onOutcome={outcome => {
-        setEditing(false);
-        if (outcome.type === 'saved') {
-          deleteLocalVideo(ownedUri.current);
-          ownedUri.current = outcome.video.uri;
-          setReview(outcome.video.uri);
-          setReviewDuration(outcome.video.durationMs / 1000);
-          setError(false);
-          dismissTrimHint();
-        } else if (outcome.type === 'failed') {
-          ToastAndroid.show(t('student.cameraRecorderView.copy011'), ToastAndroid.LONG);
-        }
-      }} /> : null}
     </Modal>
   );
 }
