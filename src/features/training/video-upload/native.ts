@@ -145,20 +145,22 @@ export async function prepareTrainingVideo(
   let output: string | null = null;
   try {
     const metadata = await Compressor.getVideoMetaData(source.uri);
-    if (
-      metadata.duration > VIDEO_MAX_DURATION_SECONDS ||
-      (source.durationMs ?? 0) > VIDEO_MAX_DURATION_SECONDS * 1000
-    ) {
-      throw new VideoNativeError(
-        VIDEO_UPLOAD_ERRORS.tooLong(VIDEO_MAX_DURATION_SECONDS),
-        { deterministic: true },
-      );
-    }
     check();
     const tracks = await requireNativeModule<{
       readTracks(uri: string): Promise<TrackMetadata>;
     }>('TrainingVideo').readTracks(source.uri);
     check();
+    // Muxed tails can extend a full-limit selection by a fraction of a frame.
+    // Unknown frame rate gets no tolerance; never permit more than one frame.
+    const fps = tracks.frameRate;
+    const allowance = fps && Number.isFinite(fps) && fps > 0 ? Math.min(0.1, 1 / fps) : 0;
+    const durationLimit = VIDEO_MAX_DURATION_SECONDS + allowance;
+    if (metadata.duration > durationLimit || (source.durationMs ?? 0) > durationLimit * 1000) {
+      throw new VideoNativeError(
+        VIDEO_UPLOAD_ERRORS.tooLong(VIDEO_MAX_DURATION_SECONDS),
+        { deterministic: true },
+      );
+    }
     if (passthroughEligibility(tracks) === 'passthrough')
       return { localUri: source.uri, sizeBytes: new File(source.uri).size };
     output = await compressVideo(source, control);
@@ -214,6 +216,12 @@ export function deleteLocalVideo(uri: string | null): VideoNativeError | null {
 /** Sources copied before a crash but never attached are safe to reclaim at cold startup. */
 export function cleanOrphanVideos(referencedUris: readonly string[]): void {
   const referenced = new Set(referencedUris);
+  // Trim owns a separate prefix so a concurrent compressor failure cannot reclaim its files.
+  // Only cold startup may collect abandoned trim sessions, including their JPEG thumbnails.
+  for (const file of new Directory(Paths.cache).list()) {
+    if (file instanceof File && /^training-trim-.*\.(mp4|jpg)$/.test(file.name) && !referenced.has(file.uri))
+      deleteLocalVideo(file.uri);
+  }
   for (const file of cachedExports())
     if (!referenced.has(file.uri)) deleteLocalVideo(file.uri);
   for (const file of directory().list()) {

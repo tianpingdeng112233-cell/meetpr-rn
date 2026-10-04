@@ -9,12 +9,26 @@ import android.net.Uri
 import android.os.Build
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.Promise
+import expo.modules.kotlin.functions.Queues
 import java.nio.ByteBuffer
 
-/** Track facts absent from compressor's public metadata API. No encoding or upload here. */
+/** Local video inspection and trim; upload compression remains in the existing JS pipeline. */
 class TrainingVideoModule : Module() {
+  private val trimExporter by lazy { VideoTrimExporter() }
   override fun definition() = ModuleDefinition {
     Name("TrainingVideo")
+    AsyncFunction("trimInfo") { uri: String ->
+      VideoTrimMedia.inspect(requireNotNull(appContext.reactContext), uri).toMap()
+    }
+    AsyncFunction("thumbnails") { uri: String, count: Int ->
+      VideoTrimMedia.thumbnails(requireNotNull(appContext.reactContext), uri, count)
+    }
+    AsyncFunction("trim") { uri: String, startMs: Double, endMs: Double, promise: Promise ->
+      trimExporter.trim(requireNotNull(appContext.reactContext), uri, startMs, endMs, promise)
+    }.runOnQueue(Queues.MAIN)
+    AsyncFunction("cancelTrim") { uri: String -> trimExporter.cancel(uri) }.runOnQueue(Queues.MAIN)
+    OnDestroy { trimExporter.close() }
     AsyncFunction("hasCamera") {
       val context = requireNotNull(appContext.reactContext)
       val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -36,13 +50,23 @@ class TrainingVideoModule : Module() {
           val rate = bitrate(extractor, index, format)
           if (mime.startsWith("video/")) {
             video = mapOf("codec" to mime, "width" to format.getInteger(MediaFormat.KEY_WIDTH),
-              "height" to format.getInteger(MediaFormat.KEY_HEIGHT), "bitrate" to rate)
+              "height" to format.getInteger(MediaFormat.KEY_HEIGHT), "bitrate" to rate, "frameRate" to frameRate(format))
           } else {
             audio = mapOf("codec" to mime, "bitrate" to rate)
           }
         }
         requireNotNull(video) { "No video track" } + mapOf("audio" to audio)
       } finally { extractor.release() }
+    }
+  }
+
+  private fun frameRate(format: MediaFormat): Double? {
+    if (!format.containsKey(MediaFormat.KEY_FRAME_RATE)) return null
+    return if (Build.VERSION.SDK_INT >= 29) {
+      format.getNumber(MediaFormat.KEY_FRAME_RATE)?.toDouble()
+    } else {
+      try { format.getInteger(MediaFormat.KEY_FRAME_RATE).toDouble() }
+      catch (_: ClassCastException) { format.getFloat(MediaFormat.KEY_FRAME_RATE).toDouble() }
     }
   }
 

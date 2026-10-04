@@ -3,6 +3,7 @@ export type TrackMetadata = {
   width: number;
   height: number;
   bitrate: number | null;
+  frameRate?: number | null;
   /** null means no audio; undefined means unknown and must transcode. */
   audio?: { codec: string | null; bitrate: number | null } | null;
 };

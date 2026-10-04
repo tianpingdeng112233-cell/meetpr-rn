@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { AppState, Modal, Text, type AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ExpoModules from 'expo-modules-core';
+import * as MediaLibrary from 'expo-media-library';
 import { CameraView } from 'expo-camera';
 import Video from 'react-native-video';
 import { setLocaleOverride, t } from '@/i18n';
@@ -37,10 +40,28 @@ jest.mock('expo-camera', () => {
   };
 });
 
+const mockMedia = {
+  trimInfo: jest.fn(async () => ({ durationMs: 3000, videoTrackCount: 1 })),
+  thumbnails: jest.fn(async () => []),
+  trim: jest.fn(async () => ({ uri: 'file:///cache/trimmed.mp4', durationMs: 1000 })),
+  cancelTrim: jest.fn(async () => {}),
+};
+jest.mock('expo-file-system', () => ({
+  File: class {
+    uri: string; exists = true; size = 100;
+    constructor(...parts: (string | { uri: string })[]) { this.uri = parts.map(p => typeof p === 'string' ? p : p.uri).join('/'); }
+    copy() {} delete() {}
+  },
+  Paths: { cache: { uri: 'file:///cache/' }, document: { uri: 'file:///documents/' } },
+}));
 const uri = 'file:///recorded.mp4';
 let renderer: ReactTestRenderer;
 let changeState: (state: AppStateStatus) => void;
-beforeEach(() => {
+beforeEach(async () => {
+  await AsyncStorage.clear();
+  jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireNativeModule').mockReturnValue(mockMedia);
+  jest.spyOn(ExpoModules.uuid, 'v4').mockReturnValue('camera-working');
+  jest.mocked(MediaLibrary.Asset.create).mockClear();
   setLocaleOverride('en');
   jest.useFakeTimers();
   jest.mocked(deleteLocalVideo).mockClear();
@@ -174,4 +195,56 @@ test.each(['Close camera', 'system back'])('%s closes capture and cleans up an i
   await act(async () => { mockFinishRecording?.({ uri }); });
   expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
   expect(onUse).not.toHaveBeenCalled();
+});
+
+test('review offers Edit and a persistent do-not-remind trim hint', async () => {
+  await mountCamera();
+  await completeRecording();
+  const labels = () => renderer.root.findAllByType(Text).map(node => node.props.children);
+  expect(labels()).toContain(t('student.cameraRecorderComponents.copy009'));
+  expect(labels()).toContain(t('student.cameraRecorderComponents.copy007'));
+  await press(t('student.cameraRecorderComponents.copy008'));
+  expect(labels()).not.toContain(t('student.cameraRecorderComponents.copy007'));
+  act(() => renderer.unmount());
+  await mountCamera();
+  await completeRecording();
+  expect(labels()).not.toContain(t('student.cameraRecorderComponents.copy007'));
+});
+
+
+test('Edit then Save updates duration, suppresses the hint, and Use saves and delivers the trimmed file', async () => {
+  const { onUse } = await mountCamera();
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy009'));
+  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain(t('student.videoTrimView.copy002'));
+  const trimPlayer = renderer.root.findAllByType(Video).find(n => n.props.source.uri !== uri)!;
+  await act(async () => { trimPlayer.props.onLoad({ duration: 3 }); });
+  await press(t('student.videoTrimView.copy003'));
+  expect(renderer.root.findByType(Video).props.source.uri).toBe('file:///cache/trimmed.mp4');
+  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain('Duration 00:01');
+  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.cameraRecorderComponents.copy007'));
+  await changeAppState('background', 'active');
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(MediaLibrary.Asset.create).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+  expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+  expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
+  act(() => renderer.unmount());
+  expect(deleteLocalVideo).not.toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+});
+
+
+test.each(['close', 'failure'])('Edit %s retains the review and permits retry', async outcome => {
+  const { onUse } = await mountCamera();
+  await completeRecording();
+  if (outcome === 'failure') mockMedia.trimInfo.mockRejectedValueOnce(new Error('invalid file'));
+  await press(t('student.cameraRecorderComponents.copy009'));
+  if (outcome === 'close') await press(t('student.cameraRecorderView.copy005'));
+  expect(renderer.root.findByType(Video).props.source.uri).toBe(uri);
+  expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+  await press(t('student.cameraRecorderComponents.copy009'));
+  const trimPlayer = renderer.root.findAllByType(Video).find(n => n.props.source.uri !== uri)!;
+  await act(async () => { trimPlayer.props.onLoad({ duration: 3 }); });
+  await press(t('student.videoTrimView.copy003'));
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
 });

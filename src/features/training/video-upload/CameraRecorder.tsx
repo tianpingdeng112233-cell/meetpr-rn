@@ -13,7 +13,9 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { t } from '@/i18n';
 import { deleteLocalVideo } from './native';
 import { VIDEO_MAX_DURATION_SECONDS } from './model';
+import { VideoTrimView } from './VideoTrimView';
 const SAVE_TO_PHOTOS_KEY = 'training.video.saveToPhotos.v1';
+const TRIM_HINT_DISMISSED_KEY = 'training.video.trimHintDismissed.v1';
 const clockText = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -42,6 +44,9 @@ function CameraRecorderContent({
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [review, setReview] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [reviewDuration, setReviewDuration] = useState(0);
+  const [trimHintVisible, setTrimHintVisible] = useState(false);
   const [saveToPhotos, setSaveToPhotos] = useState(true);
   const [preferenceLoaded, setPreferenceLoaded] = useState(false);
   const [using, setUsing] = useState(false);
@@ -92,6 +97,9 @@ function CameraRecorderContent({
       .catch(() => {
         if (live) setPreferenceLoaded(true);
       });
+    void AsyncStorage.getItem(TRIM_HINT_DISMISSED_KEY)
+      .then(value => { if (live) setTrimHintVisible(value !== 'true'); })
+      .catch(() => { if (live) setTrimHintVisible(true); });
     const subscription = AppState.addEventListener('change', (state) => {
       // Only interrupt an in-flight recording; completed reviews still own their local video.
       // Android also reports a transient 'background' while the camera / permission activity attaches,
@@ -160,6 +168,7 @@ function CameraRecorderContent({
       }
       if (!video?.uri) throw new Error('Recording incomplete');
       ownedUri.current = video.uri;
+      setReviewDuration(Math.max(0, (Date.now() - startedAt.current) / 1000));
       setReview(video.uri);
     } catch {
       if (current === generation.current && !closed.current) setError(true);
@@ -187,6 +196,10 @@ function CameraRecorderContent({
     ownedUri.current = null;
     onUse(review);
   };
+  const dismissTrimHint = () => {
+    setTrimHintVisible(false);
+    void AsyncStorage.setItem(TRIM_HINT_DISMISSED_KEY, 'true').catch(() => undefined);
+  };
   return (
     <Modal visible presentationStyle="fullScreen" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
       <StatusBar barStyle="light-content" />
@@ -197,10 +210,13 @@ function CameraRecorderContent({
               source={{ uri: review }}
               repeat
               controls
+              paused={editing || using}
               resizeMode="contain"
               style={StyleSheet.absoluteFill}
+              onLoad={({ duration }) => setReviewDuration(duration)}
               onError={() => setError(true)}
             />
+
           ) : (
             <CameraView
               ref={camera}
@@ -224,6 +240,13 @@ function CameraRecorderContent({
               style={{ backgroundColor: colors.numberPadScrim }}
               icon={({ size }) => <MaterialCommunityIcons name="close" size={size} color={colors.inkOnCTAFill} />}
             />
+            {review ? <AppButton variant="link" disabled={using} label={t('student.cameraRecorderView.copy009')} onPress={() => {
+              deleteLocalVideo(review);
+              ownedUri.current = null;
+              setReview(null);
+              setReady(false);
+              setError(false);
+            }} /> : null}
             {permission === 'granted' && !review ? (
               <View style={{ alignItems: 'flex-end', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.control, backgroundColor: colors.numberPadScrim }}>
                 <Text style={{ color: colors.inkOnCTAFill, ...font.mono(18) }}>{clockText(elapsed)}</Text>
@@ -258,6 +281,7 @@ function CameraRecorderContent({
         </View>
         {permission === 'granted' && review ? (
           <View style={{ padding: spacing.base, gap: spacing.md }}>
+            <Text style={{ textAlign: 'center', color: colors.textSecondary, ...font.mono(12, 'semibold') }}>{t('student.cameraRecorderComponents.copy005', [clockText(Math.round(reviewDuration))])}</Text>
             {error ? <Text style={{ color: colors.danger }}>{t('student.cameraRecorderView.copy008')}</Text> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }}>
               <Text style={{ color: colors.inkOnCTAFill, ...font.body(16), flexShrink: 1 }}>{t('student.cameraRecorderComponents.copy006')}</Text>
@@ -271,19 +295,19 @@ function CameraRecorderContent({
                 }}
               />
             </View>
+            {trimHintVisible ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.space1 }}>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={{ flex: 1, color: colors.textTertiary, ...font.body(11) }}>{t('student.cameraRecorderComponents.copy007')}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('student.cameraRecorderComponents.copy008')} onPress={dismissTrimHint} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center', flexShrink: 1 }}>
+                <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: colors.textSecondary, ...font.body(11, 'semibold') }}>{t('student.cameraRecorderComponents.copy008')}</Text>
+              </Pressable>
+            </View> : null}
             <View style={{ flexDirection: 'row', gap: spacing.base }}>
               <AppButton
                 style={{ flex: 1 }}
                 disabled={using}
                 variant="secondary"
-                label={t('student.cameraRecorderView.copy009')}
-                onPress={() => {
-                  deleteLocalVideo(review);
-                  ownedUri.current = null;
-                  setReview(null);
-                  setReady(false);
-                  setError(false);
-                }}
+                label={t('student.cameraRecorderComponents.copy009')}
+                onPress={() => setEditing(true)}
               />
               <AppButton
                 style={{ flex: 1 }}
@@ -295,6 +319,19 @@ function CameraRecorderContent({
           </View>
         ) : null}
       </SafeAreaView>
+      {editing && review ? <VideoTrimView key={review} uri={review} onOutcome={outcome => {
+        setEditing(false);
+        if (outcome.type === 'saved') {
+          deleteLocalVideo(ownedUri.current);
+          ownedUri.current = outcome.video.uri;
+          setReview(outcome.video.uri);
+          setReviewDuration(outcome.video.durationMs / 1000);
+          setError(false);
+          dismissTrimHint();
+        } else if (outcome.type === 'failed') {
+          ToastAndroid.show(t('student.cameraRecorderView.copy011'), ToastAndroid.LONG);
+        }
+      }} /> : null}
     </Modal>
   );
 }
