@@ -20,6 +20,7 @@ export function restNotificationPermission(): boolean {
 export const restTimerNotifications: RestTimerNotifications = {
   show: (endAtEpochMs, startedAtEpochMs, body) => nativeModule()?.show(endAtEpochMs, startedAtEpochMs, body, {
     title: t('training.restNotification.title'),
+    titleTemplate: t('training.restNotification.titleTemplate'),
     completeTitle: t('student.restTimerOverlay.copy003'),
     completeBody: t('training.restNotification.completeBody'),
     skip: t('student.restTimerOverlay.copy001'),

@@ -1,5 +1,6 @@
 {
 "training.restNotification.title": { "en": "Rest between sets", "zh": "组间休息" },
+"training.restNotification.titleTemplate": { "en": "Rest {0}", "zh": "休息 {0}" },
 "training.restNotification.completeBody": { "en": "Time for your next set", "zh": "该做下一组了" },
 "training.restNotification.add": { "en": "+30s", "zh": "+30s" },
 "training.restNotification.timerChannel": { "en": "Rest timer", "zh": "休息倒计时" },

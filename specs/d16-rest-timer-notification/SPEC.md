@@ -133,3 +133,60 @@
 - vivo 原子通知 / 原子岛等厂商专有接入。
 - 自定义通知布局、进度条上的图标、通知里的下一组处方信息。
 - 前台服务。
+
+---
+
+## 增补二（2026-10-04 晚，David 真机验 `9215385` 后拍板「A」）
+
+### 真机上发生了什么（vivo V2405A，Android 16 / OriginOS 6，adb 现场）
+
+- **系统在 App 切后台约 6 秒后冻结它，并删掉它排的全部定时器**（`dumpsys alarm` 的 Removal history 里原因写的是 `frozen`）。后果：进度不刷新；**"Rest complete" 不来**（终点后 25 秒、70 秒各查一次都没有）。
+- 通知没有被提升为实时更新（没有 `PROMOTED_ONGOING`）。这台系统的状态栏"岛"只认厂商自己的场景白名单。
+- 系统给 `ProgressStyle` 画的卡片不画计时控件，所以卡片里没有倒计时数字（第一版的普通样式在通知中心是有的）。
+
+结论：依赖"系统计时控件 + 系统定时器"的做法在会冻结后台应用的系统上不成立。本节**覆盖**上文"不使用前台服务""由系统原生计时控件显示""进度约每 10 秒前进一次（TICK 定时）"等条目，其余不变。
+
+### 行为
+
+- 休息倒计时进行中、App 进入后台时，由一个**前台服务**持有倒计时通知；回到前台、Skip、走完时服务结束。服务存活期间 App 不会被系统冻结。
+- **剩余时间写进通知标题并每秒刷新**："Rest 01:53" / 「休息 01:53」（分:秒，不足两位补零；超过 59:59 不会出现）。正文仍是动作名。进度条每秒更新。任何厂商的卡片样式都能看到数字。
+- 不再使用系统计时控件（否则原生 Android 上标题与页眉会出现两个倒计时）。Android 16 的状态栏胶囊改用短文本显示同一个剩余时间（如 `1:53`），每秒刷新；仍请求提升为实时更新。
+- **结束提醒由服务在终点准点发出**，不依赖系统定时器；内容、渠道、震动不变。保留一个系统定时器作为兜底（服务被系统杀掉的情况），兜底与服务不得重复发提醒。
+- 通知上的 Skip / +30s 行为不变，在服务存活时立即生效（标题、进度、终点同步更新）。
+- 3A 不变：App 在前台时没有通知、没有服务。
+- 通知权限未授予：不启动服务、不发通知，App 内行为不变。
+- 服务启动被系统拒绝（个别系统不允许此时启动）：退回"增补一"的做法（系统计时控件 + 定时器），不崩溃、不弹任何请求。
+- 划掉最近任务（杀进程）之后：服务与通知随进程结束；兜底定时器若还在，结束提醒照常；不要求通知继续倒计时（覆盖验收 10 的原表述）。
+
+### 技术方案
+
+- 在 `modules/rest-timer-notification` 新增 `RestTimerService`（`Service`），Manifest 声明 `android:foregroundServiceType="specialUse"`、`exported=false`，并带 `android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE` 属性（一句英文说明：用户记完一组后发起的组间休息倒计时）。新增权限 `FOREGROUND_SERVICE` 与 `FOREGROUND_SERVICE_SPECIAL_USE`（都是普通权限，无弹窗）。这是经 David 拍板对"不使用前台服务、不新增权限"的放宽。
+- 启动时机：JS 侧 `show` 的调用点不变（App 进入后台那一刻，Activity 仍可见，系统允许此时启动前台服务）。原生 `show` 改为 `ContextCompat.startForegroundService`；服务在 `onStartCommand` 里立即 `startForeground`（Android 14+ 带上类型）。捕获启动异常（含 `ForegroundServiceStartNotAllowedException`、`SecurityException`）后走退回路径。
+- 服务内用主线程 `Handler` 每秒重发通知（`setOnlyAlertOnce`），时间一律按墙钟终点计算，不累加。终点到达：发结束提醒 → `stopForeground(STOP_FOREGROUND_REMOVE)` → `stopSelf()`。`START_NOT_STICKY`。
+- 通知构建沿用现有 `publish`：去掉 `setUsesChronometer` / `setChronometerCountDown` / `setShowWhen(true)`，加 `setShortCriticalText(剩余时间)`；`ProgressStyle`、`setRequestPromotedOngoing`、渠道、图标、按钮不变。退回路径保留计时控件。
+- Receiver 的 Skip / +30s / END 与服务共用同一份 `SharedPreferences` 状态与同一把锁；服务存活时由服务负责重发与收尾，`TICK` 定时不再排。`hide()` 负责停服务。
+- 标题模板由 JS 传入（带一个占位符），原生只做时间格式化与替换。新增文案键放 `RnExtras.json`：英文 `Rest {0}`、中文 `休息 {0}`。
+- 把这次的 Play 申报要求记到仓内发布清单：上 Google Play 时需为 `specialUse` 前台服务填写用途说明（`docs/` 下已有分发 / W4 文档则追加一行，没有则写进 `PARITY.md` 对应行的备注）。
+
+### 测试 seam（先红后绿）
+
+1. JS：`show` / `hide` / `consumeState` 的调用契约不变，现有测试保持通过；新增"标题模板被传给原生"的断言。
+2. 纯函数（若把时间格式化放在可测位置）：剩余毫秒 → `mm:ss`，含 0、59 秒、10 分钟、向上取整规则与页内计时条一致。
+3. 原生无 jest seam：在 JOURNAL 给出 adb 验证步骤——`dumpsys activity services com.meetpr.app` 能看到前台服务；相隔 3 秒两次 `dumpsys notification --noredact` 的 `android.title` 不同；终点后 `id=16002` 出现。
+
+### 验收清单（追加，Opus 收货）
+
+21. 模拟器（Android 15 与 16）：切后台后通知标题里的时间每秒变化，回到 App 与页内计时条一致（误差 ≤ 1 秒）；进度条连续前进。
+22. Android 16 模拟器：状态栏胶囊显示剩余时间并每秒变化；卡片排最前。标题与页眉不出现两个倒计时。
+23. 未授予"闹钟和提醒"权限时，后台走完仍准点（≤ 2 秒）出现 "Rest complete" 并震动；不重复出现两条。
+24. 通知上 Skip / +30s 立即生效；回到前台后 `dumpsys activity services` 里没有本服务。
+25. App 内 Skip / 记下一组 / 完成当天后切后台：没有服务、没有通知。
+26. 关掉通知权限：不启动服务、不崩溃、不弹请求。
+27. **真机（vivo）**：切后台后标题时间在走；终点后 5 秒内 `dumpsys notification` 有 `id=16002`；`dumpsys alarm` 的 Removal history 在休息期间没有新增针对本应用的 `frozen` 条目（或虽有但结束提醒仍准点）。
+28. 锁屏（模拟器与真机）：记录实际表现。真机锁屏若仍不显示，如实写明，不在本轮硬修。
+29. 增补一的 15–18 与第一版的 3、4、5、7、8、9 复跑通过。
+
+### Out of Scope（追加）
+
+- vivo 状态栏"岛" / 原子通知接入。
+- 训练提醒在被冻结系统上的可靠性（另案 D-47）。

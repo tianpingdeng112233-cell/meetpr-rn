@@ -2446,3 +2446,82 @@ adb shell am broadcast -n com.meetpr.app/com.meetpr.resttimer.RestTimerReceiver 
 - `src/features/training/__tests__/set-save.test.tsx`
 - `docs/CODEX-JOURNAL.md`（仅追加本节）
 - `PARITY.md`（原 D-16 行按卡追加一句）
+
+## D-16 返修二（2026-10-04，增补二；开发自测）
+
+### 实装前状态机与测试 seam
+
+- 基线 `feat/d16-rest-timer-notification@3b0ce46`；开工仅 SPEC/CARD 有未提交改动，原样保留。本轮不 commit、不 push。按增补二实装，不改变 JS show/hide 时机和页内计时条。
+- `IDLE → STARTING`：show 在同一把锁内写 SharedPreferences（token、起止时间、正文、labels），提前建渠道/构造通知/排 END 兜底，再请求启动服务；服务 onStartCommand 首先用预构造的通知 startForeground，之前不读磁盘、不排定时、不创建渠道。随后在锁内验证 token、前后台及权限。
+- `STARTING → SERVICE`：服务成为唯一重发者，主线程 Handler 每秒按墙钟终点更新标题/短文本/进度，不排 TICK。Receiver ADD_30 在同一锁内改终点、重排 END 并唤醒服务立即刷新；END 到来且服务存活时只唤醒服务，由服务收尾。
+- `STARTING → FALLBACK`：startForegroundService 或 startForeground 抛 RuntimeException（包含后台启动拒绝和 SecurityException），停止失败的服务，校验仍为当前 token 后改发系统计时控件通知，排 END + 10 秒 TICK。失效 token 不复活。FALLBACK 下 Receiver 负责重发/收尾。
+- `SERVICE/FALLBACK → IDLE`：回前台/hide/Skip 先清 token、取消 END/TICK，再移除通知、移除 Handler 回调并停服务；保留 consumeState 所需按钮状态。自然到期的唯一 completion 入口也在同一锁下先消费 token、取消 END/TICK，再发一次 id=16002、移除 id=16001 并停服务；随后服务/旧 END 均因无 token 而无效。+30s 后旧 END 还需匹配 endAt 才能处理。
+- 进程死亡不会持久化“服务存活”标记；新进程 Receiver 无服务 owner，凭持久化 token/endAt 发兜底提醒。服务 START_NOT_STICKY；划掉任务停止服务/通知但保留 END 与数据。onDestroy 不调用 hide，以免吞掉兜底或取消下一次休息。
+- 测试 seam 沿用 SPEC 已批准的 JS→原生桥接；新增真实 i18n 英/中文标题模板断言（保留 `{0}`），不 mock 内部模块。原生仍无 Android 单测工程，设备/Gradle 由 Opus 在验收树完成，不以源码断言充当行为测试。
+
+### 本轮文件与实现细节
+
+- 新增：`modules/rest-timer-notification/android/src/main/java/com/meetpr/resttimer/RestTimerService.kt`；`src/features/training/__tests__/rest-timer-notification.test.ts`。
+- 修改：模块 `android/src/main/AndroidManifest.xml`、`RestTimerNotifications.kt`；`src/features/training/rest-timer-notification.ts`、`src/i18n/catalog/RnExtras.json`；`PARITY.md` 与本 JOURNAL。SPEC/CARD 是开工前已有的 Opus WIP，本轮未修改。Receiver 和 Expo Module 源文件无需改动：仍委派同一同步 coordinator，labels Map 增加 titleTemplate，不变更 show 参数签名。
+- 服务通知每秒按 `ceil(max(endAt-now,0)/1000)` 计算；标题补零 `mm:ss`，胶囊为 `m:ss`，Locale.ROOT 保证数字格式；不使用 chronometer/showWhen/timeoutAfter，避免重复倒计时或前台通知被超时提前移除。仍为相同 ProgressStyle、promoted 请求、渠道、图标、按钮。foregroundServiceBehavior=IMMEDIATE 避免系统默认推迟展示。fallback 才保留原 chronometer/timeoutAfter 及 10 秒 TICK。
+- Service 的 onStartCommand 仅先解包 show 预构建的 Notification，立即在 try 内 startForeground（34+ 传 SPECIAL_USE）；没有预先读 SharedPreferences、构建通知、建渠道或排 alarm。两级启动拒绝均捕获 RuntimeException（覆盖 ForegroundServiceStartNotAllowedException、SecurityException）并恢复 fallback，不请求任何权限。onStartCommand 返回 START_NOT_STICKY。
+- 回前台/hide 立即撤销 token/END/TICK，清 Handler 并 stopForeground(REMOVE)/stopSelf；尚未进入 onStartCommand 的请求由 stopService 取消。已交付的迟到 onStart 仍先履行前台提升，随后验证 token，按 startId 停旧请求；若已有新的有效 token，则立即恢复新 fallback，避免旧服务共用 id=16001 擦掉新通知。若已有有效 owner 则重发该 owner 的当前状态。hide 后没有 token，不会复活。
+- 通知 ADD_30 写 endAt/changedEndAt 并重排 END，服务 handler 立即刷新；有 owner 时 END 只请求服务刷新，到期仍统一 complete。complete 在同一锁内先删除 token 并 commit，再取消 END/TICK、发 id=16002、停服务；旧 END/token、旧终点和后到的 handler 均无法重复发送。所有组件仍为同进程，未声明 android:process。此处是正常回调竞争的 at-most-once；不声称系统强杀恰在“持久化消费后、notify 前”也保证交付。
+- onTaskRemoved 主动撤下服务及倒计时通知，保留持久状态/END。onDestroy 仅释放属于本实例的 owner 和 Handler，不调用 hide、不删除 token 或 alarm，因此 cold Receiver 可以兜底。厂商若同时删 END，按增补二“不保证划掉任务后继续倒计时”边界实测记录。
+- 原生所有 timer/Receiver 入口使用同一对象 monitor；服务存在与否只存进程内引用，SharedPreferences 中没有可能跨进程残留的 alive 标记。
+
+### 新增 Manifest 条目与发布备注
+
+1. `uses-permission android.permission.FOREGROUND_SERVICE`。
+2. `uses-permission android.permission.FOREGROUND_SERVICE_SPECIAL_USE`。
+3. `.RestTimerService`：`exported=false`，`foregroundServiceType="specialUse"`；没有额外 process、intent-filter 或开机启动入口。
+4. service 内 property：`android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE` = `User-initiated rest countdown between workout sets after logging a set.`。
+
+原有 POST_PROMOTED_NOTIFICATIONS 和非导出 Receiver 不变；无第三方依赖变化。docs 下没有分发/W4 文档，按 SPEC 在 PARITY 对应 D-16 行记录 Google Play specialUse 用途申报待办。
+
+### 红 → 绿与构建边界
+
+- 新增测试 `passes the localized countdown title template to native (en)`、`passes the localized countdown title template to native (zh)`，真实 i18n → 原生边界：初跑 **2 failed**（收到 labels 缺 titleTemplate），实现后 **2 passed**。日志 `/private/tmp/d16-r2-red.log`、`/private/tmp/d16-r2-green.log`。后续只调整 Jest 参数表类型，解决 tsc readonly tuple 类型错误，断言不变。
+- 时间格式化留在 Kotlin notification builder 内；没有为 JS 复制另一份格式化实现，也没有以源码匹配代替服务行为测试。原生无 Android 单测工程；其时间边界和状态机仍需设备/原生 instrumentation 验证。
+- 已读 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)、[Android 前台服务启动要求](https://developer.android.com/develop/background-work/services/fgs/launch)、[Live Update 文档](https://developer.android.com/develop/ui/views/notifications/live-update)。本机 core 1.17.0 javap 确认 setShortCriticalText 和 setForegroundServiceBehavior 存在。
+- 独立 Kotlin 编译（四份模块源码，Android 36/core 1.17.0/本机现有 Expo/RN classpath）通过，0 errors / 0 warnings；Android 36 AAPT2 用模块真实 Manifest 的临时 package 副本链接通过。证据 `/private/tmp/d16-r2-native/`；初跑 Kotlin 发现 nullable Notification 不能传入三参数 startForeground，已在调用参数内明确非空并复编译通过。没有更改依赖、生成本树 android/ 或操作验收树。
+- 这些独立检查不等于 Gradle dependency resolution、Manifest merge 或 APK 构建通过。已有 autolink 的验收树同步整个模块与 JS 后重新构建原生 APK即可合并服务/权限，通常不需重新 prebuild；新树仍需 Expo prebuild/autolinking。旧 APK 不能仅 reload JS 获得服务。
+
+### Opus 验证入口（本轮未执行）
+
+以下使用 `adb -s <serial>` 明确选择 Android 15、16 模拟器或 vivo。先安装重建的 APK，在训练页真实记组后按 Home；不要导出 Receiver/Service 来方便测试。
+
+```sh
+adb -s <serial> shell input keyevent KEYCODE_HOME
+adb -s <serial> shell dumpsys activity services com.meetpr.app
+adb -s <serial> shell dumpsys notification --noredact > /tmp/d16-before.txt
+sleep 3
+adb -s <serial> shell dumpsys notification --noredact > /tmp/d16-after.txt
+rg -n -A45 'RestTimerService|16001|16002|android.title|android.progress|shortCritical|PROMOTED_ONGOING|chronometer' /tmp/d16-before.txt /tmp/d16-after.txt
+adb -s <serial> shell dumpsys alarm > /tmp/d16-alarm.txt
+rg -n -A12 'com.meetpr.app|resttimer|frozen' /tmp/d16-alarm.txt
+```
+
+- 21–22：两次 title 应减少约 3 秒；进度增加；胶囊时间随之变且无第二个 chronometer。按原 SPEC 实际看屏/截图；dumpsys promoted flag 不能单独证明卡片排序/胶囊/锁屏。
+- 23：先从应用的“闹钟和提醒”系统设置关闭精确权限，再真实记组。观察终点后 ≤2 秒 id=16002 与震动，id=16001/服务/END/TICK 均清；继续等待兜底可能迟到的窗口，确认没有第二次提醒。核对 notification 历史/录屏，而非仅“只剩一个 id”证明没有重复震动。
+- 24–26：通过真实通知按钮 +30s/Skip 和页内各结束路径操作，重复 services/alarm/notification；回前台应无 service、16001、16002、END/TICK。系统关闭通知权限后再记组，无 service/通知/权限请求。
+- 27–28：vivo 同样留前后 title/终点 id=16002 与 alarm Removal history；锁屏另截图记录实际表现。不要把前台服务当作厂商绝不冻结的实测保证。
+- 29：照 SPEC 原条目复跑，包括 Android 15 标准通知、退回实时更新禁用、锁屏、+30s 上限、Skip、回前台与旧 TICK 不复活。
+- 退回路径/竞态：需在验收树 debug instrumentation 或 debugger 中分别令 startForegroundService 与 startForeground 抛启动拒绝/SecurityException，确认无服务而 16001 的 chronometer/END/TICK 仍在、按钮仍工作。加测 show(A) 排队→show(B) 被拒→A 迟到成功/失败：B 的 fallback 必须立即保留；hide 后到达的旧 start/END/TICK 不得复活。外部 adb 无权直接启动非导出 Service/Receiver；`am broadcast` 被拒不能算通过，过期 token/END 重放需用同 UID instrumentation。
+
+### 未覆盖的验收条目
+
+**21–29 全部未在设备上执行，不宣告任何一项完成。** 24–26、29 的 JS 既有行为有 Jest 回归覆盖，但不能替代服务生命周期/系统权限/通知 UI 的验收。Android 15/16 模拟器、vivo、锁屏表现、原生完整 Gradle/APK 构建以及强制启动失败退回路径，均按卡交 Opus 收货。验收清单不改写、不缩小。
+
+### 本地双轴审查（不是 Opus 收货）
+
+- 使用 review-loop 的本地文件流程，Standards 与 Spec 两个独立只读 reviewer。仓无 `docs/agents/issue-tracker.md`；未私建 tracker，也未声称执行依赖它的 code-review；后续启用该流程需 David 调用 `$setup-matt-pocock-skills`。
+- Standards：0 硬违反 / 0 实质坏味道。Spec：初审 1 个 P2——迟到的旧 onStart 在 B 已 fallback 后会删共用通知 ID；已定向修复成功/失败两条启动路径，复审 0 未决 finding。固定 diff `/private/tmp/d16-r2-review.diff`、`/private/tmp/d16-r2-review-final.diff`，另审了两份 untracked 新文件。源码审查不代表设备验收。
+- 最终核对：RestTimer.tsx、rest-timer-session.ts、RestTimerNotificationSession.tsx、TodayWorkoutView.tsx 均无 diff；无 package/lock/build.gradle 改动；HEAD 仍为 `3b0ce46`，index 无暂存改动；未 commit/push。
+
+### 最终检查结果
+
+- `npm test -- --runInBand`：**147 suites / 1084 tests passed，0 failed**（最终复跑 44.175s）；日志 `/private/tmp/d16-r2-full-test.log`。有仓内既有 React/Expo 测试警告，不声称测试日志零 warning。
+- `npm run lint`：**0 errors / 0 warnings**，退出 0；`/private/tmp/d16-r2-lint.log`。
+- `npx tsc --noEmit`：**0 errors**，退出 0；`/private/tmp/d16-r2-tsc.log`。
+- `git diff --check`：通过。独立 Kotlin/AAPT2 检查已过，完整 Gradle/APK 和设备验收仍未执行。

@@ -42,3 +42,17 @@ SPEC「验收清单」1–11 由 Opus 在模拟器执行，12 由 David 真机�
 - 页内计时条的外观、文案、交互不变。不使用前台服务。除 `POST_PROMOTED_NOTIFICATIONS` 外不新增权限。不新增第三方依赖（`androidx.core` 版本声明除外）。
 - 不 commit、不 push。JOURNAL 追加"D-16 返修一"一节；`PARITY.md` 对应行补一句。
 - 结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`，贴条数。
+
+---
+
+## 返修二（2026-10-04 晚，David 拍板「A」：前台服务 + 文字倒计时）
+
+依据：SPEC 文末「增补二」全文。在 `3b0ce46` 之上做增量。
+
+- 范围：`modules/rest-timer-notification`（新增 `RestTimerService`、Manifest、`RestTimerNotifications.kt`、`RestTimerReceiver.kt`、Module 接口如需加参数）、`src/features/training/rest-timer-notification.ts`（传标题模板）、`RnExtras.json`、相关测试、发布清单备注。JS 侧何时调用 `show` / `hide` 不变。
+- 顺序：先把"服务存活时谁负责重发、谁负责收尾、兜底定时器何时取消"的状态机写进 JOURNAL（文字即可），再写会红的 JS 测试，最后改原生。
+- 重点防三件事：结束提醒发两次（服务 + 兜底定时器）；回到前台后服务没停；启动服务失败时什么都不显示（必须退回增补一的路径）。
+- `startForeground` 必须在 `onStartCommand` 里第一时间调用，之前不得有可能抛异常或耗时的步骤。
+- 本工作树没有 `android/`；Kotlin 与 Manifest 由 Opus 在验收树编译，真机由 Opus 用 adb 验（设备 Android 16 / OriginOS 6）。把每个新增的 Manifest 条目与权限列在 JOURNAL。
+- 不 commit、不 push。JOURNAL 追加"D-16 返修二"一节；`PARITY.md` 对应行更新。
+- 结束前 `npm test` 全量、`npm run lint`、`npx tsc --noEmit`，贴条数。
