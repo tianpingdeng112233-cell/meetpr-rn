@@ -87,3 +87,16 @@
 以 SPEC「验收清单」全部条目为准（1a–1d、2a–2c、3a–3g、4、5、6），由 Opus 逐项收货，实装方不得增删范围。模拟器实屏、老用户升级第一屏、Light / Dark 与小屏大字号由 Opus 做；沙箱里跑不了模拟器就在 JOURNAL 如实写"未做设备验证"，并写清你认为最需要实屏确认的三处。
 
 交付前跑通：`npx jest --runInBand` 全量、`npx tsc --noEmit`、`npm run lint`。
+
+## 返修一（2026-10-09，Opus 读全量 diff + 模拟器实屏后）
+
+主体通过：升级后第一屏、周条双标记、概览卡跳训练页并在返回后重置、体重单项页（kg 与 lb）、Meet 编辑页（旧手填值、缺项拦截、保存、移除确认）、Profile 两行、营养占位，实屏均符合 SPEC。以下八项定向修，**不要动别的**；规则同前（不 commit / push，JOURNAL 追加「卡 B 返修一」，三项全量检查通过）。
+
+1. **Profile 的基础信息行标题被改名了，恢复原样。** `profileTitles.basics` 改回 `student.myProfileView.copy009`（`Height / Body weight` / `身高 / 体重`），把这个键恢复进 `StudentKit.json`；编辑页标题仍是 `Basic information`。原因：屏幕稿转写时把这一行的现有标题写错了，属于范围外改名。相应测试断言改回。
+2. **Basic information 页与引导第 1 步的体重字段标题恢复为现有的 `student.step1BasicsSection.copy003`（`Body weight`，非堆叠布局时后面仍带单位括号）。** 只有单项体重页用 `Weight`。给 `WeightSection` 加一个参数区分即可。
+3. **概览卡单复数。** 实屏出现 `1 exercises · 3 sets`。动作数与组数各自处理单数（`1 exercise`、`1 set`），按仓内已有的 `.one` 后缀惯例（参照 `student.dashboardProfileMetricsView.copy005.one` 的用法）；中文不受影响。补测试：1 个动作 3 组、3 个动作 1 组。
+4. **Meet 编辑页缺项提示语。** 现在缺赛事方或级别时显示的是通用的 `Failed to save. Try again`，会让人以为是网络失败。缺赛事方或级别时改为新文案：`Choose a federation and weight class` / `请选择赛事方和体重级别`；只有日期不合法时沿用现有提示。只改 Profile 的 Meet 编辑页；引导向导里的提示不动。补测试。
+5. **学员端不要借用教练端命名空间的键。** `coach.planning.studentHeader.competition` 在 `profileTitles`、编辑页标题、引导区块标题三处被用来显示 `Meet`；新增 `student.rn.meet.title`（`Meet` / `比赛`）并替换这三处。
+6. **级别网格尾行对不齐。** CPA 女子表最后一行只有 3 格时，每格比上面几行宽约 4px（实测 237 对 233）。尾行每格宽度要与满行一致，补位元素要和真实格子走同一套间距。
+7. **级别块大字号下贴边。** 360×640 dp + 字体 1.3× 时 `140+ kg` 几乎贴到块的左右边。级别块与赛事方块的文字设为单行，并允许按现有做法略微缩小（如 `adjustsFontSizeToFit` + `minimumFontScale` 约 0.85），不得换行、不得截断。
+8. **新加的 import 位置。** `DashboardScreen.tsx`、`OnboardingSteps.tsx`、`ProfileEditor.tsx`、`onboarding/model.ts`、`profile/model.ts` 里新 import 被插在文件最顶部、原有第一行之前；挪到各文件原有 import 分组里对应的位置（第三方 → `@/` → 相对路径，照该文件原来的顺序）。
