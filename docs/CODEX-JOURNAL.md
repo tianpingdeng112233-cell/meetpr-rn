@@ -2935,3 +2935,61 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `npx tsc --noEmit`：**0 errors**；`/private/tmp/r4-final-tsc.log`。
 - `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
 - 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。
+
+## Spec 085 卡 A（2026-10-09，Codex 开发自测；待 Opus 收货）
+
+### 实现要点与范围
+
+- 首条命令 `touch .codex-write-probe && rm .codex-write-probe` 成功，始终在指定可写工作树 `/Users/david/Projects/apps/meetpr-rn-wt-085` 实装。现场分支 `feat/085-today-final-walkthrough`，HEAD `1643fdf`，基线 `aeb1020`；开工工作区干净。仓内无 CONTEXT.md / FOLLOWUPS.md / AGENTS.override.md；CLAUDE.md 仅引用 AGENTS.md。
+- 只新增 `src/domain/meet/weight-class.ts`、`src/features/onboarding/meet.ts`、`src/domain/profile/body-weight.ts` 与各自目录下的三个测试文件；现有文件仅追加本 JOURNAL。不修改任何现有源文件，不接 UI，不加文案、依赖或 DTO，不读写存储，不调用 `t()`，不改后端与草稿结构。
+- 级别表逐项照 SPEC，CPA 女子末段 `90 / 100 / 100+`，IPL 女子末段 `100 / 110 / 110+`。新模块提供严格固定格式解析、格式化和按档案性别/唯一级别归属选表；旧手填值保持不识别，未接入任何展示或写入路径。
+- 比赛保存与移除各只返回三个字段，类型直接兼容 `OnboardingUpsertInput`；校验复用现有 `onboardingDateBounds(now).competition`，另检查真实日历日期、必填赛事方与合法级别。未知/未选赛事方时级别也无法判为有效。
+- 体重输入保留首个小数点和两位小数；kg/lb 保存为两位 kg 字符串，校验换算及舍入后的值均在 `(0, 500)` 内；lb 系数严格使用卡内 `2.2046226218`。读回去尾零，展示固定两位；`183.26 lb → 83.13 kg → 183.27 lb → 83.13 kg` 稳定。
+- 新文件未被现有 App 代码引用，因此未接入新的可见行为。没有运行模拟器或 UI 验收，本卡仅报告开发纯函数自测，不宣布整份 Spec 085 产品验收完成。
+
+### 红 → 绿测试与原始日志
+
+测试仅调用卡内三个新文件的导出函数，无内部 mock。按公开行为逐段加入测试，看到失败后再实现该段；参数化各例的名称与结果均保留在原始日志。日志根目录：`/private/tmp/rn-085-card-a/`，下表文件名均相对此目录。
+
+| 测试名 / 参数化用例 | 红 → 绿 | 原始日志 |
+|---|---|---|
+| `lists the four supported federations in picker order`（1） | 新模块不存在，suite 无法加载 → 通过 | `01-tables-red.log` / `01-tables-green.log` |
+| `returns the approved %s %s open classes`（四家 × 男女，8） | 同上 → 八张表逐项一致 | 同上 |
+| `round-trips %s %s in the fixed wire format`（5，含 120+ / 67.5 / 100+ / 84+、首尾空白） | 导出函数缺失 → 固定文字与解析结果通过 | `02-format-red.log` / `02-format-green.log` |
+| `leaves unrecognized class %j as legacy text`（18，空/null/undefined、83kg/-93/IPF 83/IPF、未知赛事方、表外/青年级别及格式错误） | 导出函数缺失 → 全部返回 null | 同上 |
+| `throws for a class outside %s: %s`（5） | 缺函数产生 TypeError，不符合 RangeError 断言 → 全部按编程错误抛 RangeError | 同上 |
+| `chooses table for %s %s / profile %s as %s`（10） | 导出函数缺失 → 男/女优先、未知性别唯一归属、重叠/不归属/未选默认男表通过 | `03-sex-red.log` / `03-sex-green.log` |
+| `saves only the three meet fields in an onboarding-compatible patch`（1） | 新模块不存在，suite 无法加载 → 精确三个保存字段通过 | `04-patch-red.log` / `04-patch-green.log` |
+| `removes the meet by clearing exactly its three fields`（1） | 同上 → false/null/null 通过 | 同上 |
+| `reports missing or invalid meet fields for %j`（18） | 导出函数缺失 → 三项逐一缺失、非法赛事方/级别、上下越界、无效日历日期通过 | `05-validation-red.log` / `05-validation-green.log` |
+| `accepts a complete meet on %s including date bounds`（4） | 导出函数缺失 → 今天/区间内/闰日/十年后边界通过 | 同上 |
+| `accepts a class from either sex table`（1） | 导出函数缺失 → 女子独有级别通过 | 同上 |
+| `clamps the ten-year date bound for leap day`（1） | 导出函数缺失 → 2038-02-28 合法、03-01 越界通过 | 同上 |
+| `filters body weight input %j to %j`（8） | 新模块不存在，suite 无法加载 → 包含 `83.256 → 83.25`、`8a3..2 → 83.2` 的全部过滤例通过 | `06-filter-red.log` / `06-filter-green.log` |
+| `converts %j %s into storable kg %j`（23） | 导出函数缺失 → kg 固定两位、lb 换算、0/空/500、非有限/非数字与舍入后边界通过 | `07-storage-red.log` / `07-storage-green.log` |
+| `reads stored %j kg as %s input %j`（14） | 导出函数缺失 → kg 去尾零、lb 换算、空/非法值通过 | `08-readback-red.log` / `08-readback-green.log` |
+| `keeps stored kg stable when %s lb is read back and saved`（2，183.25/183.26） | 读回函数缺失 → 读回后再保存 kg 不变 | 同上 |
+| `formats body weight %j as %s`（6，卡内三例各测 number/string） | 导出函数缺失 → 83.00 / 83.50 / 83.26 通过 | `09-display-red.log` / `09-display-green.log` |
+
+共新增 **3 suites / 126 tests**。01/04/06 的红测是新模块尚不存在导致加载失败（0 tests executed），其余为导出函数尚未实现的用例失败，未将这些记录写成已执行的行为断言失败。抛错断言初稿过宽，缺函数也可满足 `toThrow()`；实现前改为 `toThrow(RangeError)` 并重新确认 02 的 28 条新用例全部失败，才实现对应函数。
+
+### 差异、审查与边界
+
+- **SPEC 与卡的一处冲突**：卡写 `bodyWeightKgFromInput` 的 kg 分支“原样（去掉多余的尾随小数点）”；SPEC §2「存储」明确“公制原样存两位”。按用户规定以 SPEC 为准，返回 `83.00` / `83.50` 等固定两位字符串；对应测试也按 SPEC。没有发现阻碍卡 A 的 SPEC 自相矛盾，没有自行改变已批准产品口径。
+- 首轮 `npx tsc --noEmit` 有 **7 个 TS2345**，均来自新增 Jest 参数表的 `as const` 只读元组与 callback 类型不兼容；改为显式 `test.each` 元组类型，未改断言或运行时行为。原始失败保留 `first-tsc.log`。首轮全量 Jest/lint 已通过，分别保留 `first-jest.log` / `first-lint.log`。
+- `code-review` 两个只读子代理分别直接审查六个新增文件（未跟踪文件不在普通 git diff 内）：**Standards 0 findings；Spec 0 findings**。测试类型修正和空行整理不改语义。这里只是开发自审，不替代 Opus 逐项收货。
+- 仓内没有 `docs/agents/issue-tracker.md`，未私建配置；本次使用用户提供的 SPEC 与卡完成本地审查。未来如需完整 Matt tracker 流程，应由 David 调用 `$setup-matt-pocock-skills`；不阻塞本卡已授权的代码工作。
+- 没有 commit、push、PR、依赖安装或正典台账修改。PARITY 与卡 B 界面接线留给后续批准范围。
+
+### 最终全量检查
+
+- `npx jest --runInBand`：**156 suites / 1295 tests passed，0 failed，0 snapshots**，15.666s，退出码 0；`/private/tmp/rn-085-card-a/final-jest.log`。
+- `npx tsc --noEmit`：**0 errors**，退出码 0；`/private/tmp/rn-085-card-a/final-tsc.log`（成功无输出）。
+- `npm run lint`：**0 errors / 0 warnings**，退出码 0；`/private/tmp/rn-085-card-a/final-lint.log`。
+- 新增代码与测试完整 diff：`/private/tmp/rn-085-card-a/final-code.diff`。本地检查结果不等于 CI 或 UI 验收。
+
+### 交付末次现场核对
+
+- `git diff --check` 通过；工作区改动仅本 JOURNAL 与六个新文件。尝试 `touch /Users/david/Projects/scratch/rn-085-today-20261009/done-a` 被沙箱拒绝，原始错误：`touch: /Users/david/Projects/scratch/rn-085-today-20261009/done-a: Operation not permitted`。按用户要求忽略标记文件步骤，不改去其他工作目录。
+- 末次核对发现本会话之外将 HEAD 从 `1643fdf` 更新为 `28376ac`（`Reduce the Today day card in spec 085 to an overview that hands off to Training`）。已读取该提交完整 diff：仅修改 SPEC 的 Today/UI 部分，卡 A 的体重、比赛与级别表条款未变；本会话没有执行 commit/push。
+- **末次新发现的 SPEC 文本矛盾，停止继续动作并留待 Opus 澄清**：新提交的验收项 1b 同时写“动作数与组数”和“卡内没有组数、次数、重量”。可能涉及汇总组数与逐动作明细的区分，但本会话不自行裁决。发现时卡 A 代码、全部检查及上述记录已经完成；没有实现或修改 §1 UI，也未因该句更改卡 A。此条取代前文“没有发现”对末次 SPEC 版本的适用性。
