@@ -53,8 +53,10 @@ export function TrainingWeekStrip({ plan, strip, onSelect }: {
       accessibilityState={{ selected: isSelected }} onPress={() => onSelect(day.id)}
       style={[styles.day, size, isCurrent && styles.currentDay, isSelected && styles.selectedDay]}>
       {weekdayText}
-      <MaterialCommunityIcons name={dayStatus === 'done' ? 'check' : isCurrent ? 'circle' : 'circle-outline'}
-        size={spacing.base} color={dayStatus === 'done' ? colors.success : isCurrent ? colors.goldText : colors.textMuted} />
+      <View style={styles.statusSlot}>
+        <MaterialCommunityIcons name={dayStatus === 'done' ? 'check' : isCurrent ? 'circle' : 'circle-outline'}
+          size={dayStatus === 'done' ? spacing.md : spacing.sm} color={dayStatus === 'done' ? colors.success : isCurrent ? colors.goldText : colors.textMuted} />
+      </View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.shortDate, isCurrent && styles.currentDate, isBehind && styles.behind]}>{isBehind ? t('student.trainingWeekStrip.behind') : date}</Text>
     </Pressable>;
   });
@@ -86,6 +88,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   calendar: { flex: 1, minWidth: 0 },
   days: { flexDirection: 'row', gap: spacing.point2 },
   day: { flex: 1, minWidth: 0, minHeight: spacing.xxxl, paddingHorizontal: spacing.zero, paddingVertical: spacing.xs, gap: spacing.point2, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control, borderWidth: spacing.point2, borderColor: 'transparent', backgroundColor: colors.surfaceCard },
+  statusSlot: { height: spacing.base, alignItems: 'center', justifyContent: 'center' },
   restDay: { backgroundColor: colors.bgStack, borderWidth: 0, paddingVertical: spacing.sm, gap: spacing.xs },
   restLabel: { ...font.body(10), color: colors.textMuted, textAlign: 'center', alignSelf: 'stretch' },
   currentDay: { backgroundColor: colors.goldSoft },

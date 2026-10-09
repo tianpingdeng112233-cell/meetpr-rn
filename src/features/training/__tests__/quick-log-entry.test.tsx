@@ -185,3 +185,13 @@ test('an overdue future preview hides its old recommended date while keeping its
   expect(copy()).not.toContain(t('student.dashboardPrimaryAction.copy009', ['Tue, 9/8']));
   expect(copy()).toContain('This session unlocks after W1 · D1 · Training day is completed.');
 });
+
+test('Chinese training history text and accessibility label open the existing history route', async () => {
+  setLocaleOverride('zh');
+  await mount();
+  expect(copy()).toContain('训练历史');
+  expect(copy()).not.toContain('Training history');
+  await press('训练历史');
+  expect(mockPush).toHaveBeenCalledWith('/training-history');
+  expect(training22.history).toBe('Training history');
+});

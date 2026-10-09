@@ -1,12 +1,4 @@
 {
-  "student.trainingCoachNote.exercise": {
-    "en": "Coach note · {0}",
-    "zh": "教练备注 · {0}"
-  },
-  "student.trainingCoachNote.thisSet": {
-    "en": "Coach note · this set",
-    "zh": "教练备注 · 本组"
-  },
 "training.restNotification.title": { "en": "Rest between sets", "zh": "组间休息" },
 "training.restNotification.completeBody": { "en": "Time for your next set", "zh": "该做下一组了" },
 "training.restNotification.add": { "en": "+30s", "zh": "+30s" },

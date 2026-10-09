@@ -3033,3 +3033,74 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
   - `npx tsc --noEmit`：退出码 0，**0 errors**（无输出）；`tsc.log`。
   - `npm run lint`：退出码 0，**0 errors / 0 warnings**；`lint.log`。
 - 本轮增量自审确认仅上述样式与本小节发生变化。`git diff --check` 通过；Impeccable layout 机械扫描输出 `[]`，仅作静态辅助，不代替原生排版验证。
+
+### 返修二（2026-10-09）
+
+- 按 SPEC 同日真机后修订与 CARD「返修二」完成四点。开工当前工作树试写并删除临时文件成功，分支 `feat/086-training-strip-coach-note`，HEAD `c26ace5`，原工作树干净。仓内无 CONTEXT.md / FOLLOWUPS.md / AGENTS.override.md。已读 AGENTS、CLAUDE、PLAN、SPEC 全文及 CARD，并核对 Expo SDK 57 版本文档。未 commit、push、开 PR 或安装依赖，未修改 node_modules 软链。
+
+#### 改动文件（9 个，含本节）
+
+| 文件 | 本轮改动 |
+| --- | --- |
+| `src/features/training/WorkoutBody.tsx` | 淡金块仅可编辑 hero 的动作 notes，标题复用 copy014，无后缀、分隔线或第二段；组备注回到上次成绩之后的小灰字块，可编辑/只读均仅显示非空组备注，取消动作备注回落。分动作组表不动。 |
+| `src/features/training/coach-notes.ts` | 纯函数改为独立返回去首尾空白后的 exerciseNote / setNote，空值为 null；因不再组装标题段落，将 coachNoteParagraphs 改名为 workoutCoachNotes，移除动作名参数、isPrimary 与 i18n 依赖。 |
+| `src/features/training/TrainingWeekStrip.tsx` | 实心/空心圆用 spacing.point10，对勾用 spacing.point14，放入 spacing.base（16）高的居中槽位；原格高、触控区域和颜色 token 保留。 |
+| `src/features/training/TodayWorkoutView.tsx` | 历史入口文字与 accessibilityLabel 复用 student.trainingHistoryView.copy024（Training history / 训练历史）；build22-strings.ts 与其他调用不变。 |
+| `src/i18n/catalog/RnExtras.json` | 删除 trainingCoachNote.thisSet / trainingCoachNote.exercise 两条键及其中英文；src 已无引用。 |
+| `src/features/training/__tests__/coach-notes.test.ts` | 按独立来源重写纯函数断言，覆盖单来源、双来源、相同文字、null / undefined / 空串 / 空白。 |
+| `src/features/training/__tests__/workout-coach-notes.test.tsx`（新增） | 挂载 WorkoutBody 验证英文/中文无后缀标题、超过 200 字符全文、备注在重量前/处方后、只读与编辑态、空白、换组不换动作备注及换动作更换备注；不写样式数值断言。 |
+| `src/features/training/__tests__/quick-log-entry.test.tsx` | 只新增中文历史入口文字、读屏入口点击及路由回归；原断言不改。 |
+| `docs/CODEX-JOURNAL.md` | 追加本节。 |
+
+#### 改写首轮断言及原因
+
+1. `only a set note produces the primary this-set paragraph`：改成 exerciseNote 为 null、setNote 独立返回；新版 §3 不允许组备注进入淡金块。
+2. `only an exercise note is primary and includes its display name`：改成只返回动作内容、无组备注；标题在渲染 seam 检查为 Coach note / 教练备注，不再带动作名。
+3. `both notes keep the set first and the exercise secondary, including identical copy`：改为两个独立字段，保留同文双来源用例；UI 分别渲染上下两块，不存在主次段落排序。
+4. `missing or whitespace-only notes produce no block` 的四组数据：原空数组断言改为两个 null 字段，空白处理的业务约束保留。
+5. `Chinese titles use the display name and keep the complete long note when the active set changes`：去除中文“本组/动作名”标题预期，长正文、中英文标题与换组/换动作验证移到实际 WorkoutBody 渲染 seam。纯函数不再承担翻译。
+
+既有 set-save、completion-entry、quick-log-entry、set-ref-entry 的断言均未修改；没有放宽与本轮无关的断言。
+
+#### 红绿证据
+
+原始 stdout/stderr 在 `/private/tmp/rn-086/r2/`，每组的 `-red.log` / `-green.log`：
+
+- `01-exercise`：旧函数返回带组备注及后缀标题的数组，动作字段断言失败 → 只从 exercise.notes 派生内容通过。
+- `02-set`：缺独立 setNote 字段，9 条组合断言失败 → 按组来源单独 trim、不回落，通过。
+- `03-exercise-render`：初次日志还含测试挂载生命周期错误；修正 fixture 的 set 参数与卸载后 renderer 重用后，`03-exercise-render-red-behavior.log` 明确两种语言均因 hero 缺标题/正文而失败 → 接入动作备注单块后通过。最初含测试桩错误的日志不作为纯行为红测。
+- `04-set-render`：可编辑态组备注丢失、只读态未 trim → 两态都用独立组内容渲染，通过；后续空白与不回落断言一并通过。
+- `05-history`：中文界面只有硬编码 Training history → 复用现有 i18n 后文字、读屏入口、路由通过。
+- `06-coverage-green.log`：纯函数、备注渲染和周条共 20 项通过。补充换组/换动作与无动作备注覆盖直接绿，不冒称另有红测。
+
+#### 疑点、审查与设备边界
+
+- CARD 前文仍有“双段 + 本组/动作名后缀”，与修订 SPEC §3 不同；按 SPEC 和 CARD「返修二」执行，上述旧断言相应改写。未发现需产品取舍的新增问题。
+- 当前本地 main 指向 `87c5535`，并非 SPEC 明确的 main@aeb1020；直接读其文件会得到另一版布局。本轮以 SPEC 基线 `aeb1020` 的原灰块及 CARD 明确的 bgInset / coachNoteText / 12 号为准。位置在上次成绩后，原 padding、圆角、字体、行高均未改。该基线差异已核实，不自行追随漂移的 main。
+- review-loop 对 `/private/tmp/rn-086/r2/review.diff` 进行一轮两个只读独立审查：**Standards 0 findings；Spec 0 findings**。审查后仅修正新增测试的 TypeScript 表格泛型声明，无行为变化。主代理亲读完整增量；Impeccable layout 静态扫描 `layout-scan.json` 为 `[]`，不等于原生视觉验证。
+- 仓内仍缺 docs/agents/issue-tracker.md；完整 Matt tracker 工作流需另行 `$setup-matt-pocock-skills`。本次本地双轴直接使用批准 SPEC/CARD，未私建配置。
+- **未做设备验证**：尝试 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices -l` 退出 1。原始报错：`could not install *smartsocket* listener: Operation not permitted`，随后 `adb: failed to check server version: cannot connect to daemon`。ADB 原始启动日志保存为 `device-adb.log`；当前沙箱不能启动其监听端口，未绕过限制。按 CARD 交由 Opus 实屏复验：① 三种小图形的辨识度、槽位居中及格高；② 双主题/大字号下长动作备注与下方组备注；③ 360×640、1.3× 字体、三位数落后胶囊与中英文历史入口换行。没有宣称验收 7 / 8 / 8b / 10 实屏通过。
+
+#### 三条最终命令
+
+| 命令 | 最终结果 | 原始日志 |
+| --- | --- | --- |
+| `npx jest --runInBand` | 退出码 0；156 suites / 1204 tests passed，0 failed；18.241s | `/private/tmp/rn-086/r2/final-jest.log` |
+| `npx tsc --noEmit` | 退出码 0；0 errors（无输出） | `/private/tmp/rn-086/r2/final-tsc.log` |
+| `npm run lint` | 退出码 0；0 errors / 0 warnings | `/private/tmp/rn-086/r2/final-lint.log` |
+
+TypeScript 首跑因新测试的 `test.each([... ] as const)` 产生 TS2345（readonly 元组与 Jest 可变参数类型不兼容），原报错保留在 `tsc-first.log`。改用显式可变元组泛型后重新跑完上述三条命令；未改断言、未禁用检查。最终 `git diff --check` 通过；完整增量（含新增测试）见 `/private/tmp/rn-086/r2/final.diff`。
+
+### 返修三（2026-10-09）
+
+- 当前目录临时文件试写及删除成功；分支 `feat/086-training-strip-coach-note`，HEAD `f6f66be`。已读 CARD「返修三」、SPEC §3 与 Expo SDK 57 文档；仓内无 CONTEXT.md。保留返修二全部未提交改动，本轮仅改以下两个实现文件、对应测试与本小节；未 commit、push、开 PR 或安装依赖，node_modules 软链未动。
+- `TrainingWeekStrip.tsx`：实心/空心圆从 spacing.point10 改为 spacing.sm（8），对勾从 spacing.point14 改为 spacing.md（12）；statusSlot 固定高度 spacing.base（16）和格高不变。
+- `WorkoutBody.tsx`：小灰块取已去首尾空白的组备注，仅不可编辑时回落到已去首尾空白的动作备注；沿用返修二纯函数的空白判空。灰块位置与样式不变，淡金块仍仅可编辑且有动作备注时出现，可编辑态取值不变。
+- `workout-coach-notes.test.tsx`：将原“只读且无组备注时没有 Coach note/动作备注”改为“仅一块备注，在处方之后显示 trim 后的动作备注”，同时保留只读组备注优先、编辑态原预期，覆盖 null / 空串 / 纯空白组备注的回落及双空不显示。通过标题数量和内容位置验证只读无上方淡金块，未添加样式数值断言。
+- 先改测试实跑红，再改实现实跑绿。原始 stdout/stderr：`/private/tmp/rn-086/r3/01-readonly-red.log`（退出 1，1 failed / 7 passed，失败原因是只读回落备注缺失）；`01-readonly-green.log`（退出 0，8 passed）。
+- 最终三条命令均实跑完成，日志在 `/private/tmp/rn-086/r3/`：
+  - `npx jest --runInBand`：退出 0，156 suites / 1204 tests passed，0 failed，18.235s；`final-jest.log`。
+  - `npx tsc --noEmit`：退出 0，0 errors（无输出）；`final-tsc.log`。
+  - `npm run lint`：退出 0，0 errors / 0 warnings；`final-lint.log`。
+- 对启动时返修二快照的增量执行 code-review 两个只读独立审查：Standards 0 findings；Spec 0 findings。主代理核对本轮只触及上述四文件，其他未提交文件逐一哈希一致；`git diff --check` 通过。代码/测试增量见 `/private/tmp/rn-086/r3/review.diff`。
+- 未做设备验证，未宣称实屏验收通过；按 CARD 由 Opus 复验圆点辨识度、三种状态对齐与格高，以及只读 hero 灰块回落/无淡金块。

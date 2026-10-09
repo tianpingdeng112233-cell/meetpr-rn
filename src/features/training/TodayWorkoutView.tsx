@@ -884,8 +884,8 @@ export function TodayWorkoutView() {
               style={[styles.weekBadge, viewedWeek.status === 'current' && styles.currentWeekBadge]}>{weekStatus}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit style={styles.weekCount}>{viewedWeek.completed} / {viewedWeek.cells.length}</Text>
           </View> : <View style={styles.weekHeading} />}
-        <Pressable accessibilityRole="button" accessibilityLabel={training22.history} onPress={() => router.push('/training-history')} style={styles.historyLink}>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.historyLabel}>{training22.history}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingHistoryView.copy024')} onPress={() => router.push('/training-history')} style={styles.historyLink}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.historyLabel}>{t('student.trainingHistoryView.copy024')}</Text>
           <MaterialCommunityIcons name="chevron-right" size={spacing.base} color={colors.goldText} />
         </Pressable>
         </View>
