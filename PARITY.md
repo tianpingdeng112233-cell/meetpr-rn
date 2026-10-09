@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-10-09 spec 086 授权差异（仅安卓，iOS 无对应；周条部分偏离双端 spec 084 §4）**：David 走查 Training 后拍板三项——周条训练日格显示教练推荐日期、不写 D 序号，休息格不显示日期，推荐日期已过而没练完的训练日格内改写 `Behind`、周次胶囊改写落后天数（按当前训练日算，不用红色、不拦操作，是对 spec 071「不催促」的安卓修订）；周条版式压矮（周次并入 Training history 一行、箭头在格子两端、去掉周数小点）；hero 卡教练备注上移到动作名下并加重，组备注与动作备注都显示。零后端改动，推进规则不变。模拟器收货（[收货记录](docs/verification-spec086-2026-10-09.md)），未真机、未连 Global。口径正典见 `specs/086-training-strip-coach-note/SPEC.md`。
 > **2026-10-04 D-16 授权差异**：David 2026-10-02 拍板安卓后台/锁屏休息通知（iOS build 22 基线无此能力）。返修三按 [SPEC 增补三](specs/d16-rest-timer-notification/SPEC.md) 将数字交由系统 Chronometer 渲染；Android 16 实际提升时保留标准样式，否则使用自定义大号倒计时卡片。结束定时改为 AlarmClock，无精确权限时退回非精确定时；删除前台服务及其权限、进度、TICK 与标题模板。保留动作名、Skip/+30s、渠道与 MeetPR 图标。覆盖本页旧“前台服务通知待定”表述；开发证据及未覆盖验收见 `docs/CODEX-JOURNAL.md`「D-16 返修三」，原生构建/设备收货待 Opus/David。
 > **2026-10-03 使用数据告知授权差异**：按 [任务卡](specs/build22-parity/USAGE-NOTICE-COPY-CARD.md)，`appShell.privacy.analytics.body` 中英文改为 Global 美国 DigitalOcean / 账号存续期间保留口径，有意区别于 iOS 历史参照；正文可滚动、链接与确认按钮固定，已实装，模拟器验收待 Opus，证据见 `docs/CODEX-JOURNAL.md` 本卡节。
 
