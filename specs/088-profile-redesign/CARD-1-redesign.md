@@ -112,3 +112,10 @@ SPEC「验收清单」第 1–12 条（第 1、10、11 条的实屏部分由 Opu
 ## Out of Scope
 
 SPEC 同名一节全部；另加：头像上传与任何图片选择 / 相机代码、`GET /me`、名字显示（第二步）；教练端任何文件；`ProfileEditor` 各 section 的表单内容与校验；`ReadinessSheet` 除那一行以外的任何改动；`src/app/(student)/profile.tsx` 的参数处理；Today、Training、Progress 三个 Tab 的任何文件（上面两个从 087 原样取来的组件文件除外）；Tab 栏；任何后端请求的增删。
+
+## 补充一（2026-10-09，Opus 答 Codex 的停工提问）
+
+1. `src/features/dashboard/__tests__/visual-parity.test.tsx` 里断言旧 Profile 首页的那几条（约第 236–239 行：`MyProfileValueRow` 的标题含 `Height / Body weight` / `Meet` / `Note to coach`、留言行的 `value` 与 `valueLines`）**允许迁移**，这是对「Out of Scope：Today 目录」的唯一例外：只改这几条，改成断言新首页上对应的东西（`Meet` 与 `Note to coach` 两行存在、留言有内容时值为 `Added`、身高体重出现在 `About me` 行的值里）。同一个测试里 Today 体重卡 → 带 `edit=weight` 进 Profile → 打开编辑页 → 保存 → 回到 Today 的断言一条不动，必须照旧通过。迁移前后的断言都贴进 JOURNAL。
+2. 其它测试文件里若还有断言旧 Profile 首页结构的，同样处理：能迁移到新结构的迁移，并在 JOURNAL 逐条列出；不要为了让测试通过去保留旧组件。
+3. `git fetch origin` 在沙箱里失败不用管：本地的 `origin/feat/087-progress-menu` 引用是最新的，Opus 已核对工作区里那两个组件文件与该引用逐字节相同。
+4. 工作树根目录下的 `.codex-088-*.log` 是你的临时文件，交付前删掉。
