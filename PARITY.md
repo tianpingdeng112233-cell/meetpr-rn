@@ -149,6 +149,8 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 
 按 David 提供的 iOS 截图放开字距及末尾 R 的额外重叠，四个学员 Tab 共用同一字标。保持高度、槽位与主题描边；四页浅色及 Today/Profile 深色模拟器亲验通过，131 suites / 908 tests、tsc、lint、Android Release 构建通过。见 [验证与截图](docs/verification-wordmark-2026-09-25.md)。
 
+2026-10-09 追加(David 拍板「以页头那版为准」):登录/注册/找回密码页与视频角标卡原先各画一份、仍是压缩字距,现三处合为 `src/design/MeetPRMark.tsx` 一个组件,口径同页头。这是对 iOS 登录页字标(-0.11em 压缩)的授权差异。模拟器 `meetpr16` 合成服务包亲验:登录页浅/深、角标卡、四个页头浅色、Today/Profile 深色;154 suites / 1173 tests、tsc、lint 通过。[截图](docs/evidence/wordmark-20261009/summary.png)。未实屏:注册与找回密码页(同一 `AuthForm`)、教练端、真机。
+
 ## 2026-09-25 Hold completion repair
 
 修复长按时按钮内轻微移动被 Android 原生滚动取消，以及金色进度填充不显示。保留 1.1 秒、提前松手/越界取消、单次提交和无障碍入口；设备原复现转绿，取消后重试通过。验证与独立双轴审查见 [取证](docs/verification-hold-2026-09-25.md)。完成页 0/1 与 All completed 的既有文案矛盾另记为待办。

@@ -1,22 +1,33 @@
-import Svg, { Text, TSpan } from 'react-native-svg';
+import Svg, { Text as SvgText } from 'react-native-svg';
 
 import { useColors } from './theme';
 import { font } from './tokens';
 
-export function MeetPRMark({ fontSize = 15 }: { fontSize?: number }) {
+type MeetPRMarkProps = {
+  testID?: string;
+  fontSize?: number;
+  strokeColor?: string;
+  fillColor?: string;
+  accessibilityLabel?: string;
+};
+
+/** Canonical header wordmark, scaled proportionally from the 16pt, 97×24 slot. */
+export function MeetPRMark({ testID, fontSize = 16, strokeColor, fillColor, accessibilityLabel }: MeetPRMarkProps) {
   const colors = useColors();
-  const height = fontSize / 0.34;
+  const scale = fontSize / 16;
+  const stroke = strokeColor ?? colors.textPrimary;
   const textProps = {
-    x: fontSize * 0.16, y: height / 2 + fontSize * 0.35,
-    fontFamily: font.display(fontSize, 'black').fontFamily,
-    fontSize, fontWeight: '900' as const, letterSpacing: -fontSize * 0.11,
+    x: 3, y: 18,
+    fontFamily: font.display(16, 'black').fontFamily,
+    fontSize: 16, fontWeight: '900' as const, letterSpacing: 0,
   };
-  return <Svg width={height * 2.05} height={height} accessible={false} accessibilityElementsHidden>
-    <Text {...textProps} stroke={colors.textPrimary} strokeWidth={fontSize * 0.32} strokeLinejoin="round" fill={colors.textPrimary}>
-      MEETP<TSpan dx={-fontSize * 0.13}>R</TSpan>
-    </Text>
-    <Text {...textProps} fill={colors.bgBase}>
-      MEETP<TSpan dx={-fontSize * 0.13}>R</TSpan>
-    </Text>
+  return <Svg testID={testID} width={97 * scale} height={24 * scale} viewBox="0 0 97 24"
+    accessible={!!accessibilityLabel} accessibilityLabel={accessibilityLabel}>
+    <SvgText {...textProps} stroke={stroke} strokeWidth={5.12} strokeLinejoin="round" fill={stroke}>
+      MEETPR
+    </SvgText>
+    <SvgText {...textProps} fill={fillColor ?? colors.bgBase}>
+      MEETPR
+    </SvgText>
   </Svg>;
 }

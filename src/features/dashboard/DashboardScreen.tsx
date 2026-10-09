@@ -16,6 +16,7 @@ import {
   AppButton,
   Card,
   GradientFill,
+  MeetPRMark,
   Screen,
   Sparkline,
   useColors,
@@ -40,7 +41,6 @@ import {
 import { WeekCalendar } from './WeekCalendar';
 import { FeedbackCard } from './FeedbackCard';
 import { useDashboardViewModel } from './use-dashboard';
-import { MeetPRMark } from './MeetPRMark';
 
 export { WeekGrid } from './WeekCalendar';
 

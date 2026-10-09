@@ -2935,3 +2935,18 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `npx tsc --noEmit`：**0 errors**；`/private/tmp/r4-final-tsc.log`。
 - `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
 - 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。
+
+## 2026-10-09 — wordmark-unify：统一 MEETPR 字标（T0）
+
+按 `specs/wordmark-unify/CARD.md` 实装。`src/design/MeetPRMark.tsx` 成为唯一实现，沿用原页头的 97×24 viewBox、16pt display black、整串 MEETPR、零字距及 5.12 圆角描边；支持等比尺寸、testID、自定义描边/填充色与可选 accessibilityLabel。删除 dashboard 重复组件，四个页头仅更换 import，原尺寸与 testID 不变。AuthForm 保留 15pt，原外框宽高与标题间距不变，字标垂直居中、左对齐。VideoBadgeCard 改用共享组件，保留原槽位、palette 颜色和 MEETPR 无障碍标签。
+
+### 红测与验证
+
+- 实现改动前运行新增组件测试和角标测试：`Tests:       4 failed, 5 passed, 9 total`；组件字距断言 `Expected: 0` / `Received: -1.65`。原始输出：`/private/tmp/wordmark-red.log`。
+- 仓内没有独立 VideoBadgeCard 测试文件，角标卡用例追加到既有 `video-badge-overlay.test.tsx`。SVG 库会将字符串内部包装成 TSpan，因此“不拆 TSpan”断言检查传给 SvgText 的子节点；两层均必须为整串 MEETPR，未 mock SVG。
+- `npm test -- --runInBand`：154 suites / 1173 tests passed，0 failed，81.272s；`/private/tmp/wordmark-test.log`。既有页头测试断言未改。
+- `npm run lint`：0 errors / 0 warnings，exit 0；`/private/tmp/wordmark-lint.log`。
+- `npx tsc --noEmit`：0 errors，exit 0；`/private/tmp/wordmark-tsc.log`。
+- `grep -rn "MEETP<" src`：0 命中（exit 1）；dashboard 重复组件不存在；`git diff --check` 通过。
+
+未覆盖：登录页、角标卡及四个页头在浅/深色下的实屏验证，按卡由 Opus 在模拟器收货。本次只完成开发自测，不宣称实屏验收通过。未安装依赖，未改原生、文案、PARITY.md 或 iOS 仓，未 commit / push。

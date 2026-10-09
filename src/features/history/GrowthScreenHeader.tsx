@@ -2,9 +2,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
-import { font, radius, spacing, useColors } from '@/design';
+import { font, MeetPRMark, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
-import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 
 export function GrowthScreenHeader({ unreadCount, onOpenChat }: { unreadCount: number; onOpenChat: () => void }) {
   const colors = useColors();
