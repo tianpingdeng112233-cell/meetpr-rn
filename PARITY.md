@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-10-09 spec 087 授权差异（仅安卓学员端，iOS 无对应）**：David 走查 Progress 后拍板把一整页长滚动改为列表入口——第一步四行（e1RM、Training history、Coach feedback、Intensity metrics），每行带当前值；e1RM 独立成页，顶部 `Total / Squat / Bench / Deadlift` 四段共用一个时间范围，新增 Total 曲线（三项各自最新值沿用求和），原对比两格并入 Total 段；训练次数 / 周数 / 总容量三格并入历史记录页；容量强度图独立成页；Progress 里只有文字的反馈弹层删除，改进现有反馈页。零后端改动，e1RM 算法与来源弹层不变。模拟器收货（[收货记录](docs/verification-spec087-2026-10-09.md)），未真机、未连 Global。第二步（体重曲线，依赖后端 spec 046）未开工。口径正典见 `specs/087-progress-menu/SPEC.md`。
 > **2026-10-04 D-16 授权差异**：David 2026-10-02 拍板安卓后台/锁屏休息通知（iOS build 22 基线无此能力）。返修三按 [SPEC 增补三](specs/d16-rest-timer-notification/SPEC.md) 将数字交由系统 Chronometer 渲染；Android 16 实际提升时保留标准样式，否则使用自定义大号倒计时卡片。结束定时改为 AlarmClock，无精确权限时退回非精确定时；删除前台服务及其权限、进度、TICK 与标题模板。保留动作名、Skip/+30s、渠道与 MeetPR 图标。覆盖本页旧“前台服务通知待定”表述；开发证据及未覆盖验收见 `docs/CODEX-JOURNAL.md`「D-16 返修三」，原生构建/设备收货待 Opus/David。
 > **2026-10-03 使用数据告知授权差异**：按 [任务卡](specs/build22-parity/USAGE-NOTICE-COPY-CARD.md)，`appShell.privacy.analytics.body` 中英文改为 Global 美国 DigitalOcean / 账号存续期间保留口径，有意区别于 iOS 历史参照；正文可滚动、链接与确认按钮固定，已实装，模拟器验收待 Opus，证据见 `docs/CODEX-JOURNAL.md` 本卡节。
 
