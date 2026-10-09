@@ -4,7 +4,7 @@
 - 级别／节奏：T2 / P1。只做安卓（`meetpr-rn`），分支 `feat/089-accessory-quick-log`，工作树 `meetpr-rn-wt-089`。**叠在 `feat/086-training-strip-coach-note`（PR #81）之上**——两者都改训练页 hero 卡；086 合并后本分支并入 main。iOS 原生不跟。
 - 性质：David 批准的新功能，不属于"1:1 复刻 build 22"；除本文所列外不得顺手改别的。
 - 后端：**零改动**。不加字段、不迁移、不部署。
-- 屏幕稿：待出、待 David「定稿」；定稿后把结构与文案转写到文末，再派界面卡。数据层卡不依赖屏幕稿，spec 定下即可派。
+- 屏幕稿：画布 https://claude.ai/artifact/51DjddMhJtWKDsRfvJJVN1 ，**David 2026-10-09 已「定稿」**，结构与文案转写在文末「屏幕稿」。
 
 ## 术语
 
@@ -110,9 +110,37 @@ iOS 原生；后端与网页编辑器；学员自己加组、删组、改计划�
 
 两张，同一分支同一个 PR：
 
-- 卡 A（T1，数据层）：辅助项判定、行模型、"全部完成"选择、休息时长三级优先级与偏好字段，纯函数加测试，不接界面。spec 定下即派。
-- 卡 B（T2，界面）：记录卡、✓ / 取消 / 全部完成的写入接线、Profile 新增一行、文案。屏幕稿定稿后派。
+- 卡 A （T1，数据层）：辅助项判定、行模型、"全部完成"选择、休息时长三级优先级与偏好字段，纯函数加测试，不接界面。**2026-10-09 已收货**：Opus 读全量 diff，本地 157 suites / 1264 tests、tsc 0 错、lint 0 警告。留给卡 B 的四点见 JOURNAL 卡 A 一节末尾（动作类型要从动作库取、取消要显式传 action、lb 换算沿用既有精度、切换休息模式时保留辅助项时长）。
+- 卡 B （T2，界面）：记录卡、✓ / 取消 / 全部完成的写入接线、Profile 新增一段、文案。2026-10-09 定稿后派出。
 
-## 屏幕稿
+## 屏幕稿（David 2026-10-09「定稿」）
 
-待出。
+画布 https://claude.ai/artifact/51DjddMhJtWKDsRfvJJVN1 （3 张）。稿只管布局／层级／间距；颜色、字号、圆角一律用 `src/design` 现有 token 与现有组件，不照抄稿里的色值。以下转写，实装以此为准。
+
+**1 辅助项记录卡 · 做一组记一组**（自上而下）
+页头与周次行同 spec 086 →（本张为突出卡片省略了周条格子行，实装里周条照常在）→ hero 卡（左侧金色竖条沿用现状）：
+1. 标题行：左两行——`Leg press`（大号粗体）与其下一行等宽小灰字 `Accessory · exercise 3 / 4`；右 `Ask coach` 描边胶囊按钮。
+2. 教练备注淡金块（086 样式，有动作备注才出现）。
+3. 表头一行，等宽 10 号灰字，六列：`Set`｜`Last`｜`KG`（随单位偏好为 `LB`）｜`Reps`｜`RPE`｜`Done`。列宽：Set 36、Last 72、KG 占剩余、Reps 48、RPE 48、Done 44；列间距 6。
+4. 每组一行，行高 44 + 上下各 4 留白，行间距 6：
+   - 组号：36×44 的浅灰底圆角方块按钮，等宽粗体数字。
+   - Last：等宽 11 号灰字 `170 × 10`，整格可点；没有上次记录显示 `—`、不可点。
+   - KG / Reps / RPE：圆角输入框，白底 1 px 描边，等宽 15 号、有值时加粗、居中；RPE 没填时显示灰色占位（教练预设值，如 `8`）。
+   - Done：44 直径圆形按钮，未记录 = 白底、深色 2 px 描边、深色对勾；已完成 = 绿色实心、白色对勾。
+   - **已完成的行**：整行浅绿底圆角条；三个输入框去掉描边与白底（数字仍可点进去改）。
+5. 提示行：小摄像机图形 + `Tap a set number to record video or mark it failed`，12 号、次要文字色。
+6. 主按钮：整宽深色胶囊 `Complete all as planned`。
+卡片下方是现有的休息计时条（示例 `0:52`，`-30s` / `Skip` / `+30s`）与 Tab 栏。稿里第 1 组已完成（`180` `10` RPE `7`），第 2、3 组预填 `180` `10`、RPE 占位 `8`。
+
+**2 行的各种情况**（两张卡上下排列）
+- 上卡 `Cable row`，副标题 `Accessory · 3 × 12 @ RPE 8`：
+  - 第 1 组已完成且带视频：组号按钮里数字下方多一个小摄像机图形（金棕色）；其余同已完成行。
+  - 第 2、3 组教练没给重量：KG 输入框为空，灰色占位是上次的重量 `60`；Reps 预填 `12`；RPE 占位 `8`；Done 按钮置灰（浅灰描边与对勾，不可点）。
+  - 表格下方、主按钮上方一行金棕色小字 `2 sets still need a weight`（此时提示行让位给它；两者同时需要时，这一行在提示行之上）。
+- 下卡 `Pull-up`，副标题 `Accessory · bodyweight · 2 × 8 @ RIR 2`：
+  - 每行 Last 列 `—`；KG 列不是输入框，显示等宽粗体灰字 `BW`；Reps 预填 `8`；RPE 输入框的灰色占位是 `RIR 2`（字号比数字小）；Done 按钮可点。
+  - 表头省略（稿上为节省高度；实装每张卡都有表头）。提示行与主按钮同第 1 张。
+副标题规则：`Accessory` 后面依次接"自重时 `bodyweight`"与处方摘要（现有的处方文字格式），用 ` · ` 连接；第 1 张里的 `exercise 3 / 4` 位置信息与处方摘要同处一行时，顺序为 `Accessory · {处方摘要} · exercise 3 / 4`，放不下时截掉最后一段。
+
+**3 Profile · Rest between sets**
+左上返回 `‹ Profile` → 标题 `Rest between sets` → 小节标题（等宽小灰字）`Main lifts and variations` → 现有的模式选择卡（`Automatic (by RPE)` 选中带对勾 / `Set manually`）→ 现有的 `Automatic rules` 卡（三行规则）→ 小节标题 `Accessory exercises` → 一张卡：左两行 `Rest after each set`（粗体）与 `30 sec to 5 min`（小灰字）；右侧三件横排——圆形 `−` 按钮、等宽粗体时长 `1:00`、圆形 `+` 按钮（每按 15 秒，到 30 秒 / 5 分钟时对应按钮置灰）→ 页底说明文字改为 `Rest times set by your coach always take priority. These settings only change the default when your coach has not set one.`（把原文的 `This setting only changes` 改为复数）。现有页面里"自定义"模式下的三档时长编辑沿用现状，位置在第一段内不变。
