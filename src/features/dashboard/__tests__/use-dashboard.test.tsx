@@ -16,6 +16,9 @@ import { TrainingCTA, WeekGrid } from '../DashboardScreen';
 import { useDashboardViewModel } from '../use-dashboard';
 import { useWeekOverviewViewModel } from '../week-overview';
 
+let mockFocus: (() => void) | undefined;
+jest.mock('expo-router', () => ({ useFocusEffect: (effect: () => void) => { mockFocus = effect; } }));
+
 jest.mock('@/api/domains', () => ({
   buildExerciseIndex: () => new Map(),
   useExerciseCatalog: jest.fn(),
@@ -289,3 +292,29 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // Existing copy assertions pin the original Chinese presentation.
 beforeEach(() => setLocaleOverride('zh'));
 afterEach(() => setLocaleOverride(null));
+
+
+test('Today focus resets selection to the current day and defaults to the day just completed', async () => {
+  const refetch = jest.fn(async () => undefined);
+  const days = [1, 2].map(day => ({ id: `day-${day}`, plan_id: PLAN_ID, week_number: 1, day_of_week: day, sort_order: day, shifted_to_date: null, exercises: [] }));
+  let active: PlanDetail = { ...plan, days };
+  jest.mocked(usePlans).mockReturnValue({ data: { plans: [active] }, isPending: false, isError: false, refetch } as never);
+  jest.mocked(usePlan).mockImplementation(() => ({ data: active, isPending: false, isError: false, refetch }) as never);
+  jest.mocked(useExerciseCatalog).mockReturnValue({ data: { exercises: [] }, isError: false, refetch } as never);
+  jest.mocked(useOnboardingProfile).mockReturnValue({ data: null, isError: false, refetch } as never);
+  jest.mocked(useSetLogs).mockReturnValue({ data: { logs: [] }, isPending: false, isError: false, refetch } as never);
+  jest.mocked(useWeekOverviewViewModel).mockImplementation((_student, _plan, weekIndex) => ({ state: { status: 'loaded', plan: active, days: active.days.filter(day => day.week_number === weekIndex).map((day, index) => ({ day, status: day.completed_at ? 'done' : index === 0 ? 'current' : 'upcoming', date: '2026-07-13', lift: null, completion: 0 })), logs: [], weekIndex: 1, weekStart: '2026-07-13', weekEndExclusive: '2026-07-20' }, reload: refetch }));
+  let vm: ReturnType<typeof useDashboardViewModel>;
+  function Harness() { vm = useDashboardViewModel(STUDENT_ID); return null; }
+  let view: ReactTestRenderer;
+  await act(async () => { view = create(<Harness />); });
+  expect(vm!.selectedDayID).toBe('day-1');
+  act(() => vm!.selectDay('day-2'));
+  expect(vm!.selectedDayID).toBe('day-2');
+  act(() => { mockFocus?.(); });
+  expect(vm!.selectedDayID).toBe('day-1');
+  active = { ...active, days: [{ ...days[0], completed_at: new Date().toISOString() }, { ...days[1], week_number: 2 }] };
+  act(() => { view!.update(<Harness />); });
+  expect(vm!.selectedDayID).toBe('day-1');
+  act(() => view!.unmount());
+});

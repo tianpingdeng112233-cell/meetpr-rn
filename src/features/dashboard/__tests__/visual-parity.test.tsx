@@ -8,7 +8,9 @@ import type { OnboardingProfile } from '@/api/domains/onboarding';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
 import ProfileRoute from '@/app/(student)/profile';
+import { MyProfileValueRow } from '@/features/profile/components';
 import { ProfileEditor } from '@/features/profile/ProfileEditor';
+import { useStudentTabsStore } from '@/features/student-tabs';
 import { DashboardScreen } from '../DashboardScreen';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 
@@ -54,6 +56,7 @@ let renderer: ReactTestRenderer;
 let client: QueryClient;
 let servedPlan: PlanDetail | null;
 let servedProfile: OnboardingProfile | null;
+let servedExercises: import('@/api/domains').Exercise[];
 let feedbackItems: import('@/api/domains').FeedbackItem[];
 
 beforeEach(() => {
@@ -62,6 +65,7 @@ beforeEach(() => {
   mockProfileParams = {};
   setLocaleOverride('en');
   servedPlan = plan;
+  servedExercises = [];
   servedProfile = null;
   feedbackItems = [];
   mockPush.mockClear();
@@ -71,7 +75,7 @@ beforeEach(() => {
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
     if (path.endsWith('/plans')) return { plans: servedPlan ? [servedPlan] : [] } as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
-    if (path === '/exercises') return { exercises: [] } as never;
+    if (path === '/exercises') return { exercises: servedExercises } as never;
     if (path.endsWith('/onboarding')) {
       if (options?.method === 'PUT' && servedProfile) servedProfile = { ...servedProfile, ...options.body as Partial<OnboardingProfile> };
       return servedProfile as never;
@@ -219,15 +223,20 @@ test.each([false, true])('Today metric cards open the existing Profile editors (
   };
   await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  const weightLabel = hasValues ? t('student.dashboardProfileMetricsView.copy002', ['83 kg']) : t('student.dashboardProfileMetricsView.copy011');
+  if (hasValues) expect(renderer.root.findAllByType(Text).some(node => node.props.children === '83')).toBe(true);
+  const weightLabel = hasValues ? t('student.dashboardProfileMetricsView.copy002', ['83.00 kg']) : t('student.dashboardProfileMetricsView.copy011');
   const weight = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === weightLabel)[0];
   expect(weight).toBeDefined();
   await act(async () => weight.props.onPress());
-  expect(mockNavigate).toHaveBeenLastCalledWith({ pathname: '/(student)/profile', params: { edit: 'basics', returnTo: 'today' } });
-  mockProfileParams = { edit: 'basics', returnTo: 'today' };
+  expect(mockNavigate).toHaveBeenLastCalledWith({ pathname: '/(student)/profile', params: { edit: 'weight', returnTo: 'today' } });
+  mockProfileParams = { edit: 'weight', returnTo: 'today' };
   await act(async () => { renderer.update(<QueryClientProvider client={client}><ProfileRoute /></QueryClientProvider>); });
-  expect(renderer.root.findByType(ProfileEditor).props.section).toBe('basics');
+  expect(renderer.root.findByType(ProfileEditor).props.section).toBe('weight');
   if (hasValues) {
+    expect(renderer.root.findAllByType(MyProfileValueRow).map(node => node.props.title)).toEqual(expect.arrayContaining(['Height / Body weight', 'Meet', 'Note to coach']));
+    const noteRow = renderer.root.findAllByType(MyProfileValueRow).find(node => node.props.title === 'Note to coach')!;
+    expect(noteRow.props.value).toBe('Existing note');
+    expect(noteRow.props.valueLines).toBe(1);
     await act(async () => { renderer.root.findAllByType(TextInput).find(node => node.props.value === '83')!.props.onChangeText('84'); });
     const save = renderer.root.findByType(ProfileEditor).findAll(node => typeof node.props.onPress === 'function' && node.props.label === t('student.profileCardsSection.copy013'))[0];
     await act(async () => { save.props.onPress(); });
@@ -241,7 +250,7 @@ test.each([false, true])('Today metric cards open the existing Profile editors (
   expect(mockSetParams).toHaveBeenCalledWith({ edit: undefined, returnTo: undefined });
   await act(async () => { renderer.update(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  if (hasValues) expect(renderer.root.findAll(node => node.props.accessibilityLabel === t('student.dashboardProfileMetricsView.copy002', ['84 kg'])).length).toBeGreaterThan(0);
+  if (hasValues) expect(renderer.root.findAll(node => node.props.accessibilityLabel === t('student.dashboardProfileMetricsView.copy002', ['84.00 kg'])).length).toBeGreaterThan(0);
   const meetText = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.dashboardProfileMetricsView.copy003'))!;
   let meetButton = meetText;
   while (meetButton.parent && (meetButton.props.accessibilityRole !== 'button' || typeof meetButton.props.onPress !== 'function')) meetButton = meetButton.parent;
@@ -256,4 +265,85 @@ test.each([false, true])('Today metric cards open the existing Profile editors (
   await act(async () => { renderer.root.findByType(ProfileEditor).findByType(Modal).props.onRequestClose(); });
   expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/today');
   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method === 'PUT')).toHaveLength(writes);
+});
+
+
+const textCopy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
+const loadDashboard = async () => {
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+  for (let attempt = 0; attempt < 100 && !textCopy().includes('Weekly progress'); attempt += 1) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  }
+};
+
+test('Today overview follows selection, hands off the selected day, and keeps the current start action', async () => {
+  const first = plan.days[0];
+  const bench = '60000000-0000-4000-8000-000000000001';
+  const row = '60000000-0000-4000-8000-000000000002';
+  servedExercises = [[first.exercises[0].exercise_id, 'Squat', 'squat'], [bench, 'Bench press', 'bench'], [row, 'Barbell row', null]].map(([id, name, family]) => ({
+    id: id!, name: name!, name_en: name!, main_lift_family: family, is_competition_lift: true, competition_stance: null,
+    exercise_type: family ? 'main' : 'accessory', muscle_groups: null, equipment: null, movement_pattern: null, created_by_coach_id: null, created_at: plan.created_at,
+  })) as import('@/api/domains').Exercise[];
+  const second = { ...first, id: '40000000-0000-4000-8000-000000000001', day_of_week: 2, sort_order: 1,
+    exercises: [{ ...first.exercises[0], id: 'row', exercise_id: row, sort_order: 2, is_main_lift: false },
+      { ...first.exercises[0], id: 'bench', exercise_id: bench, sort_order: 0 },
+      { ...first.exercises[0], id: 'unknown', exercise_id: '60000000-0000-4000-8000-000000000099', sort_order: 1, is_main_lift: false }] };
+  servedPlan = { ...plan, days: [first, second] };
+  await loadDashboard();
+  const overview = () => renderer.root.findAll(node => node.props.testID === 'today-day-overview' && typeof node.props.onPress === 'function')[0];
+  expect(overview()).toBeDefined();
+  expect(textCopy()).toContain("Today's session");
+  const day2 = renderer.root.findAll(node => node.props.accessibilityLabel?.startsWith('W1D2 ') && typeof node.props.onPress === 'function')[0];
+  await act(async () => day2.props.onPress());
+  expect(overview().props.accessibilityRole).toBe('button');
+  expect(overview().findAllByType(Text).map(node => node.props.children)).toEqual(expect.arrayContaining(['Bench press day', 'Upcoming', '3 exercises · 3 sets', 'Bench press · Barbell row']));
+  expect(overview().findAllByType(Text).find(node => node.props.children === 'Bench press · Barbell row')?.props.numberOfLines).toBe(1);
+  expect(textCopy()).toContain('W1D1');
+  expect(textCopy()).toContain('Selected day · e1RM chart');
+  const charts = renderer.root.findAllByType(Text).filter(node => node.props.children === 'Bench press');
+  expect(charts).toHaveLength(1);
+  expect(renderer.root.findAllByType(Text).filter(node => node.props.children === 'Squat')).toHaveLength(0);
+  await act(async () => overview().props.onPress());
+  expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/training');
+  expect(useStudentTabsStore.getState().trainingHandoff?.dayID).toBe(second.id);
+  const start = renderer.root.findAll(node => node.props.label === 'Start training' && typeof node.props.onPress === 'function')[0];
+  await act(async () => start.props.onPress());
+  expect(useStudentTabsStore.getState().trainingHandoff?.dayID).toBe(first.id);
+});
+
+test('Today keeps the completed day overview and nutrition is a display-only accessible card', async () => {
+  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: new Date().toISOString() }] };
+  await loadDashboard();
+  const overview = renderer.root.findAll(node => node.props.testID === 'today-day-overview' && typeof node.props.onPress === 'function')[0];
+  expect(overview).toBeDefined();
+  expect(overview.findAllByType(Text).some(node => node.props.children === 'Completed')).toBe(true);
+  const nutrition = renderer.root.findAll(node => node.props.accessibilityLabel === 'Nutrition, coming soon' && typeof node.type === 'string')[0];
+  expect(nutrition).toBeDefined();
+  expect(nutrition.props.onPress).toBeUndefined();
+  expect(nutrition.findAll(node => typeof node.props.onPress === 'function')).toHaveLength(0);
+  expect(textCopy()).toEqual(expect.arrayContaining(['Nutrition', 'Coming soon', 'Carbs', 'Protein', 'Fat', 'Fiber']));
+});
+
+
+test('Today overview uses singular exercise for one exercise and three sets', async () => {
+  const day = plan.days[0];
+  const exercise = day.exercises[0];
+  servedPlan = { ...plan, days: [{ ...day, exercises: [{ ...exercise,
+    sets: [1, 2, 3].map(number => ({ ...exercise.sets[0], id: `set-${number}`, set_number: number })),
+  }] }] };
+  await loadDashboard();
+  const overview = renderer.root.findAll(node => node.props.testID === 'today-day-overview' && typeof node.props.onPress === 'function')[0];
+  expect(overview.findAllByType(Text).map(node => node.props.children)).toContain('1 exercise · 3 sets');
+});
+
+
+test('Today overview uses singular set for three exercises and one set', async () => {
+  const day = plan.days[0];
+  const exercise = day.exercises[0];
+  servedPlan = { ...plan, days: [{ ...day,
+    exercises: [0, 1, 2].map(index => ({ ...exercise, id: `exercise-${index}`, sort_order: index, sets: index === 0 ? exercise.sets : [] })),
+  }] };
+  await loadDashboard();
+  const overview = renderer.root.findAll(node => node.props.testID === 'today-day-overview' && typeof node.props.onPress === 'function')[0];
+  expect(overview.findAllByType(Text).map(node => node.props.children)).toContain('3 exercises · 1 set');
 });

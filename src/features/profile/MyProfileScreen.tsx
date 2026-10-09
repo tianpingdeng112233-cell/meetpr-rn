@@ -50,21 +50,21 @@ function LoadedProfile({ studentId, profile }: { studentId: string; profile: Onb
   const date = gymDayText();
   const readiness = useReadiness(studentId, date);
   const values = profileRowValues(profile);
-  const row = (section: ProfileSection) => <MyProfileValueRow title={t(profileTitles[section])} value={values[section]} onPress={() => setEdit(section)} />;
+  const row = (section: ProfileSection) => <MyProfileValueRow valueLines={section === 'note' ? 1 : 2} title={t(profileTitles[section])} value={values[section]} onPress={() => setEdit(section)} />;
   return <>
     <MyProfileOneRMCard profile={profile} />
     <MyProfileSectionLabel>{t('student.myProfileView.copy003')}</MyProfileSectionLabel>
     {/* iOS: one recovery card (today's readiness, falling back to the onboarding answers) opening the readiness sheet, then a separate injuries card. */}
     <MyProfileGroupCard><MyProfileRecoveryRow title={t('student.myProfileView.copy004')} chips={readiness.data?.checkin ? readinessSummary(readiness.data.checkin) : recoverySummary(profile)} onPress={() => setShowsReadiness(true)} /></MyProfileGroupCard>
     <MyProfileGroupCard><MyProfileRecoveryRow title={t(profileTitles.injuries)} chips={injuryChips(profile.injury_areas)} injury={!!profile.injury_areas?.length} onPress={() => setEdit('injuries')} /></MyProfileGroupCard>
-    <MyProfileSectionLabel>{t('student.myProfileView.copy006')}</MyProfileSectionLabel><MyProfileGroupCard>{row('muscles')}<MyProfileDivider /><PreferenceRows studentId={studentId} trainingDays={profile.training_days} /><MyProfileDivider />{row('competition')}<MyProfileDivider />{row('basics')}</MyProfileGroupCard>
+    <MyProfileSectionLabel>{t('student.myProfileView.copy006')}</MyProfileSectionLabel><MyProfileGroupCard>{row('muscles')}<MyProfileDivider /><PreferenceRows studentId={studentId} trainingDays={profile.training_days} /><MyProfileDivider />{row('competition')}<MyProfileDivider />{row('note')}<MyProfileDivider />{row('basics')}</MyProfileGroupCard>
     <MyProfileSectionLabel>{t('student.myProfileView.copy010')}</MyProfileSectionLabel><MyProfileGroupCard>{row('background')}<MyProfileDivider />{row('environment')}</MyProfileGroupCard>
     <AccountSecuritySection studentId={studentId} /><SignOut />
     {edit ? <ProfileEditor section={edit} profile={profile} onClose={() => setEdit(null)} /> : null}
     {showsReadiness ? <ReadinessSheet studentId={studentId} date={date} onComplete={() => setShowsReadiness(false)} onSkip={() => setShowsReadiness(false)} /> : null}
   </>;
 }
-export function MyProfileScreen({ editSection, onEditClose }: { editSection?: 'basics' | 'competition'; onEditClose?: () => void } = {}) {
+export function MyProfileScreen({ editSection, onEditClose }: { editSection?: 'basics' | 'competition' | 'weight' | 'note'; onEditClose?: () => void } = {}) {
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const profile = useOnboardingProfile(studentId);
   const chat = useOpenCoachChat(studentId);

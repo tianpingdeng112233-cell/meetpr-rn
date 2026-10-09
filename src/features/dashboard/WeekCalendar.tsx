@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import { font, useColors } from '@/design';
+import { font, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { dayCode, weekDayOrdinals } from '@/domain/plan/sequence';
 import { recommendedDateText } from '@/domain/plan/presentation';
@@ -20,12 +20,14 @@ function WeekRecommendationLabel() {
 }
 
 export function WeekCalendar({
+  todaySelection = false,
   headerStyle,
   weekNumber,
   cells,
   selectedDayID,
   onSelect,
 }: {
+  todaySelection?: boolean;
   headerStyle: 'progress' | 'currentWeek';
   weekNumber: number;
   cells: DashboardWeekDay[];
@@ -60,16 +62,18 @@ export function WeekCalendar({
           </View>
         </View>
       )}
-      <WeekGrid days={cells} selectedDayID={selectedDayID} onSelect={onSelect} />
+      <WeekGrid todaySelection={todaySelection} days={cells} selectedDayID={selectedDayID} onSelect={onSelect} />
     </View>
   );
 }
 
 export function WeekGrid({
+  todaySelection = false,
   days,
   selectedDayID,
   onSelect,
 }: {
+  todaySelection?: boolean;
   days: DashboardWeekDay[];
   selectedDayID: string | null;
   onSelect: (id: string) => void;
@@ -85,6 +89,7 @@ export function WeekGrid({
           accessibilityRole="button"
           accessibilityLabel={`${dayCode(day, weekDays)} ${recommendedDateText(date)}`}
           accessibilityState={{ selected: selectedDayID === day.id }}
+          accessibilityValue={todaySelection ? { text: t(status === 'current' ? 'student.rn.today.session' : status === 'done' ? 'student.dashboardTodayScreen.copy002' : 'student.rn.today.upcoming') } : undefined}
           onPress={() => onSelect(day.id)}
           style={{
             minWidth: 0,
@@ -97,16 +102,16 @@ export function WeekGrid({
             gap: 5,
             backgroundColor:
               status === 'current'
-                ? `${colors.goldRGB}1F`
-                : status === 'done'
+                ? todaySelection ? colors.goldSoft : `${colors.goldRGB}1F`
+                : status === 'done' || (todaySelection && selectedDayID === day.id)
                   ? colors.surfaceCard
                   : colors.bgInset,
-            borderWidth: status === 'current' ? 1.5 : 0,
-            borderColor: colors.gold500,
+            borderWidth: todaySelection ? spacing.point2 : status === 'current' ? 1.5 : 0,
+            borderColor: todaySelection ? selectedDayID === day.id ? colors.textPrimary : 'transparent' : colors.gold500,
           }}
         >
           {status === 'done' ? <MaterialCommunityIcons name="check" size={11} color={colors.success} /> : <View style={{ width: 7, height: 7, borderRadius: 3.5, borderWidth: status === 'current' ? 0 : 1, borderColor: colors.textGhost, backgroundColor: status === 'current' ? colors.gold500 : 'transparent' }} />}
-          <Text style={{ color: status === 'current' ? colors.textPrimary : colors.textMuted, ...font.mono(10, status === 'current' ? 'bold' : 'semibold') }}>D{ordinals.get(day.id)}</Text>
+          <Text style={{ color: status === 'current' || (todaySelection && selectedDayID === day.id) ? colors.textPrimary : colors.textMuted, ...font.mono(10, status === 'current' ? 'bold' : 'semibold') }}>D{ordinals.get(day.id)}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ color: status === 'current' ? colors.textSecondary : colors.textMuted, ...font.mono(10) }}>{recommendedDateText(date)}</Text>
         </Pressable>
       ))}

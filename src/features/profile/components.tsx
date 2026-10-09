@@ -31,10 +31,10 @@ export function MyProfileDivider() {
   const colors = useColors();
   return <View style={{ height: 1, backgroundColor: colors.borderSubtle }} />;
 }
-export function MyProfileValueRow({ title, value, onPress, danger = false }: { title: string; value?: string; onPress: () => void; danger?: boolean }) {
+export function MyProfileValueRow({ title, value, onPress, danger = false, valueLines = 2 }: { title: string; value?: string; onPress: () => void; danger?: boolean; valueLines?: number }) {
   const colors = useColors();
   return <Pressable accessibilityRole="button" onPress={onPress} style={{ minHeight: value ? 68 : 52, paddingHorizontal: 16, paddingVertical: value ? 14 : 15, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-    <View style={{ flex: 1, gap: 3 }}><Text style={{ ...font.body(value ? 11 : 15, value ? 'regular' : 'semibold'), color: danger ? colors.danger : value ? colors.textMuted : colors.textPrimary }}>{title}</Text>{value ? <Text numberOfLines={2} style={{ ...font.body(16, 'semibold'), color: colors.textPrimary }}>{value}</Text> : null}</View>
+    <View style={{ flex: 1, gap: 3 }}><Text style={{ ...font.body(value ? 11 : 15, value ? 'regular' : 'semibold'), color: danger ? colors.danger : value ? colors.textMuted : colors.textPrimary }}>{title}</Text>{value ? <Text numberOfLines={valueLines} style={{ ...font.body(16, 'semibold'), color: colors.textPrimary }}>{value}</Text> : null}</View>
     <MaterialCommunityIcons name="chevron-right" size={15} color={colors.textDim} />
   </Pressable>;
 }

@@ -12,10 +12,10 @@ export type Choice<T extends string | number> = {
   value: T;
 };
 
-export function FieldLabel({ children }: { children: ReactNode }) {
+export function FieldLabel({ children, error = false }: { children: ReactNode; error?: boolean }) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  return <Text style={styles.fieldLabel}>{children}</Text>;
+  return <Text accessibilityRole={error ? 'alert' : undefined} style={[styles.fieldLabel, error && { color: colors.danger }]}>{children}</Text>;
 }
 
 export function FormInput({ error, style, ...props }: TextInputProps & { error?: boolean }) {
@@ -36,12 +36,16 @@ export function ChoiceGroup<T extends string | number>({
   selected,
   error = false,
   layout = 'wrap',
+  appearance = 'default',
+  columns,
 }: {
   choices: readonly Choice<T>[];
   onChange: (value: T) => void;
   selected: T | null;
   error?: boolean;
   layout?: 'wrap' | 'row' | 'segmented';
+  appearance?: 'default' | 'meet';
+  columns?: number;
 }) {
   const { colors, scheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -63,9 +67,11 @@ export function ChoiceGroup<T extends string | number>({
               active && styles.selected,
               active && layout === 'segmented' && styles.selectedSegment,
               active && layout === 'segmented' && scheme === 'dark' && styles.selectedSegmentDark,
+              appearance === 'meet' && styles.meetChoice,
+              appearance === 'meet' && active && styles.meetSelected,
               error && styles.errorBorder,
             ]}>
-            <Text style={[styles.choiceText, layout !== 'wrap' && styles.equalChoiceText, layout === 'segmented' && styles.segmentText, active && styles.selectedText]}>
+            <Text numberOfLines={appearance === 'meet' ? 1 : undefined} adjustsFontSizeToFit={appearance === 'meet'} minimumFontScale={appearance === 'meet' ? 0.85 : undefined} style={[styles.choiceText, layout !== 'wrap' && styles.equalChoiceText, layout === 'segmented' && styles.segmentText, active && styles.selectedText, appearance === 'meet' && styles.meetText, appearance === 'meet' && active && styles.meetSelectedText]}>
               {choice.label}
             </Text>
             {choice.subtitle ? (
@@ -74,6 +80,7 @@ export function ChoiceGroup<T extends string | number>({
           </Pressable>
         );
       })}
+      {columns ? Array.from({ length: Math.max(0, columns - choices.length) }, (_, index) => <View key={`empty-${index}`} style={[styles.choice, styles.equalChoice, appearance === 'meet' && styles.meetChoice, { opacity: 0 }]} />) : null}
     </View>
   );
 }
@@ -328,6 +335,10 @@ const createStyles = (colors: Colors) => StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
   },
+  meetChoice: { paddingHorizontal: spacing.point2, backgroundColor: colors.surfaceCard },
+  meetSelected: { backgroundColor: colors.ctaBackground, borderColor: colors.ctaBackground },
+  meetText: { ...typography.footnote },
+  meetSelectedText: { color: colors.ctaText },
   choiceCard: { flexBasis: '100%' },
   selected: { backgroundColor: colors.goldSoft, borderColor: colors.gold500 },
   errorBorder: { borderColor: colors.danger },
