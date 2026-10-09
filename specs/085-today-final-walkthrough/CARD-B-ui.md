@@ -100,3 +100,12 @@
 6. **级别网格尾行对不齐。** CPA 女子表最后一行只有 3 格时，每格比上面几行宽约 4px（实测 237 对 233）。尾行每格宽度要与满行一致，补位元素要和真实格子走同一套间距。
 7. **级别块大字号下贴边。** 360×640 dp + 字体 1.3× 时 `140+ kg` 几乎贴到块的左右边。级别块与赛事方块的文字设为单行，并允许按现有做法略微缩小（如 `adjustsFontSizeToFit` + `minimumFontScale` 约 0.85），不得换行、不得截断。
 8. **新加的 import 位置。** `DashboardScreen.tsx`、`OnboardingSteps.tsx`、`ProfileEditor.tsx`、`onboarding/model.ts`、`profile/model.ts` 里新 import 被插在文件最顶部、原有第一行之前；挪到各文件原有 import 分组里对应的位置（第三方 → `@/` → 相对路径，照该文件原来的顺序）。
+
+## 返修二（2026-10-09，深色主题实屏后；最后一轮）
+
+返修一交回的八项另行复核。深色主题（Profile → Appearance → Dark）实屏发现两处，只修这两处：
+
+9. **深色下 Meet 页的选中块看不出来。** 选中的赛事方 / 级别块用的是 `colors.ctaFill`，它在深浅两套主题里都是深藏青（`#111827`），深色主题下与未选中的块几乎同色。改用随主题变化的那一对：底色 `colors.ctaBackground`、文字 `colors.ctaText`、描边同底色（浅色下仍是深底白字，深色下是金底深字，与页面上的 Save 按钮同一套）。
+10. **深色下几处浅底衬不出来。** 用了 `colors.bgStack` 做底的四处——概览卡的 `Upcoming` 小标、营养卡的 `Coming soon` 小标、营养卡的四个小格——在深色卡片上看不到底色。改用 `colors.surfaceRaised`（浅色下与现在同色，深色下可见）。`Today's session` 小标（`goldSoft`）不动。
+
+规则同前：不 commit / push，JOURNAL 追加「卡 B 返修二」，三项全量检查通过。样式改动不要求新测试；若现有断言里写死了旧 token 名，同步改并在 JOURNAL 列出。
