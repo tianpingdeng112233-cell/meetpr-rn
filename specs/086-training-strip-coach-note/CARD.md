@@ -81,3 +81,14 @@
 - 只动 `TodayWorkoutView.tsx` 里这一行的布局样式；周条格子、备注块、文案、落后判定都不要动。
 - 测试：样式不写断言。若为此抽出了任何纯逻辑则先红后绿；否则在 JOURNAL 本卡一节后追加"返修一"小节，写清改了哪几条样式、为什么这样能保证不截字。
 - 仍然不 commit、不 push。交付前重跑 `npx jest --runInBand`、`npx tsc --noEmit`、`npm run lint`。
+
+## 返修二（2026-10-09，David 真机看包后改口径）
+
+先重读 SPEC：「已拍板口径」第 3、4 行、整节「§3」、测试 seam 第 3 条、验收 7 / 8 / 8b、「屏幕稿」里的"3 教练备注"与"周条状态图形大小"。这三处是在首轮基础上的口径修订，不是缺陷返工。
+
+1. **淡金备注块只显示动作备注**（`active.exercise.notes`），小标题用现有键 `student.todayWorkoutScreen.copy014`（`Coach note` / "教练备注"），不带"· 本组"或"· 动作名"后缀，不再有分隔线与第二段。`coach-notes.ts` 的纯函数与测试按新口径改写；首轮新增的两条文案键 `student.trainingCoachNote.thisSet` / `student.trainingCoachNote.exercise` 不再使用，删掉（中英文同步）。
+2. **组级 `coach_note` 回到改前的小灰字块**：位置与样式同 `main`（卡片下方、上次成绩行之后，`bgInset` 底、12 号 `coachNoteText`），仅当该组 `coach_note` 非空（去空白后）时出现，可编辑态与只读态都如此；不再回落显示动作备注。原因见 SPEC §3"事实"一段：组级备注只有系统写入（自重标记、旧导入的节奏说明），不能丢，也不该当教练备注放大。
+3. **周条状态图形缩小**：`TrainingWeekStrip.tsx` 里实心圆点与空心圆由 `spacing.base`（16）改为约 10，对勾约 14；用现有 token（没有合适数值就用最接近的现有 token，不新增 token）；给图形一个固定高度的槽位，三种状态下格内三层的垂直位置一致、格高不变。
+4. **顺带一处文案**（本卡重排过这一行）：页头的 `Training history` 现在取自 `build22-strings.ts` 的硬编码英文，中文界面下不翻译。改为走 i18n（中文"训练历史"；仓内若已有等价键则复用），读屏标签同步。别处用到 `training22.history` 的地方表现不得变化。
+
+约束不变：不 commit、不 push；只动与上述四点直接相关的文件；测试先红后绿（第 1、2 点的纯函数与渲染断言）；因口径变化需要改的首轮断言逐条写进 JOURNAL"返修二"小节。交付前重跑 `npx jest --runInBand`、`npx tsc --noEmit`、`npm run lint`。
