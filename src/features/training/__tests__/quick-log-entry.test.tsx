@@ -146,6 +146,7 @@ test('training history has a visible text entry and opens the history stack', as
 });
 
 test('browsing a future week is read-only and Back to today restores the current workout', async () => {
+  jest.useFakeTimers({ now: new Date(2026, 8, 7, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
   const futureDay = { ...plan.days[0], id: 'future-day', week_number: 2,
     exercises: plan.days[0].exercises.map(exercise => ({ ...exercise, id: 'future-exercise', plan_day_id: 'future-day',
       sets: exercise.sets.map(set => ({ ...set, id: 'future-set', plan_exercise_id: 'future-exercise' })),
@@ -171,4 +172,16 @@ test('browsing a future week is read-only and Back to today restores the current
   expect(copy()).toContain('W1D1');
   expect(copy()).toContain(t('student.todayWorkoutScreen.copy008'));
   expect(copy()).not.toContain('Back to today');
+});
+
+test('an overdue future preview hides its old recommended date while keeping its unlock message', async () => {
+  jest.useFakeTimers({ now: new Date(2026, 8, 25, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
+  servedPlan = { ...plan, days: [...plan.days, { ...plan.days[0], id: 'overdue-preview', week_number: 2 }] };
+  await mount();
+  await press('Next week');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain('Upcoming');
+  expect(copy().some(text => text.includes('days behind'))).toBe(false);
+  expect(copy()).not.toContain(t('student.dashboardPrimaryAction.copy009', ['Tue, 9/8']));
+  expect(copy()).toContain('This session unlocks after W1 · D1 · Training day is completed.');
 });

@@ -30,8 +30,6 @@ export function TrainingWeekStrip({ plan, strip, onSelect }: {
     },
   }), [nextDayID, previousDayID, onSelect]);
   if (!week) return null;
-  const status = t(week.status === 'current' ? 'student.trainingWeekStrip.current'
-    : week.status === 'upcoming' ? 'student.trainingWeekStrip.upcoming' : 'student.trainingWeekStrip.completed');
   const visibleWeight = week.calendarCells.slice(0, 7).reduce((total, cell) => total + (cell.kind === 'rest' ? 0.7 : 1), 0);
   const unitWidth = rowWidth > 0 ? (rowWidth - spacing.point2 * 6) / visibleWeight : spacing.minimumHitTarget;
   const calendar = week.calendarCells.map(cell => {
@@ -40,79 +38,61 @@ export function TrainingWeekStrip({ plan, strip, onSelect }: {
     const date = `${dateValue.getUTCMonth() + 1}/${dateValue.getUTCDate()}`;
     const weight = cell.kind === 'rest' ? 0.7 : 1;
     const size = overflow ? { flex: 0, width: unitWidth * weight } : { flex: weight };
-    const weekdayText = <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.date}>{weekday}</Text>;
+    const weekdayText = <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.date, cell.kind === 'training' && cell.isCurrent && styles.currentWeekday]}>{weekday}</Text>;
     if (cell.kind === 'rest') return <View key={`rest-${cell.date}`} accessible
-      accessibilityLabel={t('student.trainingWeekStrip.restAccessibility', [`${weekday} ${date}`])}
+      accessibilityLabel={t('student.trainingWeekStrip.restAccessibility', [weekday])}
       style={[styles.day, styles.restDay, size]}>
       {weekdayText}
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.restLabel}>{t('student.trainingWeekStrip.rest')}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.date}>{date}</Text>
     </View>;
-    const { day, ordinal, status: dayStatus, isSelected, isCurrent } = cell;
+    const { day, status: dayStatus, isSelected, isCurrent, isBehind } = cell;
     return <Pressable key={day.id} accessibilityRole="button"
-      accessibilityLabel={`${dayCode(day, plan.days)} ${weekday} ${date}`}
+      accessibilityLabel={isBehind
+        ? t('student.trainingWeekStrip.behindAccessibility', [`${dayCode(day, plan.days)}, ${weekday}`])
+        : `${dayCode(day, plan.days)}, ${weekday} ${date}`}
       accessibilityState={{ selected: isSelected }} onPress={() => onSelect(day.id)}
       style={[styles.day, size, isCurrent && styles.currentDay, isSelected && styles.selectedDay]}>
       {weekdayText}
-      <MaterialCommunityIcons name={dayStatus === 'done' ? 'check' : 'circle-outline'}
+      <MaterialCommunityIcons name={dayStatus === 'done' ? 'check' : isCurrent ? 'circle' : 'circle-outline'}
         size={spacing.base} color={dayStatus === 'done' ? colors.success : isCurrent ? colors.goldText : colors.textMuted} />
-      <Text style={styles.ordinal}>D{ordinal}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.date, isCurrent && styles.currentDate]}>{date}</Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.shortDate, isCurrent && styles.currentDate, isBehind && styles.behind]}>{isBehind ? t('student.trainingWeekStrip.behind') : date}</Text>
     </Pressable>;
   });
   return <View style={styles.strip} {...(!overflow ? pan.panHandlers : {})}>
-    <View style={styles.header} {...(overflow ? pan.panHandlers : {})}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingWeekStrip.previous')}
-        accessibilityState={{ disabled: !previousDayID }} disabled={!previousDayID}
-        onPress={() => { if (previousDayID) onSelect(previousDayID); }} style={styles.arrow}>
-        <MaterialCommunityIcons name="chevron-left" size={spacing.lg} color={previousDayID ? colors.textPrimary : colors.textDisabled} />
-      </Pressable>
-      <View style={styles.heading}>
-        <Text style={styles.week}>W{week.number}</Text>
-        <Text style={[styles.badge, week.status === 'current' && styles.currentBadge]}>{status}</Text>
-        <Text style={styles.count}>{week.completed} / {week.cells.length}</Text>
-      </View>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingWeekStrip.next')}
-        accessibilityState={{ disabled: !nextDayID }} disabled={!nextDayID}
-        onPress={() => { if (nextDayID) onSelect(nextDayID); }} style={styles.arrow}>
-        <MaterialCommunityIcons name="chevron-right" size={spacing.lg} color={nextDayID ? colors.textPrimary : colors.textDisabled} />
-      </Pressable>
-    </View>
-    <View onLayout={event => setRowWidth(event.nativeEvent.layout.width)}>
+    <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingWeekStrip.previous')}
+      accessibilityState={{ disabled: !previousDayID }} disabled={!previousDayID}
+      onPress={() => { if (previousDayID) onSelect(previousDayID); }} style={styles.arrow}
+      {...(overflow ? pan.panHandlers : {})}>
+      <MaterialCommunityIcons name="chevron-left" size={spacing.lg} color={previousDayID ? colors.textPrimary : colors.textDisabled} />
+    </Pressable>
+    <View style={styles.calendar} onLayout={event => setRowWidth(event.nativeEvent.layout.width)}>
       {overflow ? <ScrollView key={week.number} horizontal contentContainerStyle={styles.days}
         showsHorizontalScrollIndicator>
         {calendar}
       </ScrollView> : <View style={styles.days}>{calendar}</View>}
     </View>
-    {strip.indicators.length ? <View style={styles.indicators} accessible={false} importantForAccessibility="no-hide-descendants">
-      {strip.indicators.map(indicator => <View key={indicator.number} style={[
-        styles.dot,
-        indicator.isCurrent && { backgroundColor: colors.gold500 },
-        indicator.isSelected && styles.selectedDot,
-      ]} />)}
-    </View> : null}
+    <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingWeekStrip.next')}
+      accessibilityState={{ disabled: !nextDayID }} disabled={!nextDayID}
+      onPress={() => { if (nextDayID) onSelect(nextDayID); }} style={styles.arrow}
+      {...(overflow ? pan.panHandlers : {})}>
+      <MaterialCommunityIcons name="chevron-right" size={spacing.lg} color={nextDayID ? colors.textPrimary : colors.textDisabled} />
+    </Pressable>
   </View>;
 }
 
 const createStyles = (colors: Colors) => StyleSheet.create({
-  strip: { gap: spacing.sm },
-  header: { flexDirection: 'row', alignItems: 'center' },
-  arrow: { width: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' },
-  heading: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
-  week: { ...font.display(14), color: colors.textPrimary },
-  badge: { ...font.body(11, 'semibold'), color: colors.textSecondary, backgroundColor: colors.bgStack, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.point2, flexShrink: 1, textAlign: 'center' },
-  currentBadge: { color: colors.goldText, backgroundColor: colors.goldSoft },
-  count: { ...font.mono(11), color: colors.textMuted },
+  strip: { flexDirection: 'row', alignItems: 'stretch' },
+  arrow: { width: spacing.point28, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' },
+  calendar: { flex: 1, minWidth: 0 },
   days: { flexDirection: 'row', gap: spacing.point2 },
-  day: { flex: 1, minWidth: 0, minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.zero, paddingVertical: spacing.sm, gap: spacing.xs, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control, borderWidth: spacing.point2, borderColor: 'transparent', backgroundColor: colors.surfaceCard },
-  restDay: { backgroundColor: colors.bgStack, borderWidth: 0, paddingVertical: spacing.sm + spacing.point2, justifyContent: 'space-between' },
+  day: { flex: 1, minWidth: 0, minHeight: spacing.xxxl, paddingHorizontal: spacing.zero, paddingVertical: spacing.xs, gap: spacing.point2, alignItems: 'center', justifyContent: 'center', borderRadius: radius.control, borderWidth: spacing.point2, borderColor: 'transparent', backgroundColor: colors.surfaceCard },
+  restDay: { backgroundColor: colors.bgStack, borderWidth: 0, paddingVertical: spacing.sm, gap: spacing.xs },
   restLabel: { ...font.body(10), color: colors.textMuted, textAlign: 'center', alignSelf: 'stretch' },
   currentDay: { backgroundColor: colors.goldSoft },
   selectedDay: { borderColor: colors.textPrimary },
-  ordinal: { ...font.mono(11, 'semibold'), color: colors.textPrimary },
+  shortDate: { ...font.mono(11), color: colors.textPrimary, textAlign: 'center', alignSelf: 'stretch' },
+  behind: { ...font.mono(10), color: colors.goldText },
   date: { ...font.body(10), color: colors.textMuted, textAlign: 'center', alignSelf: 'stretch' },
-  currentDate: { ...font.body(10, 'bold'), color: colors.goldText },
-  indicators: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.point6, paddingVertical: spacing.xs },
-  dot: { width: spacing.point6, height: spacing.point6, borderRadius: radius.pill, backgroundColor: colors.borderStrong },
-  selectedDot: { width: spacing.point18, backgroundColor: colors.textPrimary },
+  currentDate: { color: colors.goldText },
+  currentWeekday: { ...font.body(10, 'bold'), color: colors.goldText },
 });

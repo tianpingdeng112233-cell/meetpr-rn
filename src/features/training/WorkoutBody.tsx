@@ -7,9 +7,10 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { RollUpBody, RollUpCard } from '@/design/TrainingRewardMotion';
 import { t } from '@/i18n';
 import { training22 } from './build22-strings';
+import { coachNoteParagraphs } from './coach-notes';
 import type { PlanExercise } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
-import { AppButton, Card, GradientFill, font, radius, spacing, useColors } from '@/design';
+import { AppButton, Card, GradientFill, font, fontMetrics, radius, spacing, useColors } from '@/design';
 import {
   decodePrescription,
   intensityText,
@@ -61,7 +62,7 @@ export function WorkoutBody({
   onAskCoach,
   preparingShare = false,
 }: {
-  preview?: { recommendedDate: string; title: string; unlockMessage?: string };
+  preview?: { recommendedDate?: string; title: string; unlockMessage?: string };
   onAskCoach?: (draft: WorkoutSetDraft) => void;
   preparingShare?: boolean;
   exercises: readonly PlanExercise[];
@@ -106,6 +107,10 @@ export function WorkoutBody({
       drafts: drafts.filter((draft) => draft.exercise.id === exercise.id),
     }));
   const p = active ? decodePrescription(active.planSet) : null;
+  const coachNotes = editable && active ? coachNoteParagraphs(
+    active.planSet.coach_note, active.exercise.notes,
+    exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)),
+  ) : [];
   const outcome = active ? suggestionForDraft(active) : null;
   const actualWeight =
     active?.sourceLog && !active.sourceLog.assumed
@@ -147,7 +152,7 @@ export function WorkoutBody({
         >
           <GradientFill size={accentSize} direction="vertical" stops={[{ color: colors.gold300, offset: 0 }, { color: colors.gold400, offset: 0.5 }, { color: colors.gold500, offset: 1 }]} />
         </View>
-        {preview ? <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.dashboardPrimaryAction.copy009', [preview.recommendedDate])}</Text> : null}
+        {preview?.recommendedDate ? <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.dashboardPrimaryAction.copy009', [preview.recommendedDate])}</Text> : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{preview?.title ?? (recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017'))}</Text>
           {editable && active && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
@@ -196,6 +201,16 @@ export function WorkoutBody({
           </>
         ) : active && p ? (
           <>
+            {coachNotes.length ? <View style={{ padding: spacing.md, gap: spacing.sm, borderRadius: radius.inset, backgroundColor: colors.goldSoft }}>
+              {coachNotes.map((paragraph, index) => <View key={index} style={{ gap: spacing.point3 }}>
+                {!paragraph.isPrimary ? <View style={{ height: spacing.point1, backgroundColor: colors.borderSubtle, marginBottom: spacing.sm }} /> : null}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  {paragraph.isPrimary ? <MaterialCommunityIcons name="message-outline" size={spacing.point14} color={colors.goldText} /> : null}
+                  <Text style={{ flex: 1, color: colors.goldText, ...font.body(fontMetrics.size11, 'bold') }}>{paragraph.title}</Text>
+                </View>
+                <Text style={{ color: colors.textPrimary, ...font.body(paragraph.isPrimary ? fontMetrics.size15 : fontMetrics.size14, 'medium'), lineHeight: paragraph.isPrimary ? fontMetrics.size21 : fontMetrics.size20 }}>{paragraph.body}</Text>
+              </View>)}
+            </View> : null}
             <View
               style={{
                 flexDirection: 'row',
@@ -244,7 +259,7 @@ export function WorkoutBody({
                 {reference(historyLogs, active.exercise.exercise_id)}
               </Text>
             ) : null}
-            {(active.planSet.coach_note ?? active.exercise.notes) ? (
+            {!editable && (active.planSet.coach_note ?? active.exercise.notes) ? (
               <View style={{ paddingHorizontal: 12, paddingVertical: 10, gap: 3, borderRadius: 10, backgroundColor: colors.bgInset }}>
                 <Text style={{ color: colors.textFaint, ...font.mono(11) }}>{t('student.todayWorkoutScreen.copy014')}</Text>
                 <Text style={{ color: colors.coachNoteText, ...font.body(12), lineHeight: 18 }}>{active.planSet.coach_note ?? active.exercise.notes}</Text>

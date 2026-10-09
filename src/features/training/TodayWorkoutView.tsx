@@ -59,6 +59,7 @@ import {
   AppButton,
   Card,
   font,
+  radius,
   useColors,
   type Colors,
   Screen,
@@ -202,7 +203,12 @@ export function TodayWorkoutView() {
     editingPlan?.trainee_id === studentId ? editingPlan : planQuery.data;
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
-  const weekStrip = trainingWeekStrip(plan, requestedDayID);
+  const weekStrip = trainingWeekStrip(plan, requestedDayID, today);
+  const viewedWeek = weekStrip.week;
+  const weekIsBehind = viewedWeek?.status === 'current' && weekStrip.daysBehind > 0;
+  const weekStatus = weekIsBehind ? t('student.trainingWeekStrip.daysBehind', [weekStrip.daysBehind])
+    : t(viewedWeek?.status === 'current' ? 'student.trainingWeekStrip.current'
+      : viewedWeek?.status === 'upcoming' ? 'student.trainingWeekStrip.upcoming' : 'student.trainingWeekStrip.completed');
   const planDay = weekStrip.selectedDay;
   const selectedDayID = planDay?.id ?? null;
   const dayState = planDay
@@ -385,13 +391,14 @@ export function TodayWorkoutView() {
   useFocusEffect(
     useCallback(() => {
       trainingFocused.current = true;
+      setClockNow(new Date());
       void refreshRef.current(throttle.current.refreshWhenReturning());
       return () => {
         trainingFocused.current = false;
         endRest();
         setRequestedDayID(null);
       };
-    }, [endRest]),
+    }, [endRest, setRequestedDayID]),
   );
   useEffect(() => {
     const listener = AppState.addEventListener('change', (state) => {
@@ -869,11 +876,19 @@ export function TodayWorkoutView() {
             </>}
           </View>
         </View>
+        <View style={styles.weekHistoryRow}>
+          {state.kind !== 'loading' && plan && viewedWeek ? <View style={styles.weekHeading}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.weekNumber}>W{viewedWeek.number}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}
+              accessibilityLabel={weekIsBehind ? t('student.trainingWeekStrip.daysBehindAccessibility', [weekStrip.daysBehind]) : weekStatus}
+              style={[styles.weekBadge, viewedWeek.status === 'current' && styles.currentWeekBadge]}>{weekStatus}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.weekCount}>{viewedWeek.completed} / {viewedWeek.cells.length}</Text>
+          </View> : <View style={styles.weekHeading} />}
         <Pressable accessibilityRole="button" accessibilityLabel={training22.history} onPress={() => router.push('/training-history')} style={styles.historyLink}>
-          <MaterialCommunityIcons name="history" size={spacing.base} color={colors.goldText} />
-          <Text style={styles.historyLabel}>{training22.history}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.historyLabel}>{training22.history}</Text>
           <MaterialCommunityIcons name="chevron-right" size={spacing.base} color={colors.goldText} />
         </Pressable>
+        </View>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         {state.kind !== 'loading' && plan ? (
@@ -952,7 +967,8 @@ export function TodayWorkoutView() {
             ) : null}
             <WorkoutBody
               preview={dayState?.kind === 'upcoming' && plan ? {
-                recommendedDate: recommendedDateText(recommendedDate(plan, state.planDay)),
+                recommendedDate: weekStrip.week?.cells.find(cell => cell.isSelected)?.isBehind
+                  ? undefined : recommendedDateText(recommendedDate(plan, state.planDay)),
                 title: dayName(state.planDay, resolveExerciseMetadata),
                 unlockMessage: cursor ? t('student.trainingCalendarLogic.copy012', [
                   cursor.week_number, `D${dayCode(cursor, orderedDays).split('D')[1]} · ${dayName(cursor, resolveExerciseMetadata)}`,
@@ -1160,13 +1176,20 @@ const createStyles = (colors: Colors) =>
     },
     historyLink: {
       alignSelf: 'flex-end',
+      marginLeft: 'auto',
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.xs,
       minHeight: spacing.minimumHitTarget,
-      maxWidth: '100%',
+      flexShrink: 0,
     },
-    historyLabel: { color: colors.goldText, ...typography.footnote, flexShrink: 1 },
+    weekHistoryRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
+    weekHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 },
+    weekNumber: { ...font.display(14), color: colors.textPrimary },
+    weekBadge: { ...font.body(11, 'semibold'), color: colors.textSecondary, backgroundColor: colors.bgStack, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.point2, flexShrink: 0, textAlign: 'center' },
+    currentWeekBadge: { color: colors.goldText, backgroundColor: colors.goldSoft },
+    weekCount: { ...font.mono(11), color: colors.textMuted },
+    historyLabel: { color: colors.goldText, ...typography.footnote, flexShrink: 0 },
     navTitle: { color: colors.textPrimary, ...font.display(20), flexShrink: 1 },
     navActions: { alignItems: 'center', flexDirection: 'row', gap: 9 },
     navButton: {

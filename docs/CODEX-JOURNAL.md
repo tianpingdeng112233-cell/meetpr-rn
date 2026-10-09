@@ -2935,3 +2935,101 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `npx tsc --noEmit`：**0 errors**；`/private/tmp/r4-final-tsc.log`。
 - `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
 - 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。
+
+## 2026-10-09 · Spec 086 · Training 周条 2B 与 hero 教练备注（开发自测交付）
+
+### 范围与现场
+
+- 工作树 `/Users/david/Projects/apps/meetpr-rn-wt-086`，分支 `feat/086-training-strip-coach-note`，HEAD `6aa9397`。启动后在本目录 `mktemp` 试写并删除成功；开工工作区干净。未切换工作树，未 commit、push 或开 PR。
+- 完整读取本仓 AGENTS、CLAUDE（仅引用 AGENTS）、086 SPEC/CARD、084 §4 及其修订；本仓没有 CONTEXT.md / FOLLOWUPS.md。已读 Expo SDK 57 版本文档。沿用现有 node_modules 软链，未安装依赖。
+- 只改 Training 派生和学员界面，不改推进、推荐日期算法、API schema、本地存储、后端、dashboard 或教练端。不改 PARITY、SPEC、CARD。没有引入账号、密钥或令牌。
+
+### 改动文件（13 个，含本节）
+
+| 文件 | 改动 |
+| --- | --- |
+| `src/domain/plan/week-strip.ts` | 可选 today 默认 gymDayToday；cells/calendarCells 的训练格带 date/isBehind；daysBehind 只按 cursorDay 派生，以 UTC 日期差避免 DST 小时差影响。 |
+| `src/features/training/TrainingWeekStrip.tsx` | 星期／状态／短日期或 Behind，删除 D 序号与休息日期；当前日实心点；读屏按新口径；固定两端箭头、中间可滚动格子；删除独立换周行与周数小点。 |
+| `src/features/training/TodayWorkoutView.tsx` | 周次、胶囊、计数移入 Training history 同一行；当前周支持落后单复数与读屏；传入页面 today；重新聚焦立即更新时间；过期预览不传推荐日期。 |
+| `src/features/training/WorkoutBody.tsx` | 推荐日期可缺省；可编辑 hero 的备注上移至动作名后、重量前，淡金块内组备注在先、动作备注在后；两段之间细线；正文 15/21 与次段 14/20，全文显示。已完成详情保留原备注块，分组表动作备注不变。 |
+| `src/features/training/coach-notes.ts`（新增） | 独立备注派生函数，输入组备注、动作备注、动作显示名，输出小标题、正文、isPrimary；空白作无内容。 |
+| `src/domain/plan/__tests__/week-strip.test.ts` | 新增格子落后、后移日期、cursor 天数与完成推进、默认 4 点日界线用例；旧断言原样保留。 |
+| `src/features/training/__tests__/training-week-strip.test.tsx`（新增） | 三种第三行、无 D/休息日期/小点、读屏、换周按钮禁用与点击。 |
+| `src/features/training/__tests__/coach-notes.test.ts`（新增） | 四种组合、空白、同文双备注、中英文标题、长正文与换组取值。 |
+| `src/features/training/__tests__/completion-entry.test.tsx` | 直接挂载训练页验证胶囊与读屏、跨 4 点聚焦/前台恢复、非当前已完成周；未抽胶囊测试函数。 |
+| `src/features/training/__tests__/quick-log-entry.test.tsx` | 旧未来预览用例固定时钟；新增已过期未来周预览隐藏日期但保留解锁说明与 Upcoming。 |
+| `src/i18n/catalog/StudentKit.json` | Behind、落后天数及格子/胶囊读屏，中英文与 `.one` 单数键。 |
+| `src/i18n/catalog/RnExtras.json` | 本组与动作名备注标题，中英文。 |
+| `docs/CODEX-JOURNAL.md` | 追加本节原始证据、范围和验收边界。 |
+
+新增颜色全部使用已有语义 token，落后状态为 goldText/goldSoft；备注字号与行高使用 fontMetrics。沿用页面原有分钟 tick 和 AppState 恢复刷新，仅在原聚焦回调中补时钟更新，没有新开定时器。旧备注标题仍用于已完成详情、分组表和历史页，故不删除共享 i18n 键。
+
+### 先红后绿及原始日志
+
+所有原始 stdout/stderr 均在 `/private/tmp/rn-086/`。下表日志前缀后接 `-red.log` / `-green.log`；每轮红测后才实现对应行为，没有通过删除或放宽旧断言变绿。
+
+| seam / 测试 | 红测 → 绿测 | 日志前缀 |
+| --- | --- | --- |
+| `training cells independently mark only unfinished recommended dates before today as behind` | 缺 date/isBehind → 已完成 false、过期未完成 true、等于今天 false、未来 false、后移后未到期 false；两类 cells 同时验证。 | `01-cells` |
+| `cursor days behind on %s is %i regardless of selection`（4 条）及 `days behind follows the shifted cursor, advances on completion and clears without a cursor` | 缺 daysBehind → 未到期/当天 0、1/18 天正确；点选别周不改 cursor 天数；后移按新日期算，完成推进后重算，全完/无计划为 0。 | `02-days` |
+| `training cells show dates or Behind without D ordinals; rest cells expose only weekday and Rest` | 仍有 D1–D4 → 无 D，完成/当天/未来短日期及 Behind 正确，休息无日期，读屏正确。 | `03-cell-render` |
+| `the compact strip contains only calendar cells and fixed navigation, without week heading or dots` | 独立 W1 行仍存在 → 周条只余格子与箭头，无点；首尾周箭头禁用和翻周目标正确。 | `04-strip-layout` |
+| `training header shows cursor status on September %i`（3 条） | 页头无胶囊 → Current week / 1 day behind / 18 days behind 及对应读屏。 | `05-header` |
+| `only a set note produces the primary this-set paragraph` | 目标函数模块尚不存在 → 单组备注主段与本组标题。 | `06-set-note` |
+| `only an exercise note is primary and includes its display name` | 空白组备注被当正文 → 动作备注成为主段，带动作显示名。 | `07-exercise-note` |
+| `both notes keep the set first and the exercise secondary, including identical copy` | 第二段缺失 → 组在先、动作为次段，即使正文相同也保留两条。 | `08-both-notes` |
+| `missing or whitespace-only notes produce no block (%p, %p)`（4 条） | null/undefined 抛错、空串/空白产生段落 → 四种均输出空数组。 | `09-no-notes` |
+| `an overdue future preview hides its old recommended date while keeping its unlock message` | 仍显示 Coach recommends Tue, 9/8 → 该行隐藏；解锁说明、Upcoming、只读规则保留。 | `10-preview` |
+| `training header recalculates after 4am on focus without waiting for its minute tick` | 聚焦仍显示 Current week → 立即变为 1 day behind。 | `11-clock` |
+
+`03-cell-render-red.log` 是首个测试桩缺 AsyncStorage native mock 的运行错误，不算行为红测；补齐系统边界 mock 后，实际行为红测保存在 `03-cell-render-red-behavior.log`。`06-set-note` 的红测为缺少指定纯函数模块，记录为导入失败，不宣称运行过函数断言。
+
+已存在行为的额外覆盖直接绿，不冒称先红：
+
+- `training header recalculates after 4am on foreground without waiting for its minute tick`：原 AppState 更新已有效，与 `11-clock` 同跑。
+- `the default today follows the local 4am gym-day boundary`：补充 trainingWeekStrip 默认参数的端到端派生。既有 `training-policy.test.ts` 已覆盖 `gymDayText`（即 gymDayToday）03:59:59 / 04:00:00，不改原函数或原断言。
+- `Chinese titles use the display name and keep the complete long note when the active set changes`：中英文标题、超过 200 字符正文、切组取值。
+- `browsing a completed week keeps Completed instead of the overdue cursor count`：非当前已完成周不带天数。
+
+后三条和相关 suite 的输出为 `12-additional-coverage-green.log`。所有新增测试均落在 CARD 列出的 domain、周条组件、备注纯函数及训练页挂载 seam；没有写样式数值断言。最后自审只简化了重复日期派生和备注分支，相关检查及全量重跑通过。
+
+### 既有断言与 SPEC 疑点
+
+- **既有断言修改：0 条**。`set-save`、`completion-entry`、`quick-log-entry`、`set-ref-entry` 原断言全部保留并通过。
+- 旧 `quick-log-entry` 的 `browsing a future week is read-only and Back to today restores the current workout` 原先依赖机器当天，却断言 9/8 的推荐日期必出现。本次只将该用例时钟固定为本地 2026-09-07 12:00，确保其原本要验证的“未到期未来预览”前提成立；日期、解锁说明、Back to today 等原断言一字未改。另增独立已过期预览用例，避免漏掉新口径。
+- `completion-entry` 的路由 focus 空桩改为可记录回调的 jest mock，供新的聚焦恢复用例调用；旧用例不触发该回调。没有改变旧行为预期。
+- **SPEC/CARD 冲突**：SPEC「测试 seam」第 4 项要求旧入口测试“不改断言”；CARD「测试 seam」第 5 项允许必要时改旧断言。按用户优先级遵循 SPEC，处理如上。
+- **未发现 SPEC 内部自相矛盾或需要产品取舍的事项**。完成格仍显示推荐日期，已落后的未完成格与其预览隐藏旧日期，按 §1 的完成状态表执行。§3 只变可编辑 hero，已完成详情不扩改。
+
+### 独立自审与最终检查
+
+- `review-loop` 对固定 `/private/tmp/rn-086/review.diff`（12 个代码/测试/文案文件，含 3 个新文件）执行两个只读独立 reviewer：**Standards 0 findings；Spec 0 findings**，一轮，无返修项。这不是 Opus 验收结论。
+- 仓内无 `docs/agents/issue-tracker.md`；已告知完整 Matt tracker 工作流需要 `$setup-matt-pocock-skills`。未私建 tracker，本次本地双轴以批准 SPEC/CARD 为源。
+- `npx jest --runInBand`：**155 suites / 1193 tests passed，0 failed**，20.083s。含全部 i18n 守卫和上述四个旧入口 suite；原始输出 `/private/tmp/rn-086/final-jest.log`。
+- `npx tsc --noEmit`：**0 errors**，退出码 0；`/private/tmp/rn-086/final-tsc.log`（成功无输出）。
+- `npm run lint`：**0 errors / 0 warnings**，退出码 0；`/private/tmp/rn-086/final-lint.log`。
+- 首轮 lint 有 1 个 React Compiler `preserve-manual-memoization` 错误：聚焦回调推断依赖含 setRequestedDayID。将该稳定 setter 补入依赖后通过，未禁用规则。原始错误在 `lint-first.log`，修后结果在 `lint-second.log`，最终结果如上。
+- `git diff --check` 通过。Impeccable layout 机械扫描输出 `[]`，记录在 `layout-scan.json`；该扫描不能验证原生排版。最终完整本地 diff 在 `/private/tmp/rn-086/final.diff`。
+
+### 未做设备验证与三处实屏重点
+
+**未做设备验证**：按 CARD，模拟器实屏、老用户升级第一屏、Light / Dark 与小屏大字号由 Opus 按原验收清单收货。本轮没有启动模拟器、原生构建/装包、截图、真实账号联调、TalkBack 或真实切后台验证；组件树与纯函数测试不代替这些证据。
+
+最需要实屏确认的三处：
+
+1. **2B 窄屏密度**：360×640 dp、系统字体 1.3×、双主题和中英文下，同一行的 Wn / 三位数落后胶囊 / 计数 / Training history，以及最窄训练格的 Behind / 已落后完整性；日期/状态的对比度和约 64dp 高度。
+2. **周条交互与旧用户首屏**：落后两周以上时过期日期隐藏；首尾周禁用箭头、选中/当前标记、Back to today、跨 7 天横向滚动与滑动翻周、凌晨 4 点/前台恢复；真实已记录组、已完成日、休息计时保持。
+3. **hero 备注与换组**：四种备注组合、两段排序和分隔、约 200 字符长正文及长动作名在双主题/大字号下不溢出，Ask coach / Log this set 不受挤压；记完一组后组备注更换、动作备注保留，已完成详情和分组表表现不变。
+
+### 返修一（2026-10-09）
+
+- 按 CARD「返修一」处理验收 10 的页头裁字：已查看 Opus 的 `50-small-18.png`，360×640 dp、字体 1.3× 下胶囊只显示 `18 days`。本次按返修明确允许 `Training history` 整体换到下一行，覆盖 SPEC 验收 10 原来的整行不换行要求。
+- 仅修改 `src/features/training/TodayWorkoutView.tsx` 中该行的 5 处布局样式：`weekHistoryRow` 增加 `flexWrap: 'wrap'`；`weekHeading` 删除 `flex: 1`、`minWidth: 0`，改为 `flexShrink: 0`；`weekBadge`、`historyLabel` 的 `flexShrink` 从 1 改为 0；`historyLink` 的 `flexShrink` 从 1 改为 0，并增加 `marginLeft: 'auto'`。
+- 原布局把左组限制在历史入口剩余的宽度，再压缩胶囊，导致单行文字的尾词被裁掉。现在左组按内容宽度参与排版，胶囊与历史入口不再承担收缩；Wn、完成数沿用默认不收缩。空间不足时外层以左组和完整历史入口为换行单位，自动左边距让历史入口换行后仍靠右；空间足够时保留同一行、左右两端对齐。原有单行 Text、字号、颜色、间距 token 和触控高度不变，胶囊不会通过折成两行解决拥挤。未改 JSX、文案、周条格子、备注或落后判定；未抽纯逻辑、未增加样式断言或依赖。
+- 开工当前目录临时文件试写及删除成功；分支现场为 `feat/086-training-strip-coach-note`、HEAD `c2be1ab`。保留已有未提交实装，未 commit、push 或开 PR，未修改 `node_modules` 软链。
+- 已读 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/) 与 [React Native Flexbox 文档](https://reactnative.dev/docs/flexbox)。本次为已给定复现与修法边界的样式返修，按用户要求不写样式测试；未执行新的设备复现或改后截图，不能以 Jest 通过声称实屏验收通过。改后的小屏 1.3×、三位数天数及宽屏同排由 Opus 复验。
+- 三条命令均实际跑完，原始 stdout/stderr 在 `/private/tmp/rn-086-rework1/`：
+  - `npx jest --runInBand`：退出码 0，**155 suites / 1193 tests passed，0 failed**，30.904s；`jest.log`。
+  - `npx tsc --noEmit`：退出码 0，**0 errors**（无输出）；`tsc.log`。
+  - `npm run lint`：退出码 0，**0 errors / 0 warnings**；`lint.log`。
+- 本轮增量自审确认仅上述样式与本小节发生变化。`git diff --check` 通过；Impeccable layout 机械扫描输出 `[]`，仅作静态辅助，不代替原生排版验证。
