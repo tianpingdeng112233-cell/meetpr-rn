@@ -86,3 +86,14 @@ SPEC「验收清单」第 1–13 条（第 11、12 条的实屏部分由 Opus �
 ## Out of Scope
 
 SPEC 同名一节全部；另加：体重行与体重页（第二步）；教练反馈页本身；e1RM 的算法、主线判定、来源弹层内容；`VolumeIntensityChart` 与历史列表的内部实现；Tab 栏；训练页；任何后端请求的增删。
+
+## 返修一（2026-10-09）
+
+1. Total 序列改取三段各自主线点（`growthSnapshot(curve, 'all').samples`），不取 `trajectory`；大号数字取 `stats.sbdTotalKg`，不取最后一个 Total 点。本卡 §2 里"取各自主线 `trajectory`"的写法作废，以 SPEC §2 的 2026-10-09 修订为准。
+2. 取消被跳过的那条测试并改为真实数据路径断言（600 → 300 → 330 → 360）。
+3. `ProgressPageHeader` 标题紧贴返回箭头左对齐，不居中。
+
+## 返修二（2026-10-09，实屏后；最后一轮）
+
+4. 深色主题下选中的分段看不出来：本卡指定的 `colors.ctaFill` / `colors.inkOnCTAFill` 不随主题变，改用 `colors.ctaBackground` / `colors.ctaText`，描边同底色。
+5. 小屏 + 大字体下入口行标题被拆行：标题单行不收缩，右侧值占剩余宽度右对齐、放不下才换行，去掉值的固定最大宽度。

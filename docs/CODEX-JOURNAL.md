@@ -2935,3 +2935,222 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `npx tsc --noEmit`：**0 errors**；`/private/tmp/r4-final-tsc.log`。
 - `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
 - 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。
+
+
+## 2026-10-09 · Spec 087 CARD-1 · Progress 四入口与独立页面（未提交，Total 口径待决定）
+
+### 范围与交付状态
+
+工作树 `meetpr-rn-wt-087`，分支 `feat/087-progress-menu`，起点/交付 HEAD 均为 `91c2e7e`。开工 `touch .codex-write-test && rm .codex-write-test` 成功。按 CONTEXT → AGENTS → SPEC 全文 → CARD-1 顺序读取，并查阅 Expo SDK 57 文档。
+
+四行入口、e1RM 四段页面及共享范围、历史三格、强度页已接线。所有数据沿用 `useHistoryViewModel`；聚焦时仅失效已有 feedback query。未改 API/依赖、反馈页、Training、tab bar、e1RM 算法或历史列表内部；未做体重第二步。未读取 `.env`，未写 node_modules，未 commit/push/开 PR。
+
+**开发自测不等于验收通过：Total 数据来源存在卡片与 spec 冲突；验收 4/11 的一致性未完成。** 下方保留真实路径红测证据和 1 项显式 skipped 测试，不以全量退出码 0 掩盖这个缺口。
+
+### 文件变更
+
+- 路由：`src/app/_layout.tsx`；新增 `src/app/progress/e1rm.tsx`、`src/app/progress/intensity.tsx`。
+- 入口：`src/features/history/GrowthScreen.tsx`、`GrowthScreenHeader.tsx`；新增 `ProgressMenuRow.tsx`；`src/features/student-tabs.ts` 删除无调用方的 feedbackJumpToken/bumpFeedbackJump。
+- e1RM：新增 `E1RMScreen.tsx`、`GrowthTotalCard.tsx`、`GrowthRangeControl.tsx`；`GrowthE1RMCard.tsx` 接收页面范围、零训练三段均可去 Today；`GrowthE1RMChart.tsx` 接受仅 date/value 的 Total 点，原点选逻辑保留。
+- 历史/强度：`TrainingHistoryScreen.tsx`、`HistoryEntriesView.tsx`；新增 `HistoryStatsCard.tsx`、`IntensityScreen.tsx`。历史 modal 不加统计，列表内部不改；VolumeIntensityChart 文件未改。
+- 公共页面结构：新增 `ProgressPageHeader.tsx`、`ProgressLoadState.tsx`。
+- 模型与文案：`src/features/history/model.ts`；`src/i18n/catalog/RnExtras.json`（英中同时增加；Bench 短标签独立于原卡的 Bench press）。
+- 测试：`src/features/history/__tests__/model.test.ts`、`growth-screen.test.tsx`；新增 `e1rm-screen.test.tsx`、`progress-details.test.tsx`、`src/features/history/test-support/progress-screen.tsx`。
+- 文档：仅追加本节；PARITY 与正典验收记录留 Opus。
+
+### 先红后绿与既有断言
+
+按卡片 seam 顺序推进：
+
+1. Total 函数未定义：模型 1 failed / 20 passed → 21 passed。随后窗口/稀疏/平线补充测试直接绿（22 passed），不宣称它单独经历失败。
+2. 行值函数未定义：1 failed / 22 passed → 23 passed，覆盖合计、单复数、未读/已读/空反馈、末周无 RPE 和未解锁。
+3. 四行组件：旧页面对新入口断言 4 failed → 4 passed。
+4. e1RM 页面：先因新模块不存在而红；实装后 1 failed / 4 passed（缺项文案测试误写 Bench，而旧名称为 Bench press），更正测试预期并按批准稿给分段增加 Bench 短标签 → 5 passed。
+5. 历史/强度组件：先因新 IntensityScreen 模块不存在而红 → 5 passed。后续补充三页失败恢复、突破提示直接绿；测试环境的动态 import 错误改为静态 import，不算产品行为红测。
+6. `history-points` / `imported-baseline` / `source-detail` / `growth-chart-selection` 四个文件 **零 diff**；独立运行 **4 suites / 22 tests passed**。
+
+原 growth-screen 每项断言去向：
+
+| 原测试 | 新位置或不再适用原因 |
+| --- | --- |
+| zero training / Today only on squat / locked history / dashes | 三段 Today 与零态迁 `e1rm-screen` 的 `missing Total...`；三格横杠迁 `progress-details` 的 `history stack shows three empty stat tiles...`；强度锁定迁 `intensity retains the locked explanation...`。仅 squat 有 Today、历史 disabled、旧解锁副文案被新 spec 明确替换，不保留。 |
+| three completed days unlock volume/history | 图表解锁、周数无障碍 label 迁 `three completed days unlock the existing intensity chart and both legends`；历史始终可点由 `four ordered rows remain tappable...` 覆盖。 |
+| squat capsule cycles | 迁 `defaults to Total...shared ranges...`，循环仍验证 30/90/All/30，额外验证跨段不重置。 |
+| selected catalog language | 入口中英文名称和顺序仍验证；释义迁 e1RM 默认段测试；旧反馈归档副文案和 disabled 已按 §1 删除。 |
+| header wordmark/chat/title/subtitle/no Eyebrow | wordmark、chat badge、打开 chat、无 Eyebrow、无 growth 导航保留；入口 subtitle 按 spec 删除并断言不存在，e1RM 页断言存在；已删 jump token 的“不变”断言不再适用。 |
+| pending/failure/retry | 改为加载/失败仍有四个空值可点入口、重试恢复、下拉刷新。旧 skeleton accessibilityLabel 与原始异常文本不是新 spec 的入口态，已移除。 |
+| feedback archive/detail marks read | 旧两个弹层已要求删除，故弹层出现/markRead 调用断言不再适用。改测路由到现有 inbox、返回聚焦刷新后 1 new → 1，chat badge 不变；现有反馈页实现和独立测试未改。 |
+
+### 验收项与测试映射（非实屏收货结论）
+
+| SPEC 项 | 开发证据 / 未覆盖部分 |
+| --- | --- |
+| 1 | `growth-screen`: `four ordered rows remain tappable without charts, tiles or Body weight in both languages`；图标、值、chevron 的组件结构已自审，未实屏看。 |
+| 2 | `model`: `Progress row values cover totals, singular/plural sessions, unread/read/empty feedback and the latest RPE`；`growth-screen` 额外验证四个空值及反馈值。 |
+| 3 | `e1rm-screen`: `defaults to Total with comparisons and no source interaction; shared ranges survive all segment switches`，含重挂后 Total。 |
+| 4 | `model`: `waits for all lifts...`、`Total windows keep all-history current...` 覆盖卡片输入的累加/窗口；`e1rm-screen` 验证缺项及不可点。真实曲线一致性 **阻塞，1 skipped**，见下。 |
+| 5 | `e1rm-screen`: 默认段比较格；`Total alone shows the legacy breakthrough comparison when estimates exceed training 1RM`。 |
+| 6 | `e1rm-screen`: 默认段测试逐项打开真实来源弹层；`missing Total...`、`lift forming-progress state retains %s recorded points`（1/2）、`old lift points show range-sparse state...`；来源四组既有回归断言不变。 |
+| 7 | `progress-details`: `history stack shows three empty stat tiles...`、`history stack moves session/week/volume totals unchanged`、`modal history presentation does not gain stat tiles`。Training 原路由与列表未改。 |
+| 8 | `growth-screen`: `feedback navigates to the existing inbox and focus refresh updates its unread value without changing chat`。Today/反馈页未改；真实账号读完返回仍待 Opus。 |
+| 9 | `progress-details`: `intensity retains the locked explanation...`、`three completed days unlock the existing intensity chart and both legends`。 |
+| 10 | `growth-screen`: `pending and failed requests keep blank tappable rows, with retry and pull-to-refresh recovery`；`progress-details` 的三页 `retains back navigation, loading, failure and retry`。 |
+| 11 | 行值仍从原 stats 和 feedback 派生；Total 页面真实路径存在阻塞。未覆盖安装或使用真实账号，不声明升级第一屏通过。 |
+| 12 | 新组件使用 useColors/design tokens；名称和值允许换行，未用 numberOfLines 截断入口文案。**未实测 Light/Dark、360×640dp、1.3×字体、中文/四位数 Total 排版**，交 Opus。 |
+| 13 | 最终全量结果如下；i18n guards 通过。PARITY 授权差异登记由 Opus 写，本轮未改。 |
+
+### 待 Opus 决定
+
+**Total 来源与当前值冲突（Spec reviewer 1 项 blocker）：** CARD-1 §2 明确输入 `GrowthCurve.trajectory`；SPEC §2 同时要求它是三段实际主线、覆盖所有更新日期、All history，并要求末点等于三项 All history 当前值。现场代码并不满足这个前提：
+
+- `buildGrowthCurves` 的 trajectory 来自 `ninetyDayRecordTrajectory`，仅历史纪录，裁到 90 天并补窗口边界和今天的投影点（`src/domain/e1rm/series.ts:146–180`）。
+- 三段实际图来自 `growthSnapshot.samples`（每日最佳 normal 点）；headline 来自最后 smoothed 点的 winner。既有 `daily-best chart uses declining window values...` 测试已证明主线末值 140 与 headline 150 可以不同。
+- 当前新增实现按卡片使用 trajectory，**尚未决定/未修正上述来源冲突**，所以不能保证验收 4、11，不能放行 Total。未改三项原算法以强凑相等。
+- 真实 fixture：三项各有 5/1=200、10/1=100、10/2=110、10/3=120，now=10/9。SPEC 更新日期应出 600→300→330→360；实际 trajectory 合计仅 7/11=600、10/9=600。失败测试 `pending Opus: real growth curves must preserve every Total update and match all-history lift headlines` 已先运行确认失败，再明确 `test.skip` 保留待决断言；不是已通过。
+- 需要决定：以每日主线建立完整 Total 时，Total headline 是主线最新合计还是沿用三项 smoothed-winner 合计；两种口径在下降期不能同时相等。实现不自行改写 spec、卡片或 e1RM 算法。
+
+失败差异摘记（为便于阅读重新排版；计数来自原始输出）：
+
+```text
+-     "2026-05-01",
++     "2026-07-11",
+      600,
+-     "2026-10-01", 300,
+-     "2026-10-02", 330,
+-     "2026-10-03", 360,
++     "2026-10-09", 600,
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 23 skipped, 24 total
+```
+
+### 独立审查
+
+review-loop 两个只读子代理审当前 HEAD=91c2e7e 的未提交 diff 与新增文件：**Standards 0 findings；Spec 1 blocker（Total）**。主代理核实并补真实路径红测，未擅自拍产品取舍。review 后仅补测试、清理 lint 警告及本文，无额外产品变更。缺 `docs/agents/issue-tracker.md`，已告知完整 Matt tracker 流程需 `$setup-matt-pocock-skills`；未私建配置。
+
+无 ADB/模拟器操作，无视觉验证或线上联调。未要求额外权限；所有验证命令均能在本 sandbox 执行。未完成项明确为 Total 口径、Opus 实屏收货与 PARITY 登记。
+
+### 最终全量检查（原始尾部）
+
+`npx jest --runInBand`，exit 0；**155 suites passed / 0 failed；1183 tests passed / 0 failed / 1 skipped，1184 total**：
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1 skipped, 1183 passed, 1184 total
+Snapshots:   0 total
+Time:        38.711 s, estimated 71 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，exit 0，**0 errors**。stdout/stderr 为空，无可粘贴的输出行。
+
+`npm run lint`，exit 0，**0 errors / 0 warnings**，原始输出：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+`git diff --check` 无输出，exit 0。原始中间日志仅用于本轮取证，最终摘要保留在本节；未将测试输出中的长篇 React 警告落成仓内交付文件。
+
+### 2026-10-09 · Spec 087 CARD-1 · 返修一
+
+按 Opus 已修订的 SPEC §2（2026-10-09 修订）与本轮用户指令执行；上节“待 Opus 决定”的 Total 来源/主值阻塞现已解决。未编辑 SPEC 或 CARD，工作区中 SPEC 的改动为接手本轮时已有的 Opus 修订。
+
+**本轮改动文件：**
+
+- `src/features/history/model.ts`：`buildTotalSeries(curves, now)` 改从三项 `growthSnapshot(curve, 'all', now).samples` 聚合，按当地日历日合并、沿用各项最新主线值；`totalSnapshot` 同源判缺项，保留可注入 now 与窗口 delta，删除 currentKg。
+- `src/features/history/GrowthTotalCard.tsx`、`E1RMScreen.tsx`：页面显式传入 `stats.sbdTotalKg` 为 headlineKg，卡内大号数字保留一位小数，null 显示 `—`，不再从曲线末点取主值。
+- `src/features/history/ProgressPageHeader.tsx`：标题紧随返回按钮左对齐，删除右侧 spacer；19 bold、44 点命中区与返回读屏标签保留。e1RM、Intensity、Training history 共用此行。
+- `src/features/history/__tests__/model.test.ts`：真实路径待决测试取消 skip、改名，合成曲线改经 series.rawEligible 输入。
+- `src/features/history/__tests__/e1rm-screen.test.tsx`：新增上升/回落主值与对比格一致、跨范围不变，以及缺项横杠测试。
+- `src/features/history/__tests__/progress-details.test.tsx`：三页标题顺序、左对齐、字号、命中区、读屏与返回操作测试。
+- `docs/CODEX-JOURNAL.md`：仅追加本节。
+
+**红 → 绿证据：**
+
+| seam | 首次红测 | 绿测 / 行为证据 |
+| --- | --- | --- |
+| Total 数据源 | model 3 failed / 21 passed | 24 passed；真实 5/1、10/1、10/2、10/3 fixture 明确出 600→300→330→360；末点等于三项最后 samples 点的合计；无历史截断或今天补点。 |
+| Total headline | e1rm-screen 2 failed / 7 passed | 9 passed；正常样本主值=480、末点=480；回落样本主值=450、末点=420；主值与 stats 及左对比格数值一致，30/90/All 三档不变；缺项为横杠。 |
+| 返回栏布局 | progress-details 3 failed / 8 passed | 11 passed；三页返回按钮后直接跟左对齐标题，无右侧 spacer，返回仍可点。 |
+
+主值和曲线末值现在各循批准的独立口径，下降期不再强求相等；窗口 delta 仍是窗口末点减首点。未修改 `growthSnapshot`、三项 e1RM 算法或分段行为，其余上一轮交付内容不变。
+
+首轮 TypeScript 报 6 处 TS2540：合成测试直接赋值只读 `rawEligible`。已改为通过 spread 替换整个 series，未改类型或断言；重新运行 tsc、受影响模型测试和 lint。此为测试夹具类型修复，不计作产品行为红测。
+
+**定向独立复审：Standards 0 findings；Spec 0 findings。** 两个只读 reviewer 确认上一轮 Total blocker 已解决；随后仅做上述测试夹具类型修复和记录追加。无新产品待决项。实屏验收仍由 Opus 完成，本轮未使用 ADB/模拟器、未声称视觉验证。PARITY 未改。未 commit/push/开 PR。
+
+**最终检查原始尾部：**
+
+`npx jest --runInBand`：exit 0，**155 suites / 1190 tests passed；0 failed / 0 skipped**。
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1190 passed, 1190 total
+Snapshots:   0 total
+Time:        107.764 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`：exit 0，**0 errors**；stdout/stderr 为空，无输出尾行。
+
+`npm run lint`：exit 0，**0 errors / 0 warnings**：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+只读字段夹具修正后的定向复跑 `npx jest src/features/history/__tests__/model.test.ts --runInBand`，exit 0：
+
+```text
+
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        1.303 s
+Ran all test suites matching /src\/features\/history\/__tests__\/model.test.ts/i.
+```
+
+`git diff --check`：无输出，exit 0。原有四组来源/历史回归断言保持不变，已随全量通过。本轮中间日志在摘录后清理；未改变任何既有提交或用户的 spec 修订。
+
+
+### 2026-10-09 · Spec 087 CARD-1 · 返修二（最终轮）
+
+用户回报：返修一的 Total、对比格、共享范围、来源弹层、历史三格、强度页、空态、失败重试及升级路径已通过模拟器验收。本轮只处理其指出的两处样式，不重新改动上述行为。
+
+**本轮文件与改动：**
+
+- `src/features/history/E1RMScreen.tsx`：选中分段背景与边框统一用 `colors.ctaBackground`，文字用 `colors.ctaText`。沿用现有主题 token，Light 保持深底白字，Dark 使用金底深字；未选中状态不变。
+- `src/features/history/ProgressMenuRow.tsx`：标题去掉 `flex: 1`，改为 `flexShrink: 0`，按短标题自身宽度占位；右侧值使用 `flex: 1` / `flexShrink: 1` 占剩余宽度、右对齐，需要时自然换行，删除 `maxWidth: '42%'`。两段文字均未添加 numberOfLines、ellipsis 或字体缩小；原行最小高度与点击区域保留。
+- `docs/CODEX-JOURNAL.md`：仅追加本节。
+
+**测试断言调整：无。** 已检查现有 history 页面测试，未发现锁定旧 CTA token 名称、标题 flex 或值 maxWidth 的断言。按本轮“仅调整已有固定旧样式的断言”要求，没有增加或修改测试。
+
+本轮自审确认仅上述两处样式变化，无数据、路由、文案或算法变化；未编辑 SPEC/CARD。未进行本轮改后的模拟器/实屏复验，不把组件测试作为视觉验收。未 commit、push 或开 PR，全部改动继续保留在当前工作树。
+
+**最终检查及原始尾部：**
+
+`npx jest --runInBand`：exit 0，**155 suites / 1190 tests passed，0 failed / 0 skipped**：
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1190 passed, 1190 total
+Snapshots:   0 total
+Time:        23.225 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`：exit 0，**0 errors**。stdout/stderr 为空，无输出尾行。
+
+`npm run lint`：exit 0，**0 errors / 0 warnings**，原始输出：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+`git diff --check`：无输出，exit 0。中间日志摘录后清理。
