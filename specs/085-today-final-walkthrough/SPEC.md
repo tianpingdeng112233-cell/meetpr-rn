@@ -1,10 +1,10 @@
-# Spec 085 · Today 定稿前走查三项（安卓）
+# Spec 085 · Today 定稿前走查四项（安卓）
 
-- 来源：David 2026-10-09 模拟器走查 Today 页，当场提三条；同日 grill 两轮，第一轮答复「1A 2B 3A 4A」，看稿后第二轮答复「1B 2A」并给出 CPA 女子级别表。
+- 来源：David 2026-10-09 模拟器走查 Today 页，当场提三条；同日 grill 两轮，第一轮答复「1A 2B 3A 4A」，看稿后第二轮答复「1B 2A」并给出 CPA 女子级别表；随后把 1a/1b 改为概览卡、追加营养占位（§4）、训练日命名维持现状，并对全部屏幕稿说「定稿」。
 - 级别／节奏：T2 / P1。只做安卓（`meetpr-rn`），基线 `main@aeb1020`，分支 `feat/085-today-final-walkthrough`。iOS 原生不跟。
-- 性质：David 批准的新口径，不属于"1:1 复刻 build 22"，不受身份卡"v1 严禁夹带新功能"约束；除本文三项外不得顺手改别的。
+- 性质：David 批准的新口径，不属于"1:1 复刻 build 22"，不受身份卡"v1 严禁夹带新功能"约束；除本文四项外不得顺手改别的。
 - 后端：**零改动**。不加字段、不迁移、不部署。
-- 屏幕稿：见文末「屏幕稿」。稿未经 David「定稿」前不派 UI 卡。
+- 屏幕稿：David 2026-10-09 已「定稿」，结构与文案转写在文末「屏幕稿」。
 
 ## 已拍板口径
 
@@ -17,6 +17,8 @@
 | 5 赛事方与级别是否必填（第二轮） | 必填：日期、赛事方、级别三项齐了才能保存 |
 | 6 点选其他训练日时的页头（第二轮） | 页头大标题不变，始终是当前训练日 |
 | 7 CPA 女子级别（第二轮） | David 提供：44 / 48 / 52 / 56 / 60 / 67.5 / 75 / 82.5 / 90 / 100 / 100+ |
+| 8 营养占位 | 做。产品口径由"不做营养"改为"待开放方向"（Brain PRD 已同步，`5877433`）；位置在 Today 的体重 / Meetday 行下面 |
+| 9 同一天多个主项时训练日怎么叫 | 维持现状不改：一项 `Squat day`，两项 `Squat / Bench press day`，三项窄位 `SBD day`、其余 `Squat·Bench·Deadlift`，无主项 `Training day` |
 
 ## §1 Today 周条：选中训练日并查看安排
 
@@ -95,6 +97,17 @@ Today 的 Meetday 卡（有值、空态）点击后进入标题为 `Meet` 的编
 - 新用户引导第 7 步：去掉是/否题。改为一块可展开区域，收起时是一行 `+ Add a meet (optional)`；展开后出现与编辑页相同的日期、赛事方、级别三段（展开后三项同样必填，缺项时这一步不能继续），以及右上角 `Remove`（收起并清空）。给教练的留言框留在这一步的末尾（引导里只有这一处能写）。提交时：展开 → `is_competing = true`；未展开 → `is_competing = false`、日期与级别为空。第 7 步不再因"没回答是否备赛"拦截。
 - 教练端不改：它原样显示 `target_weight_class`，现在会看到 `IPF · 83 kg`。
 
+## §4 营养占位卡（暂未开放）
+
+- 位置：Today 页，紧跟体重 / Meetday 那一行之后、"This session · e1RM chart"小标题之前。显示条件与体重 / Meetday 行相同（那一行出现它就出现，骨架屏阶段不出现）。
+- 内容：一张与体重卡同款的白色卡片。
+  - 标题行：左侧 `Nutrition`（样式同 `Body weight` 那个小标题），右侧灰色小标 `Coming soon`。
+  - 下面一行四个等宽小格，从左到右 `Carbs` `Protein` `Fat` `Fiber`；每格上面是名称，下面是 `—` 加单位 `g`，整体用次要文字色。
+  - 中文目录对应：`营养`、`暂未开放`、`碳水`、`蛋白质`、`脂肪`、`膳食纤维`。
+- 纯展示：不可点、无按压反馈、不跳转、不请求任何接口、不存任何东西、不发埋点。无障碍上整张卡读作一句（`Nutrition, coming soon`）。
+- 卡上不写任何关于将来怎么用的说明文字（形态未定，不提前承诺）。
+- 教练端不出现。
+
 ## 存量数据与升级（带历史的老用户第一屏）
 
 - 不迁移、不回填，老数据原样可读。
@@ -113,6 +126,8 @@ Today 的 Meetday 卡（有值、空态）点击后进入标题为 `Meet` 的编
 - Today 页头、Coach feedback 卡、e1RM 卡、底部按钮、Tab 栏。
 - 训练页本身（084 已定稿，不动；本 spec 只从 Today 把所选日交给它）。
 - 体重历史／趋势曲线、称重提醒。
+- 营养的任何实际功能（目标、记录、餐食、后端字段）；本 spec 只放一张占位卡。
+- 训练日命名规则（拍板维持现状）。
 - 多场比赛、比赛名称、地点、试举计划。
 - 青年／大师等年龄组专属级别；带装组别。
 - CN 轨文案之外的本地化调整（新增文案中英文目录都要补齐，过 i18n 守卫）。
@@ -122,7 +137,7 @@ Today 的 Meetday 卡（有值、空态）点击后进入标题为 `Meet` 的编
 1. **纯函数 `src/domain/meet/weight-class.ts`（新建）**：`formatMeetClass` / `parseMeetClass` 往返（含 `120+`、`67.5`；旧手填值、只有赛事方代码、级别不在该赛事方表内都判为不识别）；`weightClassesFor(federation, sex)` 四家 × 两性别的表与本文一致。
 2. **`src/features/onboarding/model.ts` 的 patch 与校验**：保存 → `is_competing=true` + 日期 + 格式化级别；缺赛事方或级别时校验不通过；移除 → 三个字段清空；第 7 步不展开时不报错且 `is_competing=false`，展开后缺项报错；体重两位小数的输入过滤与英制换算精度（含读回值再保存 kg 不变）。
 3. **`src/features/profile/__tests__/editor.test.tsx`（已有挂载方式）**：`weight`、`competition`、`note` 三个编辑页各自只发出自己那几个字段。
-4. **`src/features/dashboard/__tests__/week-calendar.test.tsx` 与 `visual-parity.test.tsx`（已有）**：点选后 `selected` 状态跟随、当前训练日标记不随点选移动；概览卡对所选日显示名称、状态小标、动作数与组数、按计划顺序的动作名一行；点卡把所选日交给训练页；体重卡显示两位小数；两张卡的路由参数指向新的单项页。
+4. **`src/features/dashboard/__tests__/week-calendar.test.tsx` 与 `visual-parity.test.tsx`（已有）**：点选后 `selected` 状态跟随、当前训练日标记不随点选移动；概览卡对所选日显示名称、状态小标、动作数与组数、按计划顺序的动作名一行；点卡把所选日交给训练页；体重卡显示两位小数；两张卡的路由参数指向新的单项页；营养占位卡存在且不可点。
 
 样式（颜色、间距）不写断言，由模拟器实屏验收。
 
@@ -141,21 +156,45 @@ Today 的 Meetday 卡（有值、空态）点击后进入标题为 `Meet` 的编
 - [ ] 3d `Remove meet` 有确认框；确认后 Today 回到 `Not scheduled`，教练端不再显示级别。
 - [ ] 3e Profile 出现 `Meet` 与 `Note to coach` 两行，各进各的编辑页；原有留言原样可见可改。
 - [ ] 3f 新用户引导第 7 步：不展开直接下一步可完成引导（`is_competing=false`）；展开填写后完成，Today 显示比赛。
+- [ ] 3g 营养占位卡在体重 / Meetday 行下面，四格名称与 `Coming soon` 正确，点按无任何反应；中文界面显示对应中文。
 - [ ] 4 **老用户升级第一屏**（用升级前造好的三个账号，不重新注册）：① 手填级别 `83kg` + 有日期 → Today 倒数与 `83kg` 都在，进编辑页有 `Previously entered: 83kg`，取消返回后仍是 `83kg`，选齐保存后变为新格式；② 从未回答是否备赛 → `Not scheduled`，可新增；③ 体重存的是 `83.5` → 显示 `83.50 kg`。三者的留言都还在。
 - [ ] 5 Light / Dark 两套主题；360×640 dp + 系统字体 1.3× 下级别网格不溢出、不截字。
-- [ ] 6 `npx jest --runInBand` 全量、`npx tsc --noEmit`、`npm run lint` 通过；`PARITY.md` 登记这三处与 iOS 的授权差异（Opus 写）。
+- [ ] 6 `npx jest --runInBand` 全量、`npx tsc --noEmit`、`npm run lint` 通过；`PARITY.md` 登记这四处与 iOS 的授权差异（Opus 写）。
 
 ## 拆卡
 
 两张，同一分支同一个 PR：
 
 - 卡 A `CARD-A-data.md`（T1）：级别表与格式、比赛写入口径、体重两位小数的纯函数与测试，不接界面。不依赖屏幕稿，spec 定下即派。**2026-10-09 已收货**：Opus 读全量 diff（三个新源文件 + 三个测试），级别表逐格对过正文；本地 `156 suites / 1295 tests`、`tsc` 0 错、lint 0 警告。一处口径以正文为准：公制体重也固定存两位（`83` 存成 `83.00`），卡内"原样"的写法作废。留给卡 B 的注意点：`formatBodyWeightKg` 对空值会给出 `NaN`，调用处要先判空。
-- 卡 B（T2，待写）：三处界面接线与文案，以屏幕稿为参照。等 David「定稿」后派。
+- 卡 B `CARD-B-ui.md`（T2）：四处界面接线与文案，以下面转写的屏幕稿为参照。2026-10-09 定稿后派出。
 
-## 屏幕稿
+## 屏幕稿（David 2026-10-09「定稿」）
 
-画布（2026-10-09，1a/1b 已按 David 意见重做为概览卡，**未定稿**）：https://claude.ai/artifact/67Rjtcd9x5iUzkxTdsVfVa ，共 8 张：1a Today 默认选中当前训练日、1b 点选 D2、2 体重单项编辑页、3a Meet 编辑页（已选 IPF 83）、3b 老用户手填过级别、3c IPL 且性别未填时切男女表、3e Profile 两行、3f 引导第 7 步比赛区块（收起）。稿只管布局／层级／间距，颜色字号以 `src/design` 现有 token 为准。
+画布 https://claude.ai/artifact/67Rjtcd9x5iUzkxTdsVfVa （9 张）。稿只管布局／层级／间距；颜色、字号、圆角一律用 `src/design` 现有 token 与现有组件，不照抄稿里的色值。以下是各张的结构与文案转写，实装以此为准。
 
-稿里比正文多出的一处文案：引导第 7 步收起态的虚线按钮下有一行灰字 `Opens meet date, federation and weight class. Skip it if you are not competing.`
+**1a Today · 默认选中当前训练日**（自上而下，除标注外都是现状）
+页头 `W3D1` + 消息按钮 → 本周进度条 → Coach feedback 卡 → `Weekly progress 0 / 2` 与 `Coach-recommended date` → 周条两格：D1 = 淡金底 + 深色 2pt 粗框 + 金色实心圆点 + `D1` 加粗 + `Mon, 9/21`；D2 = 浅灰底、无框、空心圆点、灰字 → **概览卡**（新）：左侧三行——`Squat day` 后跟淡金底小标 `Today's session`；灰色等宽字 `3 exercises · 9 sets`；`Squat · Pause squat · Leg press` 单行截断——右侧 `›` → 体重卡 `83.00 kg` 与 Meetday 卡（`23 days`，下面一行灰字 `IPF · 83 kg`）→ `This session · e1RM chart` → e1RM 卡 → 底部 `Start training / Squat day` 按钮 → Tab 栏。
 
-David「定稿」后，把结构与文案转写到本节（Codex 打不开外链），再派卡。
+**1b Today · 点选 D2**
+与 1a 相同，区别：D1 仍是淡金底但没有框；D2 变白底 + 深色 2pt 粗框、字变深色；概览卡变为 `Bench day` + 灰底小标 `Upcoming`、`4 exercises · 14 sets`、`Bench press · Close-grip bench · Barbell row · Triceps pushdown`（截断）；小标题变为 `Selected day · e1RM chart`，下面是卧推的 e1RM 卡；页头仍是 `W3D1`，底部按钮仍是 `Start training / Squat day`。
+
+**2 体重单项编辑页**
+左上 `Cancel ›`（现有编辑页的写法）→ 标题 `Body weight` → 字段标题 `Weight` → 一行：数字输入框（示例值 `83.25`，聚焦态深色描边）+ 右侧单位 `kg` → 灰字 `Up to two decimal places` → 整宽深色按钮 `Save`。页面没有别的字段。
+
+**3a Meet 编辑页 · 已选 IPF 83**
+`Cancel ›` → 标题 `Meet` → `Meet date` + 现有日期滚轮 → `Federation` + 一行四个等宽块 `CPA` `IPF` `IPL` `WP`（选中项深色底白字，未选白底描边）→ `Weight class` + 每行 4 个的网格 `59 kg` `66 kg` `74 kg` `83 kg` `93 kg` `105 kg` `120 kg` `120+ kg`（选中项同样深色底白字）→ `Save` → 居中的红色文字按钮 `Remove meet`。
+
+**3b 老用户 · 手填过级别**
+同 3a，区别：`Federation` 标题下多一行灰字 `Previously entered: 83kg`（值用等宽字、深色）；四个赛事方都未选；没有 `Weight class` 区；`Save` 与 `Remove meet` 仍在。
+
+**3c IPL · 性别未填时可切表**
+同 3a，区别：选中 `IPL`；`Weight class` 标题行右侧多一个两段切换 `Men`（选中）/ `Women`；网格 12 格分三行，`52 kg` … `140 kg` `140+ kg`，选中 `82.5 kg`。
+
+**3e Profile · 两行**
+同一张分组卡里相邻三行，各带右侧 `›`：`Basic information`（值 `178 cm · 83.00 kg`）、`Meet`（值 `2026-11-01 · IPF · 83 kg`，日期格式沿用该行现状）、`Note to coach`（值为留言首行，单行截断）。行的位置：`Meet` 在原 `Meet / notes` 的位置，`Note to coach` 紧随其后。
+
+**3f 引导第 7 步 · 比赛区块（收起）**
+小标题 `Meet` → 一个整宽虚线描边按钮 `+ Add a meet (optional)`（金棕色字）→ 一行灰字 `Opens meet date, federation and weight class. Skip it if you are not competing.` → `Anything to tell your coach? (optional)` + 多行输入框（占位文字沿用现状）。展开态 = 把虚线按钮和那行灰字换成 3a 的日期、赛事方、级别三段，`Meet` 小标题右侧出现文字按钮 `Remove`。
+
+**4 Today · 营养占位**
+体重 / Meetday 行之下一张白卡：标题行左 `Nutrition`、右灰底小标 `Coming soon`；下面四个等宽浅灰小格 `Carbs` `Protein` `Fat` `Fiber`，每格名称在上、`— g` 在下。其下接 `This session · e1RM chart`。
