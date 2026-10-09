@@ -144,6 +144,7 @@ export function ReadinessSheet({ date, onComplete, onSkip, studentId }: Props) {
             </View>
           )}
         </ScrollView>
+        {step === 2 ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center', paddingHorizontal: spacing.base }}>{t('student.rn.profile.notify')}</Text> : null}
         <View style={styles.footer}>
           {step === 2 ? (
             <AppButton haptic="none" fullWidth={false} label={t('student.readinessCheckinSheet.copy015')} onPress={() => setStep(1)} variant="secondary" />

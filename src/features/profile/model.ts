@@ -65,3 +65,30 @@ export function profileRowValues(profile: OnboardingProfile): Record<ProfileSect
     environment: rowValue([label(GYM_TIER_LABELS, profile.gym_tier), ...(profile.equipment_overrides ?? []).map(equipmentLabel)]),
   };
 }
+
+export function profileInitials(identity: string): string {
+  const text = identity.trim();
+  if (!text) return '';
+  const initials = text.includes('@') || /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(text)
+    ? [...text][0].toUpperCase()
+    : text.split(/\s+/).slice(0, 2).map(word => [...word][0]).join('').toUpperCase();
+  return /^\p{L}+$/u.test(initials) ? initials : '';
+}
+
+/** Step one supplies only session email/phone; a later caller can supply a profile name. */
+export function profileIdentity(user: { email?: string | null; phone?: string | null } | null, name?: string | null): string {
+  return name?.trim() || user?.email?.trim() || user?.phone?.trim() || '';
+}
+export function profileCoachName(binding: { status: string; coach_display_name: string | null } | null | undefined): string {
+  return binding?.status === 'accepted' ? binding.coach_display_name?.trim() ?? '' : '';
+}
+export function profileMenuValues(profile: OnboardingProfile) {
+  const values = profileRowValues(profile);
+  return {
+    about: profile.height_cm || profile.weight_kg ? values.basics : '—',
+    health: profile.injury_areas?.length ? injurySummary(profile.injury_areas) : t('student.rn.profile.noInjuries'),
+    competition: profile.is_competing && profile.competition_date ? values.competition : '—',
+    note: profile.note_to_coach?.trim() ? t('student.rn.profile.added') : '—',
+    settings: '',
+  };
+}

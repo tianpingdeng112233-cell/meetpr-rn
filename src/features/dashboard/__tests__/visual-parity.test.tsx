@@ -8,7 +8,7 @@ import type { OnboardingProfile } from '@/api/domains/onboarding';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
 import ProfileRoute from '@/app/(student)/profile';
-import { MyProfileValueRow } from '@/features/profile/components';
+import { ProgressMenuRow } from '@/features/history/ProgressMenuRow';
 import { ProfileEditor } from '@/features/profile/ProfileEditor';
 import { useStudentTabsStore } from '@/features/student-tabs';
 import { DashboardScreen } from '../DashboardScreen';
@@ -233,10 +233,10 @@ test.each([false, true])('Today metric cards open the existing Profile editors (
   await act(async () => { renderer.update(<QueryClientProvider client={client}><ProfileRoute /></QueryClientProvider>); });
   expect(renderer.root.findByType(ProfileEditor).props.section).toBe('weight');
   if (hasValues) {
-    expect(renderer.root.findAllByType(MyProfileValueRow).map(node => node.props.title)).toEqual(expect.arrayContaining(['Height / Body weight', 'Meet', 'Note to coach']));
-    const noteRow = renderer.root.findAllByType(MyProfileValueRow).find(node => node.props.title === 'Note to coach')!;
-    expect(noteRow.props.value).toBe('Existing note');
-    expect(noteRow.props.valueLines).toBe(1);
+    expect(renderer.root.findAllByType(ProgressMenuRow).map(node => node.props.title)).toEqual(expect.arrayContaining(['About me', 'Meet', 'Note to coach']));
+    const noteRow = renderer.root.findAllByType(ProgressMenuRow).find(node => node.props.title === 'Note to coach')!;
+    expect(noteRow.props.value).toBe('Added');
+    expect(renderer.root.findAllByType(ProgressMenuRow).find(node => node.props.title === 'About me')!.props.value).toBe('180 cm · 83.00 kg');
     await act(async () => { renderer.root.findAllByType(TextInput).find(node => node.props.value === '83')!.props.onChangeText('84'); });
     const save = renderer.root.findByType(ProfileEditor).findAll(node => typeof node.props.onPress === 'function' && node.props.label === t('student.profileCardsSection.copy013'))[0];
     await act(async () => { save.props.onPress(); });

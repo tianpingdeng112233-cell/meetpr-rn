@@ -233,3 +233,13 @@ test.each(['en', 'zh'] as const)('Meet keeps the existing hint when only the dat
   expect(copy).toContain(locale === 'en' ? 'Failed to save. Try again' : '保存失败,请重试');
   expect(copy).not.toContain(locale === 'en' ? 'Choose a federation and weight class' : '请选择赛事方和体重级别');
 });
+
+test.each(['injuries', 'basics', 'background', 'competition', 'note', 'weight'] as const)('%s editor shows the coach notice only for injuries above Save', async section => {
+  await mount(section);
+  const copy = renderer.root.findAllByType(Text).map(node => node.props.children);
+  const notice = copy.indexOf('Your coach will be notified of changes');
+  if (section === 'injuries') {
+    expect(notice).toBeGreaterThanOrEqual(0);
+    expect(notice).toBeLessThan(copy.indexOf(t('student.profileCardsSection.copy013')));
+  } else expect(notice).toBe(-1);
+});

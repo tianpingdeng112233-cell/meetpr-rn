@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Text } from 'react-native';
 import { useUpsertOnboarding, type OnboardingProfile } from '@/api/domains/onboarding';
 import { ApiError } from '@/api/client';
-import { AppButton, spacing, typography, useColors } from '@/design';
+import { AppButton, font, spacing, typography, useColors } from '@/design';
 import { FeedbackPressable } from '@/design/FeedbackPressable';
 import { NoteSection, WeightSection, BackgroundStep, BasicStep, CompetitionSection, EnvironmentStep, InjuriesSection, MusclesSection, RecoveryStep } from '@/features/onboarding/OnboardingSteps';
 import { formFromServer, invalidFieldsForStep, type OnboardingErrorField } from '@/features/onboarding/model';
@@ -57,6 +57,7 @@ export function ProfileEditor({ section, profile, onClose }: { section: ProfileS
   return <ProfileModal title={t(profileEditorTitles[section])} onClose={onClose} busy={save.isPending}>
     <Content key={section === 'basics' ? form.unitPreference ?? 'unset' : section} showHelp={section === 'weight'} profileLayout errorFields={errorFields} form={form} update={(patch) => setForm((current) => ({ ...current, ...patch }))} />
     {error ? <ProfileText error>{error}</ProfileText> : null}
+    {section === 'injuries' ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{t('student.rn.profile.notify')}</Text> : null}
     <AppButton label={t('student.profileCardsSection.copy013')} disabled={save.isPending} onPress={() => void submit()} />
     {section === 'competition' && profile?.is_competing && profile.competition_date ? <FeedbackPressable accessibilityRole="button" disabled={save.isPending} onPress={removeMeet} style={{ padding: spacing.sm, alignItems: 'center' }}>
       <Text style={{ color: colors.danger, ...typography.bodyEmphasis }}>{t('student.rn.meet.remove')}</Text>
