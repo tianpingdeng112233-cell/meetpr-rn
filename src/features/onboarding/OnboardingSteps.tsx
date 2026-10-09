@@ -1,3 +1,4 @@
+import { decimalInput, metricDisplay, metricStored, POUNDS_PER_KG } from '@/domain/measurement';
 import { t } from '@/i18n';
 
 import { useState, useMemo } from 'react';
@@ -38,20 +39,6 @@ type Props = {
   update: (patch: Partial<OnboardingForm>) => void;
 };
 
-function decimalInput(value: string): string {
-  return value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-}
-
-function metricDisplay(value: string, factor: number): string {
-  const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? String(Math.round(number * factor * 10) / 10) : '';
-}
-
-function metricStored(value: string, factor: number): string {
-  const number = Number(decimalInput(value));
-  return Number.isFinite(number) && number > 0 ? String(Math.round((number / factor) * 10) / 10) : '';
-}
-
 export function BasicStep({ errorFields, form, update, profileLayout = false }: Omit<Props, 'step'> & { profileLayout?: boolean }) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -86,7 +73,7 @@ export function BodyMeasurementsSection({ errorFields, form, update, stacked = f
   const styles = useMemo(() => createStyles(colors), [colors]);
   const imperial = form.unitPreference === 'lb';
   const [heightText, setHeightText] = useState(() => metricDisplay(form.heightCm, 0.3937007874));
-  const [weightText, setWeightText] = useState(() => metricDisplay(form.weightKg, 2.2046226218));
+  const [weightText, setWeightText] = useState(() => metricDisplay(form.weightKg, POUNDS_PER_KG));
   return (
     <View style={stacked ? styles.section : styles.twoColumns}>
       <View style={!stacked && styles.column}>
@@ -114,10 +101,10 @@ export function BodyMeasurementsSection({ errorFields, form, update, stacked = f
             style={stacked && styles.measurementInput}
             error={errorFields.has('weightKg')}
             keyboardType="decimal-pad"
-            onBlur={() => setWeightText(metricDisplay(form.weightKg, 2.2046226218))}
+            onBlur={() => setWeightText(metricDisplay(form.weightKg, POUNDS_PER_KG))}
             onChangeText={(value) => {
               setWeightText(value);
-              update({ weightKg: imperial ? metricStored(value, 2.2046226218) : decimalInput(value) });
+              update({ weightKg: imperial ? metricStored(value, POUNDS_PER_KG) : decimalInput(value) });
             }}
             placeholder={imperial ? '183' : '83'}
             value={imperial ? weightText : form.weightKg}

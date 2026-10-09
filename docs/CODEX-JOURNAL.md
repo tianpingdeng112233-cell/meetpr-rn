@@ -3104,3 +3104,135 @@ TypeScript 首跑因新测试的 `test.each([... ] as const)` 产生 TS2345（re
   - `npm run lint`：退出 0，0 errors / 0 warnings；`final-lint.log`。
 - 对启动时返修二快照的增量执行 code-review 两个只读独立审查：Standards 0 findings；Spec 0 findings。主代理核对本轮只触及上述四文件，其他未提交文件逐一哈希一致；`git diff --check` 通过。代码/测试增量见 `/private/tmp/rn-086/r3/review.diff`。
 - 未做设备验证，未宣称实屏验收通过；按 CARD 由 Opus 复验圆点辨识度、三种状态对齐与格高，以及只读 hero 灰块回落/无淡金块。
+
+## Spec 089 · 卡 A 数据层（2026-10-09）
+
+- 工作树 `/Users/david/Projects/apps/meetpr-rn-wt-089`；分支 `feat/089-accessory-quick-log`；启动 HEAD `3a343b0`、工作树干净。首先在当前目录创建并删除临时文件成功。已完整读取 CONTEXT、AGENTS、SPEC、CARD-A，并读取 CLAUDE、PLAN、工程规约及 Expo SDK 57 文档；未找到仓内 FOLLOWUPS 或 AGENTS.override。
+- 六组纯函数与测试全部交付。未接 UI、未改已有组件的渲染与行为；未改 API schema、后端、SPEC、CARD、PARITY；未 commit、push、开 PR、安装依赖。保留 `node_modules -> ../meetpr-rn/node_modules`。所有 fixture 均为合成数据，无真实账号或凭证。
+
+### 文件清单（12 个，含本节）
+
+| 文件 | 新增 / 改动 |
+| --- | --- |
+| `src/features/training/accessory-quick-log.ts` | 新增判定、行模型、可写性、coached 请求体、批量选择五组纯函数及行类型。 |
+| `src/features/training/set-log-input.ts` | 新增从 QuickLogAttempt 原样提取的共享校验，返回逐字段错误。 |
+| `src/features/training/quick-log.ts` | 逐行校验改用共享函数；日期、提交、重试行为不动。 |
+| `src/features/training/policy.ts` | 新增辅助项休息优先级；继续导出原 `restDefaultSeconds` 入口。 |
+| `src/features/settings/rest-timer.ts` | 两种偏好追加可选 accessory、默认常量与辅助项钳位；原 `restDefaultSeconds` 函数移入此文件，避免 policy 与 settings 循环依赖，函数体不变。 |
+| `src/features/settings/storage.ts` | 两种偏好 schema 接受 accessory；custom 读回保留它；字段损坏仅回落该字段，不丢主项偏好；旧存储键和旧数据路径不变。 |
+| `src/domain/measurement.ts` | 原样提取 onboarding 的 decimalInput、metricDisplay、metricStored 与 lb 因子；metricStored 追加 number 入参供已验证数据使用，string 路径保持原样。 |
+| `src/features/onboarding/OnboardingSteps.tsx` | 仅改为引用提取后的函数与原因子，组件渲染、交互、换算精度不变。 |
+| `src/features/training/__tests__/accessory-quick-log.test.ts` | 新增 48 项纯函数 seam 测试（含参数化用例）。 |
+| `src/features/training/__tests__/training-policy.test.ts` | 追加辅助项休息优先级、0、负值及最大值边界；原断言不改。 |
+| `src/features/settings/__tests__/rest-timer.test.ts` | 追加两种模式的默认/钳位/步进与存储兼容；原断言不改。 |
+| `docs/CODEX-JOURNAL.md` | 追加本节。 |
+
+### 先红后绿证据
+
+原始 stdout/stderr 全部保存在 `/private/tmp/rn-089/a/`。下表每个前缀均对应 `-red.log`（退出 1）与 `-green.log`（退出 0），先运行红测后才实现该行为。参数化表中已有行为可直接通过，未声称每个已有分支都单独失败。
+
+| 日志前缀 | seam / 红测原因 → 绿测行为 |
+| --- | --- |
+| `01-type` | 三种动作类型、未知字符串、null、undefined：模块尚不存在导致加载失败 → 类型字符串判定通过（6 项）。这是缺模块红测，不冒称断言红。 |
+| `02-rows` | 固定重量处方、无上次记录：accessoryRows 未导出 → 两行 stableSetId / setIndex、处方重量次数、空 RPE / 占位通过。 |
+| `03-placeholders` | 纯 RPE、RIR、重量区间：上次记录与 RPE/RIR 占位缺失 → 按组序匹配上次重量次数，RPE 仅占位、RIR 返回 kind/value，未定重量保持空串。 |
+| `04-existing` | 已完成、失败、取消记录和视频标记：预填仍取处方 → 已有重量次数、学员 RPE 优先，null RPE 不回填处方，三种状态与调用方视频标记保留。 |
+| `05-bodyweight` | 自重/大小写 BODYWEIGHT、普通备注、空白、null：3 个非空分支失败 → 自重显示 BW、普通备注保留原文、空白和自重备注为 null。 |
+| `06-lb-rows` | lb 下处方、已有记录与上次重量仍为 kg → 复用 metricDisplay 换算，并保留合法 0；同时运行原 onboarding wizard 测试。 |
+| `07-validation` | 可写性函数未导出 → 重量空白/负值/非有限/0/小数/逗号，次数 0/1/99/100/非整数/非有限，RPE 空/0/10/越界/非有限/小数与旧空白行为，自重仅忽略重量校验全部通过；quick-log 原测试原样通过。 |
+| `08-request` | 请求函数未导出 → coached 形态、真实编辑值、RPE 空为 null / 带值 / 0、logged_date 可选均通过。 |
+| `09-cancel` | 取消仍写 completed:true 且采用编辑值 → 显式取消保留原始 kg 十进制、次数、RPE，completed/failed 均 false；带视频拒绝取消；默认操作仍可覆盖完成行。 |
+| `10-request-units` | BW 生成 NaN → 自重写 0、lb 55.1 写 25kg、0 写 0、Number 支持的 1e2 写 45.4kg；无效输入抛错。 |
+| `11-complete-all` | 选择函数未导出 → 完成/失败两边均排除；未记录合法行按组序选中，空重量/非法次数跳过；编辑补重、空集合与输入不被排序改写通过。 |
+| `12-rest-preference` | 新常量/函数未导出 → 两模式缺值及 NaN/±Infinity 为 60；30–300 钳位、67→60 / 68→75；主项 RPE 结果不变。 |
+| `13-rest-policy` | resolver 未导出 → 教练 75 / 0 优先、超大值钳至 900、负值钳至 0、其次偏好 90、旧偏好缺字段 60。 |
+| `14-storage` | 新字段被 schema 丢弃 → 两种模式 accessory 往返保留，旧数据无字段为 60，损坏的 accessory 不丢 custom 字段，v1 数字偏好继续读回。 |
+| `15-lb-small` | 独立审查发现极小数被文本清洗改义；0.0000001 / 1e-7 本应按既有精度为 0，却实际得到 7.7 → converter 接受 number，保留原字符串路径，回归通过；相关四 suites / 111 tests 通过。 |
+
+`quick-log.test.ts` 未改一字。其余新断言均在卡 A 的判定、行模型、校验、请求体、选择、休息/偏好边界内，没有增加 UI 测试或内部实现测试。
+
+### 卡 B 对接签名
+
+直接从下列文件导入；未改 training barrel。所有新函数无全局状态读取、无翻译调用或 I/O；存储仍使用原有 read/write 路径。
+
+```ts
+// src/features/training/set-log-input.ts
+export type SetLogInput = {
+  weightText: string;
+  repsText: string;
+  rpeText: string;
+};
+export type SetLogValidation = {
+  writable: boolean;
+  invalidFields: (keyof SetLogInput)[];
+};
+export function validateSetLogInput(input: SetLogInput): SetLogValidation;
+
+// src/features/training/accessory-quick-log.ts
+export function isAccessoryExercise(exerciseType: string | null | undefined): boolean;
+export function accessoryRows(input: {
+  drafts: readonly WorkoutSetDraft[];
+  previousLogs: readonly SetLog[];
+  unit: 'kg' | 'lb';
+  videoById?: Readonly<Record<string, boolean>>;
+}): AccessoryRow[];
+export function accessoryRowWritable(row: AccessoryRow, edited: SetLogInput): SetLogValidation;
+export type AccessoryLogOptions = {
+  planExerciseId: string;
+  loggedDate?: string;
+  action?: 'complete' | 'cancel';
+};
+export function accessoryLogRequest(
+  row: AccessoryRow, edited: SetLogInput, options: AccessoryLogOptions,
+): SetLogUpsertRequest;
+export function rowsToCompleteAll(
+  rows: readonly AccessoryRow[], editedById: Readonly<Record<string, SetLogInput>>,
+): { toWrite: AccessoryRow[]; skipped: AccessoryRow[] };
+
+// src/features/settings/rest-timer.ts
+export const ACCESSORY_REST_DEFAULT = 60;
+export function accessoryRestSeconds(preference: RestTimerPreference): number;
+export function restDefaultSeconds(rpe: number | null): number; // 原函数，policy 继续重导出
+
+// src/features/training/policy.ts
+export function resolveAccessoryRestSeconds(input: {
+  prescribed: number | null | undefined;
+  preference: RestTimerPreference;
+}): number;
+
+// src/domain/measurement.ts：已有换算提取后的共享接口
+export const POUNDS_PER_KG = 2.2046226218;
+export function decimalInput(value: string): string;
+export function metricDisplay(value: string, factor: number): string;
+export function metricStored(value: string | number, factor: number): string;
+```
+
+- `AccessoryRow` 携带 stableSetId、零基 setIndex、`status: 'pending' | 'complete' | 'failed'`、hasVideo、unit、三项输入文本、weightPlaceholder、`rpePlaceholder: string | { kind: 'rir'; value: number }`、isBodyweight、`previous: { weightText: string; reps: number } | null`、extraNote，以及用于取消时无损保留的 `recorded: Pick<SetLog, 'weight_kg' | 'reps' | 'rpe'> | null`。
+- `previousLogs` 由调用方限定为同一动作的上一次训练；行模型只按 set_index 匹配。`videoById` 以 stableSetId 为键，缺失为 false。自重 weightText 为 `BW`，组件按 isBodyweight 禁用输入，请求写 0。
+- `edited` 始终包含三项当前文本，rpeText 为实际 RPE；RIR 只是占位元数据。校验返回所有错误字段，复用 quick-log 的 Number 语义（例如逗号小数无效，纯空白 RPE 沿旧逻辑按 0）。
+- 请求默认 `action: 'complete'`；卡 B 根据“完成行是否修改”决定覆盖还是显式传 cancel。取消读取 recorded，不采用未保存编辑、不做 lb 反换算。带视频、非完成或无源记录的取消抛 `Cannot cancel this set`；非法保存抛 `Invalid set input`。卡 B 应在调用前按 SPEC 展示视频提示及字段错误，不直接显示这些工程错误文字。
+- rowsToCompleteAll 返回原行引用，未编辑行按预填校验；提交时仍需使用同一份 editedById（缺键用 row），逐条请求与失败反馈由卡 B 负责。RPE 未填写 null，与现有 set-save 路径相同。辅助项偏好由 accessoryRestSeconds 统一钳位，存储不迁移、不改键。
+
+### SPEC 疑点与对接边界
+
+1. 卡中所称 `resolveExerciseMetadata` 的现有实现实际是 `createExerciseMetadataResolver`，返回值没有 exercise_type。本卡采用卡内明确允许的“类型字符串”入参，卡 B 需从动作库取得 exercise_type，或在其接线范围补 resolver 字段；不能用计划 is_main_lift 代替。
+2. 卡中请求体示例签名未给出记录/取消的区分参数。实现追加可选 action（默认 complete），取消保留服务端原值；不在数据层猜测按钮点击意图。这是接口补全，不改变 SPEC 的交互。
+3. 仓内已有 lb 换算仅在 onboarding 组件私有函数里，并保留一位小数精度。已提取共享、沿用其精度与因子，0 单独保留；未新建另一套换算规则。极小数风险已按上述红绿回归修复。
+4. 当前 RestTimerSettingsScreen 的模式切换尚不携带 accessory。按本卡“不得改 Profile 行为”的边界未接界面；卡 B 增加该设置时须在自动/自定义切换中保留 accessory。持久化本身已能保存两种形态。
+
+无需要产品裁决而阻塞卡 A 的 SPEC 冲突；以上均为卡 B 必须知道的接口与现状。未宣称 UI、Global 联调或整项功能验收通过。
+
+### 独立审查与最终验证
+
+- 以启动 HEAD `3a343b0` 为基线，`review-loop` 派出两个只读 reviewer，对固定快照 `review.diff` 分别审 Standards / Spec。Standards：硬规范违反 0、正确性判断 1；Spec：1 finding。两轴指向同一个极小 lb 数值清洗错误（不是两个独立缺陷）。按 `15-lb-small` 先红后绿返修，再对 `review-fixed.diff` 定向复核：**Standards 0 剩余；Spec 0 剩余**。主代理已亲读全部实现及测试增量。
+- 仓内缺 `docs/agents/issue-tracker.md`，完整 Matt tracker 流程需另行 `$setup-matt-pocock-skills`；本次采用 review-loop 的本地批准 SPEC/CARD 双轴审查，未私建配置。
+- TypeScript 首跑：测试 fixture 的 load_mode 误写为 `weight`（TS2322），已改成 schema 规定的 `fixed_weight`，断言未放宽；原始报错 `tsc-first.log`。
+- 首轮全量 lint 报 `restDefaultSeconds` 从 constants / policy 重复 barrel 导出。最终代码将原函数放入 settings/rest-timer、policy 重导出，constants 与原文件完全一致。第二次 lint 仍命中旧缓存；`npx eslint src/features/training/index.ts --no-cache` 退出 0，随后仅删除本工作树生成的 `.expo/cache/eslint/.cache_x6kso5` 并重跑原指定命令通过。原日志分别为 `pre-review-fix-lint.log`、`lint-stale-cache.log`、`lint-no-cache.log`，未改 lint 配置或关闭规则。
+
+| 最终指定命令 | 实际结果 | 原始 stdout/stderr |
+| --- | --- | --- |
+| `npx jest --runInBand` | 退出 0；157 suites / 1264 tests passed，0 failed；29.829s | `/private/tmp/rn-089/a/final-jest.log` |
+| `npx tsc --noEmit` | 退出 0；0 errors（无输出） | `/private/tmp/rn-089/a/final-tsc.log` |
+| `npm run lint` | 退出 0；0 errors / 0 warnings | `/private/tmp/rn-089/a/final-lint.log` |
+
+三条最终退出码另存同名 `.exit` 文件。最终 `git diff --check` 通过；指定保护文件与 quick-log 原测试无 diff。完整交付增量（含新文件与本节）为 `/private/tmp/rn-089/a/final.diff`。这是卡 A 自测及工程自审记录，整项功能收货仍由 Opus 按 SPEC 验收清单执行。
