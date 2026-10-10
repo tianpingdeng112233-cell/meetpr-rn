@@ -1,3 +1,4 @@
+import { decimalInput, metricDisplay, metricStored } from '@/domain/measurement';
 import { useState, useMemo } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
@@ -39,20 +40,6 @@ type Props = {
   step: OnboardingStep;
   update: (patch: Partial<OnboardingForm>) => void;
 };
-
-function decimalInput(value: string): string {
-  return value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-}
-
-function metricDisplay(value: string, factor: number): string {
-  const number = Number(value);
-  return Number.isFinite(number) && number > 0 ? String(Math.round(number * factor * 10) / 10) : '';
-}
-
-function metricStored(value: string, factor: number): string {
-  const number = Number(decimalInput(value));
-  return Number.isFinite(number) && number > 0 ? String(Math.round((number / factor) * 10) / 10) : '';
-}
 
 export function BasicStep({ errorFields, form, update, profileLayout = false }: Omit<Props, 'step'> & { profileLayout?: boolean }) {
   const colors = useColors();

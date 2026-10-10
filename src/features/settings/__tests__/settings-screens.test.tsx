@@ -144,3 +144,24 @@ test('an authorization query that finishes after logout cannot restore reminders
   await act(async () => { await useSessionStore.getState().logout(); finish(true); });
   expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
 });
+
+test('accessory rest upgrades old preferences without changing main-lift durations and stays adjustable in both modes', async () => {
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><RestTimerSettingsScreen studentId="student" initial={{ mode: 'custom', low: 135, mid: 195, high: 255 }} onClose={() => {}} /></QueryClientProvider>); });
+  const copy = () => renderer.root.findAllByType(Text).map(n => n.props.children);
+  const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && (node.props.accessibilityLabel === label || node.findAllByType(Text).some(text => text.props.children === label)))[0];
+  expect(copy()).toContain('Accessory exercises');
+  expect(copy()).toContain('Main lifts and variations');
+  expect(copy()).toContain('1:00');
+  await act(async () => button('15 seconds more').props.onPress());
+  expect(await readRestPreference('student')).toEqual({ mode: 'custom', low: 135, mid: 195, high: 255, accessory: 75 });
+  await act(async () => button(t('student.studentRestTimerSettings.copy001')).props.onPress());
+  expect(await readRestPreference('student')).toEqual({ mode: 'automatic', accessory: 75 });
+  for (let i = 0; i < 3; i++) await act(async () => button('15 seconds less').props.onPress());
+  expect(copy()).toContain('0:30');
+  expect(button('15 seconds less').props.disabled).toBe(true);
+  for (let i = 0; i < 18; i++) await act(async () => button('15 seconds more').props.onPress());
+  expect(copy()).toContain('5:00');
+  expect(button('15 seconds more').props.disabled).toBe(true);
+  await act(async () => button(t('student.studentRestTimerSettings.copy003')).props.onPress());
+  expect(await readRestPreference('student')).toMatchObject({ mode: 'custom', accessory: 300 });
+});

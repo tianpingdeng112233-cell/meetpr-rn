@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type PressableStateCallbackType, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type PressableStateCallbackType, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Path } from 'react-native-svg';
 
@@ -8,6 +8,7 @@ import { font, radius } from './tokens';
 export type AppButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   haptic?: 'none' | 'light' | 'warning';
   label: string;
+  labelStyle?: StyleProp<TextStyle>;
   sub?: string;
   icon?: 'none' | 'play' | 'logout';
   loading?: boolean;
@@ -16,7 +17,7 @@ export type AppButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   variant?: 'primary' | 'secondary' | 'danger' | 'link';
 };
 
-export function AppButton({ disabled = false, label, sub, icon = 'none', loading = false, fullWidth = true, style, variant = 'primary', accessibilityState, onPress, haptic, ...props }: AppButtonProps) {
+export function AppButton({ disabled = false, label, labelStyle, sub, icon = 'none', loading = false, fullWidth = true, style, variant = 'primary', accessibilityState, onPress, haptic, ...props }: AppButtonProps) {
   const colors = useColors();
   const blocked = disabled || loading;
   const foreground = { primary: colors.ctaText, secondary: colors.textSecondary, danger: colors.dangerMuted, link: colors.textMuted }[variant];
@@ -47,7 +48,7 @@ export function AppButton({ disabled = false, label, sub, icon = 'none', loading
         <View style={styles.copy}>
           <View style={styles.labelRow}>
             {icon === 'play' && variant !== 'link' ? <Svg width={13} height={13} viewBox="0 0 24 24" style={{ marginRight: 7 }}><Path d="M7 4.5V19.5C7 20.3 7.9 20.8 8.6 20.4L20.6 12.9C21.2 12.5 21.2 11.5 20.6 11.1L8.6 3.6C7.9 3.2 7 3.7 7 4.5Z" fill={foreground} /></Svg> : null}
-            <Text style={[labelFont, { color: foreground }]}>{label}</Text>
+            <Text style={[labelFont, { color: foreground }, labelStyle]}>{label}</Text>
             {variant === 'link' ? <Svg width={13} height={13} viewBox="0 0 24 24" style={{ marginLeft: 3 }}><Path d="M9 6L15 12 9 18" stroke={foreground} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" fill="none" /></Svg> : null}
           </View>
           {sub && variant !== 'link' ? <Text style={{ ...font.mono(12, 'bold'), letterSpacing: 0.72, color: foreground, opacity: 0.72 }}>{sub}</Text> : null}

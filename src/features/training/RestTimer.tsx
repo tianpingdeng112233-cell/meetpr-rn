@@ -17,6 +17,7 @@ import { restNotificationPermission, restTimerNotifications } from './rest-timer
 
 type Props = {
   durationSeconds: number | null;
+  showRPEExplanation?: boolean;
   exerciseName?: string;
   studentId: string;
   onClose: () => void;
@@ -30,7 +31,7 @@ export function RestTimer(props: Props) {
   return props.durationSeconds === null ? null : <RestTimerContent key={`${props.studentId}:${props.durationSeconds}`} {...props} />;
 }
 
-function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId }: Props) {
+function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId, showRPEExplanation = true }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
@@ -56,6 +57,7 @@ function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId }:
   }, [session]);
 
   useEffect(() => {
+    if (!showRPEExplanation) return;
     let disposed = false;
     void readBoolean(STORAGE_KEYS.restExplanation(studentId)).then((seen) => {
       if (disposed) return;
@@ -63,7 +65,7 @@ function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId }:
       setExplanationLoaded(true);
     });
     return () => { disposed = true; };
-  }, [durationSeconds, studentId]);
+  }, [durationSeconds, studentId, showRPEExplanation]);
 
   useEffect(() => {
     session.setPaused(true);
@@ -93,8 +95,8 @@ function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId }:
   }, [close, durationSeconds, exerciseName, session]);
 
   useEffect(() => {
-    session.setPaused(!explanationLoaded || showExplanation || showSettings);
-  }, [explanationLoaded, session, showExplanation, showSettings]);
+    session.setPaused((showRPEExplanation && (!explanationLoaded || showExplanation)) || showSettings);
+  }, [explanationLoaded, session, showExplanation, showSettings, showRPEExplanation]);
 
   if (durationSeconds === null || closed) return null;
   const progress = Math.max(0, Math.min(1, remaining / Math.max(1, durationSeconds)));
@@ -130,7 +132,7 @@ function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId }:
         animationType="slide"
         onRequestClose={() => undefined}
         transparent
-        visible={showExplanation}>
+        visible={showRPEExplanation && showExplanation}>
         <View style={styles.modalBackdrop}>
           <SafeAreaView edges={['bottom']} style={{ backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal, maxHeight: '100%' }}><ScrollView><Card style={styles.explanation}>
             <Text style={styles.explanationTitle}>{t('student.restTimerExplanationView.copy001')}</Text>

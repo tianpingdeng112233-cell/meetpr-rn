@@ -2316,8 +2316,8 @@
 "zh": "自动规则"
 },
 "student.restTimerSettingsView.copy003": {
-"en": "Rest times set by your coach always take priority. This setting only changes the default when your coach has not set one.",
-"zh": "教练在计划中指定的休息时长始终优先。此设置只改变没有教练设定时的默认行为。"
+"en": "Rest times set by your coach always take priority. These settings only change the default when your coach has not set one.",
+"zh": "教练在计划中指定的休息时长始终优先。这些设置只改变没有教练设定时的默认行为。"
 },
 "student.restTimerSettingsView.copy004": {
 "en": "Rest between sets",
@@ -3538,6 +3538,30 @@
 "student.trainingWeekStrip.current": {
 "en": "Current week",
 "zh": "当前周"
+},
+"student.trainingWeekStrip.behind": {
+"en": "Behind",
+"zh": "已落后"
+},
+"student.trainingWeekStrip.daysBehind": {
+"en": "{0} days behind",
+"zh": "已落后 {0} 天"
+},
+"student.trainingWeekStrip.daysBehind.one": {
+"en": "1 day behind",
+"zh": "已落后 1 天"
+},
+"student.trainingWeekStrip.daysBehindAccessibility": {
+"en": "{0} days behind schedule",
+"zh": "已落后 {0} 天"
+},
+"student.trainingWeekStrip.daysBehindAccessibility.one": {
+"en": "1 day behind schedule",
+"zh": "已落后 1 天"
+},
+"student.trainingWeekStrip.behindAccessibility": {
+"en": "{0}, behind schedule",
+"zh": "{0}，已落后"
 },
 "student.trainingWeekStrip.upcoming": {
 "en": "Upcoming",
