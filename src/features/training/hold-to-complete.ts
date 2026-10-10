@@ -27,7 +27,7 @@ export function completionAvailability({
   remainingSets: number;
 }) {
   const button = editable && recording && realCount > 0;
-  return { button, pill: button && remainingSets > 0 };
+  return { button, pill: button && remainingSets > 0, sticky: button && remainingSets === 0 };
 }
 
 export function holdFeedback(step: number): { weight: 'light' | 'medium' | 'heavy'; intensity: number; pulseMs: number } {

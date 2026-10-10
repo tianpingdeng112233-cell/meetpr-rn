@@ -3917,6 +3917,77 @@ Ran all test suites.
 
 `npm run lint`：exit 0，**0 errors / 0 warnings**，原始输出：
 
+## 2026-10-10 · Spec 090 训练流程（Codex 开发交付，待 Opus 收货）
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-090`，分支 `feat/090-training-flow`，开工 HEAD `2e932ae`；目录内 `mktemp .codex-write-probe.XXXXXX` 试写和删除均退出 0，初始工作区干净。已全文读取 CONTEXT、AGENTS、090 SPEC/CARD，并读取 Expo SDK 57 版本文档。未 commit、push、安装依赖、修改 API/schema/存储键或正典台账；`node_modules` 保持 `../meetpr-rn/node_modules` 符号链接。
+
+### Files changed（本卡共 14 个文件）
+
+- `src/features/training/exercise-progress.ts`：S1 分区和 S2 分段模型；hero、分区、分段共享 `needsSetResult`，失败计为结果，assumed 不计。
+- `src/features/training/SetProgressBar.tsx`：主项/变式 hero 的分段条；实测尺寸传给 GradientFill，尺寸 key 重建，读屏隐藏。
+- `src/features/training/WorkoutBody.tsx`：记录态可编辑非预览的上收/退回、hero 隐藏、完成行文案和读屏、单份组表渲染、上收反馈与滚动通知。
+- `src/design/TrainingRewardMotion.tsx`：RollUpCard 增加可选 completed 外观；默认分支保留，展开复用 RollUpBody。
+- `src/features/training/hold-to-complete.ts`：completionAvailability 派生 sticky 标志。
+- `src/features/training/TodayWorkoutView.tsx`：单颗按钮在滚动区/吸底区切换、实测底部留白、hero 滚动和键盘/拖动保护、按训练日重置上收状态。
+- `src/features/training/RestTimer.tsx`：仅增加 overlay 布局测量回调；不改计时、触感、通知或停靠行为。
+- `src/features/training/SetEntrySheet.tsx`：片数说明与 collars 同行；Weight/Reps 输入行 48、数字字号 30、标题间距 4；RPE 卡/刻度和配片图高度保留，长数值单行缩放。
+- `src/i18n/catalog/RnExtras.json`：完成行单复数及读屏中英文。
+- `src/features/training/__tests__/exercise-progress.test.ts`：S1 八种情形、S2 四种情形。
+- `src/features/training/__tests__/training-flow.test.tsx`：上收顺序/文案/展开编辑、全部完成与取消、辅助项无分段、未开始/只读/预览隔离、恢复日志首屏不触发滚动通知。
+- `src/features/training/__tests__/hold-to-complete.test.ts`：追加吸底/非吸底两条。
+- `src/features/training/__tests__/completion-entry.test.tsx`：追加真实 TodayWorkoutView 单颗吸底按钮及取消后恢复的组件测试。
+- `docs/CODEX-JOURNAL.md`：仅末尾追加本节。
+
+### TDD 证据
+
+按已批准 S1–S4 逐 seam 先红后绿，再补同一 seam 的边界覆盖；不加录入页样式快照。
+
+| Seam | 首次红输出（原始日志在 `/private/tmp/`） | 随后绿证据 |
+| --- | --- | --- |
+| S1 | `090-s1-red.log`：`Cannot find module '../exercise-progress'`；`Test Suites: 1 failed, 1 total` | `090-s1-green.log`：7 tests passed；最终拆开失败/assumed 用例，S1 为 8 条 |
+| S2 | `090-s2-red.log`：`TypeError: (0 , _exerciseProgress.setProgressSegments) is not a function`；`Tests: 1 failed, 7 passed, 8 total` | `090-s2-green.log`：11 tests passed（当时 S1 为 7 条，S2 为 4 条）；最终该文件 12 条 |
+| S3 | `090-s3-red.log`：`Expected: true / Received: undefined`；`Tests: 1 failed, 7 passed, 8 total` | `090-s3-green.log`：9 tests passed，含所有既有断言 |
+| S4 上收 | `090-s4-body-red.log`：完成文案索引 `Expected: > -1 / Received: -1`；`Tests: 1 failed, 1 total` | `090-s4-body-green.log`：上收/编辑与既有 coach-notes 共 9 tests passed |
+| S4 吸底 | `090-s4-dock-red.log`：滚动区内按钮 `Expected length: 0 / Received length: 1`；`Tests: 1 failed, 17 skipped, 18 total` | `090-s4-dock-green.log`：单颗吸底与取消恢复 2 tests passed；最终全量覆盖所有新增用例 |
+
+既有测试断言没有删除或修改。`Ask coach conversation failure` 的旧 fixture 恰好是当天全部记完，090 明确要求此时 hero 消失；仅将该用例的 sets 响应改为未记录，继续验证原来的分享失败提示与不导航断言。相邻成功分享用例本来就采用这一前提。此处不是放宽断言。
+
+S3 兼容说明：旧测试对 `{ button, pill }` 做完整对象相等断言，CARD 又要求在同一返回值新增吸底标志。`sticky` 因此作为不可枚举只读 getter 提供，值严格为 `button && remainingSets === 0`，原枚举形状/原断言均保留。调用方直接读 `.sticky`；对象展开和序列化不会携带该派生属性。
+
+### 实现假设与待实屏核验
+
+- 滚动沿用 TodayWorkoutView 的 scroll ref。现场 089 只有 accessory input 避让键盘逻辑，没有用户拖动保护；本次补 keyboard 可见、拖动和惯性滚动判断。只有本次新完成动作且仍有 hero 时置 pending，收到新 hero 的 native onLayout 后滚到 `max(0, hero.y - spacing.md)`，y 是 ScrollView 内容坐标；此时再次检查键盘和用户滚动，受阻即放弃，不在结束操作后补抢滚动。切训练日清 pending。按训练日 key 初始化完成集合，恢复已有日志不播上收、不滚动。
+- 滚动假设 hero 不高于可用视口；超长教练备注或辅助项很多组时整张卡可能高于屏幕，此时只能保证从顶部开始可见。实际落点及过渡期间测量/滚动的观感须在设备核验。
+- 上收/替换使用 RN LayoutAnimation，时长 `motion.base`；分段反馈用 `motion.fast`。均复用系统减少动态效果判定，首帧无进场过渡。完成行仍复用既有 RollUpBody 展开/收起能力。
+- 吸底区绝对定位于现有 Screen 底部（现有 tab 内容区域内），默认高度由 `completionControlHeight + 2 * spacing.md + hairlineWidth` 得到，onLayout 后用实测高度；内容 paddingBottom 为 dock 实测高度 + rest 避让高度 + 常规间距。页面仅挂载一颗 HoldToCompleteButton，其长按/触感/完成回调不改。吸底与留白也沿用原按钮的 loaded/recording 页面门控，加载/错误页不显示完成入口。
+- 休息条仍按原 bottom=4 停靠；通过可选 onOverlayLayout 上报实际高度，吸底按钮 bottom 为该高度 + spacing.xs。第一次测量前临时采用 spacing.xxxl，条高改变会重新测量；列表留白同步包含这段高度。是否与 tab/safe area 完全贴合交 Opus 实屏核验。
+- 录入页加减按钮与数值框命中高度 48，collars 仍至少 44；片数说明允许换行且开关不压缩。仅 Weight/Reps 标题使用 compact 样式，RPE header、卡和刻度不变；数值单行缩放以避免长重量被截断。首屏是否完整露出 Record/Photos 需 Pixel 默认尺寸和 vivo X200 Pro 验证，尤其有建议说明/长片数说明时。
+- **已知稿差异，待 Opus 确认**：浅色 successSoft 文案叠 successTint/bgBase，按 sRGB 计算对比度约 3.86:1，不能满足 12 号正文 4.5:1。现有 token 无更深绿，本次完成文案/尖括号浅色采用现有 textPrimary（约 13.65:1），深色保留 successSoft（约 9.06:1），对勾和淡绿底不变。未新增颜色 token，不能据此宣称与深绿文字稿完全一致。
+
+### 独立开发自审
+
+按 review-loop 对 HEAD `2e932ae` 之后工作区 diff 与新增文件做只读双轴自审，未把自测当作 Opus 验收。
+
+- Standards：初审无阻断违规；曾提出 sticky 不可枚举 getter 的接口意外性建议。定向复核确认 CARD 的两项兼容约束后撤回，最终无未决 Standards finding；直接读取限制仍如实记录。
+- Spec：初审无确定阻断；补充对比度审查发现上述浅色绿色 token 缺口，采用可读的现有 token 并保留稿差异待收货。实屏事项没有用组件测试替代。
+- 仓内没有 `docs/agents/issue-tracker.md`；完整 Matt tracker 流程需另行 `$setup-matt-pocock-skills`，本次仅执行无需 tracker 的本地双轴流程，未新建配置。
+
+### 最终指定验证
+
+`npm test -- --runInBand`，退出 0（`/private/tmp/090-test-final.log`）：
+
+```text
+Test Suites: 160 passed, 160 total
+Tests:       1303 passed, 1303 total
+Snapshots:   0 total
+Time:        32.502 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，退出 0，无输出（`/private/tmp/090-tsc-final.log`）。
+
+`npm run lint`，退出 0，0 errors / 0 warnings（`/private/tmp/090-lint-final.log`）：
+
 ```text
 > meetpr-rn@1.0.0 lint
 > expo lint
@@ -3937,3 +4008,63 @@ Ran all test suites.
 - `grep -rn "MEETP<" src`：0 命中（exit 1）；dashboard 重复组件不存在；`git diff --check` 通过。
 
 未覆盖：登录页、角标卡及四个页头在浅/深色下的实屏验证，按卡由 Opus 在模拟器收货。本次只完成开发自测，不宣称实屏验收通过。未安装依赖，未改原生、文案、PARITY.md 或 iOS 仓，未 commit / push。
+各最终命令退出码存同名 `.exit`；首轮 lint 的两条重复 import 警告已修，随后完整复跑以上三个命令。`git diff --check` 通过。
+
+未做项：未运行模拟器/真机，不声明滚动落点、过渡观感、tab/计时条叠放、录入页视频行首屏、深色/中文/磅单位实屏通过；按 CARD 留 Opus 与 David 验证。浅色完成文案的稿差异仍待 Opus 确认。未改 PARITY/收货记录，未做 Global 联调、后端或 iOS 工作。
+
+
+### 返修一（2026-10-10，按 Opus 实屏反馈）
+
+在 `feat/090-training-flow` / HEAD `2e932ae` 的首轮未提交改动上继续，保留全部既有 WIP 及已暂存的 CARD/SPEC 修订。开工用 `mktemp .codex-write-probe.XXXXXX` 试写并删除，输出 `writable`，退出 0。只执行 CARD「返修一」两项；不 commit、不 push、不更新正典台账。以下说明替代本节首轮的 hero 滚动目标与 sticky 不可枚举兼容说明；浅色完成文案已由 Opus 接受，本轮未改样式。
+
+本轮 Files changed（相对开工 WIP，仅 7 个文件）：
+
+- `src/features/training/WorkoutBody.tsx`：新完成项按计划顺序选最后一个，将其 ID 通知页面；测量完成区和完成行的位置，去掉 hero 滚动测量。
+- `src/features/training/TodayWorkoutView.tsx`：待滚动目标改为具体动作 ID，只有目标行布局可触发一次滚动；原键盘、拖动、惯性滚动、切训练日清理及减少动态效果保护保留。
+- `src/features/training/hold-to-complete.ts`：返回普通 `{ button, pill, sticky }`，移除 `Object.defineProperty` 和类型断言；三个标志计算口径不变。
+- `src/features/training/__tests__/completion-entry.test.tsx`：增加 9 条页面层滚动用例，覆盖首个完成、输入乱序的批量完成、已有更晚完成行、全部完成无 hero、减少动态效果、键盘与拖动在完成前/布局前介入、惯性滚动；同时断言恢复已有记录不滚动、同一完成只滚一次、受阻后不补抢滚动。
+- `src/features/training/__tests__/training-flow.test.tsx`：恢复记录用例名称由 hero reveal 改为 completed-row reveal，保留全部旧断言，追加通知目标为 `Bench` 的断言。
+- `src/features/training/__tests__/hold-to-complete.test.ts`：仅三条旧完整对象相等断言补 `sticky`（逐条见下）。
+- `docs/CODEX-JOURNAL.md`：仅追加本小节。
+
+先红后绿（依次完成 S4、S3；原始日志与对应退出码均在 `/private/tmp/`）：
+
+| 项目 | 红证据 | 绿证据 |
+| --- | --- | --- |
+| S4 滚动目标 | `090-r1-scroll-red.log`，退出 1：期望 `{ animated: true, y: 228 }`，实际 `{ animated: true, y: 288 }`；`Tests: 1 failed, 19 skipped, 20 total` | 修复后首条通过，再扩充边界；最终 `090-r1-scroll-green.log`，退出 0：`Test Suites: 2 passed, 2 total` / `Tests: 32 passed, 32 total` |
+| S3 普通字段 | `090-r1-sticky-red.log`，退出 1：完整相等对象期望 `sticky: false`，收到的可枚举对象缺失该字段；`Tests: 1 failed, 8 passed, 9 total` | `090-r1-sticky-green.log`，退出 0：`Test Suites: 1 passed, 1 total` / `Tests: 9 passed, 9 total` |
+
+改过的旧断言清单（均位于 `hold-to-complete.test.ts` 的 `zero real groups cannot complete; all logged hides remaining pill but keeps button`；按 CARD 返修一第 2 条明确放行）：
+
+1. `realCount: 0, remainingSets: 5`：`{ button: false, pill: false }` → `{ button: false, pill: false, sticky: false }`。
+2. `realCount: 1, remainingSets: 4`：`{ button: true, pill: true }` → `{ button: true, pill: true, sticky: false }`。
+3. `realCount: 5, remainingSets: 0`：`{ button: true, pill: false }` → `{ button: true, pill: false, sticky: true }`。
+
+三条均保持原 button/pill 期望，仅补普通字段的契约。全仓查找 `completionAvailability` 后未发现其他完整对象相等断言需要调整；未删旧断言，未改首轮已有其他测试 fixture。
+
+滚动计算与验证边界：完成区是 ScrollView 内容的直接子视图，行位置相对完成区；请求 `max(0, completedSection.y + row.y - spacing.md)`。完成区/行的 onLayout 先后均可补齐坐标，首次收到目标行布局后消费待滚动 ID；批量时按 `sort_order` 选本批最后一行，不取所有已完成行中的最后一行。全部完成没有 hero 时仍可定位刚完成行。Jest 在原生边界提供布局事件并检查 ScrollView 的 scrollTo 参数；原生滚动范围会限制实际落点，设备上的落点与过渡观感仍由 Opus 复验，本轮未跑模拟器/真机，不以组件测试替代实屏验收。
+
+只读独立自审：按 `review-loop` 对开工快照与当前代码增量做一轮双轴审查，Standards **0 findings**，Spec **0 findings**；没有返修项。固定审查差异 `/private/tmp/090-r1-review.diff`，开工快照 `/private/tmp/090-r1-before.json`；未调用缺少 tracker 配置的完整 Matt 分支审查流程。主代理已读完整增量。
+
+最终指定命令及结尾：
+
+`npm test -- --runInBand`，退出 0（`/private/tmp/090-r1-test-final.log`）：
+
+```text
+Test Suites: 160 passed, 160 total
+Tests:       1312 passed, 1312 total
+Snapshots:   0 total
+Time:        36.255 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，退出 0，无输出（`/private/tmp/090-r1-tsc-final.log`）。
+
+`npm run lint`，退出 0，0 errors / 0 warnings（`/private/tmp/090-r1-lint-final.log`）：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+三条退出码分别保存为同名 `.exit`；`git diff --check` 通过。本轮最终增量含 JOURNAL 存 `/private/tmp/090-r1-final.diff`。未做项仅本轮原生实屏复验；无未完成的已授权代码项。
