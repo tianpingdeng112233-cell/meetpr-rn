@@ -4157,3 +4157,88 @@ Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-glob
 ```
 
 `git diff --check`：无输出，exit 0。本轮没有运行全量测试，按交付要求留给 Opus 在沙箱外重跑。独立只读 Standards / Spec 定向复核均无遗留发现；以上实际测试由主代理执行。开工/完工哈希核对确认仅上述三个实现文件、屏幕测试文件及本 JOURNAL 改变，上一轮其余 src 改动未动。临时测试日志仅写本树，摘录后删除；没有写其他 worktree，没有 commit/push/PR。此前两处歧义已由用户明确决定，无新增待决定项。
+
+## 2026-10-10 · Spec 091 CARD-C · Android 构建与出包
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091c`，分支 `feat/091c-build-tracks`，起点 `ff909c9`，开工工作区干净。第一条实际命令在本目录 `mktemp .codex-write-probe.XXXXXX` 并删除临时文件，exit 0。全程没有进入其他 worktree 或主仓；沿用已有 node_modules 软链，未安装依赖、未 commit/push/开 PR，未修改 src、依赖、锁文件或正典台账。
+
+已依序读 CONTEXT、AGENTS、SPEC §1/§3/验收/Out of Scope、CARD-C；查阅 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)、[SDK 57 app config](https://docs.expo.dev/versions/v57.0.0/config/app/) 和 [config plugin 文档](https://docs.expo.dev/config-plugins/plugins/)。Gradle fixture 参照已安装 Expo 57.0.7 的模板签名/buildTypes 结构，省略模板 debug 签名值，不包含口令。
+
+Opus 本轮明确解释：Global 配置允许包名变更，以及新增 `android.versionCode: 1` 与签名 plugin 注册项；其他输出严格保持。后续同类实现卡内目标所必需的最小配置新增可由 Codex 判断并记录；范围、取舍或用户可见行为仍交回。
+
+| 目标 | 实装与对应证据 |
+| --- | --- |
+| 1 包名分轨 | `plugins/build-track.js` 的 `getAndroidBuildConfig` 为唯一映射，供 app.config.ts 调用；app.json 移除旧固定包名。`Android build track / %s selects its package and the first distribution versionCode` 覆盖 china/global/未设置/未知值。两轨显示名仍为 MeetPR，iOS 字段未改。 |
+| 2 签名 plugin | `with-release-signing.js` 通过 `expo/config-plugins` 的 `withAppBuildGradle` 接入；纯函数 `rewriteReleaseSigning` 追加/替换带标记的 Groovy 块，原模板逐字保留。四个值在 Gradle 运行期读取，非空环境变量优先，缺失时读同名 Gradle 属性；四项完整才切 release，否则 debug 并警告 NOT FOR DISTRIBUTION。测试 `release signing reads all four values at Gradle runtime and preserves the Expo template`、`any missing signing value selects debug signing and warns that the package is not distributable`、`repeated prebuild is byte-for-byte idempotent with %j line endings`（LF/CRLF）。 |
+| 3 出包脚本 | `scripts/pack-android.sh <china|global> [output-directory] [--allow-debug-signing]`；默认输出 dist/android、arm64-v8a；`MEETPR_ANDROID_ARCHITECTURES` 可扩展架构。保留已有 JAVA_HOME/ANDROID_HOME，未设时用仓规路径。配置求值读取版本；prebuild 使用 `--platform android --clean --no-install`，随后 assembleRelease。缺任一签名变量先失败；显式允许后强制 debug 并加 `-DEBUGSIGNED`，避免 Gradle 属性补全造成签名与文件名不一致（对应 `the packaging script can force debug signing even when Gradle properties supply missing values`）。正式签名路径要求位于生成目录 android/ 之外，避免 clean 删除。apksigner 找到时验签并输出证书 SHA-256；验签失败停止复制，工具缺失则提示。脚本未设置 API 地址，dotenv 禁用，所有口令只经环境进入 Gradle。手动检查命令见下。 |
+| 4 忽略规则 | .gitignore 原有 `*.jks` 保留，新增 `*.keystore` 与 `keystore.properties`。`git check-ignore --no-index sample.keystore nested/sample.jks nested/keystore.properties` 三项均命中，exit 0；没有为此创建文件。 |
+| 5 版本 | `plugins/build-track.js` 单一 `ANDROID_VERSION_CODE = 1`，注释“每次对外发包 +1”；app.config.ts 从纯函数读取。两轨配置求值均为 version 0.1.0 / versionCode 1，versionName 沿用 app.json.version。 |
+
+先红后绿：包名/版本 seam 先因模块不存在失败，再 4 passed；Gradle seam 先因模块不存在失败，再逐项添加缺值回落、LF/CRLF 幂等、强制 debug 测试，每项先观察失败后补实现，最终 2 suites / 9 tests passed。Jest 原配置可收集 plugins/__tests__，未改 Jest 配置；脚本按卡要求不新增自动化测试。
+
+实际手动检查：
+
+- `bash -n scripts/pack-android.sh`：exit 0。
+- `env -u MEETPR_UPLOAD_STORE_FILE -u MEETPR_UPLOAD_STORE_PASSWORD -u MEETPR_UPLOAD_KEY_ALIAS -u MEETPR_UPLOAD_KEY_PASSWORD bash scripts/pack-android.sh china`：预期 exit 1，构建前停止，原始输出：
+
+```text
+Missing signing environment variables: MEETPR_UPLOAD_STORE_FILE MEETPR_UPLOAD_STORE_PASSWORD MEETPR_UPLOAD_KEY_ALIAS MEETPR_UPLOAD_KEY_PASSWORD
+Refusing to package. Use --allow-debug-signing only for a local, non-distributable APK.
+```
+
+- `bash scripts/pack-android.sh invalid`：预期 exit 2，打印 Usage。
+- `EXPO_NO_DOTENV=1 EXPO_PUBLIC_BUILD_TRACK=china npx expo config --type public --json`：exit 0，`android.package=com.meetpr.app`。
+- `EXPO_NO_DOTENV=1 EXPO_PUBLIC_BUILD_TRACK=global npx expo config --type public --json`：exit 0，`android.package=com.meetpr.global`。
+- 开工前保存 Global public config，改后完整 JSON 深比较：仅 android.package、android.versionCode 和 plugins 新增末项三个获准变化，其他字段完全相同。
+- `expo prebuild`：未执行。完整 prebuild 会解包模板 debug.keystore，与本轮“不生成、读取或写入任何 keystore/jks”硬约束冲突；这是未调用的原因，没有伪造沙箱错误。plugin 的 Gradle 运行期分支和 APK 签名仍需原生实跑，不能用文本单测代替。
+- Gradle assembleRelease：未执行（未进入 Gradle）。尝试 `bash -c './android/gradlew assembleRelease'` 得到 exit 127，原始错误：
+
+```text
+bash: ./android/gradlew: No such file or directory
+```
+
+没有生成 APK，未执行 apksigner，没有读写任何 keystore/jks、.env 或凭证文件，没有在文件/输出中写入口令。
+
+独立只读双轴审查（review-loop，以本地 CARD-C 为 Spec 来源）：Standards 0 findings，Spec 0 findings。仓内缺少 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的 code-review 分支流程；如以后需要该流程，由 David 调用 `$setup-matt-pocock-skills`。reviewer 审阅代码，不把它当作原生出包验收；JOURNAL 由主代理核对。
+
+开放项交 Opus：沙箱外执行两轨 prebuild/Gradle、APK 元数据与真实签名/指纹核验、同机并存验证；真正可分发 CN APK 依赖 David 创建并保管 release keystore。Global 包名变化还需新 Google Android OAuth client 和后端 audience 登记；完成前 Google 登录不可用。旧 Global 包不会被新包覆盖，卸载重装前确认无未同步记录。均为已明确人工前置/验收项，本卡未自行操作；无新增产品决策题。
+
+自检中间失败与处置（保留实际过程）：
+
+1. 第一轮 `npx tsc --noEmit` 因新增 TS 测试使用隐式 Jest globals 失败（TS2593 / TS2304）；显式导入 `@jest/globals` 后，新增测试入口改变了全仓环境类型加载顺序，既有 src 测试的 fetch mock 出现 TS2345 / TS2322。用 TypeScript API 读取同一 tsconfig、仅排除两个新增测试根节点，保留全部生产改动，得到 `Type check excluding only the two new test roots: 0 diagnostics`。两份测试不含 TS 专有语法，最终改为 `.test.js`，与被测 JS plugin 一致；断言不变、不压制类型、不改 src/tsconfig/Jest。随后实际 `npx tsc --noEmit` exit 0，无输出。类型加载顺序问题经此对照定位，未遗留诊断脚本。
+2. 首轮 `EXPO_NO_DOTENV=1 npm test -- --runInBand`：exit 1，`Test Suites: 1 failed, 170 passed, 171 total`；`Tests: 31 failed, 1527 passed, 1558 total`。首个失败为 student-conversation-screen 的 `empty conversation invites a message to the coach and shows tonight online` 超过默认 5000ms，后续同套测试因 overlapping act / unmounted renderer 连锁失败。没有修改或跳过它；独立复跑原套件 `EXPO_NO_DOTENV=1 npx jest src/features/chat/__tests__/student-conversation-screen.test.tsx --runInBand`：exit 0，33/33 passed，耗时 3.282s。随后按原默认超时重新跑全量，最终结果见下。
+3. `npm run lint`（环境 `EXPO_NO_DOTENV=1`）首轮及测试改扩展名后复跑均 exit 0，输出只有 `expo lint` 命令行，0 errors / 0 warnings。
+
+最终自检（最终文件状态）：
+
+```text
+npx tsc --noEmit: PASS (exit 0, no output)
+npm run lint: PASS (exit 0, 0 errors / 0 warnings; EXPO_NO_DOTENV=1)
+npm test -- --runInBand: PASS (exit 0; EXPO_NO_DOTENV=1)
+Test Suites: 171 passed, 171 total
+Tests:       1558 passed, 1558 total
+Snapshots:   0 total
+Time:        43.002 s, estimated 234 s
+bash -n scripts/pack-android.sh: PASS (exit 0)
+git diff --check: PASS (exit 0)
+china android.package: com.meetpr.app
+global android.package: com.meetpr.global
+```
+
+最终全量包括两个新增 JS 测试文件的 9 项测试；没有改测试超时、跳过套件或缩小全量范围。两轨配置求值和 Global 完整比较已在生产代码最终状态执行，之后只改测试扩展名与追加 JOURNAL，未重复无变化的配置验证。最终 `git diff --numstat -- src package.json package-lock.json` 无输出。
+
+本卡最终改动文件：
+
+```text
+.gitignore
+app.config.ts
+app.json
+docs/CODEX-JOURNAL.md
+plugins/__tests__/build-track.test.js
+plugins/__tests__/release-signing.test.js
+plugins/build-track.js
+plugins/with-release-signing.js
+scripts/pack-android.sh
+```
+
+目标 1–5 代码已实现且工作区未提交；原生出包/签名/并存验收尚未执行，交 Opus 按上述开放项完成。不以本次本地自检替代 Spec 验收或宣告可分发。
