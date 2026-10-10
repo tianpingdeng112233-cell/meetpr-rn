@@ -1,6 +1,6 @@
 import { SetLogUpsertRequestSchema } from '@/api/domains/sets';
 import { videosRepository, type StudentVideo } from '@/api/domains/videos';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/demo/storage';
 import { z } from 'zod';
 import { create } from 'zustand';
 

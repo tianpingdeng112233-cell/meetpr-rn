@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { isDemoMode } from '@/demo/mode';
 
 import { clearTrainingReminders } from '@/features/settings/training-reminder';
 import { BUILD_TRACK } from '@/config/build-track';
@@ -341,6 +342,10 @@ async function runBootstrap(
     }
 
     if (!storedRefreshToken || !cachedUser) {
+      if (isDemoMode()) {
+        await authenticate(() => emailLogin({ email: 'alex@example.test', password: '' }));
+        return;
+      }
       await queueCredentialMutation(tokenStore.clearSession).catch(() => undefined);
       if (capturedGeneration === generation) {
         set({ status: 'anonymous', user: null });
