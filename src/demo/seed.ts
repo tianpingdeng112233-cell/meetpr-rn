@@ -58,7 +58,7 @@ export function buildDemoSeed(today: string) {
   const logs: SetLog[] = [];
   const mainPairs = [[0, 1], [2, 1], [0, 2], [1, 2]];
   // Historical sessions include a lighter day and a repeat before progressing again.
-  const mainHistoryIncreases = [0, 2.5, 1.25, 5, 7.5, 7.5, 10, 12.5, 15];
+  const mainHistoryIncreases = [0, 2.5, 0, 5, 7.5, 7.5, 10, 12.5, 15];
   const mainAppearances = [0, 0, 0];
   const mainEfforts = [[7.5, 8, 8.5], [8, 7.5, 9], [7.5, 8.5, 8], [8, 8.5, 7.5]];
   const accessoryEfforts = [6.5, 7.5, 8, 7, 8.5, 9];
@@ -72,7 +72,7 @@ export function buildDemoSeed(today: string) {
       indexes.forEach((index, order) => {
         const main = index < 3;
         const mode = main || order === 2 ? 'fixed_weight' : order === 3 ? 'rpe' : 'rir';
-        const weight = main ? [130, 75, 160][index] + (week - 1) * 5 + slot * 1.25 : [170, 60, 0, 40, 25, 0][index - 6];
+        const weight = main ? [130, 75, 160][index] + (week - 1) * 5 + slot * 2.5 : [170, 60, 0, 40, 25, 0][index - 6];
         const exercise: PlanExercise = {
           id: id(), plan_day_id: day.id, exercise_id: exercises[index].id, is_main_lift: main, sort_order: order,
           notes: index === 0 ? 'Brace before each rep. Keep your upper back tight throughout the set.' : order === 2 ? 'Control the lowering phase and keep every rep smooth.' : null, sets: [],

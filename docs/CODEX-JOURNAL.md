@@ -4317,3 +4317,62 @@ exit 0（0 errors / 0 warnings）
 #### 未做项
 
 本轮未改聊天 UI、API schema、假后端路由或其他既有文件；未打包、未作模拟器实屏验收，依卡交由 Opus 收货。没有 commit/push，也未更新 PARITY 或其他正典台账。
+
+### 返修二（2026-10-10，开发自测）
+
+开工在指定工作树创建临时文件并删除成功；分支 `feat/demo-offline`，HEAD `89f7918`，初始工作区干净。已读 CONTEXT、AGENTS、CLAUDE、CARD 全文与 Expo SDK 57 文档。本轮未 commit/push。
+
+#### 改动与 Files changed
+
+- `src/demo/seed.ts`：主项处方的场次增量从 `slot * 1.25` 改为 `slot * 2.5`；历史增量序列第三项从 `1.25` 改为 `0`，保留一次小回落与一次持平。处方的 `target_value` 沿用同一重量，辅助项与自重数据不变。
+- `src/demo/__tests__/seed.test.ts`：在批准的 S2 seam `buildDemoSeed(today)` 新增 9 日期不变量（连续一周、月末、年末），遍历全部计划组 `target_weight` 与全部历史 `weight_kg`，排除空值和零后断言对 2.5 取余为零。原有日期、完成状态、ID、曲线点数与起伏、RPE、次数偏差断言均保留。
+- `docs/CODEX-JOURNAL.md`：仅追加本小节。
+
+#### 先红后绿证据
+
+先只加测试、运行观察失败，再修改种子的两处增量；原始日志位于 `/tmp/demo-rework2-red.log`、`/tmp/demo-rework2-green.log`。
+
+```text
+$ npm test -- --runInBand src/demo/__tests__/seed.test.ts
+RED: Expected invalid weights: []
+     Received: [161.25, 161.25, 161.25, 76.25, ...]
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 11 passed, 20 total
+Snapshots:   0 total
+Time:        1.114 s
+exit 1
+
+GREEN:
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+Snapshots:   0 total
+Time:        1.235 s
+exit 0
+```
+
+#### 独立自审与最终命令结尾
+
+按 `review-loop` 本地双轴流程，两个只读 reviewer 对 `git diff 89f7918 -- src/demo/seed.ts src/demo/__tests__/seed.test.ts` 独立审查。Standards：0 findings；Spec：0 findings。仓内缺 `docs/agents/issue-tracker.md`，已提示以后调用 `$setup-matt-pocock-skills`，本轮不依赖远端 tracker。主代理亲读最终 diff，`git diff --check` 通过。
+
+所有非登录 shell 均先 `export PATH=/opt/homebrew/bin:/usr/bin:/bin:$PATH`；全量测试 unset `EXPO_PUBLIC_DEMO_MODE`。完整日志：`/tmp/demo-rework2-tests.log`、`/tmp/demo-rework2-tsc.log`、`/tmp/demo-rework2-lint.log`。
+
+```text
+$ npm test -- --runInBand
+Test Suites: 171 passed, 171 total
+Tests:       1549 passed, 1549 total
+Snapshots:   0 total
+Time:        42.401 s
+Ran all test suites.
+exit 0
+
+$ npx tsc --noEmit
+（无输出）
+exit 0
+
+$ npm run lint
+> meetpr-rn@1.0.0 lint
+> expo lint
+exit 0（0 errors / 0 warnings）
+```
+
+未做项：未打包、未做模拟器或真机复验；依 CARD 本轮以测试为准，实屏收货留给 Opus。未改 UI、API、其他测试或正典台账。
