@@ -10,14 +10,14 @@ import { ApiError } from '@/api/client';
 import { useSessionStore } from '@/api/session';
 import { AppButton, TextField } from '@/design';
 import { t } from '@/i18n';
-import { MyProfileDivider, MyProfileGroupCard, MyProfileSectionLabel, MyProfileValueRow, ProfileModal, ProfileText } from '@/features/profile/components';
+import { MyProfileDivider, MyProfileGroupCard, ProfileModal, ProfileText } from '@/features/profile/components';
+import { ProfilePageRow } from '@/features/profile/ProfilePage';
 import { csvFileName, trainingLogCSV } from './csv';
 type Action = 'password' | 'export' | 'delete';
 export function AccountSecuritySection({ studentId }: { studentId: string }) {
   const [action, setAction] = useState<Action | null>(null);
   return <>
-    <MyProfileSectionLabel>{t('student.myProfileView.copy014')}</MyProfileSectionLabel>
-    <MyProfileGroupCard><MyProfileValueRow title={t('student.accountSecuritySheets.copy001')} onPress={() => setAction('password')} /><MyProfileDivider /><MyProfileValueRow title={t('student.accountSecuritySheets.copy002')} onPress={() => setAction('export')} /><MyProfileDivider /><MyProfileValueRow danger title={t('student.accountSecuritySheets.copy003')} onPress={() => setAction('delete')} /></MyProfileGroupCard>
+    <MyProfileGroupCard><ProfilePageRow singleLine title={t('student.accountSecuritySheets.copy001')} onPress={() => setAction('password')} /><MyProfileDivider inset /><ProfilePageRow singleLine title={t('student.accountSecuritySheets.copy002')} onPress={() => setAction('export')} /><MyProfileDivider inset /><ProfilePageRow singleLine danger title={t('student.accountSecuritySheets.copy003')} onPress={() => setAction('delete')} /></MyProfileGroupCard>
     {action === 'password' ? <ChangePasswordSheet onClose={() => setAction(null)} /> : null}
     {action === 'export' ? <ExportDataSheet studentId={studentId} onClose={() => setAction(null)} /> : null}
     {action === 'delete' ? <DeleteAccountScreen onClose={() => setAction(null)} /> : null}

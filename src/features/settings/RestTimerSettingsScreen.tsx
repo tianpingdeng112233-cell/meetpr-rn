@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { font, useColors } from '@/design';
+import { font, fontMetrics, radius, spacing, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SettingsPage, SettingsSectionTitle } from './SettingsPage';
 import { useQueryClient } from '@tanstack/react-query';
 import { t } from '@/i18n';
 import { ProfileText, MyProfileGroupCard, MyProfileDivider } from '@/features/profile/components';
-import { clampRestSeconds, defaultCustomRest, durationText, type RestTimerPreference } from './rest-timer';
+import { accessoryRestSeconds, clampRestSeconds, defaultCustomRest, durationText, type RestTimerPreference } from './rest-timer';
 import { preferenceKeys, writeRestPreference } from './storage';
 export function RestTimerSettingsScreen({ studentId, initial, onClose }: { studentId: string; initial: RestTimerPreference; onClose: () => void }) {
   const colors = useColors();
@@ -23,13 +23,15 @@ export function RestTimerSettingsScreen({ studentId, initial, onClose }: { stude
     catch { setError(t('student.myProfileViewModel.copy002')); }
     finally { setBusy(false); }
   };
+  const accessory = accessoryRestSeconds(preference);
   const bands = [['low', 'student.restTimerSettingsView.copy005'], ['mid', 'student.restTimerSettingsView.copy006'], ['high', 'student.restTimerSettingsView.copy007']] as const;
   return <SettingsPage title={t('student.restTimerSettingsView.copy004')} onClose={onClose} busy={busy}>
+    <SettingsSectionTitle>{t('student.accessory.mainLifts')}</SettingsSectionTitle>
     <MyProfileGroupCard><View style={{ padding: 16, gap: 12 }}>
       <SettingsSectionTitle>{t('student.restTimerSettingsView.copy008')}</SettingsSectionTitle>
       <View style={{ flexDirection: 'row', backgroundColor: colors.bgInset, borderRadius: 10, padding: 3 }}>
         {(['automatic', 'custom'] as const).map(mode => <Pressable key={mode} accessibilityRole="button" accessibilityState={{ selected: preference.mode === mode, disabled: busy }} disabled={busy}
-          onPress={() => { setExpanded(null); void change(mode === 'automatic' ? { mode } : defaultCustomRest); }}
+          onPress={() => { setExpanded(null); void change({ ...(mode === 'automatic' ? { mode } : defaultCustomRest), ...(preference.accessory === undefined ? {} : { accessory: preference.accessory }) }); }}
           style={{ flex: 1, minHeight: 44, padding: 6, justifyContent: 'center', borderRadius: 8, backgroundColor: preference.mode === mode ? colors.surfaceCard : 'transparent' }}>
           <Text style={{ textAlign: 'center', ...font.body(12, 'semibold'), color: colors.textPrimary }}>{t(mode === 'automatic' ? 'student.studentRestTimerSettings.copy001' : 'student.studentRestTimerSettings.copy003')}</Text>
         </Pressable>)}
@@ -62,6 +64,25 @@ export function RestTimerSettingsScreen({ studentId, initial, onClose }: { stude
         </View>
       </View>)}</MyProfileGroupCard>
     </View>
+    <SettingsSectionTitle>{t('student.accessory.exercises')}</SettingsSectionTitle>
+    <MyProfileGroupCard><View style={{ padding: spacing.base, gap: spacing.md, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+      <View style={{ flex: 1, minWidth: spacing.xxxl, gap: spacing.xs }}>
+        <Text style={{ ...font.body(fontMetrics.size15, 'bold'), color: colors.textPrimary }}>{t('student.accessory.rest')}</Text>
+        <Text style={{ ...font.body(fontMetrics.size12), color: colors.textMuted }}>{t('student.accessory.range')}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        {([-1, 1] as const).map(direction => <View key={direction} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          {direction === 1 ? <Text style={{ ...font.mono(fontMetrics.size16, 'bold'), color: colors.textPrimary }}>{durationText(accessory)}</Text> : null}
+          <Pressable accessibilityRole="button" accessibilityLabel={t(direction < 0 ? 'student.accessory.less' : 'student.accessory.more')}
+            disabled={busy || (direction < 0 ? accessory <= 30 : accessory >= 300)}
+            accessibilityState={{ disabled: busy || (direction < 0 ? accessory <= 30 : accessory >= 300) }}
+            onPress={() => void change({ ...preference, accessory: accessoryRestSeconds({ ...preference, accessory: accessory + direction * 15 }) })}
+            style={{ width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, borderRadius: radius.pill, backgroundColor: colors.bgInset, justifyContent: 'center', alignItems: 'center', opacity: busy || (direction < 0 ? accessory <= 30 : accessory >= 300) ? 0.4 : 1 }}>
+            <MaterialCommunityIcons name={direction < 0 ? 'minus' : 'plus'} size={spacing.lg} color={colors.textPrimary} />
+          </Pressable>
+        </View>)}
+      </View>
+    </View></MyProfileGroupCard>
     <Text style={{ ...font.body(12), color: colors.textMuted }}>{t('student.restTimerSettingsView.copy003')}</Text>
     {error ? <ProfileText error>{error}</ProfileText> : null}
   </SettingsPage>;

@@ -21,6 +21,7 @@ import {
 
 export type ExerciseMetadata = {
   name: string;
+  exerciseType?: string | null;
   rawFamily: LiftFamily | null;
   competitionFamily: LiftFamily | null;
 };
@@ -68,6 +69,7 @@ export function createExerciseMetadataResolver(
     if (!exercise) return null;
     return {
       name: exerciseDisplayName(exercise),
+      exerciseType: exercise.exercise_type ?? null,
       rawFamily: exercise.main_lift_family,
       competitionFamily: resolveCompetitionLiftFamily(
         {

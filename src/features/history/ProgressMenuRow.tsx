@@ -17,8 +17,10 @@ export function ProgressMenuRow({ title, value, emphasized, icon, onPress }: {
       <View style={{ width: spacing.point40, height: spacing.point40, borderRadius: radius.control, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
         <MaterialCommunityIcons name={icon} size={20} color={colors.gold500} />
       </View>
-      <Text style={{ flexShrink: 0, ...font.body(15, 'bold'), color: colors.textPrimary }}>{title}</Text>
-      <Text style={{ flex: 1, flexShrink: 1, textAlign: 'right', ...font.mono(13, emphasized ? 'semibold' : 'regular'), color: emphasized ? colors.goldText : colors.textMuted }}>{value}</Text>
+      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: spacing.point3 }}>
+        <Text numberOfLines={1} style={{ flexShrink: 0, ...font.body(15, 'bold'), color: colors.textPrimary }}>{title}</Text>
+        {value ? <Text textBreakStrategy="simple" android_hyphenationFrequency="none" style={{ flexShrink: 0, maxWidth: '100%', ...font.mono(13, emphasized ? 'semibold' : 'regular'), color: emphasized ? colors.goldText : colors.textMuted }}>{value}</Text> : null}
+      </View>
       <MaterialCommunityIcons name="chevron-right" size={14} color={colors.textDim} />
     </Card>
   </Pressable>;

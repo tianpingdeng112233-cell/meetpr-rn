@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, AppState, Easing, StyleSheet, Vibration, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { Card } from './Card';
+import { radius, spacing } from './tokens';
 import { GradientFill } from './GradientFill';
 import { useColors } from './theme';
 import { rewardTiming, rollUpFrames, sparkGeometry } from './training-reward-spec';
@@ -108,7 +109,8 @@ export function RollUpBody({ collapsed, children }: { collapsed: boolean; childr
 }
 
 /** Fold the table first, then compact the completed card without moving its title. */
-export function RollUpCard({ collapsed, children }: { collapsed: boolean; children: ReactNode }) {
+export function RollUpCard({ collapsed, children, completed = false }: { collapsed: boolean; children: ReactNode; completed?: boolean }) {
+  const colors = useColors();
   const reduced = useReducedRewardMotion();
   const [progress] = useState(() => new Animated.Value(collapsed ? 1 : 0));
   useEffect(() => {
@@ -117,6 +119,7 @@ export function RollUpCard({ collapsed, children }: { collapsed: boolean; childr
     const animation = Animated.sequence([Animated.delay(collapsed ? rewardTiming.roll : 0), Animated.timing(progress, { toValue: collapsed ? 1 : 0, duration: 280, easing: Easing.bezier(0.22, 0.61, 0.36, 1), useNativeDriver: false })]);
     animation.start(); return () => animation.stop();
   }, [collapsed, progress, reduced]);
+  if (completed) return <View style={{ backgroundColor: colors.successTint, borderRadius: radius.card, paddingHorizontal: spacing.point14, paddingBottom: collapsed ? spacing.zero : spacing.md }}>{children}</View>;
   return <Animated.View style={{ alignSelf: 'center', width: reduced === true ? collapsed ? '92%' : '100%' : progress.interpolate({ inputRange: [0, 1], outputRange: ['100%', '92%'] }) }}><Card style={{ padding: 16, gap: 10, borderRadius: collapsed ? 14 : 16 }}>{children}</Card></Animated.View>;
 }
 

@@ -133,3 +133,11 @@ test('a pending submission exposes the loading label and disables Done', () => {
   expect(submitting.props.disabled).toBe(true);
   expect(submitting.props.accessibilityState.busy).toBe(true);
 });
+
+test('the shared Profile and Today readiness sheet shows the coach notice only above the final submission', () => {
+  const copy = () => renderer.root.findAllByType(Text).map(node => node.props.children);
+  expect(copy()).not.toContain('Your coach will be notified of changes');
+  chooseScores(); press(t('student.readinessCheckinSheet.copy016'));
+  expect(copy()).toContain('Your coach will be notified of changes');
+  expect(copy().indexOf('Your coach will be notified of changes')).toBeLessThan(copy().indexOf(t('student.readinessCheckinSheet.copy018')));
+});

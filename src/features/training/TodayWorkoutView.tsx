@@ -1,3 +1,6 @@
+import { isAccessoryExercise } from './accessory-quick-log';
+import { readRestPreference } from '@/features/settings/storage';
+import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import { localDateText } from '@/domain/plan/workout-date-policy';
 import { chatRepository, type Conversation } from '@/api/domains/chat';
 import { SetRefEntryVisibility } from '@/features/chat/set-ref';
@@ -36,7 +39,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Keyboard, ScrollView, TextInput, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -59,6 +62,7 @@ import {
   AppButton,
   Card,
   font,
+  radius,
   useColors,
   type Colors,
   Screen,
@@ -92,6 +96,7 @@ import {
   historyRangeStart,
   parseFiniteDecimal,
   resolveRestSeconds,
+  resolveAccessoryRestSeconds,
 } from './policy';
 import { ReadinessSheet } from './ReadinessSheet';
 import { RestTimer } from './RestTimer';
@@ -108,12 +113,42 @@ import {
 } from './storage';
 import { trackTrainingTabVisit } from './training-analytics';
 import { WorkoutBody } from './WorkoutBody';
+import { useReducedMotion } from '@/design/useReducedMotion';
 
 const EMPTY_E1RM_BY_EXERCISE: Record<string, number | null> = {};
 
 export function TodayWorkoutView() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const workoutScroll = useRef<ScrollView>(null);
+  const focusedAccessoryInput = useRef<TextInput | null>(null);
+  const reducedMotion = useReducedMotion();
+  const keyboardVisible = useRef(false);
+  const userScrolling = useRef(false);
+  const completedRowToReveal = useRef<string | null>(null);
+  const [completionDockHeight, setCompletionDockHeight] = useState(spacing.completionControlHeight + spacing.md * 2 + StyleSheet.hairlineWidth);
+  const [restOverlayHeight, setRestOverlayHeight] = useState<number>(spacing.xxxl);
+  const markExerciseCompleted = useCallback((exerciseId: string) => {
+    completedRowToReveal.current = !keyboardVisible.current && !Keyboard.isVisible() && !userScrolling.current ? exerciseId : null;
+  }, []);
+  const revealCompletedRow = useCallback((exerciseId: string, layout: LayoutRectangle) => {
+    if (completedRowToReveal.current !== exerciseId) return;
+    completedRowToReveal.current = null;
+    if (keyboardVisible.current || Keyboard.isVisible() || userScrolling.current) return;
+    workoutScroll.current?.scrollTo({ y: Math.max(0, layout.y - spacing.md), animated: !reducedMotion });
+  }, [reducedMotion]);
+  const revealAccessoryInput = useCallback(() => {
+    if (focusedAccessoryInput.current) workoutScroll.current?.scrollResponderScrollNativeHandleToKeyboard(focusedAccessoryInput.current, spacing.lg, true);
+  }, []);
+  useEffect(() => {
+    const subscription = Keyboard.addListener('keyboardDidShow', () => {
+      keyboardVisible.current = true;
+      completedRowToReveal.current = null;
+      revealAccessoryInput();
+    });
+    const hidden = Keyboard.addListener('keyboardDidHide', () => { keyboardVisible.current = false; focusedAccessoryInput.current = null; });
+    return () => { subscription.remove(); hidden.remove(); };
+  }, [revealAccessoryInput]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const { totalUnread: unreadCount, openCoachChat, isOpening } = useOpenCoachChat(studentId);
   const [shareRoute, setShareRoute] = useState<{ conversationId: string; initialSetLogID?: string; coachName: string } | null>(null);
@@ -153,6 +188,7 @@ export function TodayWorkoutView() {
     value: false,
   });
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [accessoryRest, setAccessoryRest] = useState(false);
   const [restExerciseName, setRestExerciseName] = useState('');
   const [restGeneration, setRestGeneration] = useState(0);
   const trainingFocused = useRef(true);
@@ -202,7 +238,12 @@ export function TodayWorkoutView() {
     editingPlan?.trainee_id === studentId ? editingPlan : planQuery.data;
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
-  const weekStrip = trainingWeekStrip(plan, requestedDayID);
+  const weekStrip = trainingWeekStrip(plan, requestedDayID, today);
+  const viewedWeek = weekStrip.week;
+  const weekIsBehind = viewedWeek?.status === 'current' && weekStrip.daysBehind > 0;
+  const weekStatus = weekIsBehind ? t('student.trainingWeekStrip.daysBehind', [weekStrip.daysBehind])
+    : t(viewedWeek?.status === 'current' ? 'student.trainingWeekStrip.current'
+      : viewedWeek?.status === 'upcoming' ? 'student.trainingWeekStrip.upcoming' : 'student.trainingWeekStrip.completed');
   const planDay = weekStrip.selectedDay;
   const selectedDayID = planDay?.id ?? null;
   const dayState = planDay
@@ -247,6 +288,8 @@ export function TodayWorkoutView() {
       ? draftOverrides[draft.stableSetId]
       : draft,
   );
+  const accessoryDraftsRef = useRef(liveDrafts);
+  useEffect(() => { accessoryDraftsRef.current = liveDrafts; }, [liveDrafts]);
   // Drafts are rebuilt each render; only changes to log identities need a fetch.
   const videoSetKey = JSON.stringify(
     liveDrafts.flatMap((draft) =>
@@ -385,13 +428,14 @@ export function TodayWorkoutView() {
   useFocusEffect(
     useCallback(() => {
       trainingFocused.current = true;
+      setClockNow(new Date());
       void refreshRef.current(throttle.current.refreshWhenReturning());
       return () => {
         trainingFocused.current = false;
         endRest();
         setRequestedDayID(null);
       };
-    }, [endRest]),
+    }, [endRest, setRequestedDayID]),
   );
   useEffect(() => {
     const listener = AppState.addEventListener('change', (state) => {
@@ -430,6 +474,7 @@ export function TodayWorkoutView() {
   }, [planRevision]);
   const startKey = `${studentId}:${selectedDayID}`;
   useEffect(() => {
+    completedRowToReveal.current = null;
     let cancelled = false;
     if (!selectedDayID) return;
     void readBoolean(`training.started.${startKey}`).then((started) => {
@@ -564,14 +609,17 @@ export function TodayWorkoutView() {
     failed: boolean;
     completed?: boolean;
     attachmentOnly?: boolean;
+    accessory?: { request: SetLogUpsertRequest; mode: 'single' | 'all' };
     quickLogDate?: string;
   }): Promise<string | undefined> => {
-    const restRevisionAtSave = restRevision.current;
+    let restRevisionAtSave = restRevision.current;
     const operation = async () => {
-      const draft = liveDrafts.find(
+      const currentDrafts = input.accessory ? accessoryDraftsRef.current : liveDrafts;
+      const draft = currentDrafts.find(
         (candidate) => candidate.stableSetId === input.stableSetId,
       );
       if (!draft) return;
+      const usesAccessoryRest = !input.quickLogDate && isAccessoryExercise(resolveExerciseMetadata(draft.exercise.exercise_id)?.exerciseType);
       if (useSessionStore.getState().user?.id !== studentId) throw new Error('Session changed');
       const latestPlan = queryClient.getQueryData<PlanDetail>(
         planKeys.detail(plan?.id ?? ''),
@@ -588,6 +636,7 @@ export function TodayWorkoutView() {
         );
         throw new Error('Selected day is no longer current');
       }
+      if (input.accessory?.mode === 'single' && input.completed) { endRest(); restRevisionAtSave = restRevision.current; }
       const logDate = input.quickLogDate ?? gymDayText(new Date());
       const completed = input.completed ?? true;
       const weight = parseFiniteDecimal(input.weightText);
@@ -609,7 +658,7 @@ export function TodayWorkoutView() {
         throw new Error('Invalid set input');
       }
       try {
-        const response = await upsert.mutateAsync({
+        const response = await upsert.mutateAsync(input.accessory?.request ?? {
           plan_exercise_id: draft.exercise.id,
           ...(input.quickLogDate ? { logged_date: input.quickLogDate } : {}),
           set_index: draft.setIndex,
@@ -624,7 +673,7 @@ export function TodayWorkoutView() {
           : completed
             ? 'complete'
             : 'pending';
-        const nextDrafts = liveDrafts.map((candidate) =>
+        const nextDrafts = currentDrafts.map((candidate) =>
           candidate.stableSetId === draft.stableSetId
             ? ({
                 ...candidate,
@@ -651,6 +700,7 @@ export function TodayWorkoutView() {
               } satisfies WorkoutSetDraft)
             : candidate,
         );
+        if (input.accessory) accessoryDraftsRef.current = nextDrafts;
         const updatedDraft = nextDrafts.find(
           (candidate) => candidate.stableSetId === draft.stableSetId,
         );
@@ -698,18 +748,20 @@ export function TodayWorkoutView() {
             await trainingE1RMRepository.acknowledgePR(e1rm.pr.id).catch(() => undefined);
           }
           if (
-            trainingFocused.current && !input.quickLogDate && draft.status !== 'complete' &&
-            nextDrafts.some((candidate) => !isDraftTerminal(candidate))
+            trainingFocused.current && !input.quickLogDate && (usesAccessoryRest || draft.status !== 'complete') &&
+            (usesAccessoryRest ? input.accessory?.mode !== 'all' && nextDrafts.some(candidate => candidate.exercise.id === draft.exercise.id && !isDraftTerminal(candidate)) : nextDrafts.some((candidate) => !isDraftTerminal(candidate)))
           ) {
-            const preference = await readNumber(
+            const accessoryPreference = usesAccessoryRest ? await readRestPreference(studentId) : null;
+            const preference = usesAccessoryRest ? null : await readNumber(
               STORAGE_KEYS.restPreference(studentId),
             );
             if (!trainingFocused.current || restRevision.current !== restRevisionAtSave) return response.id;
             const restExercise = resolveExerciseMetadata(draft.exercise.exercise_id);
+            setAccessoryRest(usesAccessoryRest);
             setRestExerciseName(restExercise ? exerciseTitle(restExercise) : '');
             setRestGeneration(value => value + 1);
             setRestSeconds(
-              resolveRestSeconds({
+              accessoryPreference ? resolveAccessoryRestSeconds({ prescribed: draft.planSet.rest_seconds, preference: accessoryPreference }) : resolveRestSeconds({
                 prescribed: draft.planSet.rest_seconds,
                 preference,
                 rpe: prescriptionRestRPE(draft.planSet),
@@ -781,6 +833,7 @@ export function TodayWorkoutView() {
     realCount: realDrafts.length,
     remainingSets: remaining.length,
   });
+  const stickyCompletion = completionUI.sticky && (state.kind === 'loaded' || state.kind === 'recording');
   const readinessDone = Boolean(readinessQuery.data?.checkin);
   const readinessGate: ReadinessGateState = readinessQuery.isLoading
     ? 'unknown'
@@ -869,13 +922,26 @@ export function TodayWorkoutView() {
             </>}
           </View>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={training22.history} onPress={() => router.push('/training-history')} style={styles.historyLink}>
-          <MaterialCommunityIcons name="history" size={spacing.base} color={colors.goldText} />
-          <Text style={styles.historyLabel}>{training22.history}</Text>
+        <View style={styles.weekHistoryRow}>
+          {state.kind !== 'loading' && plan && viewedWeek ? <View style={styles.weekHeading}>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.weekNumber}>W{viewedWeek.number}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}
+              accessibilityLabel={weekIsBehind ? t('student.trainingWeekStrip.daysBehindAccessibility', [weekStrip.daysBehind]) : weekStatus}
+              style={[styles.weekBadge, viewedWeek.status === 'current' && styles.currentWeekBadge]}>{weekStatus}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.weekCount}>{viewedWeek.completed} / {viewedWeek.cells.length}</Text>
+          </View> : <View style={styles.weekHeading} />}
+        <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingHistoryView.copy024')} onPress={() => router.push('/training-history')} style={styles.historyLink}>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.historyLabel}>{t('student.trainingHistoryView.copy024')}</Text>
           <MaterialCommunityIcons name="chevron-right" size={spacing.base} color={colors.goldText} />
         </Pressable>
+        </View>
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={workoutScroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets
+        onScrollBeginDrag={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
+        onScrollEndDrag={() => { userScrolling.current = false; }}
+        onMomentumScrollBegin={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
+        onMomentumScrollEnd={() => { userScrolling.current = false; }}
+        contentContainerStyle={[styles.content, stickyCompletion && { paddingBottom: completionDockHeight + (restSeconds !== null ? restOverlayHeight + spacing.xs : 0) + spacing.md }]}>
         {state.kind !== 'loading' && plan ? (
           <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} />
         ) : null}
@@ -951,8 +1017,12 @@ export function TodayWorkoutView() {
               </View>
             ) : null}
             <WorkoutBody
+              key={startKey}
+              onExerciseCompleted={markExerciseCompleted}
+              onCompletedRowLayout={revealCompletedRow}
               preview={dayState?.kind === 'upcoming' && plan ? {
-                recommendedDate: recommendedDateText(recommendedDate(plan, state.planDay)),
+                recommendedDate: weekStrip.week?.cells.find(cell => cell.isSelected)?.isBehind
+                  ? undefined : recommendedDateText(recommendedDate(plan, state.planDay)),
                 title: dayName(state.planDay, resolveExerciseMetadata),
                 unlockMessage: cursor ? t('student.trainingCalendarLogic.copy012', [
                   cursor.week_number, `D${dayCode(cursor, orderedDays).split('D')[1]} · ${dayName(cursor, resolveExerciseMetadata)}`,
@@ -975,6 +1045,13 @@ export function TodayWorkoutView() {
                 (log) => log.logged_date < today,
               )}
               studentId={studentId}
+              unit={profileQuery.data?.unit_preference === 'lb' ? 'lb' : 'kg'}
+              onAccessoryInputFocus={input => { focusedAccessoryInput.current = input; revealAccessoryInput(); }}
+              onAccessorySave={async (draft, request, mode) => {
+                const id = await commit({ stableSetId: draft.stableSetId, weightText: request.weight_kg, repsText: String(request.reps), rpeText: request.rpe ?? '', failed: request.failed ?? false, completed: request.completed, accessory: { request, mode } });
+                if (!id) throw new Error('Set unavailable');
+                return id;
+              }}
               onRecord={(draft) => { setInitialCamera(false); openDraft(draft); }}
               onVideo={(draft) => { setInitialCamera(true); openDraft(draft); }}
               onToggleComplete={(draft) => {
@@ -1021,7 +1098,7 @@ export function TodayWorkoutView() {
                 </Text>
               </View>
             ) : null}
-            {completionUI.button ? (
+            {completionUI.button && !completionUI.sticky ? (
               <HoldToCompleteButton
                 disabled={completion.isPending || upsert.isPending}
                 onComplete={() => void completeDay()}
@@ -1030,6 +1107,13 @@ export function TodayWorkoutView() {
           </>
         ) : null}
       </ScrollView>
+      {stickyCompletion ? <View testID="workout-completion-dock"
+        onLayout={event => setCompletionDockHeight(event.nativeEvent.layout.height)}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: restSeconds !== null ? restOverlayHeight + spacing.xs : 0,
+          paddingVertical: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.borderDefault, backgroundColor: colors.bgBase }}>
+        <HoldToCompleteButton disabled={completion.isPending || upsert.isPending} onComplete={() => void completeDay()} />
+      </View> : null}
       {quickLogPlan ? <QuickLogSheet initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
         const outcome = await quickLogAttempt.current!.submit(input);
         if (outcome.kind === 'completed') {
@@ -1135,6 +1219,8 @@ export function TodayWorkoutView() {
         <RestTimer
           key={restGeneration}
           durationSeconds={restSeconds}
+          onOverlayLayout={event => setRestOverlayHeight(event.nativeEvent.layout.height)}
+          showRPEExplanation={!accessoryRest}
           exerciseName={restExerciseName}
           studentId={studentId}
           onClose={endRest}
@@ -1160,13 +1246,20 @@ const createStyles = (colors: Colors) =>
     },
     historyLink: {
       alignSelf: 'flex-end',
+      marginLeft: 'auto',
       alignItems: 'center',
       flexDirection: 'row',
       gap: spacing.xs,
       minHeight: spacing.minimumHitTarget,
-      maxWidth: '100%',
+      flexShrink: 0,
     },
-    historyLabel: { color: colors.goldText, ...typography.footnote, flexShrink: 1 },
+    weekHistoryRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs },
+    weekHeading: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 0 },
+    weekNumber: { ...font.display(14), color: colors.textPrimary },
+    weekBadge: { ...font.body(11, 'semibold'), color: colors.textSecondary, backgroundColor: colors.bgStack, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: spacing.point2, flexShrink: 0, textAlign: 'center' },
+    currentWeekBadge: { color: colors.goldText, backgroundColor: colors.goldSoft },
+    weekCount: { ...font.mono(11), color: colors.textMuted },
+    historyLabel: { color: colors.goldText, ...typography.footnote, flexShrink: 0 },
     navTitle: { color: colors.textPrimary, ...font.display(20), flexShrink: 1 },
     navActions: { alignItems: 'center', flexDirection: 'row', gap: 9 },
     navButton: {

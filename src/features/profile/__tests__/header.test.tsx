@@ -1,6 +1,6 @@
 import { expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { t } from '@/i18n';
 import { Eyebrow } from '@/design/Eyebrow';
 import { MyProfileHeader } from '../MyProfileHeader';
@@ -9,7 +9,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
-test('profile header puts its subtitle after the title without an Eyebrow', () => {
+test('profile header keeps the title without its old subtitle or an Eyebrow', () => {
   let renderer!: ReactTestRenderer;
   act(() => { renderer = create(<MyProfileHeader />); });
   try {
@@ -17,9 +17,8 @@ test('profile header puts its subtitle after the title without an Eyebrow', () =
     const title = texts.findIndex((node) => node.props.children === t('student.myProfileView.copy016'));
     const subtitle = texts.findIndex((node) => node.props.children === t('student.myProfileView.copy017'));
     expect(title).toBeGreaterThanOrEqual(0);
-    expect(subtitle).toBeGreaterThan(title);
+    expect(subtitle).toBe(-1);
     expect(renderer.root.findAllByType(Eyebrow)).toHaveLength(0);
-    expect(StyleSheet.flatten(texts[subtitle].props.style)).toMatchObject({ fontSize: 11, letterSpacing: 0.44, marginTop: -8 });
   } finally {
     act(() => renderer.unmount());
   }

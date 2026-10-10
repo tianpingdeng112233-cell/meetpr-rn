@@ -271,11 +271,29 @@ test('unknown profile enums parse and map to unset form values', () => {
 
 test('tomorrow birthday and yesterday competition date are invalid in steps 1 and 7', () => {
   jest.useFakeTimers().setSystemTime(new Date(2026, 8, 4, 12));
-  const form = { ...completeForm(), birthDate: '2026-09-05', isCompeting: true, competitionDate: '2026-09-03' };
+  const form = { ...completeForm(), birthDate: '2026-09-05', isCompeting: true, targetWeightClass: 'IPF · 83 kg', competitionDate: '2026-09-03' };
   expect(invalidFieldsForStep(form, 1)).toEqual(['birthDate']);
   expect(invalidFieldsForStep(form, 7)).toEqual(['competitionDate']);
   expect(invalidFieldsForStep({ ...form, birthDate: '2026-09-04' }, 1)).toEqual([]);
   expect(invalidFieldsForStep({ ...form, competitionDate: '2026-09-04' }, 7)).toEqual([]);
   expect(invalidFieldsForStep({ ...form, birthDate: '1929-12-31' }, 1)).toEqual(['birthDate']);
   expect(invalidFieldsForStep({ ...form, competitionDate: '2036-09-05' }, 7)).toEqual(['competitionDate']);
+});
+
+
+test('step 7 can stay collapsed and clears stale meet fields while preserving the note', () => {
+  const form = { ...createEmptyOnboardingForm(), targetWeightClass: '83kg', noteToCoach: 'Keep this note' };
+  expect(invalidFieldsForStep(form, 7)).toEqual([]);
+  expect(onboardingPatchForStep(form, 7)).toEqual({ injury_notes: null, injury_areas: null,
+    is_competing: false, competition_date: null, target_weight_class: null, note_to_coach: 'Keep this note' });
+});
+
+test('expanded step 7 requires a recognized federation and class and saves exactly the meet plus existing extras', () => {
+  const form = { ...createEmptyOnboardingForm(), isCompeting: true, noteToCoach: 'Ready' };
+  expect(invalidFieldsForStep(form, 7)).toEqual(['federation', 'weightClass']);
+  expect(invalidFieldsForStep({ ...form, targetWeightClass: '83kg' }, 7)).toEqual(['federation', 'weightClass']);
+  const complete = { ...form, targetWeightClass: 'IPF · 83 kg' };
+  expect(invalidFieldsForStep(complete, 7)).toEqual([]);
+  expect(onboardingPatchForStep(complete, 7)).toEqual({ injury_notes: null, injury_areas: null,
+    is_competing: true, competition_date: form.competitionDate, target_weight_class: 'IPF · 83 kg', note_to_coach: 'Ready' });
 });
