@@ -246,6 +246,14 @@ export function TodayWorkoutView() {
       : viewedWeek?.status === 'upcoming' ? 'student.trainingWeekStrip.upcoming' : 'student.trainingWeekStrip.completed');
   const planDay = weekStrip.selectedDay;
   const selectedDayID = planDay?.id ?? null;
+  const previousSelectedDayID = useRef<string | null>(null);
+  useEffect(() => {
+    if (previousSelectedDayID.current !== null && previousSelectedDayID.current !== selectedDayID) {
+      // RN Android does not clamp out-of-range scroll positions while the ScrollView is hidden.
+      workoutScroll.current?.scrollTo({ y: 0, animated: false });
+    }
+    previousSelectedDayID.current = selectedDayID;
+  }, [selectedDayID]);
   const dayState = planDay
     ? workoutDayState(orderedDays, planDay, clockNow)
     : null;

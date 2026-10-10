@@ -330,6 +330,46 @@ test('browsing a completed week keeps Completed instead of the overdue cursor co
 });
 
 
+test('returning to the current training day on blur scrolls to the top once without animation', async () => {
+  servedPlan = { ...plan, days: [
+    { ...plan.days[0], completed_at: '2026-09-01T12:00:00Z' },
+    { ...plan.days[0], id: 'current-day', day_of_week: 3, sort_order: 1 },
+  ] };
+  const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {}).mockClear();
+  await mount();
+  const cleanups: (() => void)[] = [];
+  await act(async () => {
+    const callbacks = new Set(jest.mocked(useFocusEffect).mock.calls.map(([callback]) => callback));
+    callbacks.forEach(callback => { const cleanup = callback(); if (cleanup) cleanups.push(cleanup); });
+  });
+  const dayButton = (code: string) => renderer.root.findAll(node =>
+    node.props.accessibilityRole === 'button' && node.props.accessibilityLabel?.startsWith(`${code},`))[0];
+  try {
+    expect(dayButton('W1D2').props.accessibilityState.selected).toBe(true);
+    await act(async () => { dayButton('W1D1').props.onPress(); });
+    expect(dayButton('W1D1').props.accessibilityState.selected).toBe(true);
+    scrollTo.mockClear();
+  } finally {
+    await act(async () => { cleanups.forEach(cleanup => cleanup()); });
+  }
+  expect(dayButton('W1D2').props.accessibilityState.selected).toBe(true);
+  expect(scrollTo).toHaveBeenCalledTimes(1);
+  expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+});
+
+test('initial training day load and same-day rerenders do not scroll', async () => {
+  const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {}).mockClear();
+  await mount();
+  expect(renderer.root.findAllByType(ScrollView).length).toBeGreaterThan(0);
+  expect(scrollTo).not.toHaveBeenCalled();
+  await act(async () => {
+    renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>);
+  });
+  await act(async () => { await client.invalidateQueries(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(scrollTo).not.toHaveBeenCalled();
+});
+
 test('090 all done docks exactly one completion control outside the scroll content', async () => {
   await mount();
   expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
