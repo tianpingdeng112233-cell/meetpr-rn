@@ -497,17 +497,22 @@ test('signup code button keeps pending and countdown text legible while invalid 
   const textColor = (label: string) => StyleSheet.flatten(button(label).findByType(Text).props.style).color;
   expect(textColor(t('auth.getCode'))).toBe(design.colors.textDisabled);
   expect(button(t('auth.getCode')).props.accessibilityState.disabled).toBe(true);
+  // An invalid email keeps the shared disabled dimming.
+  expect(button(t('auth.getCode')).props.feedback).not.toBe('none');
   act(() => input(t('auth.email')).props.onChangeText('student@example.com'));
   act(() => button(t('auth.getCode')).props.onPress());
   try {
     expect(textColor(t('auth.getCode'))).toBe(design.colors.textTertiary);
     expect(button(t('auth.getCode')).props.accessibilityState.disabled).toBe(true);
+    // FeedbackPressable fades disabled controls to 35%; pending and countdown opt out so the label stays readable.
+    expect(button(t('auth.getCode')).props.feedback).toBe('none');
   } finally {
     await act(async () => resolve());
   }
   act(() => jest.advanceTimersByTime(2000));
   expect(textColor(t('auth.resendCountdown', [58]))).toBe(design.colors.textTertiary);
   expect(button(t('auth.resendCountdown', [58])).props.accessibilityState.disabled).toBe(true);
+  expect(button(t('auth.resendCountdown', [58])).props.feedback).toBe('none');
   act(() => input(t('auth.email')).props.onChangeText('invalid'));
   expect(textColor(t('auth.getCode'))).toBe(design.colors.textDisabled);
   expect(button(t('auth.getCode')).props.accessibilityState.disabled).toBe(true);
