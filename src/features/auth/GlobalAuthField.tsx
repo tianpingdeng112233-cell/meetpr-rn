@@ -3,7 +3,7 @@ import { Text, TextInput, View, type TextInputProps } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Circle, Path } from 'react-native-svg';
 
-import { t } from '@/i18n';
+import { getLocale, t } from '@/i18n';
 import { font, typography, useColors } from '@/design';
 import { authTypography } from './auth-typography';
 
@@ -22,6 +22,7 @@ export function GlobalAuthField({ label, helper, error, mono = false, trailing, 
   const [hasUncontrolledText, setHasUncontrolledText] = useState(Boolean(props.defaultValue));
   const hasText = props.value === undefined ? hasUncontrolledText : props.value.length > 0;
   const passwordPlaceholder = secureTextEntry && !hasText;
+  const codePlaceholder = mono && !hasText && getLocale() === 'zh';
   return <View style={{ gap: 6 }}>
     <View style={{
       backgroundColor: colors.surfaceCard, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
@@ -40,9 +41,9 @@ export function GlobalAuthField({ label, helper, error, mono = false, trailing, 
           onFocus={event => { setFocused(true); onFocus?.(event); }}
           onBlur={event => { setFocused(false); onBlur?.(event); }}
           style={[{
-            ...(passwordPlaceholder ? font.body(16, 'semibold') : secureTextEntry || mono ? font.mono(18, 'semibold') : font.body(16, 'semibold')),
+            ...(passwordPlaceholder || codePlaceholder ? font.body(16, 'semibold') : secureTextEntry || mono ? font.mono(18, 'semibold') : font.body(16, 'semibold')),
             ...(secureTextEntry ? { letterSpacing: passwordPlaceholder ? 0 : 2.52 } : {}),
-            ...authTypography(mono ? 'code' : 'body'),
+            ...authTypography(mono && hasText ? 'code' : 'body'),
             color: colors.textPrimary, flex: 1, minHeight: 44, padding: 0,
           }, style]} />
         {trailing}

@@ -427,12 +427,14 @@ test.each(['global', 'china'])('%s Chinese recovery labels the code and uses the
   act(() => input(t('auth.email')).props.onChangeText('student@example.com'));
   await act(async () => button(t('auth.sendCode')).props.onPress());
   expect(renderer.root.findAllByType(Text).find(node => node.props.children === t('auth.signupCode'))).toBeDefined();
+  act(() => input(t('auth.codePlaceholder')).props.onChangeText('1'));
   expect(StyleSheet.flatten(input(t('auth.codePlaceholder')).props.style)).toMatchObject({ fontFamily: 'IBMPlexMono_400Regular', fontWeight: '400', fontSize: 17, letterSpacing: 2 });
 });
 
 test('CN Chinese signup uses the loaded regular monospace font for verification digits', () => {
   china(); setLocaleOverride('zh');
   act(() => { renderer = create(<GlobalRegisterScreen />); });
+  act(() => input(t('auth.signupCode')).props.onChangeText('1'));
   expect(StyleSheet.flatten(input(t('auth.signupCode')).props.style)).toMatchObject({ fontFamily: 'IBMPlexMono_400Regular', fontWeight: '400', fontSize: 17, letterSpacing: 2 });
 });
 
@@ -452,4 +454,61 @@ test.each(['global', 'china'])('%s registration locks email while submit is pend
     await act(async () => reject(new ApiError('network', 'offline')));
   }
   expect(input('EMAIL').props.editable).toBe(true);
+});
+
+test('code placeholders use Chinese body typography until a digit is entered and preserve English styles', async () => {
+  china();
+  for (const locale of ['zh', 'en'] as const) {
+    setLocaleOverride(locale);
+    for (const screen of ['signup', 'recovery'] as const) {
+      act(() => { renderer = create(screen === 'signup' ? <GlobalRegisterScreen /> : <GlobalForgotPasswordScreen />); });
+      if (screen === 'recovery') {
+        mockRequestReset.mockResolvedValueOnce();
+        act(() => input(t('auth.email')).props.onChangeText('student@example.com'));
+        await act(async () => button(t('auth.sendCode')).props.onPress());
+      }
+      const label = t(screen === 'signup' ? 'auth.signupCode' : 'auth.codePlaceholder');
+      const emptyStyle = StyleSheet.flatten(input(label).props.style);
+      if (locale === 'zh') {
+        expect(emptyStyle.fontFamily).toBeUndefined();
+        expect(emptyStyle.letterSpacing).not.toBe(2);
+        expect(emptyStyle.fontSize).toBe(16);
+      } else {
+        expect(emptyStyle).toMatchObject({ fontFamily: 'IBMPlexMono_600SemiBold', fontSize: 18 });
+      }
+      act(() => input(label).props.onChangeText('1'));
+      if (locale === 'zh') {
+        expect(StyleSheet.flatten(input(label).props.style)).toMatchObject({ fontFamily: 'IBMPlexMono_400Regular', fontSize: 17, letterSpacing: 2 });
+      } else {
+        expect(StyleSheet.flatten(input(label).props.style)).toEqual(emptyStyle);
+      }
+      act(() => input(label).props.onChangeText(''));
+      expect(StyleSheet.flatten(input(label).props.style)).toEqual(emptyStyle);
+      act(() => renderer.unmount());
+    }
+  }
+});
+
+test('signup code button keeps pending and countdown text legible while invalid email stays faded', async () => {
+  china(); setLocaleOverride('zh'); jest.useFakeTimers();
+  let resolve!: () => void;
+  mockSignupCode.mockImplementationOnce(() => new Promise<void>(done => { resolve = done; }));
+  act(() => { renderer = create(<GlobalRegisterScreen />); });
+  const textColor = (label: string) => StyleSheet.flatten(button(label).findByType(Text).props.style).color;
+  expect(textColor(t('auth.getCode'))).toBe(design.colors.textDisabled);
+  expect(button(t('auth.getCode')).props.accessibilityState.disabled).toBe(true);
+  act(() => input(t('auth.email')).props.onChangeText('student@example.com'));
+  act(() => button(t('auth.getCode')).props.onPress());
+  try {
+    expect(textColor(t('auth.getCode'))).toBe(design.colors.textTertiary);
+    expect(button(t('auth.getCode')).props.accessibilityState.disabled).toBe(true);
+  } finally {
+    await act(async () => resolve());
+  }
+  act(() => jest.advanceTimersByTime(2000));
+  expect(textColor(t('auth.resendCountdown', [58]))).toBe(design.colors.textTertiary);
+  expect(button(t('auth.resendCountdown', [58])).props.accessibilityState.disabled).toBe(true);
+  act(() => input(t('auth.email')).props.onChangeText('invalid'));
+  expect(textColor(t('auth.getCode'))).toBe(design.colors.textDisabled);
+  expect(button(t('auth.getCode')).props.accessibilityState.disabled).toBe(true);
 });

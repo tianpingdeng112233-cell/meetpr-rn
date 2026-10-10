@@ -4158,6 +4158,31 @@ Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-glob
 
 `git diff --check`：无输出，exit 0。本轮没有运行全量测试，按交付要求留给 Opus 在沙箱外重跑。独立只读 Standards / Spec 定向复核均无遗留发现；以上实际测试由主代理执行。开工/完工哈希核对确认仅上述三个实现文件、屏幕测试文件及本 JOURNAL 改变，上一轮其余 src 改动未动。临时测试日志仅写本树，摘录后删除；没有写其他 worktree，没有 commit/push/PR。此前两处歧义已由用户明确决定，无新增待决定项。
 
+### 返修第 2 轮
+
+基于 Opus 已提交并收货的 `1d6bf8c` 继续，开工工作区干净；没有改写提交。仅按两项实机反馈修复：`GlobalAuthField` 复用现有 `hasText`，中文验证码空值时用正文样式，输入数字后才启用 regular 等宽字体与字距 2；英文空值/有值样式保持。`GlobalRegisterScreen` 仅调整发码按钮文字颜色：发码中或倒计时中用 `textTertiary`，无效邮箱保留 `textDisabled`；背景、点击条件及 accessibilityState 不变。
+
+既有屏幕 seam 中新增恰好两条回归测试，先运行得到 `2 failed, 31 skipped, 33 total`（exit 1），分别复现了占位符等宽字体和发码中文字颜色错误：
+
+- `code placeholders use Chinese body typography until a digit is entered and preserve English styles`：覆盖注册与找回第二步的空值→输入一位→清空，以及英文空值/输入样式不变。
+- `signup code button keeps pending and countdown text legible while invalid email stays faded`：覆盖无效邮箱、发码请求进行中、倒计时 58 秒及改回无效邮箱，并断言 disabled 无障碍状态。
+
+上一轮验证码数字字体测试仅补充输入一位数字的前置步骤，保留原字体断言，适配本轮“空值显示正文占位符”的明确要求。未改其他已有断言、文案、路由、错误处理、倒计时、footer 或 API。
+
+定向测试命令 `npx jest --runInBand src/features/auth src/api/__tests__/auth-global.test.ts`，exit 0，原始汇总：
+
+```text
+Test Suites: 4 passed, 4 total
+Tests:       81 passed, 81 total
+Snapshots:   0 total
+Time:        5.969 s
+Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-global.test.ts/i.
+```
+
+`EXPO_NO_DOTENV=1 npm run lint`：exit 0，无 warning/error，最后非空行 `> expo lint`；沿用禁用 dotenv 装载以免读取凭证文件。本轮未运行全量测试或模拟器，不将组件样式断言称为新的实机验收；待 Opus 复看。
+
+`npx tsc --noEmit`：exit 0，stdout/stderr 为空，无结果行。最终自查逐行 diff 与用户两项返修范围一致；`git diff --check` 无输出、exit 0。临时日志已摘录并删除，最终 `git status --short` 仅包含 `GlobalAuthField.tsx`、`GlobalRegisterScreen.tsx`、`global-auth-screens.test.tsx` 及本 JOURNAL 四个预期文件；无临时日志遗留。未 commit、push、开 PR 或写其他 worktree。
+
 ## 2026-10-10 · Spec 091 CARD-C · Android 构建与出包
 
 工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091c`，分支 `feat/091c-build-tracks`，起点 `ff909c9`，开工工作区干净。第一条实际命令在本目录 `mktemp .codex-write-probe.XXXXXX` 并删除临时文件，exit 0。全程没有进入其他 worktree 或主仓；沿用已有 node_modules 软链，未安装依赖、未 commit/push/开 PR，未修改 src、依赖、锁文件或正典台账。
