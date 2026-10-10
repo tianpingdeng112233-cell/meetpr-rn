@@ -113,7 +113,7 @@ export default function GlobalRegisterScreen() {
       trailing={<Pressable accessibilityRole="button" accessibilityLabel={codeButton}
         accessibilityState={{ disabled: codeDisabled, busy: sending }} disabled={codeDisabled} onPress={() => void sendCode()}
         style={{ minHeight: 44, minWidth: 44, borderRadius: 10, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: codeDisabled ? colors.surfaceRaised : colors.goldSoft }}>
-        <Text style={{ ...font.body(13), ...authTypography(), color: codeDisabled ? colors.textDisabled : colors.goldText }}>{codeButton}</Text>
+        <Text style={{ ...font.body(13), ...authTypography(), color: remaining > 0 || sending ? colors.textTertiary : codeDisabled ? colors.textDisabled : colors.goldText }}>{codeButton}</Text>
       </Pressable>} /> : null}
     <GlobalAuthField label={t('auth.password')} placeholder={t('auth.passwordPlaceholder')} helper={t('auth.passwordHelper')} error={password.length > 0 && !isValidPassword(password) ? t('auth.invalidPassword') : undefined}
       value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" autoCapitalize="none" autoCorrect={false} editable={!busy} />
