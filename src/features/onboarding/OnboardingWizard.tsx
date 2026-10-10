@@ -24,6 +24,7 @@ import {
   getOnboardingStepTitles,
   onboardingPatchForStep,
   resumeStep,
+  type OnboardingErrorField,
   type OnboardingForm,
   type OnboardingStep,
 } from './model';
@@ -63,7 +64,7 @@ export function OnboardingWizard({
   const [editing, setEditing] = useState(false);
   const [saveBanner, setSaveBanner] = useState<string | null>(null);
   const [completionError, setCompletionError] = useState<string | null>(null);
-  const [errorFields, setErrorFields] = useState<Set<keyof OnboardingForm>>(new Set());
+  const [errorFields, setErrorFields] = useState<Set<OnboardingErrorField>>(new Set());
 
   // Reset before committing a reopened modal so the old form never flashes.
   const [previousVisible, setPreviousVisible] = useState(visible);

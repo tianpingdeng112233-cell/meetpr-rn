@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -120,11 +121,12 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
         : buildExerciseIndex(exerciseCatalogQuery.data?.exercises ?? []),
     [exerciseCatalogQuery.data?.exercises, liftMetadataUnavailable],
   );
+  const todayState = todayModel(activePlan, now, planSummaries);
   const currentWeekIndex = currentWeekDays(activePlan?.days ?? [])[0]?.week_number ?? 1;
   const week = useWeekOverviewViewModel(
     studentId,
     activePlan,
-    currentWeekIndex,
+    todayState.completedToday?.week_number ?? currentWeekIndex,
     planRevision,
     exerciseIndex,
     profileQuery.data ?? null,
@@ -136,6 +138,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
     Boolean(activePlan),
   );
   const [requestedDayID, setRequestedDayID] = useState<string | null>(null);
+  useFocusEffect(useCallback(() => { setRequestedDayID(null); }, []));
   const [planSeenState, setPlanSeenState] = useState<{
     signatureKey: string | null;
     unread: boolean;
@@ -176,9 +179,8 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
   }, [planSignature, planSignatureKey, studentId]);
 
   const days = week.state.status === 'loaded' ? week.state.days : [];
-  const todayState = todayModel(activePlan, now, planSummaries);
   const current = cursorDay(activePlan?.days ?? []);
-  const todayDay = days.find(day => day.day.id === current?.id) ?? days[days.length - 1] ?? null;
+  const todayDay = days.find(day => day.day.id === (todayState.completedToday ?? current)?.id) ?? days[days.length - 1] ?? null;
   const selectedDayID = requestedDayID && days.some(day => day.day.id === requestedDayID) ? requestedDayID : todayDay?.day.id ?? null;
   const selectedDay = days.find(day => day.day.id === selectedDayID) ?? todayDay;
   const familyByExerciseId = useMemo(
@@ -203,7 +205,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
     now,
     () => `dashboard-trajectory-${projectionIndex++}`,
   );
-  const railDay = todayState.completedToday ?? todayState.cursor ?? todayDay?.day;
+  const railDay = selectedDay?.day ?? todayState.completedToday ?? todayState.cursor ?? todayDay?.day;
   const lifts = activePlan ? resolveDashboardLifts(activePlan, exerciseIndex, profileQuery.data ?? null) : new Map();
   const seenFamilies = new Set<string>();
   const rails = (railDay?.exercises ?? []).filter(exercise => exercise.is_main_lift).flatMap(exercise => {

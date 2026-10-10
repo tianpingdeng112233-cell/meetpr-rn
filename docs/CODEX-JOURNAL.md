@@ -2935,3 +2935,169 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `npx tsc --noEmit`：**0 errors**；`/private/tmp/r4-final-tsc.log`。
 - `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
 - 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。
+
+## Spec 085 卡 A（2026-10-09，Codex 开发自测；待 Opus 收货）
+
+### 实现要点与范围
+
+- 首条命令 `touch .codex-write-probe && rm .codex-write-probe` 成功，始终在指定可写工作树 `/Users/david/Projects/apps/meetpr-rn-wt-085` 实装。现场分支 `feat/085-today-final-walkthrough`，HEAD `1643fdf`，基线 `aeb1020`；开工工作区干净。仓内无 CONTEXT.md / FOLLOWUPS.md / AGENTS.override.md；CLAUDE.md 仅引用 AGENTS.md。
+- 只新增 `src/domain/meet/weight-class.ts`、`src/features/onboarding/meet.ts`、`src/domain/profile/body-weight.ts` 与各自目录下的三个测试文件；现有文件仅追加本 JOURNAL。不修改任何现有源文件，不接 UI，不加文案、依赖或 DTO，不读写存储，不调用 `t()`，不改后端与草稿结构。
+- 级别表逐项照 SPEC，CPA 女子末段 `90 / 100 / 100+`，IPL 女子末段 `100 / 110 / 110+`。新模块提供严格固定格式解析、格式化和按档案性别/唯一级别归属选表；旧手填值保持不识别，未接入任何展示或写入路径。
+- 比赛保存与移除各只返回三个字段，类型直接兼容 `OnboardingUpsertInput`；校验复用现有 `onboardingDateBounds(now).competition`，另检查真实日历日期、必填赛事方与合法级别。未知/未选赛事方时级别也无法判为有效。
+- 体重输入保留首个小数点和两位小数；kg/lb 保存为两位 kg 字符串，校验换算及舍入后的值均在 `(0, 500)` 内；lb 系数严格使用卡内 `2.2046226218`。读回去尾零，展示固定两位；`183.26 lb → 83.13 kg → 183.27 lb → 83.13 kg` 稳定。
+- 新文件未被现有 App 代码引用，因此未接入新的可见行为。没有运行模拟器或 UI 验收，本卡仅报告开发纯函数自测，不宣布整份 Spec 085 产品验收完成。
+
+### 红 → 绿测试与原始日志
+
+测试仅调用卡内三个新文件的导出函数，无内部 mock。按公开行为逐段加入测试，看到失败后再实现该段；参数化各例的名称与结果均保留在原始日志。日志根目录：`/private/tmp/rn-085-card-a/`，下表文件名均相对此目录。
+
+| 测试名 / 参数化用例 | 红 → 绿 | 原始日志 |
+|---|---|---|
+| `lists the four supported federations in picker order`（1） | 新模块不存在，suite 无法加载 → 通过 | `01-tables-red.log` / `01-tables-green.log` |
+| `returns the approved %s %s open classes`（四家 × 男女，8） | 同上 → 八张表逐项一致 | 同上 |
+| `round-trips %s %s in the fixed wire format`（5，含 120+ / 67.5 / 100+ / 84+、首尾空白） | 导出函数缺失 → 固定文字与解析结果通过 | `02-format-red.log` / `02-format-green.log` |
+| `leaves unrecognized class %j as legacy text`（18，空/null/undefined、83kg/-93/IPF 83/IPF、未知赛事方、表外/青年级别及格式错误） | 导出函数缺失 → 全部返回 null | 同上 |
+| `throws for a class outside %s: %s`（5） | 缺函数产生 TypeError，不符合 RangeError 断言 → 全部按编程错误抛 RangeError | 同上 |
+| `chooses table for %s %s / profile %s as %s`（10） | 导出函数缺失 → 男/女优先、未知性别唯一归属、重叠/不归属/未选默认男表通过 | `03-sex-red.log` / `03-sex-green.log` |
+| `saves only the three meet fields in an onboarding-compatible patch`（1） | 新模块不存在，suite 无法加载 → 精确三个保存字段通过 | `04-patch-red.log` / `04-patch-green.log` |
+| `removes the meet by clearing exactly its three fields`（1） | 同上 → false/null/null 通过 | 同上 |
+| `reports missing or invalid meet fields for %j`（18） | 导出函数缺失 → 三项逐一缺失、非法赛事方/级别、上下越界、无效日历日期通过 | `05-validation-red.log` / `05-validation-green.log` |
+| `accepts a complete meet on %s including date bounds`（4） | 导出函数缺失 → 今天/区间内/闰日/十年后边界通过 | 同上 |
+| `accepts a class from either sex table`（1） | 导出函数缺失 → 女子独有级别通过 | 同上 |
+| `clamps the ten-year date bound for leap day`（1） | 导出函数缺失 → 2038-02-28 合法、03-01 越界通过 | 同上 |
+| `filters body weight input %j to %j`（8） | 新模块不存在，suite 无法加载 → 包含 `83.256 → 83.25`、`8a3..2 → 83.2` 的全部过滤例通过 | `06-filter-red.log` / `06-filter-green.log` |
+| `converts %j %s into storable kg %j`（23） | 导出函数缺失 → kg 固定两位、lb 换算、0/空/500、非有限/非数字与舍入后边界通过 | `07-storage-red.log` / `07-storage-green.log` |
+| `reads stored %j kg as %s input %j`（14） | 导出函数缺失 → kg 去尾零、lb 换算、空/非法值通过 | `08-readback-red.log` / `08-readback-green.log` |
+| `keeps stored kg stable when %s lb is read back and saved`（2，183.25/183.26） | 读回函数缺失 → 读回后再保存 kg 不变 | 同上 |
+| `formats body weight %j as %s`（6，卡内三例各测 number/string） | 导出函数缺失 → 83.00 / 83.50 / 83.26 通过 | `09-display-red.log` / `09-display-green.log` |
+
+共新增 **3 suites / 126 tests**。01/04/06 的红测是新模块尚不存在导致加载失败（0 tests executed），其余为导出函数尚未实现的用例失败，未将这些记录写成已执行的行为断言失败。抛错断言初稿过宽，缺函数也可满足 `toThrow()`；实现前改为 `toThrow(RangeError)` 并重新确认 02 的 28 条新用例全部失败，才实现对应函数。
+
+### 差异、审查与边界
+
+- **SPEC 与卡的一处冲突**：卡写 `bodyWeightKgFromInput` 的 kg 分支“原样（去掉多余的尾随小数点）”；SPEC §2「存储」明确“公制原样存两位”。按用户规定以 SPEC 为准，返回 `83.00` / `83.50` 等固定两位字符串；对应测试也按 SPEC。没有发现阻碍卡 A 的 SPEC 自相矛盾，没有自行改变已批准产品口径。
+- 首轮 `npx tsc --noEmit` 有 **7 个 TS2345**，均来自新增 Jest 参数表的 `as const` 只读元组与 callback 类型不兼容；改为显式 `test.each` 元组类型，未改断言或运行时行为。原始失败保留 `first-tsc.log`。首轮全量 Jest/lint 已通过，分别保留 `first-jest.log` / `first-lint.log`。
+- `code-review` 两个只读子代理分别直接审查六个新增文件（未跟踪文件不在普通 git diff 内）：**Standards 0 findings；Spec 0 findings**。测试类型修正和空行整理不改语义。这里只是开发自审，不替代 Opus 逐项收货。
+- 仓内没有 `docs/agents/issue-tracker.md`，未私建配置；本次使用用户提供的 SPEC 与卡完成本地审查。未来如需完整 Matt tracker 流程，应由 David 调用 `$setup-matt-pocock-skills`；不阻塞本卡已授权的代码工作。
+- 没有 commit、push、PR、依赖安装或正典台账修改。PARITY 与卡 B 界面接线留给后续批准范围。
+
+### 最终全量检查
+
+- `npx jest --runInBand`：**156 suites / 1295 tests passed，0 failed，0 snapshots**，15.666s，退出码 0；`/private/tmp/rn-085-card-a/final-jest.log`。
+- `npx tsc --noEmit`：**0 errors**，退出码 0；`/private/tmp/rn-085-card-a/final-tsc.log`（成功无输出）。
+- `npm run lint`：**0 errors / 0 warnings**，退出码 0；`/private/tmp/rn-085-card-a/final-lint.log`。
+- 新增代码与测试完整 diff：`/private/tmp/rn-085-card-a/final-code.diff`。本地检查结果不等于 CI 或 UI 验收。
+
+### 交付末次现场核对
+
+- `git diff --check` 通过；工作区改动仅本 JOURNAL 与六个新文件。尝试 `touch /Users/david/Projects/scratch/rn-085-today-20261009/done-a` 被沙箱拒绝，原始错误：`touch: /Users/david/Projects/scratch/rn-085-today-20261009/done-a: Operation not permitted`。按用户要求忽略标记文件步骤，不改去其他工作目录。
+- 末次核对发现本会话之外将 HEAD 从 `1643fdf` 更新为 `28376ac`（`Reduce the Today day card in spec 085 to an overview that hands off to Training`）。已读取该提交完整 diff：仅修改 SPEC 的 Today/UI 部分，卡 A 的体重、比赛与级别表条款未变；本会话没有执行 commit/push。
+- **末次新发现的 SPEC 文本矛盾，停止继续动作并留待 Opus 澄清**：新提交的验收项 1b 同时写“动作数与组数”和“卡内没有组数、次数、重量”。可能涉及汇总组数与逐动作明细的区分，但本会话不自行裁决。发现时卡 A 代码、全部检查及上述记录已经完成；没有实现或修改 §1 UI，也未因该句更改卡 A。此条取代前文“没有发现”对末次 SPEC 版本的适用性。
+
+## Spec 085 卡 B（2026-10-09，Codex 开发自测；待 Opus 收货）
+
+### 实现要点与文件落点
+
+- 现场起点：`feat/085-today-final-walkthrough` / `bfb53c5`，工作区最初干净；第一条命令 `touch .codex-write-probe && rm .codex-write-probe` 退出码 0。仅在本 worktree 实装，未安装依赖，未 commit / push / stash / PR。
+- 已读本仓 AGENTS、CLAUDE（仅引用 AGENTS）、SPEC 与卡 B 全文、PLAN、工程流程及记忆索引；未发现 CONTEXT、FOLLOWUPS 或更近的 AGENTS.override。已查 Expo SDK 57 版本文档。复用卡 A 的三个纯函数文件，三者 diff 均为空；API schema、本地草稿 schema、依赖、训练页、教练端、Tab 栏均未改。
+- Today：`src/features/dashboard/WeekCalendar.tsx` 用显式 `todaySelection` 隔离选中描边与当前日金色标记；`DashboardScreen.tsx` 接入可点概览、按 sort_order 解析的一行动作名、全天合计、所选日 handoff、体重与比赛单项入口和级别原文；`use-dashboard.ts` 重新聚焦清选择、默认选择当天刚完成日（含跨周完成）、e1RM rails 使用所选日。页头与底部开练行为保留。
+- 营养：新增 `src/features/dashboard/NutritionPlaceholder.tsx`，随体重 / Meetday 行显示；四格纯展示，整卡无障碍读一句，无点击、请求或埋点。
+- 共用表单：`src/features/onboarding/OnboardingSteps.tsx` 抽出共用 `WeightSection`、独立 `NoteSection`，重接 Meet 日期/赛事方/四列级别与性别表切换；引导第 7 步展开/移除、末尾留言。`controls.tsx` 为现有 FieldLabel 增加错误态，为 ChoiceGroup 增加局部 Meet 外观与尾行占位。`model.ts` 接卡 A 校验/patch，体重保存固定两位；`OnboardingWizard.tsx` 只扩展错误字段类型，草稿结构不变。
+- Profile：`src/features/profile/model.ts` 新增 weight/note 白名单与三行值；`ProfileEditor.tsx` 单项体重、Meet、Note 内容隔离及移除确认；`MyProfileScreen.tsx` Meet 后紧接 Note，Basic information 行使用定稿标题；`components.tsx` 仅新增可选 valueLines，Note 单行截断；`src/app/(student)/profile.tsx` 扩展入口白名单。旧手填级别直到保存才覆盖，取消不写；Note 沿用原来的 trim/空值规则。
+- 文案：新增中英文位于 `src/i18n/catalog/RnExtras.json`；复用现有 Save、Cancel、Completed、Body weight、Meet、Meet date 等等价键。删除 `StudentKit.json` 中本卡失效的 `step7ExtrasSection.copy004–008`、`myProfileView.copy008–009`、`profileCardsSection.copy007`，不存在残留源代码引用。
+- 测试文件：`src/features/onboarding/__tests__/model.test.ts`；`src/features/profile/__tests__/model.test.ts`、`editor.test.tsx`；`src/features/dashboard/__tests__/week-calendar.test.tsx`、`visual-parity.test.tsx`、`use-dashboard.test.tsx`。只在卡 B 四处 seam 新增测试；`src/features/onboarding/__tests__/wizard.test.tsx` 仅修正既有精度断言，没有新增边界。
+
+### 红 → 绿测试
+
+| 边界 / 行为 | 实际红测 | 绿测结果 |
+| --- | --- | --- |
+| onboarding model：收起第 7 步 | 原来返回 isCompeting 缺项（1 failed） | 未展开校验通过，false/null/null，留言保留 |
+| onboarding model：展开三项必填 | 缺赛事方/级别却返回空错误（1 failed） | 旧手填值不算完整；新格式合法可提交；该文件 27 tests 通过 |
+| profile model：weight/note/competition 白名单、行值与两位数 | 4 个 patch 断言失败；行值测试初稿 fixture 缺字段，修正 fixture 后重新确认预期值失败 | 该文件 23 tests 通过；不发送别区字段或 1RM |
+| profile editor：体重单项 | 新 section 未实现，5 tests 渲染失败（标题键未定义） | kg/lb 输入第三位截断，83.25 / 183.25 分别存 83.25 / 83.12；读回再存不变；空/0/500 拦截 |
+| profile editor：Meet 与 Note | 3 failed：旧标题、无旧值提示、无 Remove meet | 赛事方/级别缺项不写，换赛事方清级别；三字段保存；确认移除；取消不写；Note 保存/重开/失败重试保留；该文件 16 tests 通过 |
+| dashboard visual：概览、入口、完成态与营养 | 4 failed：仍路由 basics、旧体重显示、概览不存在 | 选中概览、动作顺序与未知动作跳过、单行截断、handoff、开练仍当前日、完成态和不可点营养通过 |
+| dashboard visual：摘要与 e1RM | 摘要实际为 Exercises: N · Sets: M（1 failed）；选 D2 无 Bench press chart（1 failed） | 概览文案按定稿、图表使用 D2 主项 |
+| dashboard week-calendar | 缺少独立当前日可访问标记（1 failed）；初稿用 host onPress 的测试调用修为现有 FeedbackPressable | 点选 Upcoming/Completed 时 selected 跟随，当前日标记不移动 |
+| dashboard hook | refocus 后仍 day-2（1 failed）；扩展跨周 fixture 后再次返回 day-2（1 failed） | 重聚焦回当前日；当天完成周末日后仍默认刚完成日 |
+| dashboard visual：Profile 三行标题 | Basic information 实际仍为 Height / Body weight（1 failed） | 按屏幕稿标题，Meet/Note 行存在，留言单行 |
+
+新增 16 tests（1295 → 1311），suite 数保持 156。红测结果来自实际命令输出；渲染错误与 fixture 错误没有冒充行为断言失败。首次完整 Jest 为 155 suites / 1310 tests 通过、1 suite / 1 test 失败：仅旧英制体重精度断言；修正见下表。所有原有测试保留，未删除测试以换取绿色。
+
+### 修改的旧断言（逐项）
+
+| 文件 / 原用例 | 修改 | 原因 |
+| --- | --- | --- |
+| profile/editor：competition editor title | `Meet / notes` → `Meet` | SPEC §3 独立比赛编辑页 |
+| profile/editor：basics saves units… | lb 读回 `176.4` → `176.37`；首次保存和重开保存两处 `80` → `80.00` | 两位换算与固定两位存储；身高断言未改 |
+| profile/editor：switching units after metric edits… | `198.4` → `198.42`，保存 `90` → `90.00` | 同上 |
+| profile/editor：meet notes save…（true/false 两例） | 改在 `note` 页挂载/重开；精确 patch 从四个比赛/留言字段改为仅 `note_to_coach` | Note 独立页面和白名单；多行读回断言保留 |
+| profile/editor：failed save retains notes / cancelling edited notes | 挂载从 competition 改 note；原失败保留、重试、取消零写入断言不变 | 原留言行为迁到新入口，并非删除或弱化 |
+| profile/model：basics submits only its own fields | `weight_kg: '80'` → `'80.00'` | 公制存储也固定两位 |
+| profile/model：competition submits only its own fields | fixture/预期 `'83'` → `'IPF · 83 kg'`；精确 patch 去掉 `note_to_coach` | 保存必须使用合法新格式，留言分离；另测旧值原样显示 |
+| onboarding/model：tomorrow birthday and yesterday competition… | fixture 增加 `targetWeightClass: 'IPF · 83 kg'`，日期断言全部保留 | 排除新必填项干扰，继续单独验证原日期上下界 |
+| onboarding/wizard：imperial weight input preserves raw text… | `1`、`1.` lb 对应 kg 从 `0.5` → `0.45`，`70.5` lb 从 `32` → `31.98`；blur/切回 lb 从 `1.1` → `0.99`，切 kg 从 `0.5` → `0.45` | 新两位 kg 精度；原逐次按键、blur 和单位切换覆盖全部保留 |
+| dashboard/visual-parity：Today metric cards…（空/有值两例） | route params / ProfileEditor section `basics` → `weight`；无障碍体重 `83 kg` / `84 kg` → `83.00 kg` / `84.00 kg` | 单项页与固定两位显示；原 Save 即时返回刷新、Cancel 无写入仍保留 |
+
+### 差异、审查与验证边界
+
+- 没有发现当前 SPEC 内阻碍实现的自相矛盾。卡 A JOURNAL 尾部记录的“概览卡有没有组数”矛盾已由当前 SPEC 1b 明确区分为全天合计与逐动作明细，不再适用。
+- 基线与说明文字有两处差异：现有 `daySummary` 英文实际为 `Exercises: N · Sets: M`，所以只为 Today 概览新增定稿格式，未改训练页共用摘要；现有 e1RM rails 实际取当前日，所以修正 hook 数据选择使其符合 SPEC 所选日要求，没有修改 e1RM 卡本身。
+- SPEC 测试 seam 列表主要描述卡 A + 卡 B 全部范围，卡 B 进一步指定 UI/model 落点；按用户明确指定的卡 B 四边界写测试。仅旧 wizard 精度断言必须同步，不在该文件扩展测试范围。
+- `code-review` 两个只读子代理：Standards 首轮 1 项（旧键）；Spec 首轮 4 项（跨周完成、CPA 女子尾行四列、旧键、旧值等宽样式）。均定向修复并复审：Standards 0 剩余、Spec 0 剩余。之后 Basic information 标题按稿补齐并有红绿测试；重复 Meet 文案改为复用已有等价键。
+- 仓内仍无 `docs/agents/issue-tracker.md`；本任务已有明确 SPEC/卡，未私建配置，不阻塞本地开发自审。若以后需依赖 tracker 流程，应由 David 调用 `$setup-matt-pocock-skills`。
+- **未做设备验证**。没有运行模拟器、Global 联调或三个真实升级账号验收；沙箱中的挂载/fixture 测试不代表 Opus 的实屏收货，也未修改 PARITY 或收货清单。
+- 最需要实屏确认的三处：① Today 周条双标记、概览单行截断、跳训练再返回重置，特别是本周末日刚完成的跨周场景；② Body weight 数字键盘、kg/lb 两位输入与保存/取消回 Today 的即时更新；③ Meet 日期轮、四列级别（CPA 女子尾行、other 性别切表）、错误标题/移除确认及引导展开收起，在 Light/Dark、360×640 dp、字体 1.3× 下的布局。
+
+### 最终全量检查
+
+- `npx jest --runInBand`：**156/156 suites、1311/1311 tests passed，0 failed，0 snapshots**，17.059s，退出码 0（包含 i18n 守卫）。仍有测试环境既有 Expo notifications / React act 提示，不将它们宣称为设备日志或真实设备验证。
+- `npx tsc --noEmit`：**0 errors**，退出码 0（成功无输出）。
+- `npm run lint`：**0 errors / 0 warnings**，退出码 0。
+- `git diff --check`：通过。所有检查在本 worktree 运行；交付时 HEAD 仍为 `bfb53c5`。命令临时日志清理，不纳入交付；完整变更可直接查看本 worktree 未提交 diff。
+
+## Spec 085 卡 B 返修一
+
+2026-10-09；工作树 `meetpr-rn-wt-085`，HEAD `8d92ed7`。开工先执行 PATH 设置与 `.codex-write-probe` 创建/删除，退出码 0；无 CONTEXT.md / FOLLOWUPS.md。保留接手时卡 B 全部未提交改动，仅执行 CARD-B-ui.md「返修一」八项；未安装依赖，未 commit / push。
+
+### 八项修改与断言
+
+| 项 | 完成内容 | 本轮断言变动 |
+| --- | --- | --- |
+| 1 | Profile 基础信息行恢复 `student.myProfileView.copy009`，StudentKit 恢复中英文；编辑页仍为 Basic information。 | dashboard/visual-parity 的 Profile 行标题断言从 Basic information 恢复为 Height / Body weight；Meet/Note 与留言断言保留。 |
+| 2 | WeightSection 增加 labelKey 参数；BodyMeasurementsSection 使用原 copy003，覆盖 Basic information 与引导第 1 步，非堆叠布局保留单位括号；单项页默认仍为 Weight。 | 无断言改动；原编辑页标题、体重输入/换算与向导测试保持。 |
+| 3 | 概览动作数、组数分别选择 `.one` 键，再组合摘要；中文显示不变。 | dashboard/visual-parity 新增 2 tests：1 exercise · 3 sets、3 exercises · 1 set。 |
+| 4 | 仅 Profile Meet 页遇 federation 或 weightClass 缺项时显示指定中英文提示；仅日期错误和保存请求失败仍用旧提示；向导未改。 | profile/editor 新增 4 tests：en/zh 各覆盖未选赛事方、选赛事方后缺级别，以及只有日期无效时保留旧提示；均断言不调用 upsert。 |
+| 5 | RnExtras 新增 student.rn.meet.title（Meet / 比赛）；替换 Profile 行、编辑页和引导区块三处教练命名空间借用。 | 无断言改动；已有 Meet 标题断言保持。 |
+| 6 | 级别尾行补位复用真实格子的 choice/equalChoice/meetChoice 样式，包含相同边框、内边距与 flex，透明占位保留相同行间 gap。 | 按卡片要求不写样式断言。 |
+| 7 | 仅 meet 外观的赛事方/级别文字设单行、adjustsFontSizeToFit、minimumFontScale=0.85。 | 按卡片要求不写样式断言。 |
+| 8 | DashboardScreen、OnboardingSteps、ProfileEditor、onboarding/model、profile/model 新增 import 移回对应第三方、@/、相对路径分组。 | 无断言改动。 |
+
+### 红绿证据与检查
+
+- 第 3 项逐例先红后绿：第一例实际收到 `1 exercises · 3 sets`，1 failed；实现动作单数后 1 passed。第二例实际收到 `3 exercises · 1 sets`，1 failed；实现组数单数后 2 passed。
+- 第 4 项新增中英文缺项用例先得到 2 failed（缺少指定提示）；实现后两例转绿。日期回归初稿使用过去日期，被真实 DateWheel 自动夹到今天，产生 2 个 fixture 失败；改用下一年的 `02-30`（范围内但无效），不改生产日期行为，最后四例全部通过。fixture 失败不记作功能红测。
+- `npx jest --runInBand`：**156/156 suites、1317/1317 tests passed，0 failed，0 snapshots**；18.597s，退出码 0。比返修前新增 6 tests。
+- `npx tsc --noEmit`：**0 errors**，退出码 0。
+- `npm run lint`：**0 problems（0 errors / 0 warnings）**，退出码 0。
+- `git diff --check`：通过。
+
+### 范围与验收边界
+
+八项全部实装，无未完成项、无自行改变口径。第 1 项行标题与第 4 项提示语按后出的「返修一」及本次用户指令覆盖 SPEC 原转写/通用提示；未改 SPEC、PARITY 或其他正典台账。其余接手时的文件改动保留，不计作本轮新改动。
+
+**未做设备验证**，按卡约定由 Opus 实屏收货。最需复核三处：CPA 女子尾行是否与满行等宽；360×640 dp / 字体 1.3× 的 `140+ kg` 与赛事方文字是否完整；Basic information / 引导第 1 步与单项页的字段标题区别。自动化通过不代表这些视觉项已经验收。
+
+独立只读双轴自审（仅本轮返修差分）：**Standards 0 项、Spec 0 项发现**。已有本地卡片作为来源；仓内缺少 `docs/agents/issue-tracker.md` 的已知配置缺口未触发 tracker 流程，未新增配置。
+
+## Spec 085 卡 B 返修二
+
+2026-10-09；工作树 `meetpr-rn-wt-085`，HEAD `ce7145c`。开工写入探针通过；保留卡 B 与返修一的未提交改动，仅执行 CARD-B-ui.md「返修二」第 9、10 项。未安装依赖，未 commit / push。
+
+- 第 9 项：`src/features/onboarding/controls.tsx` 的 `meetSelected` 背景与描边改为 `colors.ctaBackground`，`meetSelectedText` 改为 `colors.ctaText`，覆盖选中的赛事方 / 级别块。
+- 第 10 项：`src/features/dashboard/DashboardScreen.tsx` 概览状态小标的非当前日背景分支由 `colors.bgStack` 改为 `colors.surfaceRaised`；`Today's session` 保持 `colors.goldSoft`。`src/features/dashboard/NutritionPlaceholder.tsx` 的 `Coming soon` 小标及四个营养小格（共用 map 样式）背景同样改为 `colors.surfaceRaised`。其他背景未改。
+- 本轮没有新增或修改测试断言。
+- `npx jest --runInBand`：**156/156 suites、1317/1317 tests passed，0 failed，0 snapshots**；17.483s，退出码 0。
+- `npx tsc --noEmit`：**0 errors**，退出码 0。
+- `npm run lint`：**0 errors / 0 warnings**，退出码 0。
+- `git diff --check`：通过。未做设备验证，视觉验收按卡片约定由 Opus 完成。
