@@ -28,6 +28,6 @@ Meet 编辑页与体重页保存回显、"全部按计划完成"、完成当天�
 
 打包侧把应用 ID 换成 `com.meetpr.app.demo`、名称换成 `MeetPR Demo`（只在本机验收树临时替换，不入仓），与正式包并存，debug 签名，仅供内部看界面，不对外分发。脚本 `~/Projects/scratch/rn-demo-20261010/pack.sh WORKTREE <apk> 1 http://demo.invalid`。
 
-## 后续
+## 后续（2026-10-10 晚更新）
 
-本分支叠在集成分支上，未开 PR。#80–#85 合进 main 后，把本分支的两个提交挪到 main 上再开 PR（T2）。
+#80–#86 已获 David 放行并合入 main（#82 开了检查通过后自动合并）。本功能已挪到新基线：分支 `feat/demo-offline-mode`（= `fix/wordmark-unify@ae0e64c`，即七个 PR 全部合入后的代码树，加上演示模式的四个提交），173 suites / 1578 tests 全绿；从它出的演示包在模拟器飞行模式下四个 tab 冒烟正常，David 此前在真机上验过同源码的上一版包（「验收全部通过」）。对 main 开 PR（T2，等放行）。旧分支 `feat/demo-offline` 与 `integration/walkthrough-demo-20261010` 只用于出包，PR 合并后可删。
