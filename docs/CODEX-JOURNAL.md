@@ -3842,3 +3842,192 @@ tsc exit code: 0
 
 三条退出码分别保存为同名 `.exit`；`git diff --check` 通过。本轮最终增量含 JOURNAL 存 `/private/tmp/090-r1-final.diff`。未做项仅本轮原生实屏复验；无未完成的已授权代码项。
 `git diff --check` 通过；`ProgressPageHeader` 只读字节核对通过；临时日志已删除。
+
+
+## 2026-10-10 · T1 Training 隐藏期间换日后空白（阶段 5）
+
+- 工作目录：`/Users/david/Projects/apps/meetpr-rn-wt-blankfix`；分支 `fix/training-blank-after-hidden-day-switch`；HEAD 与 `origin/feat/090-training-flow` 均为 `26bdefb7907bffce729a2ac90ac143d682ca33c1`。第一步在当前目录 `mktemp` 试写并删除，退出码 0。开工已有未跟踪的 `docs/diagnose-training-blank-2026-10-10.md`，保持原样。
+- 依据该诊断文档及 David 本次卡执行阶段 5，未重跑阶段 1–4。`TodayWorkoutView.tsx` 新增上一显示训练日的 ref，仅当前值从非空变为不同值时调用 `workoutScroll.current?.scrollTo({ y: 0, animated: false })`。首次载入与同日更新不触发回顶；`revealCompletedRow` 原样保留。
+- `completion-entry.test.tsx` 只新增两条完整页面 seam 用例：周条选择已完成日后，执行 `useFocusEffect` 清理返回当前待练日，回顶恰好一次；首次加载、同日重渲染及刷新无滚动。原有断言未修改。
+
+### 先红后绿
+
+先只加测试、未改实现，运行 `npx jest --runInBand src/features/training/__tests__/completion-entry.test.tsx`，退出码 1。首次除了目标用例（预期 1 次、实际 0 次）之外，已有 settlement 用例超过 5000 ms；没有修改该用例或超时设置。以下为原始失败与汇总输出；完整 stdout/stderr：`/private/tmp/training-blank-red.log`（含 Expo 通知及 act 警告）。
+
+```text
+  ● successful settlement opens celebration and direct finish persists review and navigates to Today
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+       98 | });
+       99 |
+    > 100 | test('successful settlement opens celebration and direct finish persists review and navigates to Today', async () => {
+          |     ^
+      101 |   await mount();
+      102 |   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction(); });
+      103 |   expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+
+      at Object.<anonymous> (src/features/training/__tests__/completion-entry.test.tsx:100:5)
+
+  ● returning to the current training day on blur scrolls to the top once without animation
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 0
+
+      354 |   }
+      355 |   expect(dayButton('W1D2').props.accessibilityState.selected).toBe(true);
+    > 356 |   expect(scrollTo).toHaveBeenCalledTimes(1);
+          |                    ^
+      357 |   expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+      358 | });
+      359 |
+
+      at Object.toHaveBeenCalledTimes (src/features/training/__tests__/completion-entry.test.tsx:356:20)
+      at asyncGeneratorStep (../meetpr-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 28 passed, 30 total
+Snapshots:   0 total
+Time:        20.437 s
+Ran all test suites matching /src\/features\/training\/__tests__\/completion-entry.test.tsx/i.
+```
+
+保持实现和测试不变，再运行相同命令，退出码 1；旧 settlement 用例通过，仅目标用例失败。以下为原始测试结果，完整输出：`/private/tmp/training-blank-red-repeat.log`。
+
+```text
+FAIL src/features/training/__tests__/completion-entry.test.tsx (9.733 s)
+  ✓ successful settlement opens celebration and direct finish persists review and navigates to Today (576 ms)
+  ✓ completed-day banner opens review directly and reflection survives reopening (149 ms)
+  ✓ failed settlement leaves the completion flow closed (106 ms)
+  ✓ Ask coach opens the picker before navigating, then enters chat with a staged current set (165 ms)
+  ✓ Ask coach conversation failure uses the training share alert and stays on Training (107 ms)
+  ✓ completion immediately celebrates while sending, then acknowledges the coach after success (725 ms)
+  ✓ a 503 closes celebration, restores completion eligibility and keeps the recorded set for retry (593 ms)
+  ✓ 30 seconds without a response closes celebration and rolls back, ignoring late success (484 ms)
+  ✓ coach receipt follows the completion response without waiting for the plan refresh (514 ms)
+  ✓ failure after leaving celebration rolls back without reopening it or losing recorded sets (310 ms)
+  ✓ Chinese celebration shows sending until the completion response (422 ms)
+  ✓ training header shows cursor status on September 7 (100 ms)
+  ✓ training header shows cursor status on September 8 (87 ms)
+  ✓ training header shows cursor status on September 25 (104 ms)
+  ✓ training header recalculates after 4am on focus without waiting for its minute tick (221 ms)
+  ✓ training header recalculates after 4am on foreground without waiting for its minute tick (180 ms)
+  ✓ browsing a completed week keeps Completed instead of the overdue cursor count (172 ms)
+  ✕ returning to the current training day on blur scrolls to the top once without animation (394 ms)
+  ✓ initial training day load and same-day rerenders do not scroll (358 ms)
+  ✓ 090 all done docks exactly one completion control outside the scroll content (90 ms)
+  ✓ 090 undoing a recorded set restores the hero and returns the single completion control to the scroll content (203 ms)
+  ✓ 090 completed-row scroll: first completion (355 ms)
+  ✓ 090 completed-row scroll: batch completion in plan order, before a previously completed later row (274 ms)
+  ✓ 090 completed-row scroll: last exercise with no hero remaining (212 ms)
+  ✓ 090 completed-row scroll: reduced motion (270 ms)
+  ✓ 090 completed-row scroll: keyboard already open (241 ms)
+  ✓ 090 completed-row scroll: keyboard opens before layout (209 ms)
+  ✓ 090 completed-row scroll: user dragging (167 ms)
+  ✓ 090 completed-row scroll: user starts dragging before layout (118 ms)
+  ✓ 090 completed-row scroll: momentum scrolling (182 ms)
+
+  ● returning to the current training day on blur scrolls to the top once without animation
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 0
+
+      354 |   }
+      355 |   expect(dayButton('W1D2').props.accessibilityState.selected).toBe(true);
+    > 356 |   expect(scrollTo).toHaveBeenCalledTimes(1);
+          |                    ^
+      357 |   expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false });
+      358 | });
+      359 |
+
+      at Object.toHaveBeenCalledTimes (src/features/training/__tests__/completion-entry.test.tsx:356:20)
+      at asyncGeneratorStep (../meetpr-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 29 passed, 30 total
+Snapshots:   0 total
+Time:        9.93 s, estimated 20 s
+Ran all test suites matching /src\/features\/training\/__tests__\/completion-entry.test.tsx/i.
+```
+
+随后才修改实现，相同命令退出码 0。以下为原始测试结果，完整输出：`/private/tmp/training-blank-green.log`。
+
+```text
+PASS src/features/training/__tests__/completion-entry.test.tsx (6.007 s)
+  ✓ successful settlement opens celebration and direct finish persists review and navigates to Today (459 ms)
+  ✓ completed-day banner opens review directly and reflection survives reopening (134 ms)
+  ✓ failed settlement leaves the completion flow closed (88 ms)
+  ✓ Ask coach opens the picker before navigating, then enters chat with a staged current set (109 ms)
+  ✓ Ask coach conversation failure uses the training share alert and stays on Training (60 ms)
+  ✓ completion immediately celebrates while sending, then acknowledges the coach after success (165 ms)
+  ✓ a 503 closes celebration, restores completion eligibility and keeps the recorded set for retry (277 ms)
+  ✓ 30 seconds without a response closes celebration and rolls back, ignoring late success (201 ms)
+  ✓ coach receipt follows the completion response without waiting for the plan refresh (251 ms)
+  ✓ failure after leaving celebration rolls back without reopening it or losing recorded sets (102 ms)
+  ✓ Chinese celebration shows sending until the completion response (156 ms)
+  ✓ training header shows cursor status on September 7 (37 ms)
+  ✓ training header shows cursor status on September 8 (48 ms)
+  ✓ training header shows cursor status on September 25 (83 ms)
+  ✓ training header recalculates after 4am on focus without waiting for its minute tick (69 ms)
+  ✓ training header recalculates after 4am on foreground without waiting for its minute tick (76 ms)
+  ✓ browsing a completed week keeps Completed instead of the overdue cursor count (127 ms)
+  ✓ returning to the current training day on blur scrolls to the top once without animation (177 ms)
+  ✓ initial training day load and same-day rerenders do not scroll (97 ms)
+  ✓ 090 all done docks exactly one completion control outside the scroll content (54 ms)
+  ✓ 090 undoing a recorded set restores the hero and returns the single completion control to the scroll content (121 ms)
+  ✓ 090 completed-row scroll: first completion (106 ms)
+  ✓ 090 completed-row scroll: batch completion in plan order, before a previously completed later row (155 ms)
+  ✓ 090 completed-row scroll: last exercise with no hero remaining (99 ms)
+  ✓ 090 completed-row scroll: reduced motion (117 ms)
+  ✓ 090 completed-row scroll: keyboard already open (100 ms)
+  ✓ 090 completed-row scroll: keyboard opens before layout (138 ms)
+  ✓ 090 completed-row scroll: user dragging (93 ms)
+  ✓ 090 completed-row scroll: user starts dragging before layout (74 ms)
+  ✓ 090 completed-row scroll: momentum scrolling (77 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        6.185 s, estimated 10 s
+Ran all test suites matching /src\/features\/training\/__tests__\/completion-entry.test.tsx/i.
+```
+
+### 自审与未做项
+
+- 一轮独立只读双轴审查（`review-loop`）：Standards 0 项；Spec 0 项。审查范围为 HEAD 以上两个代码文件的未提交 diff。仓库无 `docs/agents/issue-tracker.md`，已告知通用 tracker 流程需 `$setup-matt-pocock-skills`；本次按本地卡审查，未新建流程配置。
+- 未做模拟器、真机、出包及原生滚动位置验证：按本卡交 Opus 收货；Jest 只能锁住 JS 滚动指令，不能证明 Android 隐藏态实际绘制恢复。同一训练日在隐藏期间内容变短的已知范围外情形未处理。
+- 未 commit、push、开 PR；未改导航、tab、依赖、node_modules、现有 090 断言或其他正典文档；未接触密钥、账号，未添加调试日志。没有待决定的代码取舍。
+
+### 最终检查
+
+三条命令均在当前工作目录运行，退出码均为 0。以下直接摘录原始输出；完整 stdout/stderr 保存在列出的 `.log`，退出码保存在同名 `.exit`。全量 Jest 日志含测试产生的控制台警告，未隐藏或修改警告；因全文 22946 行，仅将最终汇总摘录入本记录。
+
+`npx jest --runInBand`，退出码 0；`/private/tmp/training-blank-jest-final.log`：
+
+```text
+Test Suites: 166 passed, 166 total
+Tests:       1526 passed, 1526 total
+Snapshots:   0 total
+Time:        88.158 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，退出码 0；`/private/tmp/training-blank-tsc-final.log`：原始 stdout/stderr 为空。
+
+`npm run lint`，退出码 0；`/private/tmp/training-blank-lint-final.log`：
+
+```text
+
+> meetpr-rn@1.0.0 lint
+> expo lint
+
+```
+
+`git diff --check`，退出码 0，原始 stdout/stderr 为空。仅上述两个代码文件和本 JOURNAL 有本次改动；新增代码中无调试日志，旧实现与旧测试文本均保持不变。
