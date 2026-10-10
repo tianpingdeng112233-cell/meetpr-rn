@@ -4267,3 +4267,27 @@ scripts/pack-android.sh
 ```
 
 目标 1–5 代码已实现且工作区未提交；原生出包/签名/并存验收尚未执行，交 Opus 按上述开放项完成。不以本次本地自检替代 Spec 验收或宣告可分发。
+
+## 2026-10-10 · Spec 091 Card D · CN usage-data notice
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091`，分支 `feat/091-cn-android-first`，基线 `c08b194`。启动第一步在本工作树创建并删除临时文件成功（exit 0），初始工作区干净。按 CONTEXT → AGENTS → CARD-D 顺序读取；实施使用 TDD，未重装依赖。
+
+`PrivacyNoticeSheet` 按 `BUILD_TRACK` 选择正文：china 使用新增 `appShell.privacy.analytics.bodyChina`，global 继续使用原键。新键仅加入 `RnExtras.json`，中英文均从现有正文精确替换 CARD-D 指定的存放地点片段；其余字符保留。脚本比对确认 `AppShell.json` 与 HEAD 逐字节一致、RnExtras 旧键值全部一致，`usage-notice.test.ts` 也逐字节未改。布局、按钮、出现时机未改。
+
+隐私政策链接现状：本面板的 `PRIVACY_POLICY_URL` 写死为 `https://meetpr.app/privacy`，不按语言或构建轨切换。已满足 CN 要求，因此保持原实现；新增两轨 × 两语言的点击断言，Global 行为保持不变。
+
+先红后绿证据：先在 `PrivacyNoticeSheet.test.tsx` 新增 CN/Global 两语言正文测试，未实现时 CN 两条失败（仍显示 DigitalOcean），其余三条通过。实现后发现测试 mock 的 namespace 导出被 Babel 复制，补 `__esModule: true` 后通过；初轮 tsc 发现链接参数表的 readonly tuple 类型不匹配，改为 `satisfies` 后通过。为复核最终测试确能捕捉缺陷，临时恢复组件原取键逻辑再跑：2 failed / 9 passed；恢复按轨取键后：11 passed。未删改既有断言。
+
+最终自检（命令均设置 `EXPO_NO_DOTENV=1`，禁用自动加载 .env）：
+
+```text
+npx tsc --noEmit: PASS (exit 0, no output)
+npm run lint: PASS (exit 0, 0 errors / 0 warnings)
+npx jest src/analytics/__tests__/PrivacyNoticeSheet.test.tsx src/i18n/__tests__/usage-notice.test.ts --runInBand: PASS (exit 0; 2 suites, 11 tests)
+git diff --check: PASS (exit 0)
+Exact CN substitutions / existing catalog values / unchanged usage-notice assertions: PASS
+```
+
+同一上下文自审：Standards 未发现范围或文案落点违规；Spec 未发现缺做、多做或做错。T0 文案任务未运行独立双轴审查。本次未运行模拟器视觉验收，不以 Jest 渲染自检代替上机验收。
+
+改动文件：`src/analytics/PrivacyNoticeSheet.tsx`、`src/analytics/__tests__/PrivacyNoticeSheet.test.tsx`、`src/i18n/catalog/RnExtras.json`、`docs/CODEX-JOURNAL.md`。交付未提交工作区改动；未 commit、push 或开 PR，未读取/输出 .env、密钥或凭证文件，未在工作树留下临时日志。
