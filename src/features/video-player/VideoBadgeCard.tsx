@@ -1,6 +1,5 @@
 import { Text, View } from 'react-native';
-import Svg, { Text as SvgText, TSpan } from 'react-native-svg';
-import { font } from '@/design';
+import { font, MeetPRMark } from '@/design';
 import { t } from '@/i18n';
 import { presentBadge } from './badge-presentation';
 import { VideoBadgePalette as palette } from './badge-palette';
@@ -21,17 +20,9 @@ export function VideoBadgeCard({ info, width, includesCoachAttribution = false }
     borderRadius: 14 * s, backgroundColor: palette.cardFill, borderColor: palette.cardStroke, borderWidth: Math.max(1, s) }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 * s }}>
       <VideoBadgeLogoMark size={22 * s} />
-      <Svg width={97 / 24 * 16 * s} height={16 * s} viewBox="0 0 97 24" accessibilityLabel="MEETPR">
-        {/* Knockout wordmark like MeetPRMark: ink outline with a dark counter-fill so the letters stay legible. */}
-        <SvgText x={3} y={18} fontFamily={font.display(16, 'black').fontFamily} fontSize={16} fontWeight="900"
-          letterSpacing={-1.76} stroke={palette.ink} strokeWidth={5.12} strokeLinejoin="round" fill={palette.ink}>
-          MEETP<TSpan dx={-2.08}>R</TSpan>
-        </SvgText>
-        <SvgText x={3} y={18} fontFamily={font.display(16, 'black').fontFamily} fontSize={16} fontWeight="900"
-          letterSpacing={-1.76} fill={palette.wordmarkCounter}>
-          MEETP<TSpan dx={-2.08}>R</TSpan>
-        </SvgText>
-      </Svg>
+      {/* Convert the 16*s slot height to the canonical 16pt / 24dp scale. */}
+      <MeetPRMark fontSize={16 * s * (16 / 24)} strokeColor={palette.ink}
+        fillColor={palette.wordmarkCounter} accessibilityLabel="MEETPR" />
       <View style={{ flex: 1, minWidth: 8 * s }} />
       {badge.setOrdinal !== null ? <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 * s }}>
         <Text style={{ ...font.mono(10 * s), color: palette.muted }}>{t('chat.videoBadge.setPrefix')}</Text>

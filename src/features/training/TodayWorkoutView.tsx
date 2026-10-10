@@ -27,7 +27,6 @@ import { completionAvailability } from './hold-to-complete';
 import { HoldToCompleteButton } from './HoldToCompleteButton';
 import { completionError } from './completion-errors';
 import { replayE1RMSeries } from '@/features/dashboard/model';
-import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 import { TrainingWeekStrip } from './TrainingWeekStrip';
 import { studentChatKeys, useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
@@ -61,6 +60,7 @@ import { useSessionStore } from '@/api/session';
 import {
   AppButton,
   Card,
+  MeetPRMark,
   font,
   radius,
   useColors,
