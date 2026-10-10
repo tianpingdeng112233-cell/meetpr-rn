@@ -3539,6 +3539,30 @@
 "en": "Current week",
 "zh": "当前周"
 },
+"student.trainingWeekStrip.behind": {
+"en": "Behind",
+"zh": "已落后"
+},
+"student.trainingWeekStrip.daysBehind": {
+"en": "{0} days behind",
+"zh": "已落后 {0} 天"
+},
+"student.trainingWeekStrip.daysBehind.one": {
+"en": "1 day behind",
+"zh": "已落后 1 天"
+},
+"student.trainingWeekStrip.daysBehindAccessibility": {
+"en": "{0} days behind schedule",
+"zh": "已落后 {0} 天"
+},
+"student.trainingWeekStrip.daysBehindAccessibility.one": {
+"en": "1 day behind schedule",
+"zh": "已落后 1 天"
+},
+"student.trainingWeekStrip.behindAccessibility": {
+"en": "{0}, behind schedule",
+"zh": "{0}，已落后"
+},
 "student.trainingWeekStrip.upcoming": {
 "en": "Upcoming",
 "zh": "待训练"

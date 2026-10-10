@@ -5,7 +5,8 @@ import { useSetRefStagingStore } from '@/features/chat/set-ref-staging';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ApiError } from '@/api/client';
-import { Alert, Text, TextInput } from 'react-native';
+import { Alert, AppState, Text, TextInput } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
@@ -22,7 +23,7 @@ jest.mock('@react-native-community/netinfo', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('@react-native-community/netinfo/jest/netinfo-mock'));
 const mockNavigate = jest.fn();
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }), useFocusEffect: () => {} }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }), useFocusEffect: jest.fn() }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -53,6 +54,7 @@ let failCompletion = false;
 beforeEach(() => {
   setLocaleOverride('en');
   mockNavigate.mockClear();
+  jest.mocked(useFocusEffect).mockClear();
   failCompletion = false;
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   servedPlan = plan;
@@ -272,4 +274,54 @@ test('Chinese celebration shows sending until the completion response', async ()
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
   expect(copy()).toContain('教练已收到你的训练日志');
   expect(copy()).not.toContain('正在发送给教练…');
+});
+
+test.each([
+  [7, 'Current week', 'Current week'],
+  [8, '1 day behind', '1 day behind schedule'],
+  [25, '18 days behind', '18 days behind schedule'],
+])('training header shows cursor status on September %i', async (date, label, accessibility) => {
+  jest.useFakeTimers({ now: new Date(2026, 8, date, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
+  servedPlan = { ...plan, start_date: '2026-09-07' };
+  await mount();
+  expect(copy()).toContain(label);
+  expect(renderer.root.findAllByProps({ accessibilityLabel: accessibility }).length).toBeGreaterThan(0);
+  expect(copy()).toContain('W1');
+  expect(copy()).toContain('Training history');
+});
+
+test.each(['focus', 'foreground'])('training header recalculates after 4am on %s without waiting for its minute tick', async (event) => {
+  jest.useFakeTimers({ now: new Date(2026, 8, 8, 3, 59, 59), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
+  const appState = jest.spyOn(AppState, 'addEventListener');
+  servedPlan = { ...plan, start_date: '2026-09-07' };
+  await mount();
+  expect(copy()).toContain('Current week');
+  jest.setSystemTime(new Date(2026, 8, 8, 4));
+  const cleanups: (() => void)[] = [];
+  await act(async () => {
+    if (event === 'foreground') {
+      appState.mock.calls.filter(([type]) => type === 'change').forEach(([, listener]) => listener('active'));
+    } else {
+      const callbacks = new Set(jest.mocked(useFocusEffect).mock.calls.map(([callback]) => callback));
+      callbacks.forEach(callback => { const cleanup = callback(); if (cleanup) cleanups.push(cleanup); });
+    }
+  });
+  try {
+    expect(copy()).toContain('1 day behind');
+    expect(copy()).not.toContain('Current week');
+  } finally {
+    act(() => cleanups.forEach(cleanup => cleanup()));
+  }
+});
+
+test('browsing a completed week keeps Completed instead of the overdue cursor count', async () => {
+  servedPlan = { ...plan, days: [
+    { ...plan.days[0], completed_at: '2026-09-01T12:00:00Z' },
+    { ...plan.days[0], id: 'current-week-two', week_number: 2 },
+  ] };
+  await mount();
+  await press('Previous week');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain('Completed');
+  expect(copy().some(text => text.includes('days behind'))).toBe(false);
 });
