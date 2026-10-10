@@ -3937,3 +3937,240 @@ Ran all test suites.
 - `grep -rn "MEETP<" src`：0 命中（exit 1）；dashboard 重复组件不存在；`git diff --check` 通过。
 
 未覆盖：登录页、角标卡及四个页头在浅/深色下的实屏验证，按卡由 Opus 在模拟器收货。本次只完成开发自测，不宣称实屏验收通过。未安装依赖，未改原生、文案、PARITY.md 或 iOS 仓，未 commit / push。
+
+## 2026-10-10 — demo-offline（CARD，开发自测）
+
+开工：指定目录临时文件试写/删除成功；`feat/demo-offline`，HEAD `9a86cba`，工作区初始干净。未 commit/push；不改 UI、文案、schema、依赖和既有测试。
+
+范围例外（改动前记录）：允许列表以外须改三个非界面文件 `src/features/settings/storage.ts`、`src/features/training/storage.ts`、`src/features/training/video-upload/store.ts`。它们直接读写 AsyncStorage：训练偏好、训练开始/跳过状态、e1RM 缓存和视频任务会跨冷启动残留，违反本卡“写入仅本次运行、冷启动恢复种子”。每个文件只替换存储入口，demo 时使用 `src/demo/` 的内存适配器，普通模式仍使用原 AsyncStorage。不更改存储键、UI 或业务逻辑。
+
+现场差异：本基线体重由 onboarding GET/PUT 回显，未包含后端 046 体重记录调用/回落代码；未实现路由保持 404。训练设置没有 HTTP repository，由本地存储导出读写；在原公开存储 seam 验证，不虚构 API。
+
+### Files changed
+
+- 新建 `src/demo/mode.ts`：唯一环境开关；普通模式不加载假后端。
+- 新建 `src/demo/seed.ts`：`buildDemoSeed(today)` 纯函数，合成人物/档案/6 周计划/历史/反馈/聊天。以应用 gym-day 为当天，计划第 4 周第 1 练落在当天，anchor 随当天星期移动；生日按卡固定，其余日期相对当天。
+- 新建 `src/demo/backend.ts`：内存路由与写后读；未实现方法/路径返回 404，经原 `ApiError` 和 zod 处理。
+- 新建 `src/demo/uploads.ts`：假分片 etag、附件→本地文件 URI、视频列表/标记及聊天视频回放地址。
+- 新建 `src/demo/storage.ts`、`src/demo/memory-storage.ts`：普通模式转交原 AsyncStorage；demo 延迟加载内存存储。
+- 新建 `src/demo/__tests__/{seed,transport,network,storage}.test.ts`：S1–S4 共 17 条测试（含 9 个日期样例）。
+- `src/api/client.ts`：只在 fetch 分支切换 transport；随后状态码、错误信封和 zod 校验不变。
+- `src/api/session.ts`：只在启动缺会话分支自动演示登录；有会话走原恢复，手动登出不自动重新登录。
+- `src/features/chat/realtime.ts`：demo 启动直接保持 disconnected，不建立连接或重试。
+- `src/features/training/video-upload/multipart.ts`：demo 分片分支直接成功，记录本地文件地址。
+- `src/analytics/client.ts`：demo configure 停止旧运行态后直接关闭采集，无 config/events 请求。
+- `src/features/settings/storage.ts`、`src/features/training/storage.ts`、`src/features/training/video-upload/store.ts`：仅替换存储入口，理由见本节开头的事前范围例外。
+- `docs/CODEX-JOURNAL.md`：仅追加本节。
+
+### 学员接口对照
+
+全仓检索 `apiRequest` / `authenticatedRequest`（本仓实际名称）/ `fetch` / `WebSocket` / `createUploadTask`；以下为学员角色实际路径。`{student}` 为演示学员 ID，`{id}` 为实际资源 ID，查询参数继续由现有 repository 生成。
+
+| 现有调用入口 | 方法与路径 | demo 应答/状态 |
+| --- | --- | --- |
+| auth：emailLogin/emailRegister | POST `/auth/email/login`、`/auth/email/register` | 同一 Alex Chen + 合成令牌；不校验账号密码 |
+| auth：loginRequest/registerRequest/refreshRequest | POST `/auth/login`、`/auth/register`、`/auth/refresh` | 合成会话/刷新成功；保留已有 DTO 校验 |
+| auth：requestPasswordReset/resetPassword | POST `/auth/email/forgot`、`/auth/email/reset` | 空对象成功 |
+| session：patchTimezone | PATCH `/me/timezone` | 空对象成功，无真实网络 |
+| accountRepository | PUT `/me/password`；DELETE `/me` | 空对象成功；退出由现有调用方处理 |
+| plansRepository.list/detail | GET `/students/{student}/plans`、`/plans/{id}` | 单一 Strength block + 24 个训练日 |
+| plansRepository.completeDay/undoDayCompletion | POST/DELETE `/plans/days/{id}/complete` | 写 completed_at/source 或取消；详情读回 |
+| setsRepository.range | GET `/students/{student}/sets?from&to&scope` | 按 `[from,to)` 返回日志；种子与当前运行写入 |
+| setsRepository.upsert | POST `/sets/log` | 按动作/日期/组位 upsert，保持 ID，支持 completed:false |
+| onboardingRepository.get/upsert/complete | GET `/students/{student}/onboarding`；PUT `/students/me/onboarding`；POST `/students/me/onboarding/complete` | 老学员完整档案；体重/Meet/留言等 PUT 后 GET 回显 |
+| exercisesRepository.list | GET `/exercises` | 三大项 + 3 变式 + 6 辅助项 |
+| bindRepository.mine/create/cancel | GET `/bind-requests/mine`；POST `/bind-requests`；DELETE `/bind-requests/{id}` | 初始 accepted Sam Carter；创建/取消状态读回 |
+| feedbackRepository.list/markRead | GET `/students/{student}/feedback`；PATCH `/feedback/{id}/read` | 三条文字反馈，2 已读/1 未读；已读时间持久于本运行 |
+| readinessRepository.get/submit | GET `/students/{student}/readiness?date`；POST `/students/me/readiness` | 今天初始 null；按日期保存/覆盖状态打卡 |
+| chatRepository.list/open | GET/POST `/conversations` | 与 Sam Carter 的单会话，初始未读 1 |
+| chatRepository.messages/send/sendSetRef | GET/POST `/conversations/{id}/messages` | 初始 5 条，含 strict snake_case set_ref；支持 since_seq/before_seq/limit，client_id 幂等；发送后读回，分享本次上传视频返回本地 URI |
+| chatRepository.read | POST `/conversations/{id}/read` | 单调前进的 my_last_read，更新 unread_count |
+| uploadsRepository.initiate | POST `/uploads/initiate` | 合成 attachment/upload ID 与 demo 协议 part_urls |
+| uploadFileParts | 本地假分片入口 | 不调用原生 createUploadTask；回调进度/etag，保存 attachment→file URI；支持取消信号 |
+| uploadsRepository.complete/abort/remove/url | POST `/uploads/{id}/complete`、`/uploads/{id}/abort`；DELETE `/uploads/{id}`；GET `/uploads/{id}/url` | ready 附件或删除；回放返回本次文件 URI；未知附件 404 |
+| videosRepository.list | GET `/students/{student}/videos` | 种子空；完成上传后返回关联组记录/动作的视频 |
+| videoMarkersRepository | GET/POST `/videos/{id}/markers`；DELETE `/videos/{id}/markers/{markerId}` | 本地列表、添加、删除 |
+| analytics.configure/track/flushNow | 独立 `/events/config`、`/events` 出口 | configure 直接 disabled；track/flush 无网络；假后端另对 POST `/events` 回空对象 |
+| chatRealtime.start | WebSocket 出口 | 保持 disconnected，不创建 socket |
+| read/writeRestPreference、read/writeReminderPreference | 无 HTTP 接口 | 原公开存储导出，demo 内存读写；休息计时默认 automatic（启用） |
+| 体重 046 新接口 | 本基线无调用 | 不加接口/不改 UI；未实现路径统一 404，当前体重沿用 onboarding |
+| Google challenge/sign-in、coach 专属接口 | Out of Scope | 未实现，假后端 404；不触碰原登录 UI 或 Google SDK |
+
+### Red → green 证据
+
+所有新测试均在 `src/demo/__tests__/`，既有测试没有改动。先逐 slice 加失败测试，再补对应实现；以下为原始输出关键行，完整命令日志在本机 `/tmp/demo-*.log`（不作为唯一交付证据）。
+
+```text
+S2 — npm test -- --runInBand src/demo/__tests__/seed.test.ts
+RED: Cannot find module '../seed' from 'src/demo/__tests__/seed.test.ts'
+Test Suites: 1 failed, 1 total
+GREEN:
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+```
+
+日期测试覆盖 2026-10-05 至 2026-10-11、2026-01-31、2026-12-31。以现有 `recommendedDate` / `currentWeekDays` 验计划位置，以 `buildGrowthCurves` / `growthSnapshot` / `buildTotalSeries` 验三项及 Total；断言各实体 ID 不碰撞、纯函数确定性、今天第一项深蹲/技术提示、三类辅助处方及上周记录。“自重”是卡指定的 wire 数据，以 Unicode 转义保存，并有解码后原值断言；原中文源码扫描测试不改。
+
+```text
+S1 — npm test -- --runInBand src/demo/__tests__/transport.test.ts
+RED: ApiError: Network request failed
+Cause: Network forbidden
+Tests:       1 failed, 1 total
+GREEN: Tests: 1 passed, 1 total
+
+S3 — same command, add write/read slice
+RED: ApiError: Unexpected HTTP response 404
+Tests:       1 failed, 1 passed, 2 total
+GREEN: Tests: 2 passed, 2 total
+
+S4 — same command, add cold bootstrap slice
+RED: expected status authenticated/user Alex Chen; received status anonymous/user null
+Tests:       1 failed, 2 passed, 3 total
+GREEN: Tests: 3 passed, 3 total
+```
+
+后续仍按 slice 红→绿补聊天/已读/打卡、视频/标记、设置及生命周期接口。网络测试验证 configure/track/flush + chatRealtime 全程 fetch/socket 零调用；视频测试验证真实 repository initiate→uploadFileParts→complete→url/list，原生分片零调用。存储测试验证原导出读回训练设置/开始状态/视频任务，AsyncStorage getItem/setItem 零调用。
+
+### 独立开发自审
+
+使用 `review-loop` 的本地双轴流程（缺 `docs/agents/issue-tracker.md`，已告知需 `$setup-matt-pocock-skills`；未伪造 tracker 或声称执行其远端流程）。固定基线 HEAD `9a86cba` + 未提交 diff 与 `src/demo/` 新文件，只读 reviewer。
+
+- Standards：初审 0 findings；三个存储入口例外已事前说明，普通模式/单分支/懒加载/范围符合。
+- Spec：初审 1 个 P2（发送训练卡丢失 video_id，使已上传视频在聊天不能回放）。补 `sendSetRef → messages` 测试先红：`Expected: "file:///demo-local-recording.mp4"; Received: undefined`。修复为保存附件关联，POST/GET 共用 messageWire 返回本地 video_url；GREEN `Tests: 6 passed, 6 total`。独立定向复审确认关闭，无相关回归。
+- 以上为开发自测/自审，不等于 Opus 的实屏收货或放行。
+
+S4 原始差异摘录：
+
+```diff
+  Object {
+    "bootstrapped": true,
+-   "status": "authenticated",
+-   "user": Object {
+-     "name": "Alex Chen",
+-     "role": "coached_student",
+-   },
++   "status": "anonymous",
++   "user": null,
+  }
+```
+
+### 最终要求命令
+
+执行环境：指定 worktree，非登录 shell 先 `export PATH=/opt/homebrew/bin:/usr/bin:/bin:$PATH`；完整回归前 unset `EXPO_PUBLIC_DEMO_MODE`，demo 用例内部单独切换且恢复。`node_modules` 保持原符号链接 `../meetpr-rn/node_modules`，未安装依赖。
+
+```text
+$ npm test -- --runInBand
+Test Suites: 171 passed, 171 total
+Tests:       1537 passed, 1537 total
+Snapshots:   0 total
+Time:        30.392 s
+Ran all test suites.
+exit 0
+
+$ npx tsc --noEmit
+（无输出）
+exit 0
+
+$ npm run lint
+> meetpr-rn@1.0.0 lint
+> expo lint
+exit 0（0 errors / 0 warnings）
+
+$ git diff --check
+（无输出）
+exit 0
+```
+
+原 167 个测试文件/1520 条测试零修改且通过，新增 4 个文件/17 条测试。首轮完整回归仅中文源码扫描发现种子 wire token 的字面量，已用等值转义修正并保持原测试；最终结果如上。
+
+### 未做项与交接边界
+
+- 未打包、未跑飞行模式模拟器实屏验收：卡明确由 Opus 出包并逐项验收，本次只交开发实现与测试证据；不宣称四个 tab 已通过实屏验收。
+- 未实现教练端、CN、推送/Google 登录、种子视频、跨重启保存或场景切换；均为 Out of Scope。
+- 未更新 PARITY 或收货记录，未 commit、未 push；依卡留给 Opus。
+- 体重 046 专用接口不在本基线，保持未实现路径 404，实际体重编辑继续通过现有 onboarding 保存回显；未新增 UI 或回落逻辑。
+- 无待处理的已确认代码 finding；构建与实屏结果仍待 Opus 收货。
+
+### 返修一（2026-10-10，开发自测）
+
+按 CARD 末尾「返修一」执行。开工临时文件写入 `write-ok` 后删除；现场为 `feat/demo-offline`、HEAD `9a86cba`，保留上一轮全部未提交改动及已暂存的 CARD。本轮未 commit/push。
+
+#### 根因与修复
+
+1. 聊天：`StudentChatMessageRow` 通过 `ChatSetCardPresentation` 选择卡片。条件为 kind 不是 `image`、`set_ref` 通过内部 schema、body 等于 canonical 首行或以该首行加换行开头；发送方只决定左右位置，不决定是否为卡片。原种子 kind=`text` 合法，strict snake_case 的 `set_ref` 经假后端 `messageWire` 完整保留，再由真实 `ChatMessageSchema` 转成 camelCase，未丢字段；但 body 只是 `Here is the squat set for today.`，缺少冻结协议首行，因此 selector 返回 `null`。临时探针仅把同一条取回消息的 body 换成 `canonicalBody` 后立即得到卡片，原消息仍红，排除种类/映射因素；探针已移除。种子现在用同一份 `ChatSetRef` 调现有 `canonicalBody` 和 `toSetRefWire`，由 Alex 分享今天的深蹲计划组，随后 Sam 回答重量问题；消息日期同步为今天。假后端映射本身正确，无需修改。
+2. 历史：原日志直接照抄每周等差增长的处方重量、固定 `7 + setIndex` 的 RPE、固定处方次数，因此曲线与各组记录过于规整。现在按各主项的历史出场次序使用固定重量增量序列，包含一次小回落和一次持平；RPE 用确定性的组间/场次取值，范围 6.5–9 且含半档；少量辅助项末组比处方少 1 或 2 次，仍标记已完成。处方、计划日期、完成边界和 ID 分配不改，不使用随机数。通过应用现有曲线模型验证各主项仍整体上升，1–2 个非上升区间，小回落不超过前一点的 5%（仅合成数据的回归边界，不是领域算法规则）。
+
+#### 本轮 Files changed
+
+- `src/demo/seed.ts`：修正分享正文、发送方与上下文；增加历史重量/RPE/次数起伏。
+- `src/demo/__tests__/transport.test.ts`：新增真实 bootstrap → repository → schema → `ChatSetCardPresentation` 回归，断言今天的计划组得到卡片模型、发送方为学员、fetch 零调用。
+- `src/demo/__tests__/seed.test.ts`：在原 9 个 S2 日期用例中增加现有曲线模型的起伏断言；新增 RPE 半档/同组位跨场次变化与少量辅助组次数偏差测试。原今天未开始、过去全部完成、三项各至少 6 个日期、全局唯一 ID、确定性断言保留。
+- `docs/CODEX-JOURNAL.md`：仅追加本小节。其余上一轮 WIP 未修改。
+
+#### 先红后绿证据
+
+完整原始日志保存在本机 `/tmp/demo-rework1-*.log`；以下摘录关键失败与命令结尾，非仅记录绿测。
+
+```text
+$ npm test -- --runInBand src/demo/__tests__/transport.test.ts -t 'rework 1'
+RED: Expected: {note: "Should I keep this weight for today’s squat?", setRef: ObjectContaining {...}}
+     Received: null
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 skipped, 7 total
+
+$ npm test -- --runInBand src/demo/__tests__/transport.test.ts
+GREEN:
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        1.153 s
+
+$ npm test -- --runInBand src/demo/__tests__/seed.test.ts
+曲线 RED: Expected: >= 1 (非上升区间); Received: 0
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 9 total
+曲线 GREEN: Tests: 9 passed, 9 total
+
+RPE RED: Expected Set {6.5, 7, 7.5, 8, 8.5, 9}; Received Set {7, 8, 9}
+Tests:       1 failed, 9 passed, 10 total
+RPE GREEN: Tests: 10 passed, 10 total
+
+辅助次数 RED: Expected Set {0, 1, 2}; Received Set {0}
+Tests:       1 failed, 10 passed, 11 total
+辅助次数 GREEN:
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        0.811 s
+```
+
+#### 独立自审与最终命令结尾
+
+沿用 `review-loop` 本地双轴流程：仓内仍缺 `docs/agents/issue-tracker.md`，上一轮已记录 `$setup-matt-pocock-skills` 提示；本轮不依赖远端 tracker。基线是开工时 `/tmp/demo-rework1-baseline/` 中三个文件快照，固定增量为 `rework.diff`，两个只读 reviewer 仅审本轮改动。Standards：0 findings；Spec：0 findings。这是开发自审，不代替 Opus 实屏验收。
+
+执行环境仍为本 worktree，非登录 shell 先 `export PATH=/opt/homebrew/bin:/usr/bin:/bin:$PATH`；全量测试 unset `EXPO_PUBLIC_DEMO_MODE`，demo 测试自行切换与恢复。无安装依赖。
+
+按开工文件 SHA-256 快照复核，实际变化只有上述 3 个 demo 文件与本 JOURNAL；CARD 及其他上一轮未提交文件均逐字节保持原样，无新增/删除文件。`git diff --check` 无输出、exit 0；`src/demo/` 无临时探针或 debug 残留。
+
+```text
+$ npm test -- --runInBand
+Test Suites: 171 passed, 171 total
+Tests:       1540 passed, 1540 total
+Snapshots:   0 total
+Time:        30.665 s
+Ran all test suites.
+exit 0
+
+$ npx tsc --noEmit
+（无输出）
+exit 0
+
+$ npm run lint
+> meetpr-rn@1.0.0 lint
+> expo lint
+exit 0（0 errors / 0 warnings）
+```
+
+#### 未做项
+
+本轮未改聊天 UI、API schema、假后端路由或其他既有文件；未打包、未作模拟器实屏验收，依卡交由 Opus 收货。没有 commit/push，也未更新 PARITY 或其他正典台账。

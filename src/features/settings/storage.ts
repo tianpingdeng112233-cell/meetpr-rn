@@ -1,6 +1,6 @@
 import { usePlans, usePlan } from '@/api/domains/plans';
 import { selectCurrentPlan } from '@/domain/plan/sequence';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@/demo/storage';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { STORAGE_KEYS } from '@/features/training/constants';

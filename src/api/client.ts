@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isDemoMode } from '@/demo/mode';
 
 import { DEFAULT_API_BASE_URL } from '@/config/build-track';
 
@@ -143,9 +144,12 @@ export async function apiRequest<T = unknown>(
     headers.authorization = `Bearer ${options.accessToken}`;
   }
 
-  let response: Response;
+  let response: Pick<Response, 'ok' | 'status' | 'text'>;
   try {
-    response = await fetch(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`, {
+    response = isDemoMode()
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      ? await (require('@/demo/backend') as typeof import('@/demo/backend')).demoResponse(path, options)
+      : await fetch(`${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`, {
       method: options.method ?? 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),

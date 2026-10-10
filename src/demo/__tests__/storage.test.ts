@@ -1,0 +1,27 @@
+import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readRestPreference, writeRestPreference, readReminderPreference, writeReminderPreference } from '@/features/settings/storage';
+import { readBoolean, writeBoolean } from '@/features/training/storage';
+import { useVideoUploadStore, resetVideoUploadStoreForTests, flushVideoUploads } from '@/features/training/video-upload/store';
+jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+const originalFlag = process.env.EXPO_PUBLIC_DEMO_MODE;
+beforeEach(async () => { process.env.EXPO_PUBLIC_DEMO_MODE = '1'; await AsyncStorage.clear(); jest.clearAllMocks(); });
+afterEach(() => { if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_DEMO_MODE; else process.env.EXPO_PUBLIC_DEMO_MODE = originalFlag; });
+test('S1/S3: training preferences and workout/upload state read back without persisting demo edits', async () => {
+  expect(await readRestPreference('demo')).toEqual({ mode: 'automatic' });
+  await writeRestPreference('demo', { mode: 'custom', low: 60, mid: 120, high: 180 });
+  expect(await readRestPreference('demo')).toMatchObject({ mode: 'custom', mid: 120 });
+  const reminder = { enabled: true, weekdays: [2, 4], hour: 18, minute: 0 };
+  await writeReminderPreference('demo', reminder);
+  expect(await readReminderPreference('demo')).toEqual(reminder);
+  await writeBoolean('training.started.demo', true);
+  expect(await readBoolean('training.started.demo')).toBe(true);
+  resetVideoUploadStoreForTests();
+  useVideoUploadStore.getState().dispatch('demo', 'set', { type: 'uploadSession', session: { attachment_id: 'demo', upload_id: 'demo', part_urls: [] } });
+  await flushVideoUploads();
+  resetVideoUploadStoreForTests();
+  await useVideoUploadStore.getState().hydrate();
+  expect(useVideoUploadStore.getState().records['demo:set']).toBeDefined();
+  expect(AsyncStorage.getItem).not.toHaveBeenCalled();
+  expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+});
