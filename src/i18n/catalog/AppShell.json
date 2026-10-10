@@ -7,10 +7,6 @@
 "en": "Hide password",
 "zh": "隐藏密码"
 },
-"appShell.auth.invalidCredentials": {
-"en": "Incorrect phone number or password",
-"zh": "手机号或密码错误"
-},
 "appShell.auth.invalidPassword": {
 "en": "Password must be 8 characters or more and no more than 72 bytes",
 "zh": "密码至少 8 字符,最多 72 字节"
@@ -39,14 +35,6 @@
 "en": "11-digit mainland China phone number",
 "zh": "中国大陆 11 位手机号"
 },
-"appShell.auth.phoneInputHint": {
-"en": "Enter phone number",
-"zh": "输入手机号"
-},
-"appShell.auth.phoneNumber": {
-"en": "Phone number",
-"zh": "手机号"
-},
 "appShell.auth.phoneTaken": {
 "en": "This phone number is already registered",
 "zh": "该手机号已注册"
@@ -74,10 +62,6 @@
 "appShell.login.consent": {
 "en": "By continuing, you agree to the",
 "zh": "继续即表示同意"
-},
-"appShell.login.instructions": {
-"en": "Sign in with your phone number and password.",
-"zh": "用手机号和密码登录。"
 },
 "appShell.login.signIn": {
 "en": "Sign in",

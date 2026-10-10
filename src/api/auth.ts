@@ -140,7 +140,7 @@ export async function refreshRequest(
 }
 
 export type EmailCredentials = { email: string; password: string };
-export type EmailRegistration = EmailCredentials & { timezone: string };
+export type EmailRegistration = EmailCredentials & { timezone: string; code?: string };
 export type GoogleSignIn = { idToken: string; nonce?: string; timezone: string };
 
 export function fetchAuthChallenge() {
@@ -156,9 +156,9 @@ export function googleSignIn({ idToken, nonce, timezone }: GoogleSignIn): Promis
   });
 }
 
-export function emailRegister({ email, password, timezone }: EmailRegistration): Promise<AuthResponse> {
+export function emailRegister({ email, password, timezone, code }: EmailRegistration): Promise<AuthResponse> {
   return apiRequest('/auth/email/register', {
-    method: 'POST', body: { email: email.trim(), password, role: 'coached_student', timezone }, schema: AuthResponseSchema,
+    method: 'POST', body: { email: email.trim(), password, role: 'coached_student', timezone, ...(code ? { code } : {}) }, schema: AuthResponseSchema,
   });
 }
 
@@ -174,4 +174,8 @@ export async function requestPasswordReset({ email }: { email: string }): Promis
 
 export async function resetPassword({ email, code, newPassword }: { email: string; code: string; newPassword: string }): Promise<void> {
   await apiRequest('/auth/email/reset', { method: 'POST', body: { email: email.trim(), code, newPassword } });
+}
+
+export async function requestSignupCode({ email }: { email: string }): Promise<void> {
+  await apiRequest('/auth/email/register/code', { method: 'POST', body: { email: email.trim() } });
 }
