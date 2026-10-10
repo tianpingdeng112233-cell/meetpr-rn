@@ -7,7 +7,9 @@ import { getLocale, t } from '@/i18n';
 import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
 import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
 
-import type { HistoryDay, HistoryExercise, HistoryWeek } from './types';
+import { ProgressPageHeader } from './ProgressPageHeader';
+import { HistoryStatsCard } from './HistoryStatsCard';
+import type { GrowthStats, HistoryDay, HistoryExercise, HistoryWeek } from './types';
 
 type ExerciseChoice = { id: string | null; name: string };
 
@@ -16,8 +18,10 @@ export function HistoryEntriesView({
   weeks,
   onClose,
   presentation = 'modal',
+  stats,
 }: {
   presentation?: 'modal' | 'stack';
+  stats?: GrowthStats;
   visible: boolean;
   weeks: HistoryWeek[];
   onClose: () => void;
@@ -46,6 +50,7 @@ export function HistoryEntriesView({
   const selection = choices.find((choice) => choice.id === exerciseId) ?? choices[0];
 
   const content = <Screen edges={['top', 'left', 'right']}>
+        {presentation === 'stack' ? <ProgressPageHeader title={t('student.e1rmSourceHistory')} onBack={onClose} /> : <>
         <View style={styles.header}>
           <Pressable
             accessibilityLabel={t('student.feedbackInboxView.copy005')}
@@ -57,9 +62,11 @@ export function HistoryEntriesView({
           <Text style={styles.title}>{t('student.trainingHistoryView.copy024')}</Text>
           <View style={styles.headerSpacer} />
         </View>
+        </>}
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}>
+          {presentation === 'stack' && stats ? <HistoryStatsCard stats={stats} /> : null}
           {weeks.length === 0 ? <Text style={styles.pickerLabel}>{t('student.e1rmSourceHistoryEmpty')}</Text> : null}
           <Text style={styles.pickerLabel}>{t('student.filter.title')}</Text>
           <Pressable
