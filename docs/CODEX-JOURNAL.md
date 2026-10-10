@@ -2936,6 +2936,169 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
 - 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。
 
+
+## 2026-10-09 · Spec 087 CARD-1 · Progress 四入口与独立页面（未提交，Total 口径待决定）
+
+### 范围与交付状态
+
+工作树 `meetpr-rn-wt-087`，分支 `feat/087-progress-menu`，起点/交付 HEAD 均为 `91c2e7e`。开工 `touch .codex-write-test && rm .codex-write-test` 成功。按 CONTEXT → AGENTS → SPEC 全文 → CARD-1 顺序读取，并查阅 Expo SDK 57 文档。
+
+四行入口、e1RM 四段页面及共享范围、历史三格、强度页已接线。所有数据沿用 `useHistoryViewModel`；聚焦时仅失效已有 feedback query。未改 API/依赖、反馈页、Training、tab bar、e1RM 算法或历史列表内部；未做体重第二步。未读取 `.env`，未写 node_modules，未 commit/push/开 PR。
+
+**开发自测不等于验收通过：Total 数据来源存在卡片与 spec 冲突；验收 4/11 的一致性未完成。** 下方保留真实路径红测证据和 1 项显式 skipped 测试，不以全量退出码 0 掩盖这个缺口。
+
+### 文件变更
+
+- 路由：`src/app/_layout.tsx`；新增 `src/app/progress/e1rm.tsx`、`src/app/progress/intensity.tsx`。
+- 入口：`src/features/history/GrowthScreen.tsx`、`GrowthScreenHeader.tsx`；新增 `ProgressMenuRow.tsx`；`src/features/student-tabs.ts` 删除无调用方的 feedbackJumpToken/bumpFeedbackJump。
+- e1RM：新增 `E1RMScreen.tsx`、`GrowthTotalCard.tsx`、`GrowthRangeControl.tsx`；`GrowthE1RMCard.tsx` 接收页面范围、零训练三段均可去 Today；`GrowthE1RMChart.tsx` 接受仅 date/value 的 Total 点，原点选逻辑保留。
+- 历史/强度：`TrainingHistoryScreen.tsx`、`HistoryEntriesView.tsx`；新增 `HistoryStatsCard.tsx`、`IntensityScreen.tsx`。历史 modal 不加统计，列表内部不改；VolumeIntensityChart 文件未改。
+- 公共页面结构：新增 `ProgressPageHeader.tsx`、`ProgressLoadState.tsx`。
+- 模型与文案：`src/features/history/model.ts`；`src/i18n/catalog/RnExtras.json`（英中同时增加；Bench 短标签独立于原卡的 Bench press）。
+- 测试：`src/features/history/__tests__/model.test.ts`、`growth-screen.test.tsx`；新增 `e1rm-screen.test.tsx`、`progress-details.test.tsx`、`src/features/history/test-support/progress-screen.tsx`。
+- 文档：仅追加本节；PARITY 与正典验收记录留 Opus。
+
+### 先红后绿与既有断言
+
+按卡片 seam 顺序推进：
+
+1. Total 函数未定义：模型 1 failed / 20 passed → 21 passed。随后窗口/稀疏/平线补充测试直接绿（22 passed），不宣称它单独经历失败。
+2. 行值函数未定义：1 failed / 22 passed → 23 passed，覆盖合计、单复数、未读/已读/空反馈、末周无 RPE 和未解锁。
+3. 四行组件：旧页面对新入口断言 4 failed → 4 passed。
+4. e1RM 页面：先因新模块不存在而红；实装后 1 failed / 4 passed（缺项文案测试误写 Bench，而旧名称为 Bench press），更正测试预期并按批准稿给分段增加 Bench 短标签 → 5 passed。
+5. 历史/强度组件：先因新 IntensityScreen 模块不存在而红 → 5 passed。后续补充三页失败恢复、突破提示直接绿；测试环境的动态 import 错误改为静态 import，不算产品行为红测。
+6. `history-points` / `imported-baseline` / `source-detail` / `growth-chart-selection` 四个文件 **零 diff**；独立运行 **4 suites / 22 tests passed**。
+
+原 growth-screen 每项断言去向：
+
+| 原测试 | 新位置或不再适用原因 |
+| --- | --- |
+| zero training / Today only on squat / locked history / dashes | 三段 Today 与零态迁 `e1rm-screen` 的 `missing Total...`；三格横杠迁 `progress-details` 的 `history stack shows three empty stat tiles...`；强度锁定迁 `intensity retains the locked explanation...`。仅 squat 有 Today、历史 disabled、旧解锁副文案被新 spec 明确替换，不保留。 |
+| three completed days unlock volume/history | 图表解锁、周数无障碍 label 迁 `three completed days unlock the existing intensity chart and both legends`；历史始终可点由 `four ordered rows remain tappable...` 覆盖。 |
+| squat capsule cycles | 迁 `defaults to Total...shared ranges...`，循环仍验证 30/90/All/30，额外验证跨段不重置。 |
+| selected catalog language | 入口中英文名称和顺序仍验证；释义迁 e1RM 默认段测试；旧反馈归档副文案和 disabled 已按 §1 删除。 |
+| header wordmark/chat/title/subtitle/no Eyebrow | wordmark、chat badge、打开 chat、无 Eyebrow、无 growth 导航保留；入口 subtitle 按 spec 删除并断言不存在，e1RM 页断言存在；已删 jump token 的“不变”断言不再适用。 |
+| pending/failure/retry | 改为加载/失败仍有四个空值可点入口、重试恢复、下拉刷新。旧 skeleton accessibilityLabel 与原始异常文本不是新 spec 的入口态，已移除。 |
+| feedback archive/detail marks read | 旧两个弹层已要求删除，故弹层出现/markRead 调用断言不再适用。改测路由到现有 inbox、返回聚焦刷新后 1 new → 1，chat badge 不变；现有反馈页实现和独立测试未改。 |
+
+### 验收项与测试映射（非实屏收货结论）
+
+| SPEC 项 | 开发证据 / 未覆盖部分 |
+| --- | --- |
+| 1 | `growth-screen`: `four ordered rows remain tappable without charts, tiles or Body weight in both languages`；图标、值、chevron 的组件结构已自审，未实屏看。 |
+| 2 | `model`: `Progress row values cover totals, singular/plural sessions, unread/read/empty feedback and the latest RPE`；`growth-screen` 额外验证四个空值及反馈值。 |
+| 3 | `e1rm-screen`: `defaults to Total with comparisons and no source interaction; shared ranges survive all segment switches`，含重挂后 Total。 |
+| 4 | `model`: `waits for all lifts...`、`Total windows keep all-history current...` 覆盖卡片输入的累加/窗口；`e1rm-screen` 验证缺项及不可点。真实曲线一致性 **阻塞，1 skipped**，见下。 |
+| 5 | `e1rm-screen`: 默认段比较格；`Total alone shows the legacy breakthrough comparison when estimates exceed training 1RM`。 |
+| 6 | `e1rm-screen`: 默认段测试逐项打开真实来源弹层；`missing Total...`、`lift forming-progress state retains %s recorded points`（1/2）、`old lift points show range-sparse state...`；来源四组既有回归断言不变。 |
+| 7 | `progress-details`: `history stack shows three empty stat tiles...`、`history stack moves session/week/volume totals unchanged`、`modal history presentation does not gain stat tiles`。Training 原路由与列表未改。 |
+| 8 | `growth-screen`: `feedback navigates to the existing inbox and focus refresh updates its unread value without changing chat`。Today/反馈页未改；真实账号读完返回仍待 Opus。 |
+| 9 | `progress-details`: `intensity retains the locked explanation...`、`three completed days unlock the existing intensity chart and both legends`。 |
+| 10 | `growth-screen`: `pending and failed requests keep blank tappable rows, with retry and pull-to-refresh recovery`；`progress-details` 的三页 `retains back navigation, loading, failure and retry`。 |
+| 11 | 行值仍从原 stats 和 feedback 派生；Total 页面真实路径存在阻塞。未覆盖安装或使用真实账号，不声明升级第一屏通过。 |
+| 12 | 新组件使用 useColors/design tokens；名称和值允许换行，未用 numberOfLines 截断入口文案。**未实测 Light/Dark、360×640dp、1.3×字体、中文/四位数 Total 排版**，交 Opus。 |
+| 13 | 最终全量结果如下；i18n guards 通过。PARITY 授权差异登记由 Opus 写，本轮未改。 |
+
+### 待 Opus 决定
+
+**Total 来源与当前值冲突（Spec reviewer 1 项 blocker）：** CARD-1 §2 明确输入 `GrowthCurve.trajectory`；SPEC §2 同时要求它是三段实际主线、覆盖所有更新日期、All history，并要求末点等于三项 All history 当前值。现场代码并不满足这个前提：
+
+- `buildGrowthCurves` 的 trajectory 来自 `ninetyDayRecordTrajectory`，仅历史纪录，裁到 90 天并补窗口边界和今天的投影点（`src/domain/e1rm/series.ts:146–180`）。
+- 三段实际图来自 `growthSnapshot.samples`（每日最佳 normal 点）；headline 来自最后 smoothed 点的 winner。既有 `daily-best chart uses declining window values...` 测试已证明主线末值 140 与 headline 150 可以不同。
+- 当前新增实现按卡片使用 trajectory，**尚未决定/未修正上述来源冲突**，所以不能保证验收 4、11，不能放行 Total。未改三项原算法以强凑相等。
+- 真实 fixture：三项各有 5/1=200、10/1=100、10/2=110、10/3=120，now=10/9。SPEC 更新日期应出 600→300→330→360；实际 trajectory 合计仅 7/11=600、10/9=600。失败测试 `pending Opus: real growth curves must preserve every Total update and match all-history lift headlines` 已先运行确认失败，再明确 `test.skip` 保留待决断言；不是已通过。
+- 需要决定：以每日主线建立完整 Total 时，Total headline 是主线最新合计还是沿用三项 smoothed-winner 合计；两种口径在下降期不能同时相等。实现不自行改写 spec、卡片或 e1RM 算法。
+
+失败差异摘记（为便于阅读重新排版；计数来自原始输出）：
+
+```text
+-     "2026-05-01",
++     "2026-07-11",
+      600,
+-     "2026-10-01", 300,
+-     "2026-10-02", 330,
+-     "2026-10-03", 360,
++     "2026-10-09", 600,
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 23 skipped, 24 total
+```
+
+### 独立审查
+
+review-loop 两个只读子代理审当前 HEAD=91c2e7e 的未提交 diff 与新增文件：**Standards 0 findings；Spec 1 blocker（Total）**。主代理核实并补真实路径红测，未擅自拍产品取舍。review 后仅补测试、清理 lint 警告及本文，无额外产品变更。缺 `docs/agents/issue-tracker.md`，已告知完整 Matt tracker 流程需 `$setup-matt-pocock-skills`；未私建配置。
+
+无 ADB/模拟器操作，无视觉验证或线上联调。未要求额外权限；所有验证命令均能在本 sandbox 执行。未完成项明确为 Total 口径、Opus 实屏收货与 PARITY 登记。
+
+### 最终全量检查（原始尾部）
+
+`npx jest --runInBand`，exit 0；**155 suites passed / 0 failed；1183 tests passed / 0 failed / 1 skipped，1184 total**：
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1 skipped, 1183 passed, 1184 total
+Snapshots:   0 total
+Time:        38.711 s, estimated 71 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，exit 0，**0 errors**。stdout/stderr 为空，无可粘贴的输出行。
+
+`npm run lint`，exit 0，**0 errors / 0 warnings**，原始输出：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+`git diff --check` 无输出，exit 0。原始中间日志仅用于本轮取证，最终摘要保留在本节；未将测试输出中的长篇 React 警告落成仓内交付文件。
+
+### 2026-10-09 · Spec 087 CARD-1 · 返修一
+
+按 Opus 已修订的 SPEC §2（2026-10-09 修订）与本轮用户指令执行；上节“待 Opus 决定”的 Total 来源/主值阻塞现已解决。未编辑 SPEC 或 CARD，工作区中 SPEC 的改动为接手本轮时已有的 Opus 修订。
+
+**本轮改动文件：**
+
+- `src/features/history/model.ts`：`buildTotalSeries(curves, now)` 改从三项 `growthSnapshot(curve, 'all', now).samples` 聚合，按当地日历日合并、沿用各项最新主线值；`totalSnapshot` 同源判缺项，保留可注入 now 与窗口 delta，删除 currentKg。
+- `src/features/history/GrowthTotalCard.tsx`、`E1RMScreen.tsx`：页面显式传入 `stats.sbdTotalKg` 为 headlineKg，卡内大号数字保留一位小数，null 显示 `—`，不再从曲线末点取主值。
+- `src/features/history/ProgressPageHeader.tsx`：标题紧随返回按钮左对齐，删除右侧 spacer；19 bold、44 点命中区与返回读屏标签保留。e1RM、Intensity、Training history 共用此行。
+- `src/features/history/__tests__/model.test.ts`：真实路径待决测试取消 skip、改名，合成曲线改经 series.rawEligible 输入。
+- `src/features/history/__tests__/e1rm-screen.test.tsx`：新增上升/回落主值与对比格一致、跨范围不变，以及缺项横杠测试。
+- `src/features/history/__tests__/progress-details.test.tsx`：三页标题顺序、左对齐、字号、命中区、读屏与返回操作测试。
+- `docs/CODEX-JOURNAL.md`：仅追加本节。
+
+**红 → 绿证据：**
+
+| seam | 首次红测 | 绿测 / 行为证据 |
+| --- | --- | --- |
+| Total 数据源 | model 3 failed / 21 passed | 24 passed；真实 5/1、10/1、10/2、10/3 fixture 明确出 600→300→330→360；末点等于三项最后 samples 点的合计；无历史截断或今天补点。 |
+| Total headline | e1rm-screen 2 failed / 7 passed | 9 passed；正常样本主值=480、末点=480；回落样本主值=450、末点=420；主值与 stats 及左对比格数值一致，30/90/All 三档不变；缺项为横杠。 |
+| 返回栏布局 | progress-details 3 failed / 8 passed | 11 passed；三页返回按钮后直接跟左对齐标题，无右侧 spacer，返回仍可点。 |
+
+主值和曲线末值现在各循批准的独立口径，下降期不再强求相等；窗口 delta 仍是窗口末点减首点。未修改 `growthSnapshot`、三项 e1RM 算法或分段行为，其余上一轮交付内容不变。
+
+首轮 TypeScript 报 6 处 TS2540：合成测试直接赋值只读 `rawEligible`。已改为通过 spread 替换整个 series，未改类型或断言；重新运行 tsc、受影响模型测试和 lint。此为测试夹具类型修复，不计作产品行为红测。
+
+**定向独立复审：Standards 0 findings；Spec 0 findings。** 两个只读 reviewer 确认上一轮 Total blocker 已解决；随后仅做上述测试夹具类型修复和记录追加。无新产品待决项。实屏验收仍由 Opus 完成，本轮未使用 ADB/模拟器、未声称视觉验证。PARITY 未改。未 commit/push/开 PR。
+
+**最终检查原始尾部：**
+
+`npx jest --runInBand`：exit 0，**155 suites / 1190 tests passed；0 failed / 0 skipped**。
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1190 passed, 1190 total
+Snapshots:   0 total
+Time:        107.764 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`：exit 0，**0 errors**；stdout/stderr 为空，无输出尾行。
+
+`npm run lint`：exit 0，**0 errors / 0 warnings**：
+
+```text
 ## 2026-10-09 · Spec 086 · Training 周条 2B 与 hero 教练备注（开发自测交付）
 
 ### 范围与现场
@@ -3357,6 +3520,79 @@ export function metricStored(value: string | number, factor: number): string;
 | `npm run lint` | 退出 0；0 errors / 0 warnings | `/private/tmp/rn-089/b-r1/final-lint.log` |
 
 每条退出码另存同名 `.exit`。最终 `git diff --check` 通过；本轮交付增量（相对启动时首轮 WIP，含本节）存 `/private/tmp/rn-089/b-r1/final.diff`。未改卡 A 纯函数、API schema、i18n 目录及首轮其余文件。
+
+## 2026-10-10 · Spec 090 训练流程（Codex 开发交付，待 Opus 收货）
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-090`，分支 `feat/090-training-flow`，开工 HEAD `2e932ae`；目录内 `mktemp .codex-write-probe.XXXXXX` 试写和删除均退出 0，初始工作区干净。已全文读取 CONTEXT、AGENTS、090 SPEC/CARD，并读取 Expo SDK 57 版本文档。未 commit、push、安装依赖、修改 API/schema/存储键或正典台账；`node_modules` 保持 `../meetpr-rn/node_modules` 符号链接。
+
+### Files changed（本卡共 14 个文件）
+
+- `src/features/training/exercise-progress.ts`：S1 分区和 S2 分段模型；hero、分区、分段共享 `needsSetResult`，失败计为结果，assumed 不计。
+- `src/features/training/SetProgressBar.tsx`：主项/变式 hero 的分段条；实测尺寸传给 GradientFill，尺寸 key 重建，读屏隐藏。
+- `src/features/training/WorkoutBody.tsx`：记录态可编辑非预览的上收/退回、hero 隐藏、完成行文案和读屏、单份组表渲染、上收反馈与滚动通知。
+- `src/design/TrainingRewardMotion.tsx`：RollUpCard 增加可选 completed 外观；默认分支保留，展开复用 RollUpBody。
+- `src/features/training/hold-to-complete.ts`：completionAvailability 派生 sticky 标志。
+- `src/features/training/TodayWorkoutView.tsx`：单颗按钮在滚动区/吸底区切换、实测底部留白、hero 滚动和键盘/拖动保护、按训练日重置上收状态。
+- `src/features/training/RestTimer.tsx`：仅增加 overlay 布局测量回调；不改计时、触感、通知或停靠行为。
+- `src/features/training/SetEntrySheet.tsx`：片数说明与 collars 同行；Weight/Reps 输入行 48、数字字号 30、标题间距 4；RPE 卡/刻度和配片图高度保留，长数值单行缩放。
+- `src/i18n/catalog/RnExtras.json`：完成行单复数及读屏中英文。
+- `src/features/training/__tests__/exercise-progress.test.ts`：S1 八种情形、S2 四种情形。
+- `src/features/training/__tests__/training-flow.test.tsx`：上收顺序/文案/展开编辑、全部完成与取消、辅助项无分段、未开始/只读/预览隔离、恢复日志首屏不触发滚动通知。
+- `src/features/training/__tests__/hold-to-complete.test.ts`：追加吸底/非吸底两条。
+- `src/features/training/__tests__/completion-entry.test.tsx`：追加真实 TodayWorkoutView 单颗吸底按钮及取消后恢复的组件测试。
+- `docs/CODEX-JOURNAL.md`：仅末尾追加本节。
+
+### TDD 证据
+
+按已批准 S1–S4 逐 seam 先红后绿，再补同一 seam 的边界覆盖；不加录入页样式快照。
+
+| Seam | 首次红输出（原始日志在 `/private/tmp/`） | 随后绿证据 |
+| --- | --- | --- |
+| S1 | `090-s1-red.log`：`Cannot find module '../exercise-progress'`；`Test Suites: 1 failed, 1 total` | `090-s1-green.log`：7 tests passed；最终拆开失败/assumed 用例，S1 为 8 条 |
+| S2 | `090-s2-red.log`：`TypeError: (0 , _exerciseProgress.setProgressSegments) is not a function`；`Tests: 1 failed, 7 passed, 8 total` | `090-s2-green.log`：11 tests passed（当时 S1 为 7 条，S2 为 4 条）；最终该文件 12 条 |
+| S3 | `090-s3-red.log`：`Expected: true / Received: undefined`；`Tests: 1 failed, 7 passed, 8 total` | `090-s3-green.log`：9 tests passed，含所有既有断言 |
+| S4 上收 | `090-s4-body-red.log`：完成文案索引 `Expected: > -1 / Received: -1`；`Tests: 1 failed, 1 total` | `090-s4-body-green.log`：上收/编辑与既有 coach-notes 共 9 tests passed |
+| S4 吸底 | `090-s4-dock-red.log`：滚动区内按钮 `Expected length: 0 / Received length: 1`；`Tests: 1 failed, 17 skipped, 18 total` | `090-s4-dock-green.log`：单颗吸底与取消恢复 2 tests passed；最终全量覆盖所有新增用例 |
+
+既有测试断言没有删除或修改。`Ask coach conversation failure` 的旧 fixture 恰好是当天全部记完，090 明确要求此时 hero 消失；仅将该用例的 sets 响应改为未记录，继续验证原来的分享失败提示与不导航断言。相邻成功分享用例本来就采用这一前提。此处不是放宽断言。
+
+S3 兼容说明：旧测试对 `{ button, pill }` 做完整对象相等断言，CARD 又要求在同一返回值新增吸底标志。`sticky` 因此作为不可枚举只读 getter 提供，值严格为 `button && remainingSets === 0`，原枚举形状/原断言均保留。调用方直接读 `.sticky`；对象展开和序列化不会携带该派生属性。
+
+### 实现假设与待实屏核验
+
+- 滚动沿用 TodayWorkoutView 的 scroll ref。现场 089 只有 accessory input 避让键盘逻辑，没有用户拖动保护；本次补 keyboard 可见、拖动和惯性滚动判断。只有本次新完成动作且仍有 hero 时置 pending，收到新 hero 的 native onLayout 后滚到 `max(0, hero.y - spacing.md)`，y 是 ScrollView 内容坐标；此时再次检查键盘和用户滚动，受阻即放弃，不在结束操作后补抢滚动。切训练日清 pending。按训练日 key 初始化完成集合，恢复已有日志不播上收、不滚动。
+- 滚动假设 hero 不高于可用视口；超长教练备注或辅助项很多组时整张卡可能高于屏幕，此时只能保证从顶部开始可见。实际落点及过渡期间测量/滚动的观感须在设备核验。
+- 上收/替换使用 RN LayoutAnimation，时长 `motion.base`；分段反馈用 `motion.fast`。均复用系统减少动态效果判定，首帧无进场过渡。完成行仍复用既有 RollUpBody 展开/收起能力。
+- 吸底区绝对定位于现有 Screen 底部（现有 tab 内容区域内），默认高度由 `completionControlHeight + 2 * spacing.md + hairlineWidth` 得到，onLayout 后用实测高度；内容 paddingBottom 为 dock 实测高度 + rest 避让高度 + 常规间距。页面仅挂载一颗 HoldToCompleteButton，其长按/触感/完成回调不改。吸底与留白也沿用原按钮的 loaded/recording 页面门控，加载/错误页不显示完成入口。
+- 休息条仍按原 bottom=4 停靠；通过可选 onOverlayLayout 上报实际高度，吸底按钮 bottom 为该高度 + spacing.xs。第一次测量前临时采用 spacing.xxxl，条高改变会重新测量；列表留白同步包含这段高度。是否与 tab/safe area 完全贴合交 Opus 实屏核验。
+- 录入页加减按钮与数值框命中高度 48，collars 仍至少 44；片数说明允许换行且开关不压缩。仅 Weight/Reps 标题使用 compact 样式，RPE header、卡和刻度不变；数值单行缩放以避免长重量被截断。首屏是否完整露出 Record/Photos 需 Pixel 默认尺寸和 vivo X200 Pro 验证，尤其有建议说明/长片数说明时。
+- **已知稿差异，待 Opus 确认**：浅色 successSoft 文案叠 successTint/bgBase，按 sRGB 计算对比度约 3.86:1，不能满足 12 号正文 4.5:1。现有 token 无更深绿，本次完成文案/尖括号浅色采用现有 textPrimary（约 13.65:1），深色保留 successSoft（约 9.06:1），对勾和淡绿底不变。未新增颜色 token，不能据此宣称与深绿文字稿完全一致。
+
+### 独立开发自审
+
+按 review-loop 对 HEAD `2e932ae` 之后工作区 diff 与新增文件做只读双轴自审，未把自测当作 Opus 验收。
+
+- Standards：初审无阻断违规；曾提出 sticky 不可枚举 getter 的接口意外性建议。定向复核确认 CARD 的两项兼容约束后撤回，最终无未决 Standards finding；直接读取限制仍如实记录。
+- Spec：初审无确定阻断；补充对比度审查发现上述浅色绿色 token 缺口，采用可读的现有 token 并保留稿差异待收货。实屏事项没有用组件测试替代。
+- 仓内没有 `docs/agents/issue-tracker.md`；完整 Matt tracker 流程需另行 `$setup-matt-pocock-skills`，本次仅执行无需 tracker 的本地双轴流程，未新建配置。
+
+### 最终指定验证
+
+`npm test -- --runInBand`，退出 0（`/private/tmp/090-test-final.log`）：
+
+```text
+Test Suites: 160 passed, 160 total
+Tests:       1303 passed, 1303 total
+Snapshots:   0 total
+Time:        32.502 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，退出 0，无输出（`/private/tmp/090-tsc-final.log`）。
+
+`npm run lint`，退出 0，0 errors / 0 warnings（`/private/tmp/090-lint-final.log`）：
+
+```text
 ## Spec 085 卡 A（2026-10-09，Codex 开发自测；待 Opus 收货）
 
 ### 实现要点与范围
@@ -3658,6 +3894,107 @@ tsc exit code: 0
 > expo lint
 ```
 
+只读字段夹具修正后的定向复跑 `npx jest src/features/history/__tests__/model.test.ts --runInBand`，exit 0：
+
+```text
+
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        1.303 s
+Ran all test suites matching /src\/features\/history\/__tests__\/model.test.ts/i.
+```
+
+`git diff --check`：无输出，exit 0。原有四组来源/历史回归断言保持不变，已随全量通过。本轮中间日志在摘录后清理；未改变任何既有提交或用户的 spec 修订。
+
+
+### 2026-10-09 · Spec 087 CARD-1 · 返修二（最终轮）
+
+用户回报：返修一的 Total、对比格、共享范围、来源弹层、历史三格、强度页、空态、失败重试及升级路径已通过模拟器验收。本轮只处理其指出的两处样式，不重新改动上述行为。
+
+**本轮文件与改动：**
+
+- `src/features/history/E1RMScreen.tsx`：选中分段背景与边框统一用 `colors.ctaBackground`，文字用 `colors.ctaText`。沿用现有主题 token，Light 保持深底白字，Dark 使用金底深字；未选中状态不变。
+- `src/features/history/ProgressMenuRow.tsx`：标题去掉 `flex: 1`，改为 `flexShrink: 0`，按短标题自身宽度占位；右侧值使用 `flex: 1` / `flexShrink: 1` 占剩余宽度、右对齐，需要时自然换行，删除 `maxWidth: '42%'`。两段文字均未添加 numberOfLines、ellipsis 或字体缩小；原行最小高度与点击区域保留。
+- `docs/CODEX-JOURNAL.md`：仅追加本节。
+
+**测试断言调整：无。** 已检查现有 history 页面测试，未发现锁定旧 CTA token 名称、标题 flex 或值 maxWidth 的断言。按本轮“仅调整已有固定旧样式的断言”要求，没有增加或修改测试。
+
+本轮自审确认仅上述两处样式变化，无数据、路由、文案或算法变化；未编辑 SPEC/CARD。未进行本轮改后的模拟器/实屏复验，不把组件测试作为视觉验收。未 commit、push 或开 PR，全部改动继续保留在当前工作树。
+
+**最终检查及原始尾部：**
+
+`npx jest --runInBand`：exit 0，**155 suites / 1190 tests passed，0 failed / 0 skipped**：
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1190 passed, 1190 total
+Snapshots:   0 total
+Time:        23.225 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`：exit 0，**0 errors**。stdout/stderr 为空，无输出尾行。
+
+`npm run lint`：exit 0，**0 errors / 0 warnings**，原始输出：
+
+```text
+各最终命令退出码存同名 `.exit`；首轮 lint 的两条重复 import 警告已修，随后完整复跑以上三个命令。`git diff --check` 通过。
+
+未做项：未运行模拟器/真机，不声明滚动落点、过渡观感、tab/计时条叠放、录入页视频行首屏、深色/中文/磅单位实屏通过；按 CARD 留 Opus 与 David 验证。浅色完成文案的稿差异仍待 Opus 确认。未改 PARITY/收货记录，未做 Global 联调、后端或 iOS 工作。
+
+
+### 返修一（2026-10-10，按 Opus 实屏反馈）
+
+在 `feat/090-training-flow` / HEAD `2e932ae` 的首轮未提交改动上继续，保留全部既有 WIP 及已暂存的 CARD/SPEC 修订。开工用 `mktemp .codex-write-probe.XXXXXX` 试写并删除，输出 `writable`，退出 0。只执行 CARD「返修一」两项；不 commit、不 push、不更新正典台账。以下说明替代本节首轮的 hero 滚动目标与 sticky 不可枚举兼容说明；浅色完成文案已由 Opus 接受，本轮未改样式。
+
+本轮 Files changed（相对开工 WIP，仅 7 个文件）：
+
+- `src/features/training/WorkoutBody.tsx`：新完成项按计划顺序选最后一个，将其 ID 通知页面；测量完成区和完成行的位置，去掉 hero 滚动测量。
+- `src/features/training/TodayWorkoutView.tsx`：待滚动目标改为具体动作 ID，只有目标行布局可触发一次滚动；原键盘、拖动、惯性滚动、切训练日清理及减少动态效果保护保留。
+- `src/features/training/hold-to-complete.ts`：返回普通 `{ button, pill, sticky }`，移除 `Object.defineProperty` 和类型断言；三个标志计算口径不变。
+- `src/features/training/__tests__/completion-entry.test.tsx`：增加 9 条页面层滚动用例，覆盖首个完成、输入乱序的批量完成、已有更晚完成行、全部完成无 hero、减少动态效果、键盘与拖动在完成前/布局前介入、惯性滚动；同时断言恢复已有记录不滚动、同一完成只滚一次、受阻后不补抢滚动。
+- `src/features/training/__tests__/training-flow.test.tsx`：恢复记录用例名称由 hero reveal 改为 completed-row reveal，保留全部旧断言，追加通知目标为 `Bench` 的断言。
+- `src/features/training/__tests__/hold-to-complete.test.ts`：仅三条旧完整对象相等断言补 `sticky`（逐条见下）。
+- `docs/CODEX-JOURNAL.md`：仅追加本小节。
+
+先红后绿（依次完成 S4、S3；原始日志与对应退出码均在 `/private/tmp/`）：
+
+| 项目 | 红证据 | 绿证据 |
+| --- | --- | --- |
+| S4 滚动目标 | `090-r1-scroll-red.log`，退出 1：期望 `{ animated: true, y: 228 }`，实际 `{ animated: true, y: 288 }`；`Tests: 1 failed, 19 skipped, 20 total` | 修复后首条通过，再扩充边界；最终 `090-r1-scroll-green.log`，退出 0：`Test Suites: 2 passed, 2 total` / `Tests: 32 passed, 32 total` |
+| S3 普通字段 | `090-r1-sticky-red.log`，退出 1：完整相等对象期望 `sticky: false`，收到的可枚举对象缺失该字段；`Tests: 1 failed, 8 passed, 9 total` | `090-r1-sticky-green.log`，退出 0：`Test Suites: 1 passed, 1 total` / `Tests: 9 passed, 9 total` |
+
+改过的旧断言清单（均位于 `hold-to-complete.test.ts` 的 `zero real groups cannot complete; all logged hides remaining pill but keeps button`；按 CARD 返修一第 2 条明确放行）：
+
+1. `realCount: 0, remainingSets: 5`：`{ button: false, pill: false }` → `{ button: false, pill: false, sticky: false }`。
+2. `realCount: 1, remainingSets: 4`：`{ button: true, pill: true }` → `{ button: true, pill: true, sticky: false }`。
+3. `realCount: 5, remainingSets: 0`：`{ button: true, pill: false }` → `{ button: true, pill: false, sticky: true }`。
+
+三条均保持原 button/pill 期望，仅补普通字段的契约。全仓查找 `completionAvailability` 后未发现其他完整对象相等断言需要调整；未删旧断言，未改首轮已有其他测试 fixture。
+
+滚动计算与验证边界：完成区是 ScrollView 内容的直接子视图，行位置相对完成区；请求 `max(0, completedSection.y + row.y - spacing.md)`。完成区/行的 onLayout 先后均可补齐坐标，首次收到目标行布局后消费待滚动 ID；批量时按 `sort_order` 选本批最后一行，不取所有已完成行中的最后一行。全部完成没有 hero 时仍可定位刚完成行。Jest 在原生边界提供布局事件并检查 ScrollView 的 scrollTo 参数；原生滚动范围会限制实际落点，设备上的落点与过渡观感仍由 Opus 复验，本轮未跑模拟器/真机，不以组件测试替代实屏验收。
+
+只读独立自审：按 `review-loop` 对开工快照与当前代码增量做一轮双轴审查，Standards **0 findings**，Spec **0 findings**；没有返修项。固定审查差异 `/private/tmp/090-r1-review.diff`，开工快照 `/private/tmp/090-r1-before.json`；未调用缺少 tracker 配置的完整 Matt 分支审查流程。主代理已读完整增量。
+
+最终指定命令及结尾：
+
+`npm test -- --runInBand`，退出 0（`/private/tmp/090-r1-test-final.log`）：
+
+```text
+Test Suites: 160 passed, 160 total
+Tests:       1312 passed, 1312 total
+Snapshots:   0 total
+Time:        36.255 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，退出 0，无输出（`/private/tmp/090-r1-tsc-final.log`）。
+
+`npm run lint`，退出 0，0 errors / 0 warnings（`/private/tmp/090-r1-lint-final.log`）：
+
+```text
 `git diff --check` 通过；两份 087 组件只读字节核对通过。本次唯一文档改动为追加本节 `docs/CODEX-JOURNAL.md`。
 
 ### 返修一（2026-10-09，按 Opus 实屏收货修订）
@@ -3712,4 +4049,6 @@ tsc exit code: 0
 > expo lint
 ```
 
+`git diff --check`：无输出，exit 0。中间日志摘录后清理。
+三条退出码分别保存为同名 `.exit`；`git diff --check` 通过。本轮最终增量含 JOURNAL 存 `/private/tmp/090-r1-final.diff`。未做项仅本轮原生实屏复验；无未完成的已授权代码项。
 `git diff --check` 通过；`ProgressPageHeader` 只读字节核对通过；临时日志已删除。

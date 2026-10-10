@@ -5,11 +5,12 @@ import { useSetRefStagingStore } from '@/features/chat/set-ref-staging';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ApiError } from '@/api/client';
-import { Alert, AppState, Text, TextInput } from 'react-native';
+import { AccessibilityInfo, Alert, AppState, Keyboard, ScrollView, Text, TextInput } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
+import { HoldToCompleteButton } from '../HoldToCompleteButton';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 
 jest.mock('expo-media-library', () => ({}));
@@ -159,6 +160,8 @@ test('Ask coach conversation failure uses the training share alert and stays on 
     if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: '80000000-0000-4000-8000-000000000000', coach_display_name: 'Alex' } } as never;
     if (path === '/conversations') { if (options?.method === 'POST') throw new Error('offline'); return { conversations: [] } as never; }
     if (path.endsWith('/videos')) return { videos: [] } as never;
+    // Exercise the share failure while a current hero exists (090 removes it once all sets are done).
+    if (path.includes('/sets?')) return { logs: [] } as never;
     return original(path, options);
   });
   await mount(); await press(t('student.askCoach'));
@@ -324,4 +327,127 @@ test('browsing a completed week keeps Completed instead of the overdue cursor co
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
   expect(copy()).toContain('Completed');
   expect(copy().some(text => text.includes('days behind'))).toBe(false);
+});
+
+
+test('090 all done docks exactly one completion control outside the scroll content', async () => {
+  await mount();
+  expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
+  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(1);
+  expect(renderer.root.findAllByType(ScrollView)[0].findAllByType(HoldToCompleteButton)).toHaveLength(0);
+  expect(renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0].findAllByType(HoldToCompleteButton)).toHaveLength(1);
+});
+
+test('090 undoing a recorded set restores the hero and returns the single completion control to the scroll content', async () => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: '70000000-0000-4000-8000-000000000001', set_number: 2 }] }] }] };
+  let undone = false;
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/sets/log') {
+      undone = true;
+      return { id: '80000000-0000-4000-8000-000000000000', logged_at: new Date().toISOString() } as never;
+    }
+    if (path.includes('/sets?')) return { logs: [0, 1].map(set_index => ({
+      id: `80000000-0000-4000-8000-00000000000${set_index}`, student_id: studentId,
+      plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id, set_index, weight_kg: '80', reps: 5, rpe: '8',
+      completed: !(undone && set_index === 0), failed: false, assumed: false, adhoc: false,
+      logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z',
+    })) } as never;
+    return original(path, options);
+  });
+  await mount();
+  expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
+  const completed = renderer.root.findAll(node => node.props.onPress && node.props.accessibilityLabel?.includes(', completed, 2 sets'))[0];
+  await act(async () => completed.props.onPress());
+  const toggle = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy015'))[0];
+  await act(async () => toggle.props.onPress({ stopPropagation: () => {} }));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(renderer.root.findAllByProps({ testID: 'workout-hero' }).length).toBeGreaterThan(0);
+  expect(renderer.root.findAllByProps({ testID: 'workout-completion-dock' })).toHaveLength(0);
+  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(1);
+  expect(renderer.root.findAllByType(ScrollView)[0].findAllByType(HoldToCompleteButton)).toHaveLength(1);
+  expect(copy()).toContain(t('student.todayWorkoutPresentation.copy001', [1, 1]));
+});
+
+
+test.each([
+  { name: 'first completion', restored: [], newly: [0], targetY: 228 },
+  { name: 'batch completion in plan order, before a previously completed later row', restored: [0, 3], newly: [2, 1], targetY: 336 },
+  { name: 'last exercise with no hero remaining', restored: [0, 1, 2, 3], newly: [4], targetY: 444 },
+  { name: 'reduced motion', restored: [0], newly: [1], targetY: 282, reduced: true },
+  { name: 'keyboard already open', restored: [0], newly: [1], blocked: 'keyboard-before' },
+  { name: 'keyboard opens before layout', restored: [0], newly: [1], blocked: 'keyboard-after' },
+  { name: 'user dragging', restored: [0], newly: [1], blocked: 'drag-before' },
+  { name: 'user starts dragging before layout', restored: [0], newly: [1], blocked: 'drag-after' },
+  { name: 'momentum scrolling', restored: [0], newly: [1], blocked: 'momentum-before' },
+])('090 completed-row scroll: $name', async ({ restored, newly, targetY, reduced = false, blocked }) => {
+  const exercise = plan.days[0].exercises[0];
+  const exercises = Array.from({ length: 5 }, (_, index) => ({
+    ...exercise, id: `exercise-${index}`, sort_order: index,
+    sets: [{ ...exercise.sets[0], id: `set-${index}`, plan_exercise_id: `exercise-${index}` }],
+  }));
+  // Input order deliberately differs from plan order.
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [exercises[3], exercises[0], exercises[4], exercises[2], exercises[1]] }] };
+  let recorded = restored;
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.includes('/sets?')) return { logs: recorded.map(index => ({
+      id: `log-${index}`, student_id: studentId, plan_exercise_id: exercises[index].id,
+      exercise_id: exercise.exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: '8',
+      completed: true, failed: false, assumed: false, adhoc: false,
+      logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z',
+    })) } as never;
+    return original(path, options);
+  });
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(reduced);
+  let keyboardOpen = false;
+  jest.spyOn(Keyboard, 'isVisible').mockImplementation(() => keyboardOpen);
+  const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {}).mockClear();
+  await mount();
+  if (!restored.length) await press(t('student.todayWorkoutScreen.copy008'));
+  const layoutCompletedRows = (indices: number[], rowsFirst = false) => {
+    const section = renderer.root.findAllByProps({ testID: 'workout-completed-exercises' })[0];
+    const sectionLayout = () => section?.props.onLayout({ nativeEvent: { layout: { x: 0, y: 240, width: 360, height: indices.length * 54 } } });
+    if (!rowsFirst) sectionLayout();
+    [...indices].sort((a, b) => a - b).forEach((index, order) => {
+      const row = renderer.root.findAllByProps({ testID: `workout-completed-exercise-${index}` })[0];
+      row?.props.onLayout({ nativeEvent: { layout: { x: 0, y: order * 54, width: 360, height: 48 } } });
+    });
+    if (rowsFirst) sectionLayout();
+  };
+  act(() => layoutCompletedRows(restored));
+  expect(scrollTo).not.toHaveBeenCalled();
+  const beginInteraction = () => {
+    const scroll = renderer.root.findAllByType(ScrollView)[0];
+    if (blocked?.startsWith('keyboard')) keyboardOpen = true;
+    if (blocked?.startsWith('drag')) scroll.props.onScrollBeginDrag();
+    if (blocked?.startsWith('momentum')) scroll.props.onMomentumScrollBegin();
+  };
+  if (blocked?.endsWith('before')) act(beginInteraction);
+  recorded = [...restored, ...newly];
+  await act(async () => { await client.invalidateQueries(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  if (blocked?.endsWith('after')) act(beginInteraction);
+  act(() => {
+    const hero = renderer.root.findAllByProps({ testID: 'workout-hero' })[0];
+    hero?.props.onLayout?.({ nativeEvent: { layout: { x: 0, y: 300, width: 360, height: 400 } } });
+    layoutCompletedRows(recorded, true);
+  });
+  if (blocked) {
+    expect(scrollTo).not.toHaveBeenCalled();
+    keyboardOpen = false;
+    act(() => {
+      const scroll = renderer.root.findAllByType(ScrollView)[0];
+      scroll.props.onScrollEndDrag();
+      scroll.props.onMomentumScrollEnd();
+      layoutCompletedRows(recorded);
+    });
+    expect(scrollTo).not.toHaveBeenCalled();
+  } else {
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalledWith({ y: targetY, animated: !reduced });
+    act(() => layoutCompletedRows(recorded));
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  }
 });
