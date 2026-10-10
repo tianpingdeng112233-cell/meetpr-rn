@@ -2324,8 +2324,8 @@
 "zh": "自动规则"
 },
 "student.restTimerSettingsView.copy003": {
-"en": "Rest times set by your coach always take priority. This setting only changes the default when your coach has not set one.",
-"zh": "教练在计划中指定的休息时长始终优先。此设置只改变没有教练设定时的默认行为。"
+"en": "Rest times set by your coach always take priority. These settings only change the default when your coach has not set one.",
+"zh": "教练在计划中指定的休息时长始终优先。这些设置只改变没有教练设定时的默认行为。"
 },
 "student.restTimerSettingsView.copy004": {
 "en": "Rest between sets",

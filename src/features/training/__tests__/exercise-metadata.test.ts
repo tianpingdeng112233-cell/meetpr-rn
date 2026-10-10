@@ -51,6 +51,7 @@ describe('exercise metadata resolver seam', () => {
       createExerciseMetadataResolver([exercise()], highBarProfile)(exercise().id),
     ).toEqual({
       name: '高杠深蹲',
+      exerciseType: 'strength',
       rawFamily: 'squat',
       competitionFamily: 'squat',
     });
@@ -58,6 +59,7 @@ describe('exercise metadata resolver seam', () => {
       createExerciseMetadataResolver([exercise()], lowBarProfile)(exercise().id),
     ).toEqual({
       name: '高杠深蹲',
+      exerciseType: 'strength',
       rawFamily: 'squat',
       competitionFamily: null,
     });

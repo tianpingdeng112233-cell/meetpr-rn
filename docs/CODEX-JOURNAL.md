@@ -3236,3 +3236,124 @@ export function metricStored(value: string | number, factor: number): string;
 | `npm run lint` | 退出 0；0 errors / 0 warnings | `/private/tmp/rn-089/a/final-lint.log` |
 
 三条最终退出码另存同名 `.exit` 文件。最终 `git diff --check` 通过；指定保护文件与 quick-log 原测试无 diff。完整交付增量（含新文件与本节）为 `/private/tmp/rn-089/a/final.diff`。这是卡 A 自测及工程自审记录，整项功能收货仍由 Opus 按 SPEC 验收清单执行。
+
+## Spec 089 · 卡 B 界面与保存接线（2026-10-10）
+
+- 工作树 `/Users/david/Projects/apps/meetpr-rn-wt-089`，分支 `feat/089-accessory-quick-log`，启动 HEAD `84efbb5`、工作树干净。首先在指定目录创建并删除临时文件成功；没有切换工作目录。完整读取 CONTEXT、AGENTS、CLAUDE、SPEC（含屏幕稿和验收清单）、CARD-B、卡 A 对接记录，核对工程规约、PLAN 与 Expo SDK 57 文档。
+- 三项均已接线：辅助项记录卡；逐组完成／取消／批量串行保存；Profile 辅助项休息时长。Card A 的判定、行模型、校验、请求体、批量选择、休息 resolver 原样复用，没有改其实现。所有写入进入 TodayWorkoutView 原 `commit`、串行队列和 mutation，沿用缓存／草稿更新、日期、PR 处理、埋点和失败提示。
+- 未 commit、push、开 PR、安装依赖、改后端或 API schema。`node_modules` 仍为 `../meetpr-rn/node_modules` 符号链接。未改 SPEC、CARD、PARITY、SetEntrySheet、QuickLogSheet、Today 页、教练端、结算／撤销实现及分动作组表；主项 hero 原 JSX 保留在非辅助项分支。新增测试只使用合成数据，没有写入真实账号或凭证。
+
+### 文件清单（13 个，含本节）
+
+| 文件 | 改动 |
+| --- | --- |
+| `src/features/training/AccessoryLogCard.tsx` | 新组件：六列表格、以 stableSetId 保存输入、服务端记录变化后重置、同次历史回填、自重／RIR／视频、字段校验与读屏、单行防重复、取消保护、批量串行与动态跳过提示。输入复用 NumberPad 的 append 和 normalizeDecimalInput。 |
+| `src/features/training/WorkoutBody.tsx` | 仅记录态、可编辑且动作库类型为 accessory 时替换 hero 内容；保留标题、Ask coach、086 备注和金色竖条；限定同动作、同训练日期和 plan_exercise_id 的上次记录，组号进入原 onRecord。 |
+| `src/features/training/exercise-metadata.ts` | resolver 追加 exerciseType，读取动作库 exercise_type；无法解析仍为 null，绝不使用计划 is_main_lift。类型字段可选以兼容已有调用方构造的 metadata。 |
+| `src/features/training/TodayWorkoutView.tsx` | 复用 commit 接收 Card A 请求；按动作库选择辅助项休息规则，覆盖完整录入入口；批量不起计时，最后未记录组不起计时；队列使用最新辅助项草稿；接单位偏好及原 ScrollView 的输入／键盘滚动。 |
+| `src/features/training/RestTimer.tsx` | 追加默认开启的 showRPEExplanation 参数，辅助项跳过首次 RPE 说明，不改计时条、通知与加减／Skip。 |
+| `src/features/settings/RestTimerSettingsScreen.tsx` | 新增两段标题及辅助项 30–300 秒、15 秒步进控件；直接保存；切换模式携带已有 accessory，旧偏好不强行增加默认字段。Profile 列表摘要未改。 |
+| `src/i18n/catalog/RnExtras.json` | 新增辅助项中英文文案；Reps、Done、RPE 等等价文案复用已有键。 |
+| `src/i18n/catalog/StudentKit.json` | 页底说明英文改为 These settings，中文对应改为“这些设置”。 |
+| `src/features/training/__tests__/accessory-log-card.test.tsx` | 新增 1 项 WorkoutBody 渲染／交互测试，使用真实 metadata resolver 与 Card A。 |
+| `src/features/training/__tests__/set-save.test.tsx` | 新增 11 项挂载训练页的保存测试（含参数化），保留原 12 项断言。 |
+| `src/features/settings/__tests__/settings-screens.test.tsx` | 新增 1 项旧偏好显示／增减边界／保存／模式切换测试，原断言不改。 |
+| `src/features/training/__tests__/exercise-metadata.test.ts` | 原有两处完整对象断言增加 exerciseType: strength，见下节；没有新增测试 seam。 |
+| `docs/CODEX-JOURNAL.md` | 追加本节，未修改此前记录。 |
+
+### 每次先红后绿及原始证据
+
+原始 stdout/stderr 保存在 `/private/tmp/rn-089/b/`。下表每个前缀都有 `-red.log`、`-green.log` 及同名 `.exit`；红阶段退出 1，绿阶段退出 0。每轮观察失败后再实现对应行为；参数化用例中原本成立的分支不冒称单独失败。测试均在 Card B 批准的渲染、页面保存和设置屏边界，未对颜色／间距写断言。
+
+| 日志前缀 | 测试与红 → 绿 |
+| --- | --- |
+| `01-settings` | `accessory rest upgrades old preferences...`：缺 Accessory exercises 文案 → 旧 custom 偏好显示 1:00、首次保存仅加 accessory，原 low/mid/high 不变；两模式可调、15 秒步进及 30/300 边界禁用、切换保留辅助项时长。 |
+| `02-card` | `catalog accessories render...`：不存在行内输入 → catalog accessory 出现表格（计划 is_main_lift=true 也不影响）；主项／变式／未知／缺失类型、只读及未开始不出现；预填、空重量占位、空 RPE、RIR、BW、置灰、视频、常驻提示、备注、同次历史限定、点上次和组号通过。 |
+| `03-save` | `accessory check saves ordinary data...` 三项：✓ 无保存 handler → 请求体、空 RPE 为 null、所填 RPE、乱序记组、保存中进度／禁用，60／学员 90／教练 75 秒三种休息；辅助项无 RPE 说明，末组不起计时且切下个动作。 |
+| `04-cancel` | `an upgraded completed accessory row...`：取消错误写 completed:true 且 lb 往返丢原 kg 精度 → 显式 cancel 保留 80.123kg／次数／空 RPE；恢复 pending；55.1lb 写 25kg；改完成行数字为覆盖，失败保留输入和重试，沿用保存失败提示。 |
+| `05-video` | `a completed accessory with ... video cannot be cancelled...` 两项：上传中／已上传虽然被 Card A 拒绝取消，但未显示提示 → 不发第二次请求，保持完成并展示真实 Toast 提示进入完整录入处理视频。 |
+| `06-batch` | `complete all submits serially...` 三项：无批量按钮 → 慢请求期间主按钮和行 ✓ 禁用、按组序逐条提交；0／1／2 个空重量组、单复数提示；第二条失败即停，已写第一条保留；重试只补未写组，批量始终不起计时，全部完成后切下个动作。 |
+| `07-queued` | `two accessory checks queued before the first response...`：两行同时点击时旧闭包误启动最后组休息 → 同组重复点击只发一次；不同组复用原队列，读取最新已保存草稿，最后组不残留休息。 |
+| `08-full-entry-rest` | `an accessory recorded through its full entry...`：组号进入完整录入后保存仍起主项分档休息 → 页面按 catalog 判断，完整录入辅助项同样为 60 秒且不弹 RPE 说明；SetEntrySheet 不改。 |
+| `09-overwrite-rest` | 加强上述 `an upgraded completed accessory row...`：完成行改数字保存后找不到 RestTimer → 同动作仍有 pending 组时覆盖成功也起 60 秒休息；主项仍保留原“不对完成行重复起计时”条件。 |
+| `10-skip-count` | 加强上述 `complete all submits serially...`：补重量后仍显示旧跳过数量（1/2 两分支失败，0 分支已通过）→ 按当前行和编辑值派生数量，2→1→消失，不再保存旧计数。 |
+
+中间测试环境／fixture 修正没有隐藏：`02-card-fixture-error.log` 为 RIR fixture 使用旧 intensity_mode 导致占位为 2，改为 schema 的 load_mode=rir/rir_target=2；`03-save-fixture-error.log` 为参数化测试请求 mock 调用未清空，修正 fixture 隔离；`05-video-fixture-error.log` 为真实 Toast 缺 SafeAreaProvider，补真实 provider。上述测试的行为断言未放宽。
+
+### 原有断言改动及首轮检查
+
+- 唯一改动的既有断言：`exercise-metadata.test.ts` 的 `keeps raw family while resolving per-student competition family` 中两处 `toEqual` 结果各增加 `exerciseType: 'strength'`。resolver 按卡要求增加字段，完整对象断言需承认该字段；name/rawFamily/competitionFamily 全保留，未改成宽松匹配。首次全量的实际失败见 `full-first.log`：157 suites / 1275 tests 通过，1 suite / 1 test 失败。并非功能回归被删测规避。
+- 首轮指定回归集合 `regression-first.log`：8 suites / 99 tests 通过（当时尚未追加队列和完整录入休息两项）。最终全量包含 set-save、completion-entry、quick-log-entry、set-ref-entry、rest-timer、workout-coach-notes 与 i18n 守卫，全部通过。
+- `tsc-first.log`：新增 fixture 的 optional failed 未提供默认值、Jest 参数化 readonly tuple 不兼容，以及页面传入 optional failed，3 个错误；按现有 schema 的 failed 默认 false 与可变测试 tuple 修正。`tsc-second.log` 已退出 0。
+- `lint-first.log`：React 不允许 effect 同步 setState、render 直接写 ref，另有重复 type import 警告；改为派生弹层条件、effect 同步 ref 并合并 import，没有禁用规则或改 lint 配置。
+
+### 独立双轴审查
+
+- 使用 review-loop 两个只读 reviewer，固定初审快照 `review.diff`；Standards 0 finding，Spec 2 finding：完整录入辅助项仍套主项休息、跳过数量陈旧。按 `08`、`10` 各自红→绿修复；同时核实覆盖写入应按 §2 起计时，按 `09` 红→绿补齐。
+- 固定返修快照 `review-fixed.diff` 定向复审：**Standards 0 新增发现；Spec 0 剩余发现**。主代理已读取最终实现／测试 diff；这是工程自审，不代替 Opus 的逐项收货。
+- 本仓仍无 `docs/agents/issue-tracker.md`；完整 Matt tracker 流程需另行 `$setup-matt-pocock-skills`。本次按本地批准 SPEC/CARD 执行 review-loop，没有私建 tracker 或修改正典流程。
+
+### SPEC 疑点与对接说明
+
+1. “RPE 没填时请求不带值”按卡 A 已验收契约处理为 `rpe: null`，与完整录入保存路径一致，不改为省略字段；占位教练 RPE/RIR 从不自动写入。无 API schema 改动。
+2. SetEntrySheet 当前使用自定义 NumberPad，没有可直接复用的 TextInput 过滤回调。新组件复用其 `src/design/number-pad.ts` 的 `append` 与 `normalizeDecimalInput`，采用数字／小数系统键盘；不改原完整录入、RPE 刻度或补记。
+3. 屏幕稿固定列宽与 360dp 小屏要求存在空间压力；六列沿用稿中比例和现有 token，允许随可用宽度收缩，RIR 占位使用较小现有字号。没有引入另一套设计 token，但不能用组件测试证明小屏 1.3× 字号不截字，留实屏确认。
+4. §4 的辅助项休息规则适用于动作类型，因此从组号进入完整录入后也在同一 commit 路径按辅助项处理；覆盖完成行成功且仍有未记录组时按 §2 起计时。这里只落实已批准条款，未改主项或补记规则。
+
+未发现需要新增产品取舍而阻塞实装的 SPEC/CARD 冲突。
+
+### 未做设备验证与最需要实屏确认的三处
+
+**未做设备验证。** 没有启动模拟器、真机或 Global 联调；本卡代码与自动化自测完成，不宣称 SPEC 1–13 已验收。按 CARD-B 留给 Opus：
+
+1. 360×640dp、系统字体 1.3×、Light/Dark 的六列表格；重点看 RIR 占位、lb 小数／大重量、已完成行输入框、视频组号及副标题尾部截断。
+2. 系统键盘弹出、连续切换行和“上次”回填时，原 ScrollView 是否把当前输入完整滚到键盘上方，✓ 可点击且不误丢焦点。
+3. 老用户升级第一屏及完整录入往返：部分已记组、远端／上传中视频标记、取消保护、覆盖、批量断网重试、末组前进与 60/90/教练休息；核实已有主项设置保留以及当天末组结算／撤销不变。
+
+### 最终指定命令
+
+| 命令 | 实际结果 | 原始 stdout/stderr |
+| --- | --- | --- |
+| `npx jest --runInBand` | 退出 0；158 suites / 1277 tests passed，0 failed；31.819s。包含全部 i18n 守卫。 | `/private/tmp/rn-089/b/final-jest.log` |
+| `npx tsc --noEmit` | 退出 0；0 errors（无输出）。 | `/private/tmp/rn-089/b/final-tsc.log` |
+| `npm run lint` | 退出 0；0 errors / 0 warnings。 | `/private/tmp/rn-089/b/final-lint.log` |
+
+退出码另存同名 `.exit`。最终 `git diff --check` 通过。原始红绿日志、检查输出和完整交付 diff 均在 `/private/tmp/rn-089/b/`；本节追加后只再检查文档／diff，不重复无语义变动的全量测试。
+
+### 返修一（2026-10-10）
+
+范围：按 `CARD-B-ui.md` 文末六点，在首轮未提交工作上继续；启动临时文件试写／删除成功，分支现场为 `feat/089-accessory-quick-log`，HEAD `a58c7ef`。保留首轮全部改动；未安装依赖，未 commit／push／开 PR。
+
+本轮只改 `WorkoutBody.tsx`、`AccessoryLogCard.tsx`、`accessory-log-card.test.tsx`、`src/design/AppButton.tsx` 和本 JOURNAL。改前快照在 `/private/tmp/rn-089/b-r1/baseline/`，便于将返修与首轮 WIP 分开。
+
+1. `WorkoutBody` 为辅助项选历史时排除 `plan_exercise_id === active.exercise.id`；主项原有 `reference()` 路径不改。挂载测试点击记录第一组、更新当前记录与历史后，各行 Last 和无处方重量的占位保持前次训练值。
+2. 重量错误态与能否提交分开：未动过的空重量保留普通描边、✓ 仍置灰；只修改次数或聚焦／失焦不触发重量错误。编辑成非法值或批量完成跳过的 pending 行才显示错误，补入合法重量后清除。是否编辑重量随该行记录 revision 重置。
+3. 已完成行不显示教练 RPE/RIR 占位；实际记录的 RPE 保留，取消成 pending 后恢复处方占位。
+4. **口径已由 David 转达 Opus 明确**：只看当前行模型 `isBodyweight`（当前计划组自重标记），不看历史重量，也不查历史计划。当前自重行 Last 显示 `BW × {次数}`／`自重 × {次数}`，点击仅填次数；当前非自重行照常显示并回填历史重量和次数，历史重量为 0 也显示 `0 × 8`。测试覆盖中英文、历史 0／90，以及已完成自重行回填相同次数后仍可取消、不会因复制历史重量而误变成覆盖。
+5. 以 `stableSetId:field` 跟踪聚焦，使用 `colors.textPrimary` 深色描边；已完成行编辑时也有描边，失焦恢复。非法字段保留 `colors.danger`。未写死色值，保留已有键盘滚动回调。
+6. `AppButton` 原来没有文本样式入口，增加可选 `labelStyle`；只有辅助项主按钮传 `textAlign: 'center'`。其他调用方的默认表现不变。
+
+红绿命令均为 `npx jest src/features/training/__tests__/accessory-log-card.test.tsx --runInBand`。日志和退出码存 `/private/tmp/rn-089/b-r1/`：
+
+| 点 | 红日志：实际症状 | 绿日志 |
+| --- | --- | --- |
+| 1 | `01-history-red.log`：记录后 Last 从三行历史值变为 `80 × 5 / — / —` | `01-history-green.log`，2 tests passed |
+| 2 | `02-weight-red.log`：首屏空重量已呈错误态，期望 false、实际 true | `02-weight-green.log`，3 tests passed |
+| 3 | `03-rpe-red.log`：完成行空 RPE 仍有 `8`／`RIR 2` 占位 | `03-rpe-green.log`，5 tests passed |
+| 4 | `04-bodyweight-red.log`：期望 `BW × 8`／`自重 × 8`，实际 `0 × 8` | `04-bodyweight-green.log`，7 tests passed |
+
+第 2 点只用 `colors.danger` 判断是否进入错误态，不固定色值、间距或列宽。第 4 点第一次复跑（`04-bodyweight-first-check.log`）揭示本轮第 1 点测试的自重行仍期望旧显示 `50 × 10`；按新口径改成 `BW × 10`，保存前后相等与其他断言保留。TypeScript 首跑（`tsc-first.log`，退出 2）发现新增测试用了 `zh-Hans` 而仓内 Locale 为 `en | zh`，已改为 `zh`，未放宽断言；最终全量再次验证。
+
+独立工程自审：`review-loop` 两个只读 reviewer 按固定 `review.diff` 分轴审查，**Standards 0 findings；Spec 0 findings**。主代理已读完整本轮 diff。仓内缺 `docs/agents/issue-tracker.md`，完整 Matt tracker 流程需另行 `$setup-matt-pocock-skills`；本次按本地已批准卡执行，无新配置。这是开发自测／自审，不代表 Opus 功能收货。
+
+疑点：第 4 点数据辨识疑问已按上述明确口径关闭；**无待裁决产品疑点**。未做设备验证，按卡交 Opus 复验：① Light/Dark 下普通／错误／完成行聚焦描边；② 360×640dp、1.3× 字号下按钮折行居中；③ 系统键盘切换输入时的可见性与焦点恢复。无 Global 联调或整项验收通过的声明。
+
+本轮最终指定命令：
+
+| 命令 | 最终结果 | 原始输出 |
+| --- | --- | --- |
+| `npx jest --runInBand` | 退出 0；158 suites / 1283 tests passed，0 failed；35.079s | `/private/tmp/rn-089/b-r1/final-jest.log` |
+| `npx tsc --noEmit` | 退出 0；0 errors（无输出） | `/private/tmp/rn-089/b-r1/final-tsc.log` |
+| `npm run lint` | 退出 0；0 errors / 0 warnings | `/private/tmp/rn-089/b-r1/final-lint.log` |
+
+每条退出码另存同名 `.exit`。最终 `git diff --check` 通过；本轮交付增量（相对启动时首轮 WIP，含本节）存 `/private/tmp/rn-089/b-r1/final.diff`。未改卡 A 纯函数、API schema、i18n 目录及首轮其余文件。

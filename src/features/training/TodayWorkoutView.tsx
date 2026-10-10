@@ -1,3 +1,6 @@
+import { isAccessoryExercise } from './accessory-quick-log';
+import { readRestPreference } from '@/features/settings/storage';
+import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import { localDateText } from '@/domain/plan/workout-date-policy';
 import { chatRepository, type Conversation } from '@/api/domains/chat';
 import { SetRefEntryVisibility } from '@/features/chat/set-ref';
@@ -36,7 +39,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Keyboard, ScrollView, TextInput, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -93,6 +96,7 @@ import {
   historyRangeStart,
   parseFiniteDecimal,
   resolveRestSeconds,
+  resolveAccessoryRestSeconds,
 } from './policy';
 import { ReadinessSheet } from './ReadinessSheet';
 import { RestTimer } from './RestTimer';
@@ -115,6 +119,15 @@ const EMPTY_E1RM_BY_EXERCISE: Record<string, number | null> = {};
 export function TodayWorkoutView() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const workoutScroll = useRef<ScrollView>(null);
+  const focusedAccessoryInput = useRef<TextInput | null>(null);
+  const revealAccessoryInput = useCallback(() => {
+    if (focusedAccessoryInput.current) workoutScroll.current?.scrollResponderScrollNativeHandleToKeyboard(focusedAccessoryInput.current, spacing.lg, true);
+  }, []);
+  useEffect(() => {
+    const subscription = Keyboard.addListener('keyboardDidShow', revealAccessoryInput);
+    return () => subscription.remove();
+  }, [revealAccessoryInput]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const { totalUnread: unreadCount, openCoachChat, isOpening } = useOpenCoachChat(studentId);
   const [shareRoute, setShareRoute] = useState<{ conversationId: string; initialSetLogID?: string; coachName: string } | null>(null);
@@ -154,6 +167,7 @@ export function TodayWorkoutView() {
     value: false,
   });
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [accessoryRest, setAccessoryRest] = useState(false);
   const [restExerciseName, setRestExerciseName] = useState('');
   const [restGeneration, setRestGeneration] = useState(0);
   const trainingFocused = useRef(true);
@@ -253,6 +267,8 @@ export function TodayWorkoutView() {
       ? draftOverrides[draft.stableSetId]
       : draft,
   );
+  const accessoryDraftsRef = useRef(liveDrafts);
+  useEffect(() => { accessoryDraftsRef.current = liveDrafts; }, [liveDrafts]);
   // Drafts are rebuilt each render; only changes to log identities need a fetch.
   const videoSetKey = JSON.stringify(
     liveDrafts.flatMap((draft) =>
@@ -571,14 +587,17 @@ export function TodayWorkoutView() {
     failed: boolean;
     completed?: boolean;
     attachmentOnly?: boolean;
+    accessory?: { request: SetLogUpsertRequest; mode: 'single' | 'all' };
     quickLogDate?: string;
   }): Promise<string | undefined> => {
-    const restRevisionAtSave = restRevision.current;
+    let restRevisionAtSave = restRevision.current;
     const operation = async () => {
-      const draft = liveDrafts.find(
+      const currentDrafts = input.accessory ? accessoryDraftsRef.current : liveDrafts;
+      const draft = currentDrafts.find(
         (candidate) => candidate.stableSetId === input.stableSetId,
       );
       if (!draft) return;
+      const usesAccessoryRest = !input.quickLogDate && isAccessoryExercise(resolveExerciseMetadata(draft.exercise.exercise_id)?.exerciseType);
       if (useSessionStore.getState().user?.id !== studentId) throw new Error('Session changed');
       const latestPlan = queryClient.getQueryData<PlanDetail>(
         planKeys.detail(plan?.id ?? ''),
@@ -595,6 +614,7 @@ export function TodayWorkoutView() {
         );
         throw new Error('Selected day is no longer current');
       }
+      if (input.accessory?.mode === 'single' && input.completed) { endRest(); restRevisionAtSave = restRevision.current; }
       const logDate = input.quickLogDate ?? gymDayText(new Date());
       const completed = input.completed ?? true;
       const weight = parseFiniteDecimal(input.weightText);
@@ -616,7 +636,7 @@ export function TodayWorkoutView() {
         throw new Error('Invalid set input');
       }
       try {
-        const response = await upsert.mutateAsync({
+        const response = await upsert.mutateAsync(input.accessory?.request ?? {
           plan_exercise_id: draft.exercise.id,
           ...(input.quickLogDate ? { logged_date: input.quickLogDate } : {}),
           set_index: draft.setIndex,
@@ -631,7 +651,7 @@ export function TodayWorkoutView() {
           : completed
             ? 'complete'
             : 'pending';
-        const nextDrafts = liveDrafts.map((candidate) =>
+        const nextDrafts = currentDrafts.map((candidate) =>
           candidate.stableSetId === draft.stableSetId
             ? ({
                 ...candidate,
@@ -658,6 +678,7 @@ export function TodayWorkoutView() {
               } satisfies WorkoutSetDraft)
             : candidate,
         );
+        if (input.accessory) accessoryDraftsRef.current = nextDrafts;
         const updatedDraft = nextDrafts.find(
           (candidate) => candidate.stableSetId === draft.stableSetId,
         );
@@ -705,18 +726,20 @@ export function TodayWorkoutView() {
             await trainingE1RMRepository.acknowledgePR(e1rm.pr.id).catch(() => undefined);
           }
           if (
-            trainingFocused.current && !input.quickLogDate && draft.status !== 'complete' &&
-            nextDrafts.some((candidate) => !isDraftTerminal(candidate))
+            trainingFocused.current && !input.quickLogDate && (usesAccessoryRest || draft.status !== 'complete') &&
+            (usesAccessoryRest ? input.accessory?.mode !== 'all' && nextDrafts.some(candidate => candidate.exercise.id === draft.exercise.id && !isDraftTerminal(candidate)) : nextDrafts.some((candidate) => !isDraftTerminal(candidate)))
           ) {
-            const preference = await readNumber(
+            const accessoryPreference = usesAccessoryRest ? await readRestPreference(studentId) : null;
+            const preference = usesAccessoryRest ? null : await readNumber(
               STORAGE_KEYS.restPreference(studentId),
             );
             if (!trainingFocused.current || restRevision.current !== restRevisionAtSave) return response.id;
             const restExercise = resolveExerciseMetadata(draft.exercise.exercise_id);
+            setAccessoryRest(usesAccessoryRest);
             setRestExerciseName(restExercise ? exerciseTitle(restExercise) : '');
             setRestGeneration(value => value + 1);
             setRestSeconds(
-              resolveRestSeconds({
+              accessoryPreference ? resolveAccessoryRestSeconds({ prescribed: draft.planSet.rest_seconds, preference: accessoryPreference }) : resolveRestSeconds({
                 prescribed: draft.planSet.rest_seconds,
                 preference,
                 rpe: prescriptionRestRPE(draft.planSet),
@@ -890,7 +913,7 @@ export function TodayWorkoutView() {
         </Pressable>
         </View>
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={workoutScroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.content}>
         {state.kind !== 'loading' && plan ? (
           <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} />
         ) : null}
@@ -991,6 +1014,13 @@ export function TodayWorkoutView() {
                 (log) => log.logged_date < today,
               )}
               studentId={studentId}
+              unit={profileQuery.data?.unit_preference === 'lb' ? 'lb' : 'kg'}
+              onAccessoryInputFocus={input => { focusedAccessoryInput.current = input; revealAccessoryInput(); }}
+              onAccessorySave={async (draft, request, mode) => {
+                const id = await commit({ stableSetId: draft.stableSetId, weightText: request.weight_kg, repsText: String(request.reps), rpeText: request.rpe ?? '', failed: request.failed ?? false, completed: request.completed, accessory: { request, mode } });
+                if (!id) throw new Error('Set unavailable');
+                return id;
+              }}
               onRecord={(draft) => { setInitialCamera(false); openDraft(draft); }}
               onVideo={(draft) => { setInitialCamera(true); openDraft(draft); }}
               onToggleComplete={(draft) => {
@@ -1151,6 +1181,7 @@ export function TodayWorkoutView() {
         <RestTimer
           key={restGeneration}
           durationSeconds={restSeconds}
+          showRPEExplanation={!accessoryRest}
           exerciseName={restExerciseName}
           studentId={studentId}
           onClose={endRest}
