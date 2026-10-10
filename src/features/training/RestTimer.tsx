@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Modal, ScrollView, StyleSheet, Text, Vibration, View } from 'react-native';
+import { ActivityIndicator, AppState, Modal, ScrollView, StyleSheet, Text, Vibration, View, type ViewProps } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -16,6 +16,7 @@ import { RestTimerSession } from './rest-timer-session';
 import { restNotificationPermission, restTimerNotifications } from './rest-timer-notification';
 
 type Props = {
+  onOverlayLayout?: ViewProps['onLayout'];
   durationSeconds: number | null;
   showRPEExplanation?: boolean;
   exerciseName?: string;
@@ -31,7 +32,7 @@ export function RestTimer(props: Props) {
   return props.durationSeconds === null ? null : <RestTimerContent key={`${props.studentId}:${props.durationSeconds}`} {...props} />;
 }
 
-function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId, showRPEExplanation = true }: Props) {
+function RestTimerContent({ onOverlayLayout, durationSeconds, exerciseName, onClose, studentId, showRPEExplanation = true }: Props) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [remaining, setRemaining] = useState(durationSeconds ?? 0);
@@ -109,7 +110,7 @@ function RestTimerContent({ durationSeconds, exerciseName, onClose, studentId, s
 
   return (
     <>
-      <View style={styles.overlay}>
+      <View style={styles.overlay} onLayout={onOverlayLayout}>
         {remaining > 0 ? (
           <View accessibilityLabel={t('student.restTimerOverlay.copy002', [formatClock(remaining)])}>
             <View style={styles.timerRow}>

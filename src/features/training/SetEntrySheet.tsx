@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { t } from '@/i18n';
 import { AnalyticsEvent, track } from '@/analytics';
-import { NumberPad, PlateVisual, useColors, type Colors, font, radius, spacing, typography } from '@/design';
+import { NumberPad, PlateVisual, useColors, type Colors, font, fontMetrics, radius, spacing, typography } from '@/design';
 import type { NumberPadField } from '@/design/number-pad';
 import { SetEntryRPEScale } from './SetEntryRPEScale';
 import { TRAINING_LIMITS } from './constants';
@@ -70,8 +70,8 @@ function Stepper({ label, onChange, stepLabel, value, unit, onOpenPad, automatic
   return (
     <View style={styles.stepper}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionLabel}>{label}</Text>
-        <Text style={styles.stepLabel}>{stepLabel}</Text>
+        <Text style={[styles.sectionLabel, styles.compactSectionLabel]}>{label}</Text>
+        <Text style={[styles.stepLabel, styles.compactStepLabel]}>{stepLabel}</Text>
       </View>
       <View style={styles.stepperRow}>
         {button(-1)}
@@ -79,14 +79,14 @@ function Stepper({ label, onChange, stepLabel, value, unit, onOpenPad, automatic
           disabled={!editable} onPress={onOpenPad} onLayout={event => setWidth(event.nativeEvent.layout.width)} style={styles.valueBox}>
           {automatic && width > 0 ? (
             <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-              <Svg width={width} height={54}>
-                <Rect x={0.75} y={0.75} width={width - 1.5} height={52.5} rx={radius.card}
+              <Svg width={width} height={spacing.xxl}>
+                <Rect x={0.75} y={0.75} width={width - 1.5} height={spacing.xxl - 1.5} rx={radius.card}
                   fill="none" stroke={`${colors.gold500}73`} strokeWidth={1.5} strokeDasharray={[2, 3]} />
               </Svg>
             </View>
           ) : null}
           <View style={styles.valueContents}>
-            <Text style={[styles.stepperValue, automatic && { color: colors.textSecondary }]}>{value || t('coach.videoFeedback.missingValue')}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[styles.stepperValue, automatic && { color: colors.textSecondary }]}>{value || t('coach.videoFeedback.missingValue')}</Text>
             <Text style={styles.stepperUnit}>{unit}</Text>
           </View>
           {automatic ? <Text style={styles.automaticBadge}>{t('student.todayWorkoutTypes.copy027')}</Text> : null}
@@ -230,7 +230,7 @@ export function SetEntrySheet({
                 <View style={styles.plateSection}>
                   <PlateVisual totalKg={parsedWeight} hasCollar={collarOn} height={108} />
                   <View style={styles.plateTop}>
-                    <Text numberOfLines={2} adjustsFontSizeToFit style={styles.plateDetail}>{loadout.detail}</Text>
+                    <Text style={styles.plateDetail}>{loadout.detail}</Text>
                     <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: collarOn }}
                       accessibilityLabel={t('student.setEntrySheet.copy007')} onPress={() => onChangeCollar(!collarOn)}
                       style={[styles.collar, collarOn && { borderColor: `${colors.gold500}73` }]}>
@@ -250,7 +250,7 @@ export function SetEntrySheet({
                 <Stepper label={t('student.setEntrySheet.copy003')} stepLabel="± 1" unit={t('student.setEntrySheet.copy004')}
                   value={repsText} editable={editable} onOpenPad={() => setNumberPad('reps')}
                   onChange={direction => setRepsText(String(Math.max(0, (Number(repsText) || 0) + direction * TRAINING_LIMITS.repsStep)))} />
-                <View style={styles.stepper}>
+                <View style={{ gap: spacing.space2 }}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionLabel}>{t('chat.rpeMetric')}</Text>
                     <Text style={styles.stepLabel}>5–10 · 0.5</Text>
@@ -331,23 +331,25 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   navTitle: { color: colors.textPrimary, flex: 1, textAlign: 'center', ...font.body(17, 'semibold') },
   navSpacer: { width: 44 },
   content: { paddingHorizontal: spacing.space4, paddingBottom: spacing.space4 },
-  plateSection: { gap: 6, marginBottom: 6 },
-  plateTop: { gap: spacing.point10 },
-  plateDetail: { color: colors.textPrimary, ...font.mono(13, 'semibold') },
-  collar: { alignSelf: 'flex-end', flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: colors.surfaceCard, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderDefault, paddingHorizontal: 14, paddingVertical: 8, minHeight: 44 },
+  plateSection: { gap: spacing.point6, marginBottom: spacing.md },
+  plateTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.point10 },
+  plateDetail: { flex: 1, color: colors.textPrimary, ...font.mono(fontMetrics.size13, 'semibold') },
+  collar: { flexShrink: 0, flexDirection: 'row', gap: 6, alignItems: 'center', backgroundColor: colors.surfaceCard, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderDefault, paddingHorizontal: 14, paddingVertical: 8, minHeight: 44 },
   collarCircle: { width: 17, height: 17, borderRadius: radius.pill, borderWidth: 2, borderColor: colors.textMuted },
   collarText: { color: colors.textMuted, ...font.body(14, 'medium') },
   controls: { gap: spacing.space3 },
-  stepper: { gap: spacing.space2 },
+  stepper: { gap: spacing.xs },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   sectionLabel: { color: colors.textMuted, ...font.mono(12, 'medium'), letterSpacing: 0.96 },
+  compactSectionLabel: { lineHeight: fontMetrics.size16 },
   stepLabel: { color: colors.textMuted, ...font.mono(10) },
+  compactStepLabel: { ...font.mono(fontMetrics.size12), lineHeight: fontMetrics.size16 },
   caption: { color: colors.textSecondary, ...typography.caption },
   stepperRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.space3 },
-  stepperButton: { alignItems: 'center', justifyContent: 'center', backgroundColor: `${colors.gold500}1F`, borderColor: `${colors.gold500}4D`, borderRadius: radius.pill, borderWidth: 1, height: 48, width: 48 },
-  valueBox: { flex: 1, height: 54, backgroundColor: colors.surfaceCard, borderRadius: radius.card, alignItems: 'center', justifyContent: 'center' },
-  valueContents: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  stepperValue: { color: colors.textPrimary, ...font.mono(34, 'bold') },
+  stepperButton: { alignItems: 'center', justifyContent: 'center', backgroundColor: `${colors.gold500}1F`, borderColor: `${colors.gold500}4D`, borderRadius: radius.pill, borderWidth: 1, height: spacing.xxl, width: spacing.xxl },
+  valueBox: { flex: 1, height: spacing.xxl, backgroundColor: colors.surfaceCard, borderRadius: radius.card, alignItems: 'center', justifyContent: 'center' },
+  valueContents: { maxWidth: '100%', paddingHorizontal: spacing.sm, flexDirection: 'row', alignItems: 'baseline', gap: spacing.point6 },
+  stepperValue: { flexShrink: 1, color: colors.textPrimary, ...font.mono(fontMetrics.size30, 'bold') },
   stepperUnit: { color: colors.textMuted, ...font.body(14, 'bold') },
   automaticBadge: { position: 'absolute', top: -6, right: 10, paddingHorizontal: 5, backgroundColor: colors.bgBase, color: colors.goldText, ...font.mono(9), letterSpacing: 0.72 },
   footer: { borderTopColor: colors.borderDefault, borderTopWidth: 1, gap: spacing.space3, paddingHorizontal: spacing.space4, paddingTop: 10, paddingBottom: 20 },
