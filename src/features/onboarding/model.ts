@@ -1,13 +1,15 @@
-import { t } from '@/i18n';
-
 import type {
   OnboardingProfile,
   OnboardingUpsertInput,
 } from '@/api/domains/onboarding';
 import { ApiError } from '@/api/client';
 import { calculateE1RM } from '@/domain/e1rm';
+import { parseMeetClass } from '@/domain/meet/weight-class';
+import { bodyWeightKgFromInput } from '@/domain/profile/body-weight';
+import { t } from '@/i18n';
 
 import { INJURY_AREAS, MUSCLE_GROUPS, TRAINING_DAYS, type GymTier, type InjuryArea, type MuscleGroup } from './catalog';
+import { invalidMeetFields, meetPatch, removeMeetPatch } from './meet';
 
 export const ONBOARDING_STEP_COUNT = 7 as const;
 
@@ -51,6 +53,8 @@ export type OnboardingForm = {
   targetWeightClass: string;
   noteToCoach: string;
 };
+
+export type OnboardingErrorField = keyof OnboardingForm | 'federation' | 'weightClass';
 
 export type OnboardingDraft = {
   form: OnboardingForm;
@@ -267,7 +271,7 @@ function positive(value: string): boolean {
 export function invalidFieldsForStep(
   form: OnboardingForm,
   step: OnboardingStep,
-): (keyof OnboardingForm)[] {
+): OnboardingErrorField[] {
   const bounds = onboardingDateBounds();
   switch (step) {
     case 1:
@@ -276,7 +280,7 @@ export function invalidFieldsForStep(
         ...(form.gender ? [] : (['gender'] as const)),
         ...(form.birthDate >= bounds.birth.minDate && form.birthDate <= bounds.birth.maxDate ? [] : (['birthDate'] as const)),
         ...(positive(form.heightCm) ? [] : (['heightCm'] as const)),
-        ...(positive(form.weightKg) ? [] : (['weightKg'] as const)),
+        ...(bodyWeightKgFromInput(form.weightKg, 'kg') ? [] : (['weightKg'] as const)),
       ];
     case 2:
       return [
@@ -307,12 +311,7 @@ export function invalidFieldsForStep(
     case 6:
       return [];
     case 7:
-      return [
-        ...(form.isCompeting === null ? (['isCompeting'] as const) : []),
-        ...(form.isCompeting && (form.competitionDate < bounds.competition.minDate || form.competitionDate > bounds.competition.maxDate)
-          ? (['competitionDate'] as const)
-          : []),
-      ];
+      return form.isCompeting ? invalidMeetFields({ competitionDate: form.competitionDate, ...parseMeetClass(form.targetWeightClass) }) : [];
   }
 }
 
@@ -342,7 +341,8 @@ function assignStep(
     if (form.gender) patch.gender = form.gender;
     if (form.birthDate) patch.birth_date = form.birthDate;
     if (positive(form.heightCm)) patch.height_cm = form.heightCm;
-    if (positive(form.weightKg)) patch.weight_kg = form.weightKg;
+    const weightKg = bodyWeightKgFromInput(form.weightKg, 'kg');
+    if (weightKg) patch.weight_kg = weightKg;
   }
   if (step === 2) {
     if (Number.isFinite(form.trainingYears)) patch.training_years = form.trainingYears;
@@ -376,9 +376,9 @@ function assignStep(
   if (step === 7) {
     patch.injury_notes = trimmedOrNull(form.injuryNotes);
     patch.injury_areas = form.injuryAreas.length ? [...form.injuryAreas] : null;
-    if (form.isCompeting !== null) patch.is_competing = form.isCompeting;
-    patch.competition_date = form.isCompeting ? form.competitionDate || null : null;
-    patch.target_weight_class = trimmedOrNull(form.targetWeightClass);
+    const meet = parseMeetClass(form.targetWeightClass);
+    if (!form.isCompeting) Object.assign(patch, removeMeetPatch());
+    else if (meet) Object.assign(patch, meetPatch({ competitionDate: form.competitionDate, ...meet }));
     patch.note_to_coach = trimmedOrNull(form.noteToCoach);
   }
 }

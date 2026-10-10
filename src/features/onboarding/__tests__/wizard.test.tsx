@@ -159,18 +159,18 @@ test('imperial weight input preserves raw text until blur or a unit change', () 
     return <OnboardingStepContent errorFields={new Set()} form={form} step={1} update={(patch) => setForm((current) => ({ ...current, ...patch }))} />;
   }
   act(() => { renderer = create(<Basic />); });
-  for (const [text, kilograms] of [['1', '0.5'], ['1.', '0.5'], ['70.5', '32']]) {
+  for (const [text, kilograms] of [['1', '0.45'], ['1.', '0.45'], ['70.5', '31.98']]) {
     act(() => renderer.root.findAllByType(TextInput)[1].props.onChangeText(text));
     expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe(text);
     expect(selected!.weightKg).toBe(kilograms);
   }
   act(() => renderer.root.findAllByType(TextInput)[1].props.onChangeText('1.'));
   act(() => renderer.root.findAllByType(TextInput)[1].props.onBlur());
-  expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('1.1');
+  expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('0.99');
   act(() => press(UNIT_LABELS.kg));
-  expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('0.5');
+  expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('0.45');
   act(() => press(UNIT_LABELS.lb));
-  expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('1.1');
+  expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('0.99');
 });
 
 test('pressing the selected gym preserves customized equipment without an alert or update', () => {

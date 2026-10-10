@@ -9,7 +9,7 @@ export default function ProfileRoute() {
   const { edit, returnTo } = useLocalSearchParams<ProfileParams>();
   const router = useRouter();
   const navigation = useNavigation<NavigationProp<{ profile: ProfileParams }, 'profile'>>();
-  const section = edit === 'basics' || edit === 'competition' ? edit : undefined;
+  const section = edit === 'basics' || edit === 'competition' || edit === 'weight' || edit === 'note' ? edit : undefined;
   useFocusEffect(useCallback(() => () => {
     if (section) navigation.setParams({ edit: undefined, returnTo: undefined });
   }, [navigation, section]));

@@ -1,12 +1,13 @@
-import { decimalInput, metricDisplay, metricStored, POUNDS_PER_KG } from '@/domain/measurement';
-import { t } from '@/i18n';
-
+import { decimalInput, metricDisplay, metricStored } from '@/domain/measurement';
 import { useState, useMemo } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton, Card, useColors, type Colors, radius, spacing, typography } from '@/design';
+import { MEET_FEDERATIONS, parseMeetClass, formatMeetClass, meetClassTableSex, weightClassesFor, type MeetFederation } from '@/domain/meet/weight-class';
+import { bodyWeightInput, bodyWeightInputFromKg, bodyWeightKgFromInput } from '@/domain/profile/body-weight';
+import { t, type TranslationKey } from '@/i18n';
 
 import {
   BENCH_GRIPS, BENCH_GRIP_LABELS, DEADLIFT_STYLES, DEADLIFT_STYLE_LABELS,
@@ -28,12 +29,13 @@ import {
 import {
   estimateOneRepMax,
   onboardingDateBounds,
+  type OnboardingErrorField,
   type OnboardingForm,
   type OnboardingStep,
 } from './model';
 
 type Props = {
-  errorFields: ReadonlySet<keyof OnboardingForm>;
+  errorFields: ReadonlySet<OnboardingErrorField>;
   form: OnboardingForm;
   step: OnboardingStep;
   update: (patch: Partial<OnboardingForm>) => void;
@@ -73,7 +75,6 @@ export function BodyMeasurementsSection({ errorFields, form, update, stacked = f
   const styles = useMemo(() => createStyles(colors), [colors]);
   const imperial = form.unitPreference === 'lb';
   const [heightText, setHeightText] = useState(() => metricDisplay(form.heightCm, 0.3937007874));
-  const [weightText, setWeightText] = useState(() => metricDisplay(form.weightKg, POUNDS_PER_KG));
   return (
     <View style={stacked ? styles.section : styles.twoColumns}>
       <View style={!stacked && styles.column}>
@@ -94,26 +95,32 @@ export function BodyMeasurementsSection({ errorFields, form, update, stacked = f
           {stacked ? <Text style={styles.measurementUnit}>{imperial ? 'in' : 'cm'}</Text> : null}
         </View>
       </View>
-      <View style={!stacked && styles.column}>
-        <FieldLabel>{t('student.step1BasicsSection.copy003')}{!stacked && `(${imperial ? 'lb' : 'kg'})`}</FieldLabel>
-        <View style={stacked && styles.measurementRow}>
-          <FormInput
-            style={stacked && styles.measurementInput}
-            error={errorFields.has('weightKg')}
-            keyboardType="decimal-pad"
-            onBlur={() => setWeightText(metricDisplay(form.weightKg, POUNDS_PER_KG))}
-            onChangeText={(value) => {
-              setWeightText(value);
-              update({ weightKg: imperial ? metricStored(value, POUNDS_PER_KG) : decimalInput(value) });
-            }}
-            placeholder={imperial ? '183' : '83'}
-            value={imperial ? weightText : form.weightKg}
-          />
-          {stacked ? <Text style={styles.measurementUnit}>{imperial ? 'lb' : 'kg'}</Text> : null}
-        </View>
-      </View>
+      <View style={!stacked && styles.column}><WeightSection labelKey="student.step1BasicsSection.copy003" stacked={stacked} errorFields={errorFields} form={form} update={update} /></View>
     </View>
   );
+}
+
+
+export function WeightSection({ errorFields, form, update, stacked = true, showHelp = false, labelKey = 'student.rn.weight.label' }: Omit<Props, 'step'> & { stacked?: boolean; showHelp?: boolean; labelKey?: TranslationKey }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const unit = form.unitPreference === 'lb' ? 'lb' : 'kg';
+  const [text, setText] = useState(() => bodyWeightInputFromKg(form.weightKg, unit));
+  return <>
+    <FieldLabel>{t(labelKey)}{!stacked && `(${unit})`}</FieldLabel>
+    <View style={stacked && styles.measurementRow}>
+      <FormInput style={stacked && styles.measurementInput} error={errorFields.has('weightKg')}
+        onBlur={() => setText(bodyWeightInputFromKg(form.weightKg, unit))}
+        keyboardType="decimal-pad" placeholder={unit === 'lb' ? '183' : '83'} value={text}
+        onChangeText={(value) => {
+          const filtered = bodyWeightInput(value);
+          setText(filtered);
+          update({ weightKg: bodyWeightKgFromInput(filtered, unit) });
+        }} />
+      {stacked ? <Text style={styles.measurementUnit}>{unit}</Text> : null}
+    </View>
+    {showHelp ? <Text style={styles.help}>{t('student.rn.bodyWeight.precision')}</Text> : null}
+  </>;
 }
 
 
@@ -402,6 +409,8 @@ function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   return <View style={styles.section}>
     <InjuriesSection form={form} update={update} errorFields={errorFields} />
     <CompetitionSection form={form} update={update} errorFields={errorFields} />
+    <FieldLabel>{t('student.step7ExtrasSection.copy009')}</FieldLabel>
+    <NoteSection form={form} update={update} />
   </View>;
 }
 
@@ -422,36 +431,53 @@ export function InjuriesSection({ form, update }: Omit<Props, 'step'>) {
   </>;
 }
 
-export function CompetitionSection({ errorFields, form, update }: Omit<Props, 'step'>) {
+export function NoteSection({ form, update }: Pick<Props, 'form' | 'update'>) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  return <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder={t('student.step7ExtrasSection.copy010')} style={styles.textArea} value={form.noteToCoach} />;
+}
+
+export function CompetitionSection({ errorFields, form, update, profileLayout = false }: Omit<Props, 'step'> & { profileLayout?: boolean }) {
+  const colors = useColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const parsed = parseMeetClass(form.targetWeightClass);
+  const [federation, setFederation] = useState<MeetFederation | null>(() => parsed?.federation ?? null);
+  const [sex, setSex] = useState(() => meetClassTableSex(parsed?.federation, parsed?.weightClass, form.gender));
+  const [legacy] = useState(() => !parsed ? form.targetWeightClass : '');
+  const expanded = profileLayout || form.isCompeting === true;
+  const classes = federation ? weightClassesFor(federation, sex) : [];
+  const selectedClass = parsed?.federation === federation ? parsed?.weightClass : null;
+  const remove = () => { setFederation(null); update({ isCompeting: false, competitionDate: '', targetWeightClass: '' }); };
   return <>
-      <FieldLabel>{t('student.step7ExtrasSection.copy004')}</FieldLabel>
-      <ChoiceGroup
-        choices={[
-          { label: t('student.step7ExtrasSection.copy005'), value: 'no' },
-          { label: t('student.step7ExtrasSection.copy006'), value: 'yes' },
-        ]}
-        error={errorFields.has('isCompeting')}
-        onChange={(value) => update({ isCompeting: value === 'yes' })}
-        selected={form.isCompeting === null ? null : form.isCompeting ? 'yes' : 'no'}
-      />
-      {form.isCompeting ? (
-        <>
-          <FieldLabel>{t('student.step7ExtrasSection.copy011')}</FieldLabel>
-          <View style={errorFields.has('competitionDate') && styles.dateError}>
-            <DateWheel
-              {...onboardingDateBounds().competition}
-              onChange={(competitionDate) => update({ competitionDate })}
-              value={form.competitionDate}
-            />
-          </View>
-          <FieldLabel>{t('student.step7ExtrasSection.copy007')}</FieldLabel>
-          <FormInput onChangeText={(targetWeightClass) => update({ targetWeightClass })} placeholder={t('student.step7ExtrasSection.copy008')} value={form.targetWeightClass} />
-        </>
-      ) : null}
-      <FieldLabel>{t('student.step7ExtrasSection.copy009')}</FieldLabel>
-      <FormInput multiline onChangeText={(noteToCoach) => update({ noteToCoach })} placeholder={t('student.step7ExtrasSection.copy010')} style={styles.textArea} value={form.noteToCoach} />
+    {!profileLayout ? <View style={styles.meetHeading}>
+      <FieldLabel>{t('student.rn.meet.title')}</FieldLabel>
+      {expanded ? <Pressable accessibilityRole="button" onPress={remove}><Text style={styles.link}>{t('student.rn.meet.removeAction')}</Text></Pressable> : null}
+    </View> : null}
+    {!expanded ? <>
+      <Pressable accessibilityRole="button" style={styles.addMeet} onPress={() => update({ isCompeting: true, competitionDate: form.competitionDate || onboardingDateBounds().competition.minDate })}>
+        <Text style={styles.addMeetText}>+ {t('student.rn.meet.addOptional')}</Text>
+      </Pressable>
+      <Text style={styles.help}>{t('student.rn.meet.help')}</Text>
+    </> : <>
+      <FieldLabel error={errorFields.has('competitionDate')}>{t('student.step7ExtrasSection.copy011')}</FieldLabel>
+      <View style={errorFields.has('competitionDate') && styles.dateError}>
+        <DateWheel {...onboardingDateBounds().competition} onChange={(competitionDate) => update({ competitionDate })} value={form.competitionDate} />
+      </View>
+      <FieldLabel error={!federation && errorFields.has('federation')}>{t('student.rn.meet.federation')}</FieldLabel>
+      {legacy ? <Text accessibilityLabel={t('student.rn.meet.previous', [legacy])} style={styles.help}>{t('student.rn.meet.previous', [''])}<Text style={{ ...typography.monoLabel, color: colors.textPrimary }}>{legacy}</Text></Text> : null}
+      <ChoiceGroup layout="row" appearance="meet" choices={MEET_FEDERATIONS.map(value => ({ value, label: value }))} selected={federation}
+        onChange={(value) => { if (value !== federation) { setFederation(value); update({ targetWeightClass: '' }); } }} />
+      {federation ? <>
+        <View style={styles.meetHeading}>
+          <FieldLabel error={!selectedClass && errorFields.has('weightClass')}>{t('student.rn.meet.weightClass')}</FieldLabel>
+          {form.gender !== 'male' && form.gender !== 'female' ? <ChoiceGroup layout="segmented" choices={[{ value: 'male', label: t('student.rn.meet.men') }, { value: 'female', label: t('student.rn.meet.women') }]} selected={sex}
+            onChange={(value) => { setSex(value); if (selectedClass && !weightClassesFor(federation, value).includes(selectedClass)) update({ targetWeightClass: '' }); }} /> : null}
+        </View>
+        {Array.from({ length: Math.ceil(classes.length / 4) }, (_, index) => <ChoiceGroup key={index} columns={4} layout="row" appearance="meet"
+          choices={classes.slice(index * 4, index * 4 + 4).map(value => ({ value, label: `${value} kg` }))} selected={selectedClass}
+          onChange={(value) => update({ targetWeightClass: formatMeetClass(federation, value) })} />)}
+      </> : null}
+    </>}
   </>;
 }
 
@@ -476,6 +502,9 @@ export function OnboardingStepContent(props: Props) {
 }
 
 const createStyles = (colors: Colors) => StyleSheet.create({
+  meetHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  addMeet: { borderStyle: 'dashed', borderWidth: spacing.point1, borderColor: colors.borderStrong, borderRadius: radius.control, padding: spacing.base, alignItems: 'center' },
+  addMeetText: { color: colors.goldText, ...typography.bodyEmphasis },
   section: { gap: spacing.md },
   twoColumns: { flexDirection: 'row', gap: spacing.md },
   column: { flex: 1 },

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Text, TextInput } from 'react-native';
+import { Alert, Text, TextInput } from 'react-native';
 import { onboardingRepository, type OnboardingProfile } from '@/api/domains/onboarding';
 import { setLocaleOverride, t } from '@/i18n';
 import { GENDER_LABELS, UNIT_LABELS } from '@/features/onboarding/catalog';
@@ -65,24 +65,24 @@ test('basics editor uses the iOS Basic information title', async () => {
   expect(renderer.root.findAllByType(Text).find(node => node.props.accessibilityRole === 'header')?.props.children).toBe('Basic information');
 });
 
-test('competition editor uses the iOS Meet / notes title', async () => {
+test('competition editor uses the approved Meet title', async () => {
   await mount('competition');
-  expect(renderer.root.findAllByType(Text).find(node => node.props.accessibilityRole === 'header')?.props.children).toBe('Meet / notes');
+  expect(renderer.root.findAllByType(Text).find(node => node.props.accessibilityRole === 'header')?.props.children).toBe('Meet');
 });
 
 test('basics saves units, gender and birthday, preserves metric measurements and reopens the saved values', async () => {
   await mount('basics');
   await press(UNIT_LABELS.lb);
   expect(input('70').props.value).toBe('70.9');
-  expect(input('183').props.value).toBe('176.4');
+  expect(input('183').props.value).toBe('176.37');
   await press(GENDER_LABELS.female);
   await press(1995);
   await save();
-  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180', weight_kg: '80' });
+  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180', weight_kg: '80.00' });
   expect(onClose).toHaveBeenCalledTimes(1);
   await reopen('basics');
   await save();
-  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180', weight_kg: '80' });
+  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180', weight_kg: '80.00' });
 });
 
 test('switching units after metric edits initializes imperial text from the current measurements', async () => {
@@ -93,9 +93,9 @@ test('switching units after metric edits initializes imperial text from the curr
   act(() => input('83').props.onChangeText('90'));
   await press(UNIT_LABELS.lb);
   expect(input('70').props.value).toBe('74.8');
-  expect(input('183').props.value).toBe('198.4');
+  expect(input('183').props.value).toBe('198.42');
   await save();
-  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'male', birth_date: '2000-01-01', height_cm: '190', weight_kg: '90' });
+  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'male', birth_date: '2000-01-01', height_cm: '190', weight_kg: '90.00' });
 });
 
 test('basics requires the same gender selection as onboarding before saving', async () => {
@@ -108,23 +108,23 @@ test('basics requires the same gender selection as onboarding before saving', as
   expect(lastPatch()).toEqual(expect.objectContaining({ gender: 'other' }));
 });
 
-test.each([true, false])('meet notes save multiline input and rehydrate when competing is %s', async (isCompeting) => {
+test.each([true, false])('note editor saves multiline input and rehydrate when competing is %s', async (isCompeting) => {
   storedProfile.is_competing = isCompeting;
   storedProfile.competition_date = isCompeting ? meetDate : null;
-  await mount('competition');
+  await mount('note');
   const notes = input(t('student.step7ExtrasSection.copy010'));
   expect(notes).toBeDefined();
   expect(notes.props.multiline).toBe(true);
   act(() => notes.props.onChangeText('Meet goal\nKeep it steady'));
   await save();
-  expect(lastPatch()).toEqual({ is_competing: isCompeting, competition_date: isCompeting ? meetDate : null, target_weight_class: '83', note_to_coach: 'Meet goal\nKeep it steady' });
-  await reopen('competition');
+  expect(lastPatch()).toEqual({ note_to_coach: 'Meet goal\nKeep it steady' });
+  await reopen('note');
   expect(input(t('student.step7ExtrasSection.copy010')).props.value).toBe('Meet goal\nKeep it steady');
 });
 
 test('a failed save retains edited notes and allows retry', async () => {
   jest.mocked(onboardingRepository.upsert).mockRejectedValueOnce(new Error('Offline'));
-  await mount('competition');
+  await mount('note');
   const notes = input(t('student.step7ExtrasSection.copy010'));
   expect(notes).toBeDefined();
   act(() => notes.props.onChangeText('Keep this\nafter failure'));
@@ -137,11 +137,109 @@ test('a failed save retains edited notes and allows retry', async () => {
 });
 
 test('cancelling edited notes does not write', async () => {
-  await mount('competition');
+  await mount('note');
   const notes = input(t('student.step7ExtrasSection.copy010'));
   expect(notes).toBeDefined();
   act(() => notes.props.onChangeText('Discard this'));
   await press(t('student.accountSecuritySheets.copy013'));
   expect(onboardingRepository.upsert).not.toHaveBeenCalled();
   expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+test.each(['kg', 'lb'] as const)('weight editor has one input, filters two decimals, and saves only weight in %s', async (unit) => {
+  storedProfile.unit_preference = unit;
+  storedProfile.gender = null;
+  await mount('weight');
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(1);
+  const field = () => renderer.root.findByType(TextInput);
+  act(() => field().props.onChangeText(unit === 'kg' ? '83.256' : '183.256'));
+  expect(field().props.value).toBe(unit === 'kg' ? '83.25' : '183.25');
+  await save();
+  expect(lastPatch()).toEqual({ weight_kg: unit === 'kg' ? '83.25' : '83.12' });
+  await reopen('weight');
+  expect(field().props.value).toBe(unit === 'kg' ? '83.25' : '183.25');
+  await save();
+  expect(lastPatch()).toEqual({ weight_kg: unit === 'kg' ? '83.25' : '83.12' });
+});
+
+test.each(['', '0', '500'])('weight editor blocks invalid kg input %j', async (value) => {
+  await mount('weight');
+  act(() => renderer.root.findByType(TextInput).props.onChangeText(value));
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  expect(renderer.root.findAll(node => node.props.error === true).length).toBeGreaterThan(0);
+});
+
+
+test('Meet preserves legacy text on cancel and validates federation and class before saving only its three fields', async () => {
+  await mount('competition');
+  expect(renderer.root.findAllByType(Text).some(node => node.props.accessibilityLabel === 'Previously entered: 83')).toBe(true);
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  expect(renderer.root.findAll(node => node.props.error === true).length).toBeGreaterThan(0);
+  await press('IPF');
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  await press('83 kg');
+  await press('WP');
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  await press('85 kg');
+  await save();
+  expect(lastPatch()).toEqual({ is_competing: true, competition_date: meetDate, target_weight_class: 'WP · 85 kg' });
+  expect(storedProfile.note_to_coach).toBe('Existing note');
+});
+
+test('cancelling legacy Meet or its removal confirmation does not write; confirmed removal clears only meet fields', async () => {
+  const alert = jest.spyOn(Alert, 'alert');
+  await mount('competition');
+  await press(t('student.accountSecuritySheets.copy013'));
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  await reopen('competition');
+  await press('Remove meet');
+  expect(alert).toHaveBeenCalledWith('Remove this meet?', undefined, expect.any(Array));
+  const buttons = alert.mock.calls.at(-1)![2]!;
+  await act(async () => { buttons.find(button => button.style === 'cancel')?.onPress?.(); });
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  await act(async () => { await buttons.find(button => button.text === 'Remove')!.onPress!(); });
+  expect(lastPatch()).toEqual({ is_competing: false, competition_date: null, target_weight_class: null });
+  expect(storedProfile.note_to_coach).toBe('Existing note');
+});
+
+
+test.each(['en', 'zh'] as const)('Meet explains missing federation or weight class in %s', async (locale) => {
+  setLocaleOverride(locale);
+  await mount('competition');
+  const hint = locale === 'en' ? 'Choose a federation and weight class' : '请选择赛事方和体重级别';
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(hint);
+  await press('IPF');
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(hint);
+});
+
+
+test.each(['en', 'zh'] as const)('Meet keeps the existing hint when only the date is invalid in %s', async (locale) => {
+  setLocaleOverride(locale);
+  storedProfile.competition_date = `${new Date().getFullYear() + 1}-02-30`;
+  storedProfile.target_weight_class = 'IPF · 83 kg';
+  await mount('competition');
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  const copy = renderer.root.findAllByType(Text).map(node => node.props.children);
+  expect(copy).toContain(locale === 'en' ? 'Failed to save. Try again' : '保存失败,请重试');
+  expect(copy).not.toContain(locale === 'en' ? 'Choose a federation and weight class' : '请选择赛事方和体重级别');
+});
+
+test.each(['injuries', 'basics', 'background', 'competition', 'note', 'weight'] as const)('%s editor shows the coach notice only for injuries above Save', async section => {
+  await mount(section);
+  const copy = renderer.root.findAllByType(Text).map(node => node.props.children);
+  const notice = copy.indexOf('Your coach will be notified of changes');
+  if (section === 'injuries') {
+    expect(notice).toBeGreaterThanOrEqual(0);
+    expect(notice).toBeLessThan(copy.indexOf(t('student.profileCardsSection.copy013')));
+  } else expect(notice).toBe(-1);
 });
