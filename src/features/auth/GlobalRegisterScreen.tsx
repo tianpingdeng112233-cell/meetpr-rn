@@ -112,6 +112,8 @@ export default function GlobalRegisterScreen() {
       error={codeError} helper={sentEmail ? t('auth.signupSent', [sentEmail]) : undefined}
       trailing={<Pressable accessibilityRole="button" accessibilityLabel={codeButton}
         accessibilityState={{ disabled: codeDisabled, busy: sending }} disabled={codeDisabled} onPress={() => void sendCode()}
+        // Disabled controls fade to 35%; the pending and countdown labels must stay readable.
+        feedback={remaining > 0 || sending ? 'none' : 'standard'}
         style={{ minHeight: 44, minWidth: 44, borderRadius: 10, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: codeDisabled ? colors.surfaceRaised : colors.goldSoft }}>
         <Text style={{ ...font.body(13), ...authTypography(), color: remaining > 0 || sending ? colors.textTertiary : codeDisabled ? colors.textDisabled : colors.goldText }}>{codeButton}</Text>
       </Pressable>} /> : null}
