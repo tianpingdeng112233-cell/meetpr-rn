@@ -4,7 +4,7 @@
 - 级别／节奏：T2 / P1。只做安卓（`meetpr-rn`），分支 `feat/090-training-flow`，工作树 `meetpr-rn-wt-090`，**叠在 `feat/089-accessory-quick-log`（PR #85，其下是 #81）上**。iOS 等走查完两端一起跟。
 - 性质：David 批准的新口径，差异登记进 `PARITY.md`。除本文三项外不得顺手改别的。
 - 后端：**零改动**。不加字段、不迁移、不部署。
-- 屏幕稿：待出，David「定稿」后把结构与文案转写到文末「屏幕稿」，再派卡。
+- 屏幕稿：画布 https://claude.ai/artifact/2bKRhBjPhDRWtNp96WSA5S （五张板 A–E，2026-10-10 已出，**等 David「定稿」**）；定稿后把结构与文案转写到文末「屏幕稿」，再派卡。
 
 ## 术语
 
