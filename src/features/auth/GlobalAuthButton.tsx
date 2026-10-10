@@ -3,6 +3,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Path } from 'react-native-svg';
 
 import { font, useColors } from '@/design';
+import { authTypography } from './auth-typography';
 
 type GlobalAuthButtonProps = Pick<PressableProps, 'onPress' | 'disabled'> & { label: string; loading?: boolean };
 
@@ -16,7 +17,7 @@ export function GlobalAuthButton({ label, loading = false, disabled = false, onP
       ...(!disabled ? { shadowColor: colors.gold500, shadowOpacity: 0.22, shadowRadius: 9, shadowOffset: { width: 0, height: 6 }, elevation: 4 } : {}),
     }}>
     {loading ? <ActivityIndicator color={colors.inkOnGold} /> : <>
-      <Text style={{ ...font.body(16, 'bold'), letterSpacing: 0.32, color: disabled ? colors.textDisabled : colors.inkOnGold }}>{label}</Text>
+      <Text style={{ ...font.body(16, 'bold'), letterSpacing: 0.32, ...authTypography('button'), color: disabled ? colors.textDisabled : colors.inkOnGold }}>{label}</Text>
       <Svg width={16} height={16} viewBox="0 0 24 24" accessible={false}>
         <Path d="M4 12H20M13 5L20 12 13 19" stroke={disabled ? colors.textDisabled : colors.inkOnGold} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
       </Svg>

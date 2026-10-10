@@ -15,6 +15,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { t } from '@/i18n';
+import { authTypography } from '@/features/auth/auth-typography';
 import { BUILD_TRACK } from '@/config/build-track';
 import { Toast } from '@/design/Toast';
 
@@ -67,15 +69,13 @@ function RootNavigator() {
         headerShown: false,
       }}>
       <Stack.Screen name="index" />
-      <Stack.Protected guard={!bootstrapped || (BUILD_TRACK === 'china' && status === 'authenticating')}>
+      <Stack.Protected guard={!bootstrapped}>
         <Stack.Screen name="validating" />
       </Stack.Protected>
-      <Stack.Protected guard={bootstrapped && (status === 'anonymous' || (BUILD_TRACK === 'global' && status === 'authenticating'))}>
+      <Stack.Protected guard={bootstrapped && (status === 'anonymous' || status === 'authenticating')}>
         <Stack.Screen name="login" />
-        <Stack.Protected guard={BUILD_TRACK === 'global'}>
-          <Stack.Screen name="register" options={{ headerShown: true, title: 'Create account' }} />
-          <Stack.Screen name="forgot-password" options={{ headerShown: true, title: 'Forgot password' }} />
-        </Stack.Protected>
+        <Stack.Screen name="register" options={{ headerShown: true, title: t('auth.createAccount'), headerTitleStyle: authTypography() }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: true, title: t('auth.forgotHeader'), headerTitleStyle: authTypography() }} />
       </Stack.Protected>
       <Stack.Protected guard={isCoach}>
         <Stack.Screen name="(coach)" />
