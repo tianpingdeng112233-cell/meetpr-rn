@@ -5,6 +5,17 @@ import { buildGrowthCurves, growthSnapshot, buildTotalSeries } from '@/features/
 import type { LiftFamily } from '@/domain/e1rm';
 
 const dates = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-01-31', '2026-12-31'];
+test.each(dates)('S2 rework 2: %s uses 2.5 kg steps for all prescribed and recorded weights', today => {
+  const { plan, logs } = buildDemoSeed(today);
+  const weights = [
+    ...plan.days.flatMap(day => day.exercises.flatMap(exercise => exercise.sets.map(set => set.target_weight))),
+    ...logs.map(log => log.weight_kg),
+  ];
+  const nonzeroWeights = weights.filter(weight => weight != null && Number(weight) !== 0).map(Number);
+  expect(nonzeroWeights.length).toBeGreaterThan(0);
+  expect(nonzeroWeights.filter(weight => weight % 2.5 !== 0)).toEqual([]);
+});
+
 test.each(dates)('S2: %s has one untouched workout today in week four and rising history', today => {
   const seed = buildDemoSeed(today);
   const { plan, logs } = seed;
