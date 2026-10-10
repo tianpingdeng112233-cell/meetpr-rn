@@ -4066,3 +4066,94 @@ tsc exit code: 0
 `git diff --check`：无输出，exit 0。中间日志摘录后清理。
 三条退出码分别保存为同名 `.exit`；`git diff --check` 通过。本轮最终增量含 JOURNAL 存 `/private/tmp/090-r1-final.diff`。未做项仅本轮原生实屏复验；无未完成的已授权代码项。
 `git diff --check` 通过；`ProgressPageHeader` 只读字节核对通过；临时日志已删除。
+
+## 2026-10-10 · 091 CARD-B · CN email auth（未提交交付）
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091b`，分支 `feat/091b-cn-auth`，起点 `ff909c9`。第一条实际命令在本树用 `mktemp` 写入并删除探针，exit 0；没有切换工作目录、重装依赖、读取凭证、commit、push 或开 PR。改动仅 `src/` 与本节。已依序读 CONTEXT、AGENTS、SPEC、CARD-B，核对 Expo SDK 57 版本文档。
+
+已实现 CARD-B 1–6：两轨复用邮箱认证与匿名/认证中路由守卫；三屏、字段、按钮、错误和顶栏文案进入 catalog；CN 去 Google、固定英文口号与中文隐私 URL；CN 四框注册、验证码请求、60 秒真实时间倒计时、后台恢复校正、改邮箱复位及旧响应隔离、确认密码与错误处理；CN 中文系统字体；新增英文文案。Global 英文文案、字体及两框注册保持，验证码仅有值才追加请求体，session 保留现有透传。手机号请求仍被 session 与既有 API 测试引用，因此按卡保留；旧手机号屏幕及其专用文案已移除。没有改构建配置、依赖、全局字体或其他屏幕。
+
+### 测试覆盖对应卡项
+
+新增测试只在卡中指定的三个 seam。屏幕测试以 `jest.isolateModules` / `jest.doMock` 切轨，语言走现有 `setLocaleOverride` / `getLocale`，网络均 mock。
+
+| CARD-B 项 | 覆盖测试名（文件均为既定 seam） |
+| --- | --- |
+| 1 路由与旧屏移除 | `global-auth-screens.test.tsx`：`CN login route uses email, the fixed slogan and Chinese privacy URL without Google`；直接加载真实 login route；顶层 register/forgot-password 守卫及顶栏 i18n 另经代码审查。 |
+| 2 三屏与错误 i18n | `CN Chinese screens use localized copy and light system typography while keeping the slogan`；`CN Chinese login and recovery submit email and preserve the existing reset success flow`；`error-copy.test.ts`：`signup code error copy follows the system locale`，以及全部原有错误映射测试。 |
+| 3 分轨差异 | `CN login route uses email, the fixed slogan and Chinese privacy URL without Google`；`Global registration stays at two inputs in both languages`；全部原有 Global 登录、隐私、注册和找回测试。 |
+| 4 四框注册与 API | `CN signup requires four valid fields and sends only email, password and six digit code`；`CN signup code has a 60 second cooldown, resets after email edits and cleans up on unmount`；`CN signup corrects cooldown using elapsed time on foreground`；`CN signup rejects invalid codes inline and immediately allows resend`；`CN signup code request prevents duplicate sends and ignores a response for an edited email`；`CN failed code request shows the existing error without a cooldown %#`；`CN existing account failure provides a sign-in link`；`CN confirmation waits until blur or both passwords are present and validates each signup field`。`auth-global.test.ts`：`requests a signup code with trimmed email and accepts an empty 204`；`registers CN email with code and never sends password confirmation`；原有 `registers email with the fixed student role and device timezone` 保留逐字节 JSON body 断言。 |
+| 5 字体 | `CN Chinese screens use localized copy and light system typography while keeping the slogan` 断言系统字体、标题 30/500/40/1、标签 12/400/0.5；原生实屏字重与像素对照不以组件测试替代。 |
+| 6 CN 新增英文文案 | 上述 CN 英文屏幕测试覆盖四框、三态小按钮、发码提示、确认密码、错码与未收信说明；`CN signup help visually identifies the sign-in link after code delivery` 验证末尾 sign in 的可见下划线及登录跳转。 |
+
+先红后绿记录：实现前先写三个 seam 的测试。第一轮 API/错误映射为真实功能失败；屏幕替身先遇到 Jest 导入顺序及缺少 `DEFAULT_API_BASE_URL` 的装载错误，修正替身后屏幕为 10 failed / 8 passed。动态 getter 不能可靠切换本仓编译后的模块常量，最终改用卡指定的 isolateModules/doMock。三个 seam 随后 42/42 通过。审查返修新增底部链接可识别性测试，先 1 failed / 18 skipped，再实现为绿色；补充确认失焦与 CN 中文登录/找回回归测试。原有三文件中的 Global 测试断言逐段与 HEAD 比较，均保持原文未改。
+
+### 自审与待 Opus 确认
+
+使用 `review-loop` 本地独立只读 Standards/Spec 两轴审查。仓中没有 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的 Matt PR 审查流程；该配置可另用 `$setup-matt-pocock-skills` 补齐。Standards 最终无阻断发现。Spec 最初指出底部登录文字缺少独立链接样式，已用金色下划线突出句末登录，并保留外层至少 44dp 触控区；定向复审已关闭，无剩余实现偏差。
+
+两处需 Opus 确认的边界，均按保守解释执行：
+
+1. SPEC 字体段限定“只管 CN 轨这三屏里的中文”“Global 轨一律不动”，CARD-B 第 5 项仅说中文语言时生效。以 SPEC 为准，仅 `china + zh` 使用系统字体；Global 中文仍翻译文字，字体保留原规则。
+2. SPEC 要求“邮箱框始终可编辑”，未定义提交注册请求后再改邮箱的成功处理。当前仍允许编辑，清空验证码、提示及倒计时；已经提交的注册成功时按提交时的邮箱登录，不取消服务器已接受的注册。Standards reviewer 曾建议提交中锁邮箱，复核明确条文后撤回该建议。若需锁邮箱或取消注册，应由 Opus 改定该口径。
+
+模拟器截图、中文原生字重、Global 英文逐像素对照、真实 QQ/163 发码、老账号数据、绑定教练实机流程均按 CARD-B 留给 Opus 收货；本轮未运行真实后端请求，不将 mock 验证写作功能验收通过。
+
+### 自检执行记录
+
+第一轮 `npx tsc --noEmit` exit 0，无输出。第一轮 `EXPO_NO_DOTENV=1 npm run lint` exit 0，14 条新增测试导入写法 warning；已整理 imports，并以 `jest.requireActual` 代替裸 require。禁用 Expo dotenv 装载以遵守不得读凭证文件的要求。
+
+第一轮原样 `npm test` exit 1：`Test Suites: 6 failed, 163 passed, 169 total`，`Tests: 9 failed, 1555 passed, 1564 total`，最后非空行 `Ran all test suites.`。其中 auth suite 在审查返修新增红测时仍被该轮读取；其他五个 suite 为 coach-conversation-screen、student-conversation-screen、set-video-player、completion-entry、set-save，主要含 `Exceeded timeout of 5000 ms for a test.`，另有滚动目标 y=190/30 差异和超时后节点不存在。未修改这些无关测试；最终代码固定后用串行完整测试复核。
+
+辅助进程查询 `ps -axo pid,ppid,stat,etime,comm` 被沙箱阻止，原始错误 `zsh:1: operation not permitted: ps`；不影响三项自检执行。
+
+最终固定代码后的自检（全部 exit 0）：
+
+| 命令 | 结果 | 原始最后非空行 |
+| --- | --- | --- |
+| `npx tsc --noEmit` | 通过，无 stdout/stderr | 无输出，不虚构结果行 |
+| `EXPO_NO_DOTENV=1 npm run lint` | 通过，0 warning / 0 error | `> expo lint` |
+| `npm test -- --runInBand`（完整测试集，未过滤） | 169 suites / 1566 tests 全部通过 | `Ran all test suites.` |
+
+完整 Jest 汇总原文：
+
+```text
+Test Suites: 169 passed, 169 total
+Tests:       1566 passed, 1566 total
+Snapshots:   0 total
+Time:        60.948 s, estimated 985 s
+Ran all test suites.
+```
+
+包含 `no-literal-zh.test.ts` 与 `no-i18n-todo.test.ts`，均 PASS。前述五个无关失败 suite 在最终串行完整运行中全部通过；没有以修改旧断言或延长 timeout 消除失败。最终 `git diff --check` 无输出、exit 0。日志原始证据在 `/private/tmp/091b-{tsc,lint,test}-final.log`，相应 `.exit` 均为 0；首轮失败日志 `/private/tmp/091b-test.log` 保留。工作区交付不代表真机/后端验收放行。
+
+### 返修第 1 轮
+
+按 David 本轮收货决定，在上一轮未提交交付上定向修改。两处旧待决定项以本节为准：中文字体只按 `getLocale() === 'zh'`，同时适用于 Global/CN；注册提交期间两轨均锁邮箱，“始终可编辑”仅指发码后、提交前。SPEC 正典由 Opus 更新，本轮不改。
+
+范围：`auth-typography.ts` 去掉构建轨条件，验证码字体改为已加载的 `fontNames.mono.regular`，保持 17 号、字距 2、regular；`GlobalForgotPasswordScreen.tsx` 的验证码标签只按中文语言显示；`GlobalRegisterScreen.tsx` 邮箱改为 `editable={!busy}`。`brand` 英文口号样式维持，未改路由、文案、Google 分屏、错误映射、倒计时、footer 或 API。
+
+新增测试仍只放既有屏幕 seam `src/features/auth/__tests__/global-auth-screens.test.tsx`：
+
+- 第 1 项：`Global Chinese registration uses Chinese title and field label typography`；`%s English registration retains the original title and field typography`（global/china）；`%s Chinese login keeps the English slogan typography`（global/china）。
+- 第 1、2 项：`%s Chinese recovery labels the code and uses the loaded regular monospace font`（global/china）；`CN Chinese signup uses the loaded regular monospace font for verification digits`。
+- 第 3 项：`%s registration locks email while submit is pending and unlocks after failure`（global/china），以未完成 Promise 验证提交中锁定，失败后恢复可编辑。
+- 第 4 项：复用原有 `CN signup code request prevents duplicate sends and ignores a response for an edited email`，覆盖请求 pending 时改邮箱、旧响应返回后无 `Sent to` 提示且可重新发码；未重复造测试或修改 generation 实现。
+
+先红后绿：生产实现改动前，屏幕测试明确为 `5 failed, 26 passed, 31 total`（exit 1），失败对应 Global 中文样式、Global 中文验证码标签、两处验证码字体与 CN 提交锁邮箱；英文样式及口号保持测试已绿。按三处指定修改后，定向测试全部通过。原有 Global 断言与第 4 项竞态测试保持原文。
+
+本轮最终自检原始结果（全部 exit 0）：
+
+- `npx tsc --noEmit`：stdout/stderr 为空，无结果行。
+- `EXPO_NO_DOTENV=1 npm run lint`：最后非空行 `> expo lint`，无 error/warning；禁用 dotenv 装载以延续不读凭证文件的约束。
+- `npx jest --runInBand src/features/auth src/api/__tests__/auth-global.test.ts`：
+
+```text
+Test Suites: 4 passed, 4 total
+Tests:       79 passed, 79 total
+Snapshots:   0 total
+Time:        18.829 s, estimated 31 s
+Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-global.test.ts/i.
+```
+
+`git diff --check`：无输出，exit 0。本轮没有运行全量测试，按交付要求留给 Opus 在沙箱外重跑。独立只读 Standards / Spec 定向复核均无遗留发现；以上实际测试由主代理执行。开工/完工哈希核对确认仅上述三个实现文件、屏幕测试文件及本 JOURNAL 改变，上一轮其余 src 改动未动。临时测试日志仅写本树，摘录后删除；没有写其他 worktree，没有 commit/push/PR。此前两处歧义已由用户明确决定，无新增待决定项。
