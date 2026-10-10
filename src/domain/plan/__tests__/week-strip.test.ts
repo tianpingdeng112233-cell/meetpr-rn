@@ -1,4 +1,4 @@
-import { expect, test } from '@jest/globals';
+import { expect, jest, test } from '@jest/globals';
 import { day, plan } from '../test-fixtures';
 import { trainingWeekStrip } from '../week-strip';
 
@@ -128,4 +128,47 @@ test('seven training days fill the calendar with no rest cells across a month an
     ['training', '2026-11-01', 0], ['training', '2026-11-02', 1],
     ['training', '2026-11-03', 2],
   ]);
+});
+
+test('training cells independently mark only unfinished recommended dates before today as behind', () => {
+  const strip = trainingWeekStrip(plan([
+    day('done', { completed_at: done }),
+    day('overdue', { day_of_week: 2 }),
+    day('today', { day_of_week: 3 }),
+    day('future', { day_of_week: 4 }),
+    day('shifted', { day_of_week: 5, shifted_to_date: '2026-09-14' }),
+  ]), null, '2026-09-09');
+  const expected = [
+    { date: '2026-09-07', isBehind: false },
+    { date: '2026-09-08', isBehind: true },
+    { date: '2026-09-09', isBehind: false },
+    { date: '2026-09-10', isBehind: false },
+    { date: '2026-09-14', isBehind: false },
+  ];
+  expect(strip.week?.cells).toMatchObject(expected);
+  expect(strip.week?.calendarCells.filter(cell => cell.kind === 'training')).toMatchObject(expected);
+});
+
+test.each([
+  ['2026-09-06', 0], ['2026-09-07', 0], ['2026-09-08', 1], ['2026-09-25', 18],
+])('cursor days behind on %s is %i regardless of selection', (today, expected) => {
+  expect(trainingWeekStrip(plan([day('current'), day('next', { week_number: 2 })]), 'next', today).daysBehind).toBe(expected);
+});
+
+test('days behind follows the shifted cursor, advances on completion and clears without a cursor', () => {
+  const current = day('current', { shifted_to_date: '2026-09-09' });
+  const next = day('next', { day_of_week: 4 });
+  expect(trainingWeekStrip(plan([current, next]), null, '2026-09-11').daysBehind).toBe(2);
+  expect(trainingWeekStrip(plan([{ ...current, completed_at: done }, next]), null, '2026-09-11').daysBehind).toBe(1);
+  expect(trainingWeekStrip(plan([current, next].map(item => ({ ...item, completed_at: done }))), null, '2026-09-11').daysBehind).toBe(0);
+  expect(trainingWeekStrip(undefined, null, '2026-09-11').daysBehind).toBe(0);
+});
+
+test('the default today follows the local 4am gym-day boundary', () => {
+  jest.useFakeTimers({ now: new Date(2026, 8, 8, 3, 59, 59) });
+  try {
+    expect(trainingWeekStrip(plan([day('current')]))).toMatchObject({ daysBehind: 0, week: { cells: [{ isBehind: false }] } });
+    jest.setSystemTime(new Date(2026, 8, 8, 4));
+    expect(trainingWeekStrip(plan([day('current')]))).toMatchObject({ daysBehind: 1, week: { cells: [{ isBehind: true }] } });
+  } finally { jest.useRealTimers(); }
 });

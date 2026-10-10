@@ -1,3 +1,4 @@
+import { accessoryRestSeconds, restDefaultSeconds, type RestTimerPreference } from '@/features/settings/rest-timer';
 import { plateBreakdown, breakdownText } from '@/design/plate-visual';
 import { decodePrescription } from '@/domain/plan/prescription';
 import { gymDayToday, localDateText } from '@/domain/plan/workout-date-policy';
@@ -6,10 +7,11 @@ import type { PlanExercise, PlanSet } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 import { suggestedWeightKg } from '@/domain/e1rm';
 
-import { REST_DEFAULTS, RIR_KEYS, TRAINING_LIMITS } from './constants';
+import { RIR_KEYS, TRAINING_LIMITS } from './constants';
 import type { WeightSuggestion, WorkoutSetDraft } from './model';
 
 export { localDateText };
+export { restDefaultSeconds } from '@/features/settings/rest-timer';
 
 const DAY_MS = 86_400_000;
 
@@ -34,13 +36,6 @@ export function daysBetween(start: string, end: string): number {
   const startDate = parseLocalDate(start);
   const endDate = parseLocalDate(end);
   return Math.round((endDate.getTime() - startDate.getTime()) / DAY_MS);
-}
-
-export function restDefaultSeconds(rpe: number | null): number {
-  if (rpe === null) return REST_DEFAULTS.withoutRPE;
-  if (rpe < 7) return REST_DEFAULTS.belowSeven;
-  if (rpe < 9) return REST_DEFAULTS.belowNine;
-  return REST_DEFAULTS.nineOrAbove;
 }
 
 export function resolveRestSeconds({
@@ -181,4 +176,11 @@ export function selectWeightSuggestion({
   return prior
     ? { weightKg: Number(prior.weight_kg), label: t('student.progression.suggestionLast') }
     : null;
+}
+
+export function resolveAccessoryRestSeconds({ prescribed, preference }: {
+  prescribed: number | null | undefined;
+  preference: RestTimerPreference;
+}): number {
+  return Math.max(0, Math.min(TRAINING_LIMITS.restMaximumSeconds, prescribed ?? accessoryRestSeconds(preference)));
 }

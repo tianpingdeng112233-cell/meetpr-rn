@@ -20,14 +20,14 @@ import {
   Screen,
   Sparkline,
   useColors,
-  font,
+  font, spacing, radius, typography,
 } from '@/design';
 import { getLocale, t } from '@/i18n';
-import { dayCode, recommendedDate } from '@/domain/plan/sequence';
+import { dayCode } from '@/domain/plan/sequence';
+import { formatBodyWeightKg } from '@/domain/profile/body-weight';
 import {
   dayName,
   daySummary,
-  recommendedDateText,
 } from '@/domain/plan/presentation';
 import { useStudentTabsStore } from '@/features/student-tabs';
 import { useExerciseMetadataResolver } from '@/features/training/exercise-metadata';
@@ -41,6 +41,7 @@ import {
 import { WeekCalendar } from './WeekCalendar';
 import { FeedbackCard } from './FeedbackCard';
 import { useDashboardViewModel } from './use-dashboard';
+import { NutritionPlaceholder } from './NutritionPlaceholder';
 
 export { WeekGrid } from './WeekCalendar';
 
@@ -116,7 +117,9 @@ export function DashboardScreen() {
     router.navigate('/(student)/feedback');
   };
   const action = vm.today.action;
-  const selected = vm.today.cursor ?? vm.today.completedToday;
+  const selected = vm.selectedDay?.day ?? vm.today.completedToday ?? vm.today.cursor;
+  const selectedSetCount = selected?.exercises.reduce((count, exercise) => count + exercise.sets.length, 0) ?? 0;
+  const selectedStatus = selected?.completed_at ? 'student.dashboardTodayScreen.copy002' : selected?.id === vm.today.cursor?.id ? 'student.rn.today.session' : 'student.rn.today.upcoming';
   const statusLabel = action.kind === 'waiting'
     ? t('student.dashboardTodayScreen.copy005')
     : vm.today.cursor?.exercises.length === 0
@@ -246,43 +249,39 @@ export function DashboardScreen() {
                 />
               </DashboardAsyncSection>
               <WeekCalendar
+                todaySelection
                 headerStyle="progress"
                 weekNumber={vm.week.status === 'loaded' ? vm.week.weekIndex : 1}
                 cells={vm.week.status === 'loaded' ? vm.week.days : []}
                 selectedDayID={vm.selectedDayID}
                 onSelect={vm.selectDay}
               />
-              {!vm.today.completedToday && selected && vm.activePlan ? (
-                <View style={{ gap: 5 }}>
-                  <Text
-                    style={{
-                      ...font.body(16, 'bold'),
-                      color: colors.textPrimary,
-                    }}
-                  >
-                    {dayName(selected, resolve)}
-                  </Text>
-                  <Text style={{ ...font.mono(12), color: colors.textMuted }}>
-                    {daySummary(selected)}
-                  </Text>
-                  <Text style={{ ...font.body(12), color: colors.textDim }}>
-                    {t('student.dashboardPrimaryAction.copy009', [
-                      recommendedDateText(
-                        recommendedDate(vm.activePlan, selected),
-                      ),
-                    ])}
-                  </Text>
-                </View>
+              {selected && vm.activePlan ? (
+                <Pressable testID="today-day-overview" accessibilityRole="button" onPress={() => openTraining(selected)}>
+                  <Card style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.base, gap: spacing.sm }}>
+                    <View style={{ flex: 1, minWidth: 0, gap: spacing.xs }}>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}>
+                        <Text style={{ ...typography.bodyEmphasis, color: colors.textPrimary }}>{dayName(selected, resolve)}</Text>
+                        <Text style={{ ...typography.caption, color: colors.textSecondary, backgroundColor: selectedStatus === 'student.rn.today.session' ? colors.goldSoft : colors.surfaceRaised, borderRadius: radius.chip, paddingHorizontal: spacing.sm, paddingVertical: spacing.point2 }}>{t(selectedStatus)}</Text>
+                      </View>
+                      <Text style={{ ...typography.monoLabel, color: colors.textMuted }}>{t('student.rn.today.summary', [t(selected.exercises.length === 1 ? 'student.rn.today.exercises.one' : 'student.rn.today.exercises', [selected.exercises.length]), t(selectedSetCount === 1 ? 'student.rn.today.sets.one' : 'student.rn.today.sets', [selectedSetCount])])}</Text>
+                      <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...typography.footnote, color: colors.textSecondary }}>
+                        {[...selected.exercises].sort((a, b) => a.sort_order - b.sort_order).flatMap(exercise => { const metadata = resolve(exercise.exercise_id); return metadata ? [metadata.name] : []; }).join(' · ')}
+                      </Text>
+                    </View>
+                    <Text style={{ ...typography.headline, color: colors.textMuted }}>›</Text>
+                  </Card>
+                </Pressable>
               ) : null}
             </>
           )}
         </DashboardAsyncSection>
-        {vm.profileLoading ? <DashboardSkeleton /> : profile}
+        {vm.profileLoading ? <DashboardSkeleton /> : <>{profile}{!vm.profileError ? <NutritionPlaceholder /> : null}</>}
         {!vm.plans.isError &&
         !vm.plans.isLoading &&
         action.kind !== 'waiting' ? (
           <>
-            <Text style={{ ...font.mono(12), color: colors.textSecondary }}>{t('student.dashboardTodayScreen.copy003')}</Text>
+            <Text style={{ ...font.mono(12), color: colors.textSecondary }}>{t(selected?.id !== (vm.today.completedToday ?? vm.today.cursor)?.id ? 'student.rn.today.selectedChart' : 'student.dashboardTodayScreen.copy003')}</Text>
             <DashboardAsyncSection
               isError={vm.e1rm.isError}
               onRetry={() => void vm.e1rm.retry()}
@@ -518,18 +517,18 @@ export function ProfileMetrics({
 }) {
   const colors = useColors();
   const router = useRouter();
-  const edit = (section: 'basics' | 'competition') => router.navigate({ pathname: '/(student)/profile', params: { edit: section, returnTo: 'today' } });
+  const edit = (section: 'weight' | 'competition') => router.navigate({ pathname: '/(student)/profile', params: { edit: section, returnTo: 'today' } });
   const competitionDays =
     profile?.is_competing && profile.competition_date
       ? localCompetitionDays(profile.competition_date, now)
       : null;
   const bodyWeightText = profile?.weight_kg
-    ? `${formatKg(Number(profile.weight_kg))} kg`
+    ? `${formatBodyWeightKg(profile.weight_kg)} kg`
     : '—';
   return (
     <DashboardAsyncSection isError={profileError} onRetry={onRetry}>
       <View style={{ flexDirection: 'row', gap: 11 }}>
-        <Pressable style={{ flex: 1 }} onPress={() => edit('basics')}
+        <Pressable style={{ flex: 1 }} onPress={() => edit('weight')}
           accessibilityRole="button"
           accessibilityLabel={profile?.weight_kg
             ? t('student.dashboardProfileMetricsView.copy002', [bodyWeightText])
@@ -541,7 +540,7 @@ export function ProfileMetrics({
               <Text style={{ color: profile?.weight_kg ? colors.textPrimary : colors.textMuted, ...font.body(11) }}>{t('student.dashboardProfileMetricsView.copy001')}</Text>
             </View>
             {profile?.weight_kg ? <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-              <Text style={{ color: colors.textPrimary, ...font.mono(24, 'bold') }}>{formatKg(Number(profile.weight_kg))}</Text>
+              <Text style={{ color: colors.textPrimary, ...font.mono(24, 'bold') }}>{formatBodyWeightKg(profile.weight_kg)}</Text>
               <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}> kg</Text>
             </View> : <>
               <Text style={{ color: colors.textMuted, ...font.body(18, 'bold'), marginTop: 3 }}>{t('student.dashboardProfileMetricsView.copy009')}</Text>
@@ -567,6 +566,7 @@ export function ProfileMetrics({
                 <Text style={{ color: colors.goldText, ...font.mono(24, 'bold') }}>{competitionDays}</Text>
                 <Text style={{ color: colors.textMuted, ...font.body(13, 'semibold') }}>{t('student.dashboardProfileMetricsView.copy004')}</Text>
               </View>
+              {profile?.target_weight_class ? <Text style={{ ...typography.caption, color: colors.textMuted }}>{profile.target_weight_class}</Text> : null}
             </Card>
           </Pressable>
         ) : (

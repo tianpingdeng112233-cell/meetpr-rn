@@ -23,6 +23,5 @@ export function GrowthScreenHeader({ unreadCount, onOpenChat }: { unreadCount: n
       </Pressable>
     </View>
     <Text style={{ ...font.display(34), color: colors.textPrimary }}>{t('student.trainingHistoryView.copy013')}</Text>
-    <Text style={{ ...font.body(12), color: colors.textFaint, marginTop: -spacing.space2 }}>{t('student.trainingHistoryView.copy014')}</Text>
   </View>;
 }

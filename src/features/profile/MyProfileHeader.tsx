@@ -17,6 +17,5 @@ export function MyProfileHeader({ unreadCount = 0, onOpenChat }: { unreadCount?:
       </Pressable>
     </View>
     <Text accessibilityRole="header" style={{ ...font.display(34), color: colors.textPrimary }}>{t('student.myProfileView.copy016')}</Text>
-    <Text style={{ ...font.mono(11), letterSpacing: 0.44, color: colors.textFaint, marginTop: -8 }}>{t('student.myProfileView.copy017')}</Text>
   </View>;
 }

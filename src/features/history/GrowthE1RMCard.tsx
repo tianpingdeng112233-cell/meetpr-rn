@@ -1,9 +1,7 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useState } from 'react';
 import { Text, View } from 'react-native';
-import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { GrowthRangeControl } from './GrowthRangeControl';
 
-import { AppButton, Card, font, radius, spacing, useColors } from '@/design';
+import { AppButton, Card, font, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 
 import { GrowthE1RMChart } from './GrowthE1RMChart';
@@ -13,9 +11,8 @@ import { growthRangeLabel, growthSnapshot, LIFT_PRESENTATION, TREND_UNLOCK_THRES
 import type { E1RMSample } from '@/domain/e1rm';
 import type { GrowthCurve } from './types';
 
-export function GrowthE1RMCard({ curve, isZeroTraining, onToday, onSelect, onRangeChange, selectedPointId }: { selectedPointId?: string | null; curve: GrowthCurve; isZeroTraining: boolean; onToday: () => void; onSelect?: (sample: E1RMSample) => void; onRangeChange?: () => void }) {
+export function GrowthE1RMCard({ curve, isZeroTraining, onToday, onSelect, onRangeChange, range, selectedPointId }: { selectedPointId?: string | null; curve: GrowthCurve; isZeroTraining: boolean; onToday: () => void; onSelect?: (sample: E1RMSample) => void; range: GrowthTimeRange; onRangeChange: (range: GrowthTimeRange) => void }) {
   const colors = useColors();
-  const [range, setRange] = useState<GrowthTimeRange>('30');
   const snapshot = growthSnapshot(curve, range);
   const name = LIFT_PRESENTATION[curve.family].name;
   const rangeLabel = growthRangeLabel(range);
@@ -24,12 +21,7 @@ export function GrowthE1RMCard({ curve, isZeroTraining, onToday, onSelect, onRan
   return <Card style={{ paddingHorizontal: spacing.space4, paddingVertical: spacing.space4, elevation: 0, shadowOpacity: 0 }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.space2, height: spacing.minimumHitTarget, marginTop: -9 }}>
       <Text style={{ ...font.mono(12, 'semibold'), color: colors.textSecondary, flexShrink: 1 }}>{name} E1RM</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('student.growthE1Rmcard.copy001', [name, rangeLabel])} accessibilityHint={t('student.growthE1Rmcard.copy002')} onPress={() => { onRangeChange?.(); setRange(range === '30' ? '90' : range === '90' ? 'all' : '30'); }} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.space1, height: 22, paddingLeft: 10, paddingRight: 5, backgroundColor: colors.surfaceElevated, borderColor: colors.borderStrong, borderWidth: 1, borderRadius: radius.pill }}>
-          <Text style={{ ...font.mono(11), color: colors.textSecondary }}>{rangeLabel}</Text>
-          <MaterialCommunityIcons name="chevron-down" size={10} color={colors.gold500} />
-        </View>
-      </Pressable>
+      <GrowthRangeControl name={name} range={range} onChange={onRangeChange} />
     </View>
     <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.space1 }}>
       <Text adjustsFontSizeToFit numberOfLines={1} style={{ ...font.mono(38, 'bold'), color: colors.textPrimary, flexShrink: 1 }}>{snapshot.currentKg !== null ? snapshot.currentKg.toFixed(1) : snapshot.state === 'zero' ? t('student.growthE1Rmcard.copy004') : '—'}</Text>
@@ -43,7 +35,7 @@ export function GrowthE1RMCard({ curve, isZeroTraining, onToday, onSelect, onRan
       <GrowthZeroGhostChart />
       <Text style={{ ...font.body(14, 'semibold'), color: colors.textSecondary, textAlign: 'center' }}>{t('student.growthEmptyStates.copy006')}</Text>
       <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{t('student.growthEmptyStates.copy008')}</Text>
-      {curve.family === 'squat' && isZeroTraining ? <AppButton haptic="none" label={t('student.growthEmptyStates.copy009')} onPress={onToday} /> : null}
+      {isZeroTraining ? <AppButton haptic="none" label={t('student.growthEmptyStates.copy009')} onPress={onToday} /> : null}
     </View> : <View style={{ height: 126, paddingTop: 8, gap: 10 }}>
       <GrowthFormingTrendChart recordedCount={snapshot.eligibleDataPointCount} threshold={TREND_UNLOCK_THRESHOLD} currentKg={snapshot.currentKg} latestRecordDate={snapshot.latestRecordDate} />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.bgInset, borderRadius: 10 }}>

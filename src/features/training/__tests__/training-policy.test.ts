@@ -10,6 +10,7 @@ import {
   gymDayText,
   historyRangeStart,
   resolveRestSeconds,
+  resolveAccessoryRestSeconds,
   rirCopy,
   selectWeightSuggestion,
 } from '../policy';
@@ -225,4 +226,15 @@ test('plate loadout uses aggregated copy and canonical empty branches', () => {
   expect(t('designSystem.numberPad.enterWeight')).toBe('Enter weight');
   expect(t('designSystem.action.confirm')).toBe('Confirm');
   expect(t('designSystem.plate.emptyBar')).toBe('Empty 20 kg bar');
+});
+
+
+test('accessory rest uses prescribed seconds before its independent preference and legacy default', () => {
+  expect(resolveAccessoryRestSeconds({ prescribed: 75, preference: { mode: 'automatic', accessory: 90 } })).toBe(75);
+  expect(resolveAccessoryRestSeconds({ prescribed: 0, preference: { mode: 'automatic', accessory: 90 } })).toBe(0);
+  expect(resolveAccessoryRestSeconds({ prescribed: 1200, preference: { mode: 'automatic' } })).toBe(900);
+  expect(resolveAccessoryRestSeconds({ prescribed: -1, preference: { mode: 'automatic' } })).toBe(0);
+  expect(resolveAccessoryRestSeconds({ prescribed: null, preference: { mode: 'automatic', accessory: 90 } })).toBe(90);
+  expect(resolveAccessoryRestSeconds({ prescribed: null, preference: { mode: 'custom', low: 120, mid: 180, high: 240 } })).toBe(60);
+  expect(resolveAccessoryRestSeconds({ prescribed: undefined, preference: { mode: 'automatic' } })).toBe(60);
 });
