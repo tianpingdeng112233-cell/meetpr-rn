@@ -1,4 +1,18 @@
 {
+"student.rn.profile.noInjuries": { "en": "No injuries", "zh": "无伤病" },
+"student.rn.profile.about": {"en": "About me", "zh": "关于我"},
+"student.rn.profile.health": {"en": "Health & recovery", "zh": "健康与恢复"},
+"student.rn.profile.settings": {"en": "Settings", "zh": "设置"},
+"student.rn.profile.coach": {"en": "Coach · {0}", "zh": "教练 · {0}"},
+"student.rn.profile.bench": {"en": "Bench", "zh": "卧推"},
+"student.rn.profile.total": {"en": "Total", "zh": "合计"},
+"student.rn.profile.locked": {"en": "Training 1RM in kg · set by your coach", "zh": "训练 1RM（kg）· 由教练设定"},
+"student.rn.profile.preferences": {"en": "Preferences", "zh": "偏好"},
+"student.rn.profile.account": {"en": "Account", "zh": "账号"},
+"student.rn.profile.notify": {"en": "Your coach will be notified of changes", "zh": "改动会通知你的教练"},
+"student.rn.profile.oneRMLabel": {"en": "Training 1RM: squat {0}, bench {1}, deadlift {2}, total {3} kilograms", "zh": "训练 1RM：深蹲 {0}，卧推 {1}，硬拉 {2}，合计 {3} 千克"},
+
+"student.rn.profile.added": { "en": "Added", "zh": "已填写" },
 "training.restNotification.title": { "en": "Rest between sets", "zh": "组间休息" },
 "training.restNotification.completeBody": { "en": "Time for your next set", "zh": "该做下一组了" },
 "training.restNotification.add": { "en": "+30s", "zh": "+30s" },

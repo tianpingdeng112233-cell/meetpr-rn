@@ -3101,3 +3101,194 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `npx tsc --noEmit`：**0 errors**，退出码 0。
 - `npm run lint`：**0 errors / 0 warnings**，退出码 0。
 - `git diff --check`：通过。未做设备验证，视觉验收按卡片约定由 Opus 完成。
+
+## Spec 088 · CARD-1-redesign · 第一步（2026-10-09）
+
+工作树 `meetpr-rn-wt-088`，分支 `feat/088-profile-redesign`。只做 SPEC §1–§3。首个工具动作 `touch .codex-write-probe && rm .codex-write-probe` 退出码 0，探针已删除。未切换工作树、未重装依赖、未 commit/push/建 PR；未写 specs 或 PARITY。实屏验收由 Opus 按任务卡负责，本节记录开发自测，不宣布功能验收通过。
+
+### 文件改动
+
+- `src/app/_layout.tsx`：根 Stack 注册三个学员二级路由；新增 `src/app/profile/about.tsx`、`health.tsx`、`settings.tsx`，仅 re-export。
+- `src/features/profile/MyProfileScreen.tsx`：身份摘要卡、五行、下拉刷新与加载/失败/无档案状态；保留直接编辑入参。
+- 新增 `src/features/profile/ProfileIdentityCard.tsx`、`ProfileAboutScreen.tsx`、`ProfileHealthScreen.tsx`、`ProfileSettingsScreen.tsx`、`ProfilePage.tsx`：身份、二级页、标题导航、行展示；现有编辑与偏好/安全流程复用。
+- `src/features/profile/model.ts`：新增首字母、身份回落、已通过绑定教练名、五行摘要纯函数；原 `oneRMValues`、`profileRowValues` 算法未改。
+- `src/features/profile/MyProfileHeader.tsx`：移除副标题；`MyProfileAppearanceRow.tsx`：三等宽外观块，使用 `ctaBackground` / `ctaText`。
+- `src/features/profile/components.tsx`：删除无生产调用方的旧小标题、旧值行；分隔线新增默认关闭的 `inset` 参数，旧设置页布局保持原样。删除 `src/features/profile/MyProfileCards.tsx`（旧 1RM / Recovery 行）；旧 `MyProfileFallbackRows` 随首页替换删除，其偏好与退出能力移至 Settings。
+- `src/features/account/AccountSecuritySection.tsx`：仅替换入口行样式、移除自带小标题，原三个弹层逻辑未改。
+- `src/features/profile/ProfileEditor.tsx`：仅 injuries 保存按钮上方增加灰字；`src/features/training/ReadinessSheet.tsx`：仅最终提交步骤增加同一灰字。
+- `src/i18n/catalog/RnExtras.json`：新增中英文 profile 文案。Squat / Deadlift 复用既有键，Bench 使用短标签新键；守卫不要求清理孤儿键，旧目录键保留。
+- `src/features/history/ProgressMenuRow.tsx`、`ProgressPageHeader.tsx`：从本地 `origin/feat/087-progress-menu` 原样取出，内容未修改；补充一确认 Opus 已逐字节核对。
+- 测试：新增 profile 的 `profile-home.test.tsx`、`profile-pages.test.tsx`；追加 `model.test.ts`、`editor.test.tsx`、training 的 `readiness-sheet.test.tsx`；迁移 `header.test.tsx` 及补充一授权的 dashboard `visual-parity.test.tsx` 旧首页断言。
+
+### 先红后绿与检查过程
+
+按卡中的 seam 顺序推进：
+
+1. model 首字母新增测试先失败：`TypeError: (0 , _model2.profileInitials) is not a function`，1 failed / 23 passed；实现后 24 passed。身份/绑定/菜单三个测试先失败，3 failed / 24 passed；实现后 27 passed。
+2. 首页测试先 14 failed / 14 total；接入新首页后 14 passed。随后增加绑定状态、失败刷新缓存等回归保护。
+3. 二级页测试先因缺少 `../ProfileAboutScreen` 模块失败；实现后用现有文案及合法单位修正 fixture（这类 fixture 修正不算功能 red），10 passed。追加偏好读取失败重试、二级页重试、en/zh 与 Light/Dark 的组件检查。
+4. injuries 与 Readiness 通知提示先 2 failed / 31 passed；仅加入灰字后通过。其余编辑 section 不显示提示，旧表单断言未改。
+5. 首页/编辑/Readiness/Today 定向检查 7 suites / 101 tests passed；现有偏好、账号相关、引导、i18n 守卫均随全量运行。
+
+双轴只读自审：Standards 的共享分隔线越界、重复文案键已修正并复核；Spec 的共享分隔线问题已修正，右侧长值截断问题见下方待决定项。仓内无 `docs/agents/issue-tracker.md`，本卡文件已提供明确来源，未启用 tracker 或新增配置。
+
+期间命令收集脚本误用 zsh 保留变量 `status`，出现原始错误 `zsh:3: read-only variable: status`（一次为 `zsh:10`）；检查命令本体已执行，随后改用 `check_exit` 重跑并取得真实退出码。新增主题参数表的 readonly tuple 曾触发 TS2345，已改为显式可变 tuple 类型并重跑。
+
+### SPEC 验收 1–12 对应测试
+
+以下均为测试文件中的实际测试名；参数化测试以模板列出。组件树检查不等于原生布局、真账号或覆盖安装验收。
+
+| 项 | 测试名与证据边界 |
+| --- | --- |
+| 1 | `home shows identity and exactly five ordered entries without old groups or sign out`；`profile header keeps the title without its old subtitle or an Eyebrow`。1080×2400 首屏一屏放完由 Opus 实屏核对。 |
+| 2 | `profile initials cover words, CJK, email and empty identity`；`profile identity falls back from supplied name to email to phone without reading login name`；`coach identity requires an accepted binding and a nonblank name`；`identity exposes only a named accepted coach (%s) and no avatar action`。首步只传 email/phone，不读取登录 name。 |
+| 3 | 原有 `1RM total requires all three lifts and missing values display an em dash` 保持；`home shows identity and exactly five ordered entries without old groups or sign out` 覆盖 302.5 / 115 / 225 / 642.5；`training grid opens the unchanged 1RM explanation`。 |
+| 4 | `profile menu preserves filled legacy values and supplies every empty fallback`：身高单项、体重单项、完整/空白、伤病计数/other、Meet、Added、Settings 空值。 |
+| 5 | `About me preserves four ordered rows and opens each existing editor`；`saving basics updates About me and the mounted home through the shared cache`；`Health uses %s recovery and opens the existing sheets`（today/onboarding/empty）。现有 model 摘要与 editor 保存测试保持。 |
+| 6 | `%s editor shows the coach notice only for injuries above Save`（injuries/basics/background/competition/note/weight）；`the shared Profile and Today readiness sheet shows the coach notice only above the final submission`。Today 与 Profile 使用同一 ReadinessSheet；未另外跑设备开练。 |
+| 7 | `Settings switches appearance persistently and opens both existing preference screens`；`%s storage failure retains the existing retry behavior`；`Settings opens the unchanged %s modal`；`Settings can sign out and clear cached data even when the profile request fails`。原 `manual rest keeps automatic reference rules visible and persists a selected duration`、`enabling without exact alarm authorization keeps weekly reminders and explains possible delays` 等设置测试保持。原生重启与登录页切换待实屏；组件验证 ThemeProvider 重挂载恢复偏好及既有 logout 调用。 |
+| 8 | 原 `Today metric cards open the existing Profile editors (has values: %s)` 的体重/Meet 路由、保存、返回断言保留并通过；`direct editSection %s opens and closes without a secondary page` 覆盖 basics/competition/weight/note。`src/app/(student)/profile.tsx` 未改。 |
+| 9 | `Settings remains available when profile is %s`（pending/error/empty）；`a failed refresh hides stale values while keeping identity and every destination available`；`secondary profile page renders load failure and retries before revealing editors`；档案失败的退出测试同第 7 项。 |
+| 10 | 第 1、4、5、9 项测试保护数据派生、旧编辑入口、空档案与退出；`profile rows preserve legacy meet text, separate the first note line, and pad weight` 原断言保留。下方完整映射表覆盖 17 项及消息入口。真实老用户覆盖安装、新注册流程未运行，交 Opus。 |
+| 11 | `identity keeps full decimal values, truncation and theme tokens in %s/%s`（en/zh × light/dark）；`Settings switches appearance persistently and opens both existing preference screens`。前者检查小数完整值、身份文本单行属性和主题 token，不证明 360×640 dp / 字体 1.3× 原生几何；原样 087 行的长值截断仍是已知缺口。 |
+| 12 | 三条全量命令真实输出附后；i18n、现有功能测试随全量运行；PARITY 由 Opus 写，本次未修改。 |
+
+### 改前 17 项信息与入口的落点
+
+| 原信息 / 入口 | 新落点 |
+| --- | --- |
+| 1 Current 1RM：Squat、Bench Press、Deadlift、SBD total、说明弹窗 | 首页身份卡 Squat / Bench / Deadlift / Total 四格；数字由原 oneRMValues 派生；四格及锁定说明共同打开原说明弹窗。 |
+| 2 Recovery assessment | Health & recovery 第 1 行，今天打卡优先、引导值回落；打开原 ReadinessSheet。 |
+| 3 Injury history | Health & recovery 第 2 行；原伤病编辑页，通知灰字移到保存上方。 |
+| 4 Muscles to improve | About me 第 4 行，打开原肌群编辑。 |
+| 5 Appearance | Settings → Preferences 第 1 行，System / Light / Dark，原持久化行为。 |
+| 6 Rest between sets | Settings → Preferences 第 2 行，原组间休息设置页及失败重试。 |
+| 7 Training reminders | Settings → Preferences 第 3 行，原提醒设置页及失败重试。 |
+| 8 Meet | 首页第 3 行直接打开原 competition 编辑；原日期 / 赛事方 / 级别值保留。 |
+| 9 Note to coach | 首页第 4 行，摘要 Added / —；直接打开原留言编辑，完整留言仍在编辑页。 |
+| 10 Height / Body weight | 首页 About me 右值；About me 第 1 行改称 Basic information，原单位 / 性别 / 生日 / 身高 / 体重编辑保留。Today 单独体重入口不变。 |
+| 11 Training background | About me 第 2 行，原摘要与编辑。 |
+| 12 Training environment | About me 第 3 行，原摘要与编辑。 |
+| 13 Change password | Settings → Account 第 1 行，原弹层。 |
+| 14 Export training data | Settings → Account 第 2 行，原导出弹层。 |
+| 15 Delete account | Settings → Account 第 3 行，名称红色，原删号弹层；测试只打开，不执行删除。 |
+| 16 Sign out | Settings 页底 secondary 描边按钮，原 client.clear() + logout()，不新增确认。 |
+| 另：原分组/通知信息 | 首页旧分组小标题、副文、Notify coach 胶囊按 SPEC 删除；分组由五入口、二级页标题及 Preferences / Account 表达；通知含义保留在伤病保存与 Readiness 最终提交上方。 |
+| 17 消息按钮 | 首页原 MyProfileHeader 右上按钮，原未读角标和 openCoachChat 逻辑保留。 |
+
+以上 17 项包含消息按钮，另补原分组/通知信息的迁移说明。
+
+### 旧断言迁移（补充一授权）
+
+`src/features/dashboard/__tests__/visual-parity.test.tsx` 仅改 import 与以下旧 Profile 断言；同一测试的 Today 体重卡 → edit=weight → 编辑 → 保存 → returnTo=today，以及 Meet 路径断言未改。
+
+迁移前：
+
+```tsx
+expect(renderer.root.findAllByType(MyProfileValueRow).map(node => node.props.title)).toEqual(expect.arrayContaining(['Height / Body weight', 'Meet', 'Note to coach']));
+const noteRow = renderer.root.findAllByType(MyProfileValueRow).find(node => node.props.title === 'Note to coach')!;
+expect(noteRow.props.value).toBe('Existing note');
+expect(noteRow.props.valueLines).toBe(1);
+```
+
+迁移后：
+
+```tsx
+expect(renderer.root.findAllByType(ProgressMenuRow).map(node => node.props.title)).toEqual(expect.arrayContaining(['About me', 'Meet', 'Note to coach']));
+const noteRow = renderer.root.findAllByType(ProgressMenuRow).find(node => node.props.title === 'Note to coach')!;
+expect(noteRow.props.value).toBe('Added');
+expect(renderer.root.findAllByType(ProgressMenuRow).find(node => node.props.title === 'About me')!.props.value).toBe('180 cm · 83.00 kg');
+```
+
+`header.test.tsx`：`expect(subtitle).toBeGreaterThan(title)` 改为 `expect(subtitle).toBe(-1)`；原副标题样式断言 `expect(StyleSheet.flatten(texts[subtitle].props.style)).toMatchObject({ fontSize: 11, letterSpacing: 0.44, marginTop: -8 })` 删除，因为 SPEC 明确移除整个副标题。标题存在与无 Eyebrow 两条断言保留。未发现其它旧组件专属测试；旧 MyProfileValueRow、OneRMCard、RecoveryRow 未为迁就测试保留。
+
+### 未做 / 存疑 / pending Opus decision（待 Opus 决定）
+
+- 已知未完成点：原样 `ProgressMenuRow` 的右侧 Text 没有 `numberOfLines`，长值会换行，不能宣称满足 SPEC 的“截断值、不截断名称”。任务卡要求两个 087 文件逐字节不改，当前组件也没有值文本的样式/行数插槽；本次保留原文件，不采用字符数猜测截断或调用组件内部结构的适配。请 Opus 决定统一修复 087 组件并放宽字节约束，或提供 profile 适配接口；该点仍待完成，不因检查绿而宣称验收通过。
+- 未执行 Android 实屏、1080×2400 首屏、360×640 dp / 1.3× 字体、TalkBack、覆盖安装、真实账号与后端联调。按卡交 Opus 收货；ThemeProvider 重挂载测试不等于进程重启，mock logout 不等于实屏登录页验证。
+- 第二步头像上传、图片选择/相机、GET /me、后端名字、第三步教练端均按范围未做；无新增接口或后端改动。头像入参留可选 URL/回调，首步不会读取或调用。
+- Fetch 原始错误：`error: cannot open '/Users/david/Projects/apps/meetpr-rn/.git/worktrees/meetpr-rn-wt-088/FETCH_HEAD': Operation not permitted`。任务卡补充一已豁免，本地引用与导入文件由 Opus 确认；不是剩余阻塞。
+- 无其它未定产品口径。临时 `.codex-088-*.log` 在输出归档后删除。
+
+### 最终三项检查的原始尾部输出
+
+`npx jest --runInBand`，退出码 0：
+
+```text
+
+Test Suites: 158 passed, 158 total
+Tests:       1365 passed, 1365 total
+Snapshots:   0 total
+Time:        18.925 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，退出码 0；原始 stdout / stderr 为空，无可摘录行。命令收集器输出：
+
+```text
+tsc exit code: 0
+```
+
+`npm run lint`，退出码 0；原始尾部输出：
+
+```text
+
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+`git diff --check` 通过；两份 087 组件只读字节核对通过。本次唯一文档改动为追加本节 `docs/CODEX-JOURNAL.md`。
+
+### 返修一（2026-10-09，按 Opus 实屏收货修订）
+
+在本卡全部未提交改动上追加返修，未 commit/push，未修改 specs / PARITY。依据 CARD-1-redesign「返修一」和修订后的 SPEC §1、§2 Settings。Opus 本轮已提供首页、三个二级页、编辑页、Dark、Today 直达、断网、退出及覆盖安装验收反馈；此处不将反馈冒记为 Codex 设备实测。
+
+五项改动：
+
+1. `ProgressMenuRow.tsx` 按新授权修改：名称和值放入 `flexWrap: 'wrap'`、`justifyContent: 'space-between'` 的横向容器；名称单行且不收缩，值不收缩、最大宽度为容器宽度，无行数截断，使用 simple 文本换行及禁用自动连字符。同行可容纳时右对齐，超宽时整块落到下一行左侧；图标、箭头与最小行高保持。空串不渲染值 Text；入参、按钮读屏标签不变。`ProgressPageHeader.tsx` 仍与原引用逐字节相同。
+2. `model.ts` 首页菜单派生在无伤病时使用新键 `student.rn.profile.noInjuries`；`RnExtras.json` 为 `No injuries` / `无伤病`。原 `injurySummary`、`injuryChips` 和二级页伤病文案未改。
+3. `MyProfileScreen.tsx` 只在没有档案数据且加载/失败时留空；有缓存的刷新失败保留四格及五行值，同时显示重试。`ProfileAboutScreen.tsx`、`ProfileHealthScreen.tsx` 优先显示缓存数据，失败时补重试区；`ProfileSettingsScreen.tsx` 保留偏好/账号内容并补档案请求失败重试。无缓存的首页加载/失败/无档案测试保持通过。
+4. `profileInitials` 只返回字母/文字首字母，否则空串；`ProfileIdentityCard.tsx` 空首字母时显示 `account-outline`、`colors.textMuted`，头像仍不可点，不显示数字或加号。
+5. `ProfilePage.tsx` 的 `ProfilePageRow singleLine` 使用与首页同样的换行规则，去掉值的单行裁切。普通二级详情行仍保持最多两行的原规则。
+
+对应测试与先红后绿：
+
+| 项 | 测试名 | 实际结果 |
+| --- | --- | --- |
+| 1、5 | 新 `profile-rows.test.tsx`：`%s omits an empty value without changing the button label or minimum height`；`%s allows the complete value to wrap below the unshrinking title and keeps its accessible label`（menu/settings） | 改布局前 4 failed；实现后 4 passed。验证节点、布局属性、读屏与点击，不模拟 Yoga 原生几何。 |
+| 2 | `home uses shorter empty injury copy only in %s`（en/zh）；更新 `profile menu preserves filled legacy values and supplies every empty fallback` 的首页空伤病预期 | 3 failed / 26 passed → 29 passed；同时断言原 injurySummary / injuryChips 文案不变。 |
+| 3 | 将 `a failed refresh hides stale values while keeping identity and every destination available` 改为 `a failed refresh retains cached values and shows retry with every destination available`，旧两个 not.toContain 改为 toContain，并增加重试文案存在；新增 `secondary $Component.name retains cached content and exposes retry after refresh failure`（About/Health/Settings） | 4 failed / 36 passed → 40 passed；验证缓存值保留、重试入口与再次请求。 |
+| 4 | `nonletter identity %s has no initials`（占位手机号、数字、符号、emoji、空串）；`phone or empty identity %s uses a noninteractive account icon` | 6 failed / 49 passed → 55 passed；空串纯函数分支原本已通过。原词语、CJK、邮箱首字母回归保持。 |
+
+本轮仅迁移上述两类已被新口径替代的旧断言（首页无伤病文案；刷新失败隐藏缓存值），其余原断言保留。新增测试清理函数最初直接返回 `act()`，tsc 报 TS2322（DebugPromiseLike 不是 Jest callback 返回类型）；改为块体、不返回 act 值后 tsc 通过，并复跑全量 Jest / lint。
+
+独立只读双轴复审：Standards 0 项、Spec 0 项遗留。上一轮“右值截断待 Opus 决定”已由本轮授权和新的整体换行口径解决，不再待决定。五项无未实装内容、无新增待产品决定项；原生小屏/大字体下的具体排版仍按卡交 Opus 在模拟器复看，组件测试不能替代该项。
+
+最终检查输出如下（临时 `.codex-088-*.log` 在归档后删除）：
+
+`npx jest --runInBand`，退出码 0：
+
+```text
+
+Test Suites: 159 passed, 159 total
+Tests:       1381 passed, 1381 total
+Snapshots:   0 total
+Time:        37.404 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，退出码 0，原始 stdout / stderr 为空。收集器输出：
+
+```text
+tsc exit code: 0
+```
+
+`npm run lint`，退出码 0，原始输出：
+
+```text
+
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+`git diff --check` 通过；`ProgressPageHeader` 只读字节核对通过；临时日志已删除。
