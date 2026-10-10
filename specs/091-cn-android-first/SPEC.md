@@ -93,12 +93,12 @@ CN 轨不再出现手机号。三屏复用 Global 轨现成的那一套，不另
 
 ## 收货记录（Opus，2026-10-10）
 
-- 代码：卡 B、卡 C 均已收货并合入 `feat/091-cn-android-first`。卡 B 经两轮定向返修，另有一处（倒计时文字被共用按钮组件压到 35% 透明）在两轮额度用完后由 Claude 直接修。`tsc`、`lint` 通过，全量测试 169 套件 1578 条通过。
+- 代码：卡 B、卡 C 均已收货并合入 `feat/091-cn-android-first`。卡 B 经两轮定向返修，另有一处（倒计时文字被共用按钮组件压到 35% 透明）在两轮额度用完后由 Claude 直接修。`tsc`、`lint` 通过，全量测试（含卡 D）171 套件 1595 条通过。
 - 出包：`scripts/pack-android.sh china` 用一把仓外的临时测试 keystore 实跑成功，产物包名 `com.meetpr.app`、versionCode 1、签名证书为该测试证书（验证的是正式签名这条路径，不是可分发的包）。
 - 上机：新建模拟器 `meetpr-cn-accept`（Android 15，中文系统）装 CN 包逐屏对稿，截图在 `docs/evidence/spec091-20261010/`。登录、注册四态（刚进来／已发码／两次密码不一致／错码）、找回密码两步，结构与文案与定稿一致。
 - 上机用的是本机模拟后端（发码回 204、注册回错码），因为 backend #290 未部署。**以下验收项尚未验**：第 3 条（真邮箱收中文验证码并注册成功）、第 7 条（真邮箱找回密码）、第 8 条（两个老账号用邮箱登录看到原有数据）、第 10 条里「用 David 的 keystore 签名」。第 1 条只验了 `china` 包的包名，`global` 包未实打。第 9 条（`global` 英文系统逐屏截图无差异）只有自动化测试覆盖，未上机截图对比。
 - 已知与定稿的细小出入，未改：登录页英文口号字号沿用现有 44（稿上 40）；注册页底部小字居中（稿上靠左）。
-- 发现但不在本 spec 范围：首次打开的「使用数据说明」写的是数据存放在美国 DigitalOcean 服务器，对 CN 轨不成立（截图 `x-data-notice-us-server-copy.png`），待 David 拍怎么改。
+- 上机时发现首次打开的「使用数据说明」写的是数据存放在美国 DigitalOcean 服务器，对 CN 轨不成立。David 当日拍「A」随本波改：CN 轨改为「存放在我们位于中国大陆的阿里云服务器上」，只换存放地点那半句，Global 文案不动（卡 D，`CARD-D.md`）。改后上机复拍 `g-data-notice-china.png`，改前为 `g0-data-notice-before.png`。
 - 全量测试并行跑时 `src/features/dashboard/__tests__/visual-parity.test.tsx` 偶发失败一次，单跑与重跑均通过，与本 spec 无关，原因未查。
 
 ## 测试 seam
