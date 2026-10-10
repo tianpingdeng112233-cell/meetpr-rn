@@ -1,4 +1,8 @@
 {
+"student.trainingFlow.completedOne": {"en": "Completed · 1 set", "zh": "已完成 · 1 组"},
+"student.trainingFlow.completedMany": {"en": "Completed · {0} sets", "zh": "已完成 · {0} 组"},
+"student.trainingFlow.completedAccessibilityOne": {"en": "{0}, completed, 1 set", "zh": "{0}，已完成，1 组"},
+"student.trainingFlow.completedAccessibilityMany": {"en": "{0}, completed, {1} sets", "zh": "{0}，已完成，{1} 组"},
 "student.accessory.completeAll": {"en": "Complete all as planned", "zh": "全部按计划完成"},
 "student.accessory.needsWeightMany": {"en": "{0} sets still need a weight", "zh": "还有 {0} 组需要填重量"},
 

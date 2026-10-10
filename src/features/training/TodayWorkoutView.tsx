@@ -39,7 +39,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Keyboard, ScrollView, TextInput, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Keyboard, ScrollView, TextInput, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -113,6 +113,7 @@ import {
 } from './storage';
 import { trackTrainingTabVisit } from './training-analytics';
 import { WorkoutBody } from './WorkoutBody';
+import { useReducedMotion } from '@/design/useReducedMotion';
 
 const EMPTY_E1RM_BY_EXERCISE: Record<string, number | null> = {};
 
@@ -121,12 +122,32 @@ export function TodayWorkoutView() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const workoutScroll = useRef<ScrollView>(null);
   const focusedAccessoryInput = useRef<TextInput | null>(null);
+  const reducedMotion = useReducedMotion();
+  const keyboardVisible = useRef(false);
+  const userScrolling = useRef(false);
+  const completedRowToReveal = useRef<string | null>(null);
+  const [completionDockHeight, setCompletionDockHeight] = useState(spacing.completionControlHeight + spacing.md * 2 + StyleSheet.hairlineWidth);
+  const [restOverlayHeight, setRestOverlayHeight] = useState<number>(spacing.xxxl);
+  const markExerciseCompleted = useCallback((exerciseId: string) => {
+    completedRowToReveal.current = !keyboardVisible.current && !Keyboard.isVisible() && !userScrolling.current ? exerciseId : null;
+  }, []);
+  const revealCompletedRow = useCallback((exerciseId: string, layout: LayoutRectangle) => {
+    if (completedRowToReveal.current !== exerciseId) return;
+    completedRowToReveal.current = null;
+    if (keyboardVisible.current || Keyboard.isVisible() || userScrolling.current) return;
+    workoutScroll.current?.scrollTo({ y: Math.max(0, layout.y - spacing.md), animated: !reducedMotion });
+  }, [reducedMotion]);
   const revealAccessoryInput = useCallback(() => {
     if (focusedAccessoryInput.current) workoutScroll.current?.scrollResponderScrollNativeHandleToKeyboard(focusedAccessoryInput.current, spacing.lg, true);
   }, []);
   useEffect(() => {
-    const subscription = Keyboard.addListener('keyboardDidShow', revealAccessoryInput);
-    return () => subscription.remove();
+    const subscription = Keyboard.addListener('keyboardDidShow', () => {
+      keyboardVisible.current = true;
+      completedRowToReveal.current = null;
+      revealAccessoryInput();
+    });
+    const hidden = Keyboard.addListener('keyboardDidHide', () => { keyboardVisible.current = false; focusedAccessoryInput.current = null; });
+    return () => { subscription.remove(); hidden.remove(); };
   }, [revealAccessoryInput]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const { totalUnread: unreadCount, openCoachChat, isOpening } = useOpenCoachChat(studentId);
@@ -453,6 +474,7 @@ export function TodayWorkoutView() {
   }, [planRevision]);
   const startKey = `${studentId}:${selectedDayID}`;
   useEffect(() => {
+    completedRowToReveal.current = null;
     let cancelled = false;
     if (!selectedDayID) return;
     void readBoolean(`training.started.${startKey}`).then((started) => {
@@ -811,6 +833,7 @@ export function TodayWorkoutView() {
     realCount: realDrafts.length,
     remainingSets: remaining.length,
   });
+  const stickyCompletion = completionUI.sticky && (state.kind === 'loaded' || state.kind === 'recording');
   const readinessDone = Boolean(readinessQuery.data?.checkin);
   const readinessGate: ReadinessGateState = readinessQuery.isLoading
     ? 'unknown'
@@ -913,7 +936,12 @@ export function TodayWorkoutView() {
         </Pressable>
         </View>
       </View>
-      <ScrollView ref={workoutScroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={styles.content}>
+      <ScrollView ref={workoutScroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets
+        onScrollBeginDrag={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
+        onScrollEndDrag={() => { userScrolling.current = false; }}
+        onMomentumScrollBegin={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
+        onMomentumScrollEnd={() => { userScrolling.current = false; }}
+        contentContainerStyle={[styles.content, stickyCompletion && { paddingBottom: completionDockHeight + (restSeconds !== null ? restOverlayHeight + spacing.xs : 0) + spacing.md }]}>
         {state.kind !== 'loading' && plan ? (
           <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} />
         ) : null}
@@ -989,6 +1017,9 @@ export function TodayWorkoutView() {
               </View>
             ) : null}
             <WorkoutBody
+              key={startKey}
+              onExerciseCompleted={markExerciseCompleted}
+              onCompletedRowLayout={revealCompletedRow}
               preview={dayState?.kind === 'upcoming' && plan ? {
                 recommendedDate: weekStrip.week?.cells.find(cell => cell.isSelected)?.isBehind
                   ? undefined : recommendedDateText(recommendedDate(plan, state.planDay)),
@@ -1067,7 +1098,7 @@ export function TodayWorkoutView() {
                 </Text>
               </View>
             ) : null}
-            {completionUI.button ? (
+            {completionUI.button && !completionUI.sticky ? (
               <HoldToCompleteButton
                 disabled={completion.isPending || upsert.isPending}
                 onComplete={() => void completeDay()}
@@ -1076,6 +1107,13 @@ export function TodayWorkoutView() {
           </>
         ) : null}
       </ScrollView>
+      {stickyCompletion ? <View testID="workout-completion-dock"
+        onLayout={event => setCompletionDockHeight(event.nativeEvent.layout.height)}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: restSeconds !== null ? restOverlayHeight + spacing.xs : 0,
+          paddingVertical: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.borderDefault, backgroundColor: colors.bgBase }}>
+        <HoldToCompleteButton disabled={completion.isPending || upsert.isPending} onComplete={() => void completeDay()} />
+      </View> : null}
       {quickLogPlan ? <QuickLogSheet initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
         const outcome = await quickLogAttempt.current!.submit(input);
         if (outcome.kind === 'completed') {
@@ -1181,6 +1219,7 @@ export function TodayWorkoutView() {
         <RestTimer
           key={restGeneration}
           durationSeconds={restSeconds}
+          onOverlayLayout={event => setRestOverlayHeight(event.nativeEvent.layout.height)}
           showRPEExplanation={!accessoryRest}
           exerciseName={restExerciseName}
           studentId={studentId}

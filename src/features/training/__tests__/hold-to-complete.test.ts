@@ -34,7 +34,7 @@ test('zero real groups cannot complete; all logged hides remaining pill but keep
       realCount: 0,
       remainingSets: 5,
     }),
-  ).toEqual({ button: false, pill: false });
+  ).toEqual({ button: false, pill: false, sticky: false });
   expect(
     completionAvailability({
       editable: true,
@@ -42,7 +42,7 @@ test('zero real groups cannot complete; all logged hides remaining pill but keep
       realCount: 1,
       remainingSets: 4,
     }),
-  ).toEqual({ button: true, pill: true });
+  ).toEqual({ button: true, pill: true, sticky: false });
   expect(
     completionAvailability({
       editable: true,
@@ -50,7 +50,7 @@ test('zero real groups cannot complete; all logged hides remaining pill but keep
       realCount: 5,
       remainingSets: 0,
     }),
-  ).toEqual({ button: true, pill: false });
+  ).toEqual({ button: true, pill: false, sticky: true });
   expect(
     completionAvailability({
       editable: false,
@@ -169,4 +169,14 @@ test('an in-bounds hold survives a parent scroll responder request', () => {
     act(() => renderer?.unmount());
     jest.useRealTimers();
   }
+});
+
+test('all recorded sets dock completion without a remaining pill', () => {
+  const available = completionAvailability({ editable: true, recording: true, realCount: 3, remainingSets: 0 });
+  expect(available.sticky).toBe(true);
+  expect(available.pill).toBe(false);
+});
+
+test('one remaining set keeps completion in the scroll content', () => {
+  expect(completionAvailability({ editable: true, recording: true, realCount: 2, remainingSets: 1 }).sticky).toBe(false);
 });
