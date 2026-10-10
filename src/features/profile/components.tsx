@@ -1,8 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { Modal, ScrollView, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppButton, font, Screen, spacing, useColors } from '@/design';
+import { AppButton, font, radius, Screen, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 export function ProfileModal({ children, title, onClose, busy = false, sheet = false }: PropsWithChildren<{ title: string; onClose: () => void; busy?: boolean; sheet?: boolean }>) {
   const colors = useColors();
@@ -19,24 +18,13 @@ export function ProfileText({ children, error = false }: PropsWithChildren<{ err
   const colors = useColors();
   return <Text accessibilityRole={error ? 'alert' : undefined} style={{ ...font.body(16), color: error ? colors.danger : colors.textSecondary }}>{children}</Text>;
 }
-export function MyProfileSectionLabel({ children }: PropsWithChildren) {
-  const colors = useColors();
-  return <Text accessibilityRole="header" style={{ ...font.mono(11), letterSpacing: 0.44, color: colors.textFaint, marginTop: 2 }}>{children}</Text>;
-}
 export function MyProfileGroupCard({ children }: PropsWithChildren) {
   const colors = useColors();
-  return <View style={{ backgroundColor: colors.surfaceCard, borderRadius: 16, overflow: 'hidden' }}>{children}</View>;
+  return <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, overflow: 'hidden' }}>{children}</View>;
 }
-export function MyProfileDivider() {
+export function MyProfileDivider({ inset = false }: { inset?: boolean } = {}) {
   const colors = useColors();
-  return <View style={{ height: 1, backgroundColor: colors.borderSubtle }} />;
-}
-export function MyProfileValueRow({ title, value, onPress, danger = false }: { title: string; value?: string; onPress: () => void; danger?: boolean }) {
-  const colors = useColors();
-  return <Pressable accessibilityRole="button" onPress={onPress} style={{ minHeight: value ? 68 : 52, paddingHorizontal: 16, paddingVertical: value ? 14 : 15, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-    <View style={{ flex: 1, gap: 3 }}><Text style={{ ...font.body(value ? 11 : 15, value ? 'regular' : 'semibold'), color: danger ? colors.danger : value ? colors.textMuted : colors.textPrimary }}>{title}</Text>{value ? <Text numberOfLines={2} style={{ ...font.body(16, 'semibold'), color: colors.textPrimary }}>{value}</Text> : null}</View>
-    <MaterialCommunityIcons name="chevron-right" size={15} color={colors.textDim} />
-  </Pressable>;
+  return <View style={{ height: spacing.point1, marginHorizontal: inset ? spacing.base : spacing.zero, backgroundColor: colors.borderSubtle }} />;
 }
 export function PreferenceChip({ label, selected, onPress, disabled = false }: { label: string; selected: boolean; onPress: () => void; disabled?: boolean }) {
   const colors = useColors();

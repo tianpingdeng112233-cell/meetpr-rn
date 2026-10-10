@@ -1515,10 +1515,6 @@
 "en": "Muscles to improve",
 "zh": "想增强肌群"
 },
-"student.myProfileView.copy008": {
-"en": "Meet date",
-"zh": "比赛日期"
-},
 "student.myProfileView.copy009": {
 "en": "Height / Body weight",
 "zh": "身高 / 体重"
@@ -2094,10 +2090,6 @@
 "student.profileCardsSection.copy006": {
 "en": "Training materials",
 "zh": "训练资料"
-},
-"student.profileCardsSection.copy007": {
-"en": "Meet / notes",
-"zh": "比赛/备注"
 },
 "student.profileCardsSection.copy008": {
 "en": "Injury history",
@@ -2806,26 +2798,6 @@
 "student.step7ExtrasSection.copy003": {
 "en": "Injury area (optional)",
 "zh": "伤病部位(可选)"
-},
-"student.step7ExtrasSection.copy004": {
-"en": "Are you preparing for a meet?",
-"zh": "是否在备赛?"
-},
-"student.step7ExtrasSection.copy005": {
-"en": "No",
-"zh": "没有"
-},
-"student.step7ExtrasSection.copy006": {
-"en": "Preparing for a meet",
-"zh": "有比赛计划"
-},
-"student.step7ExtrasSection.copy007": {
-"en": "Target weight class (optional)",
-"zh": "目标体重级别(可选)"
-},
-"student.step7ExtrasSection.copy008": {
-"en": "Example: IPF 83 kg / WP −82.5 kg",
-"zh": "例:IPF 83kg / WP -82.5kg"
 },
 "student.step7ExtrasSection.copy009": {
 "en": "Anything to tell your coach? (optional)",
