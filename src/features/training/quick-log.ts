@@ -1,3 +1,4 @@
+import { validateSetLogInput } from './set-log-input';
 import type { PlanDay, PlanDetail } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 import { sequenceDays } from '@/domain/plan/sequence';
@@ -41,7 +42,7 @@ export class QuickLogAttempt {
     const rows = plan.rows.filter(row => row.included);
     if (!rows.length) return { kind: 'empty' };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(plan.selectedDate) || localDateText(localNoon(plan.selectedDate)) !== plan.selectedDate || plan.selectedDate < plan.minimumDate || plan.selectedDate > plan.maximumDate) return { kind: 'invalid' };
-    if (rows.some(({ draft }) => !draft.weightText.trim() || !Number.isFinite(Number(draft.weightText)) || Number(draft.weightText) < 0 || !Number.isInteger(Number(draft.repsText)) || Number(draft.repsText) < 1 || Number(draft.repsText) > 99 || (draft.rpeText !== '' && (!Number.isFinite(Number(draft.rpeText)) || Number(draft.rpeText) < 0 || Number(draft.rpeText) > 10)))) return { kind: 'invalid' };
+    if (rows.some(({ draft }) => !validateSetLogInput(draft).writable)) return { kind: 'invalid' };
     this.inFlight = true;
     try {
       for (const row of rows) {
