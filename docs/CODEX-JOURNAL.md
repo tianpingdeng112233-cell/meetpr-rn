@@ -4066,3 +4066,228 @@ tsc exit code: 0
 `git diff --check`：无输出，exit 0。中间日志摘录后清理。
 三条退出码分别保存为同名 `.exit`；`git diff --check` 通过。本轮最终增量含 JOURNAL 存 `/private/tmp/090-r1-final.diff`。未做项仅本轮原生实屏复验；无未完成的已授权代码项。
 `git diff --check` 通过；`ProgressPageHeader` 只读字节核对通过；临时日志已删除。
+
+## 2026-10-10 · 091 CARD-B · CN email auth（未提交交付）
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091b`，分支 `feat/091b-cn-auth`，起点 `ff909c9`。第一条实际命令在本树用 `mktemp` 写入并删除探针，exit 0；没有切换工作目录、重装依赖、读取凭证、commit、push 或开 PR。改动仅 `src/` 与本节。已依序读 CONTEXT、AGENTS、SPEC、CARD-B，核对 Expo SDK 57 版本文档。
+
+已实现 CARD-B 1–6：两轨复用邮箱认证与匿名/认证中路由守卫；三屏、字段、按钮、错误和顶栏文案进入 catalog；CN 去 Google、固定英文口号与中文隐私 URL；CN 四框注册、验证码请求、60 秒真实时间倒计时、后台恢复校正、改邮箱复位及旧响应隔离、确认密码与错误处理；CN 中文系统字体；新增英文文案。Global 英文文案、字体及两框注册保持，验证码仅有值才追加请求体，session 保留现有透传。手机号请求仍被 session 与既有 API 测试引用，因此按卡保留；旧手机号屏幕及其专用文案已移除。没有改构建配置、依赖、全局字体或其他屏幕。
+
+### 测试覆盖对应卡项
+
+新增测试只在卡中指定的三个 seam。屏幕测试以 `jest.isolateModules` / `jest.doMock` 切轨，语言走现有 `setLocaleOverride` / `getLocale`，网络均 mock。
+
+| CARD-B 项 | 覆盖测试名（文件均为既定 seam） |
+| --- | --- |
+| 1 路由与旧屏移除 | `global-auth-screens.test.tsx`：`CN login route uses email, the fixed slogan and Chinese privacy URL without Google`；直接加载真实 login route；顶层 register/forgot-password 守卫及顶栏 i18n 另经代码审查。 |
+| 2 三屏与错误 i18n | `CN Chinese screens use localized copy and light system typography while keeping the slogan`；`CN Chinese login and recovery submit email and preserve the existing reset success flow`；`error-copy.test.ts`：`signup code error copy follows the system locale`，以及全部原有错误映射测试。 |
+| 3 分轨差异 | `CN login route uses email, the fixed slogan and Chinese privacy URL without Google`；`Global registration stays at two inputs in both languages`；全部原有 Global 登录、隐私、注册和找回测试。 |
+| 4 四框注册与 API | `CN signup requires four valid fields and sends only email, password and six digit code`；`CN signup code has a 60 second cooldown, resets after email edits and cleans up on unmount`；`CN signup corrects cooldown using elapsed time on foreground`；`CN signup rejects invalid codes inline and immediately allows resend`；`CN signup code request prevents duplicate sends and ignores a response for an edited email`；`CN failed code request shows the existing error without a cooldown %#`；`CN existing account failure provides a sign-in link`；`CN confirmation waits until blur or both passwords are present and validates each signup field`。`auth-global.test.ts`：`requests a signup code with trimmed email and accepts an empty 204`；`registers CN email with code and never sends password confirmation`；原有 `registers email with the fixed student role and device timezone` 保留逐字节 JSON body 断言。 |
+| 5 字体 | `CN Chinese screens use localized copy and light system typography while keeping the slogan` 断言系统字体、标题 30/500/40/1、标签 12/400/0.5；原生实屏字重与像素对照不以组件测试替代。 |
+| 6 CN 新增英文文案 | 上述 CN 英文屏幕测试覆盖四框、三态小按钮、发码提示、确认密码、错码与未收信说明；`CN signup help visually identifies the sign-in link after code delivery` 验证末尾 sign in 的可见下划线及登录跳转。 |
+
+先红后绿记录：实现前先写三个 seam 的测试。第一轮 API/错误映射为真实功能失败；屏幕替身先遇到 Jest 导入顺序及缺少 `DEFAULT_API_BASE_URL` 的装载错误，修正替身后屏幕为 10 failed / 8 passed。动态 getter 不能可靠切换本仓编译后的模块常量，最终改用卡指定的 isolateModules/doMock。三个 seam 随后 42/42 通过。审查返修新增底部链接可识别性测试，先 1 failed / 18 skipped，再实现为绿色；补充确认失焦与 CN 中文登录/找回回归测试。原有三文件中的 Global 测试断言逐段与 HEAD 比较，均保持原文未改。
+
+### 自审与待 Opus 确认
+
+使用 `review-loop` 本地独立只读 Standards/Spec 两轴审查。仓中没有 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的 Matt PR 审查流程；该配置可另用 `$setup-matt-pocock-skills` 补齐。Standards 最终无阻断发现。Spec 最初指出底部登录文字缺少独立链接样式，已用金色下划线突出句末登录，并保留外层至少 44dp 触控区；定向复审已关闭，无剩余实现偏差。
+
+两处需 Opus 确认的边界，均按保守解释执行：
+
+1. SPEC 字体段限定“只管 CN 轨这三屏里的中文”“Global 轨一律不动”，CARD-B 第 5 项仅说中文语言时生效。以 SPEC 为准，仅 `china + zh` 使用系统字体；Global 中文仍翻译文字，字体保留原规则。
+2. SPEC 要求“邮箱框始终可编辑”，未定义提交注册请求后再改邮箱的成功处理。当前仍允许编辑，清空验证码、提示及倒计时；已经提交的注册成功时按提交时的邮箱登录，不取消服务器已接受的注册。Standards reviewer 曾建议提交中锁邮箱，复核明确条文后撤回该建议。若需锁邮箱或取消注册，应由 Opus 改定该口径。
+
+模拟器截图、中文原生字重、Global 英文逐像素对照、真实 QQ/163 发码、老账号数据、绑定教练实机流程均按 CARD-B 留给 Opus 收货；本轮未运行真实后端请求，不将 mock 验证写作功能验收通过。
+
+### 自检执行记录
+
+第一轮 `npx tsc --noEmit` exit 0，无输出。第一轮 `EXPO_NO_DOTENV=1 npm run lint` exit 0，14 条新增测试导入写法 warning；已整理 imports，并以 `jest.requireActual` 代替裸 require。禁用 Expo dotenv 装载以遵守不得读凭证文件的要求。
+
+第一轮原样 `npm test` exit 1：`Test Suites: 6 failed, 163 passed, 169 total`，`Tests: 9 failed, 1555 passed, 1564 total`，最后非空行 `Ran all test suites.`。其中 auth suite 在审查返修新增红测时仍被该轮读取；其他五个 suite 为 coach-conversation-screen、student-conversation-screen、set-video-player、completion-entry、set-save，主要含 `Exceeded timeout of 5000 ms for a test.`，另有滚动目标 y=190/30 差异和超时后节点不存在。未修改这些无关测试；最终代码固定后用串行完整测试复核。
+
+辅助进程查询 `ps -axo pid,ppid,stat,etime,comm` 被沙箱阻止，原始错误 `zsh:1: operation not permitted: ps`；不影响三项自检执行。
+
+最终固定代码后的自检（全部 exit 0）：
+
+| 命令 | 结果 | 原始最后非空行 |
+| --- | --- | --- |
+| `npx tsc --noEmit` | 通过，无 stdout/stderr | 无输出，不虚构结果行 |
+| `EXPO_NO_DOTENV=1 npm run lint` | 通过，0 warning / 0 error | `> expo lint` |
+| `npm test -- --runInBand`（完整测试集，未过滤） | 169 suites / 1566 tests 全部通过 | `Ran all test suites.` |
+
+完整 Jest 汇总原文：
+
+```text
+Test Suites: 169 passed, 169 total
+Tests:       1566 passed, 1566 total
+Snapshots:   0 total
+Time:        60.948 s, estimated 985 s
+Ran all test suites.
+```
+
+包含 `no-literal-zh.test.ts` 与 `no-i18n-todo.test.ts`，均 PASS。前述五个无关失败 suite 在最终串行完整运行中全部通过；没有以修改旧断言或延长 timeout 消除失败。最终 `git diff --check` 无输出、exit 0。日志原始证据在 `/private/tmp/091b-{tsc,lint,test}-final.log`，相应 `.exit` 均为 0；首轮失败日志 `/private/tmp/091b-test.log` 保留。工作区交付不代表真机/后端验收放行。
+
+### 返修第 1 轮
+
+按 David 本轮收货决定，在上一轮未提交交付上定向修改。两处旧待决定项以本节为准：中文字体只按 `getLocale() === 'zh'`，同时适用于 Global/CN；注册提交期间两轨均锁邮箱，“始终可编辑”仅指发码后、提交前。SPEC 正典由 Opus 更新，本轮不改。
+
+范围：`auth-typography.ts` 去掉构建轨条件，验证码字体改为已加载的 `fontNames.mono.regular`，保持 17 号、字距 2、regular；`GlobalForgotPasswordScreen.tsx` 的验证码标签只按中文语言显示；`GlobalRegisterScreen.tsx` 邮箱改为 `editable={!busy}`。`brand` 英文口号样式维持，未改路由、文案、Google 分屏、错误映射、倒计时、footer 或 API。
+
+新增测试仍只放既有屏幕 seam `src/features/auth/__tests__/global-auth-screens.test.tsx`：
+
+- 第 1 项：`Global Chinese registration uses Chinese title and field label typography`；`%s English registration retains the original title and field typography`（global/china）；`%s Chinese login keeps the English slogan typography`（global/china）。
+- 第 1、2 项：`%s Chinese recovery labels the code and uses the loaded regular monospace font`（global/china）；`CN Chinese signup uses the loaded regular monospace font for verification digits`。
+- 第 3 项：`%s registration locks email while submit is pending and unlocks after failure`（global/china），以未完成 Promise 验证提交中锁定，失败后恢复可编辑。
+- 第 4 项：复用原有 `CN signup code request prevents duplicate sends and ignores a response for an edited email`，覆盖请求 pending 时改邮箱、旧响应返回后无 `Sent to` 提示且可重新发码；未重复造测试或修改 generation 实现。
+
+先红后绿：生产实现改动前，屏幕测试明确为 `5 failed, 26 passed, 31 total`（exit 1），失败对应 Global 中文样式、Global 中文验证码标签、两处验证码字体与 CN 提交锁邮箱；英文样式及口号保持测试已绿。按三处指定修改后，定向测试全部通过。原有 Global 断言与第 4 项竞态测试保持原文。
+
+本轮最终自检原始结果（全部 exit 0）：
+
+- `npx tsc --noEmit`：stdout/stderr 为空，无结果行。
+- `EXPO_NO_DOTENV=1 npm run lint`：最后非空行 `> expo lint`，无 error/warning；禁用 dotenv 装载以延续不读凭证文件的约束。
+- `npx jest --runInBand src/features/auth src/api/__tests__/auth-global.test.ts`：
+
+```text
+Test Suites: 4 passed, 4 total
+Tests:       79 passed, 79 total
+Snapshots:   0 total
+Time:        18.829 s, estimated 31 s
+Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-global.test.ts/i.
+```
+
+`git diff --check`：无输出，exit 0。本轮没有运行全量测试，按交付要求留给 Opus 在沙箱外重跑。独立只读 Standards / Spec 定向复核均无遗留发现；以上实际测试由主代理执行。开工/完工哈希核对确认仅上述三个实现文件、屏幕测试文件及本 JOURNAL 改变，上一轮其余 src 改动未动。临时测试日志仅写本树，摘录后删除；没有写其他 worktree，没有 commit/push/PR。此前两处歧义已由用户明确决定，无新增待决定项。
+
+### 返修第 2 轮
+
+基于 Opus 已提交并收货的 `1d6bf8c` 继续，开工工作区干净；没有改写提交。仅按两项实机反馈修复：`GlobalAuthField` 复用现有 `hasText`，中文验证码空值时用正文样式，输入数字后才启用 regular 等宽字体与字距 2；英文空值/有值样式保持。`GlobalRegisterScreen` 仅调整发码按钮文字颜色：发码中或倒计时中用 `textTertiary`，无效邮箱保留 `textDisabled`；背景、点击条件及 accessibilityState 不变。
+
+既有屏幕 seam 中新增恰好两条回归测试，先运行得到 `2 failed, 31 skipped, 33 total`（exit 1），分别复现了占位符等宽字体和发码中文字颜色错误：
+
+- `code placeholders use Chinese body typography until a digit is entered and preserve English styles`：覆盖注册与找回第二步的空值→输入一位→清空，以及英文空值/输入样式不变。
+- `signup code button keeps pending and countdown text legible while invalid email stays faded`：覆盖无效邮箱、发码请求进行中、倒计时 58 秒及改回无效邮箱，并断言 disabled 无障碍状态。
+
+上一轮验证码数字字体测试仅补充输入一位数字的前置步骤，保留原字体断言，适配本轮“空值显示正文占位符”的明确要求。未改其他已有断言、文案、路由、错误处理、倒计时、footer 或 API。
+
+定向测试命令 `npx jest --runInBand src/features/auth src/api/__tests__/auth-global.test.ts`，exit 0，原始汇总：
+
+```text
+Test Suites: 4 passed, 4 total
+Tests:       81 passed, 81 total
+Snapshots:   0 total
+Time:        5.969 s
+Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-global.test.ts/i.
+```
+
+`EXPO_NO_DOTENV=1 npm run lint`：exit 0，无 warning/error，最后非空行 `> expo lint`；沿用禁用 dotenv 装载以免读取凭证文件。本轮未运行全量测试或模拟器，不将组件样式断言称为新的实机验收；待 Opus 复看。
+
+`npx tsc --noEmit`：exit 0，stdout/stderr 为空，无结果行。最终自查逐行 diff 与用户两项返修范围一致；`git diff --check` 无输出、exit 0。临时日志已摘录并删除，最终 `git status --short` 仅包含 `GlobalAuthField.tsx`、`GlobalRegisterScreen.tsx`、`global-auth-screens.test.tsx` 及本 JOURNAL 四个预期文件；无临时日志遗留。未 commit、push、开 PR 或写其他 worktree。
+
+## 2026-10-10 · Spec 091 CARD-C · Android 构建与出包
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091c`，分支 `feat/091c-build-tracks`，起点 `ff909c9`，开工工作区干净。第一条实际命令在本目录 `mktemp .codex-write-probe.XXXXXX` 并删除临时文件，exit 0。全程没有进入其他 worktree 或主仓；沿用已有 node_modules 软链，未安装依赖、未 commit/push/开 PR，未修改 src、依赖、锁文件或正典台账。
+
+已依序读 CONTEXT、AGENTS、SPEC §1/§3/验收/Out of Scope、CARD-C；查阅 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)、[SDK 57 app config](https://docs.expo.dev/versions/v57.0.0/config/app/) 和 [config plugin 文档](https://docs.expo.dev/config-plugins/plugins/)。Gradle fixture 参照已安装 Expo 57.0.7 的模板签名/buildTypes 结构，省略模板 debug 签名值，不包含口令。
+
+Opus 本轮明确解释：Global 配置允许包名变更，以及新增 `android.versionCode: 1` 与签名 plugin 注册项；其他输出严格保持。后续同类实现卡内目标所必需的最小配置新增可由 Codex 判断并记录；范围、取舍或用户可见行为仍交回。
+
+| 目标 | 实装与对应证据 |
+| --- | --- |
+| 1 包名分轨 | `plugins/build-track.js` 的 `getAndroidBuildConfig` 为唯一映射，供 app.config.ts 调用；app.json 移除旧固定包名。`Android build track / %s selects its package and the first distribution versionCode` 覆盖 china/global/未设置/未知值。两轨显示名仍为 MeetPR，iOS 字段未改。 |
+| 2 签名 plugin | `with-release-signing.js` 通过 `expo/config-plugins` 的 `withAppBuildGradle` 接入；纯函数 `rewriteReleaseSigning` 追加/替换带标记的 Groovy 块，原模板逐字保留。四个值在 Gradle 运行期读取，非空环境变量优先，缺失时读同名 Gradle 属性；四项完整才切 release，否则 debug 并警告 NOT FOR DISTRIBUTION。测试 `release signing reads all four values at Gradle runtime and preserves the Expo template`、`any missing signing value selects debug signing and warns that the package is not distributable`、`repeated prebuild is byte-for-byte idempotent with %j line endings`（LF/CRLF）。 |
+| 3 出包脚本 | `scripts/pack-android.sh <china|global> [output-directory] [--allow-debug-signing]`；默认输出 dist/android、arm64-v8a；`MEETPR_ANDROID_ARCHITECTURES` 可扩展架构。保留已有 JAVA_HOME/ANDROID_HOME，未设时用仓规路径。配置求值读取版本；prebuild 使用 `--platform android --clean --no-install`，随后 assembleRelease。缺任一签名变量先失败；显式允许后强制 debug 并加 `-DEBUGSIGNED`，避免 Gradle 属性补全造成签名与文件名不一致（对应 `the packaging script can force debug signing even when Gradle properties supply missing values`）。正式签名路径要求位于生成目录 android/ 之外，避免 clean 删除。apksigner 找到时验签并输出证书 SHA-256；验签失败停止复制，工具缺失则提示。脚本未设置 API 地址，dotenv 禁用，所有口令只经环境进入 Gradle。手动检查命令见下。 |
+| 4 忽略规则 | .gitignore 原有 `*.jks` 保留，新增 `*.keystore` 与 `keystore.properties`。`git check-ignore --no-index sample.keystore nested/sample.jks nested/keystore.properties` 三项均命中，exit 0；没有为此创建文件。 |
+| 5 版本 | `plugins/build-track.js` 单一 `ANDROID_VERSION_CODE = 1`，注释“每次对外发包 +1”；app.config.ts 从纯函数读取。两轨配置求值均为 version 0.1.0 / versionCode 1，versionName 沿用 app.json.version。 |
+
+先红后绿：包名/版本 seam 先因模块不存在失败，再 4 passed；Gradle seam 先因模块不存在失败，再逐项添加缺值回落、LF/CRLF 幂等、强制 debug 测试，每项先观察失败后补实现，最终 2 suites / 9 tests passed。Jest 原配置可收集 plugins/__tests__，未改 Jest 配置；脚本按卡要求不新增自动化测试。
+
+实际手动检查：
+
+- `bash -n scripts/pack-android.sh`：exit 0。
+- `env -u MEETPR_UPLOAD_STORE_FILE -u MEETPR_UPLOAD_STORE_PASSWORD -u MEETPR_UPLOAD_KEY_ALIAS -u MEETPR_UPLOAD_KEY_PASSWORD bash scripts/pack-android.sh china`：预期 exit 1，构建前停止，原始输出：
+
+```text
+Missing signing environment variables: MEETPR_UPLOAD_STORE_FILE MEETPR_UPLOAD_STORE_PASSWORD MEETPR_UPLOAD_KEY_ALIAS MEETPR_UPLOAD_KEY_PASSWORD
+Refusing to package. Use --allow-debug-signing only for a local, non-distributable APK.
+```
+
+- `bash scripts/pack-android.sh invalid`：预期 exit 2，打印 Usage。
+- `EXPO_NO_DOTENV=1 EXPO_PUBLIC_BUILD_TRACK=china npx expo config --type public --json`：exit 0，`android.package=com.meetpr.app`。
+- `EXPO_NO_DOTENV=1 EXPO_PUBLIC_BUILD_TRACK=global npx expo config --type public --json`：exit 0，`android.package=com.meetpr.global`。
+- 开工前保存 Global public config，改后完整 JSON 深比较：仅 android.package、android.versionCode 和 plugins 新增末项三个获准变化，其他字段完全相同。
+- `expo prebuild`：未执行。完整 prebuild 会解包模板 debug.keystore，与本轮“不生成、读取或写入任何 keystore/jks”硬约束冲突；这是未调用的原因，没有伪造沙箱错误。plugin 的 Gradle 运行期分支和 APK 签名仍需原生实跑，不能用文本单测代替。
+- Gradle assembleRelease：未执行（未进入 Gradle）。尝试 `bash -c './android/gradlew assembleRelease'` 得到 exit 127，原始错误：
+
+```text
+bash: ./android/gradlew: No such file or directory
+```
+
+没有生成 APK，未执行 apksigner，没有读写任何 keystore/jks、.env 或凭证文件，没有在文件/输出中写入口令。
+
+独立只读双轴审查（review-loop，以本地 CARD-C 为 Spec 来源）：Standards 0 findings，Spec 0 findings。仓内缺少 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的 code-review 分支流程；如以后需要该流程，由 David 调用 `$setup-matt-pocock-skills`。reviewer 审阅代码，不把它当作原生出包验收；JOURNAL 由主代理核对。
+
+开放项交 Opus：沙箱外执行两轨 prebuild/Gradle、APK 元数据与真实签名/指纹核验、同机并存验证；真正可分发 CN APK 依赖 David 创建并保管 release keystore。Global 包名变化还需新 Google Android OAuth client 和后端 audience 登记；完成前 Google 登录不可用。旧 Global 包不会被新包覆盖，卸载重装前确认无未同步记录。均为已明确人工前置/验收项，本卡未自行操作；无新增产品决策题。
+
+自检中间失败与处置（保留实际过程）：
+
+1. 第一轮 `npx tsc --noEmit` 因新增 TS 测试使用隐式 Jest globals 失败（TS2593 / TS2304）；显式导入 `@jest/globals` 后，新增测试入口改变了全仓环境类型加载顺序，既有 src 测试的 fetch mock 出现 TS2345 / TS2322。用 TypeScript API 读取同一 tsconfig、仅排除两个新增测试根节点，保留全部生产改动，得到 `Type check excluding only the two new test roots: 0 diagnostics`。两份测试不含 TS 专有语法，最终改为 `.test.js`，与被测 JS plugin 一致；断言不变、不压制类型、不改 src/tsconfig/Jest。随后实际 `npx tsc --noEmit` exit 0，无输出。类型加载顺序问题经此对照定位，未遗留诊断脚本。
+2. 首轮 `EXPO_NO_DOTENV=1 npm test -- --runInBand`：exit 1，`Test Suites: 1 failed, 170 passed, 171 total`；`Tests: 31 failed, 1527 passed, 1558 total`。首个失败为 student-conversation-screen 的 `empty conversation invites a message to the coach and shows tonight online` 超过默认 5000ms，后续同套测试因 overlapping act / unmounted renderer 连锁失败。没有修改或跳过它；独立复跑原套件 `EXPO_NO_DOTENV=1 npx jest src/features/chat/__tests__/student-conversation-screen.test.tsx --runInBand`：exit 0，33/33 passed，耗时 3.282s。随后按原默认超时重新跑全量，最终结果见下。
+3. `npm run lint`（环境 `EXPO_NO_DOTENV=1`）首轮及测试改扩展名后复跑均 exit 0，输出只有 `expo lint` 命令行，0 errors / 0 warnings。
+
+最终自检（最终文件状态）：
+
+```text
+npx tsc --noEmit: PASS (exit 0, no output)
+npm run lint: PASS (exit 0, 0 errors / 0 warnings; EXPO_NO_DOTENV=1)
+npm test -- --runInBand: PASS (exit 0; EXPO_NO_DOTENV=1)
+Test Suites: 171 passed, 171 total
+Tests:       1558 passed, 1558 total
+Snapshots:   0 total
+Time:        43.002 s, estimated 234 s
+bash -n scripts/pack-android.sh: PASS (exit 0)
+git diff --check: PASS (exit 0)
+china android.package: com.meetpr.app
+global android.package: com.meetpr.global
+```
+
+最终全量包括两个新增 JS 测试文件的 9 项测试；没有改测试超时、跳过套件或缩小全量范围。两轨配置求值和 Global 完整比较已在生产代码最终状态执行，之后只改测试扩展名与追加 JOURNAL，未重复无变化的配置验证。最终 `git diff --numstat -- src package.json package-lock.json` 无输出。
+
+本卡最终改动文件：
+
+```text
+.gitignore
+app.config.ts
+app.json
+docs/CODEX-JOURNAL.md
+plugins/__tests__/build-track.test.js
+plugins/__tests__/release-signing.test.js
+plugins/build-track.js
+plugins/with-release-signing.js
+scripts/pack-android.sh
+```
+
+目标 1–5 代码已实现且工作区未提交；原生出包/签名/并存验收尚未执行，交 Opus 按上述开放项完成。不以本次本地自检替代 Spec 验收或宣告可分发。
+
+## 2026-10-10 · Spec 091 Card D · CN usage-data notice
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091`，分支 `feat/091-cn-android-first`，基线 `c08b194`。启动第一步在本工作树创建并删除临时文件成功（exit 0），初始工作区干净。按 CONTEXT → AGENTS → CARD-D 顺序读取；实施使用 TDD，未重装依赖。
+
+`PrivacyNoticeSheet` 按 `BUILD_TRACK` 选择正文：china 使用新增 `appShell.privacy.analytics.bodyChina`，global 继续使用原键。新键仅加入 `RnExtras.json`，中英文均从现有正文精确替换 CARD-D 指定的存放地点片段；其余字符保留。脚本比对确认 `AppShell.json` 与 HEAD 逐字节一致、RnExtras 旧键值全部一致，`usage-notice.test.ts` 也逐字节未改。布局、按钮、出现时机未改。
+
+隐私政策链接现状：本面板的 `PRIVACY_POLICY_URL` 写死为 `https://meetpr.app/privacy`，不按语言或构建轨切换。已满足 CN 要求，因此保持原实现；新增两轨 × 两语言的点击断言，Global 行为保持不变。
+
+先红后绿证据：先在 `PrivacyNoticeSheet.test.tsx` 新增 CN/Global 两语言正文测试，未实现时 CN 两条失败（仍显示 DigitalOcean），其余三条通过。实现后发现测试 mock 的 namespace 导出被 Babel 复制，补 `__esModule: true` 后通过；初轮 tsc 发现链接参数表的 readonly tuple 类型不匹配，改为 `satisfies` 后通过。为复核最终测试确能捕捉缺陷，临时恢复组件原取键逻辑再跑：2 failed / 9 passed；恢复按轨取键后：11 passed。未删改既有断言。
+
+最终自检（命令均设置 `EXPO_NO_DOTENV=1`，禁用自动加载 .env）：
+
+```text
+npx tsc --noEmit: PASS (exit 0, no output)
+npm run lint: PASS (exit 0, 0 errors / 0 warnings)
+npx jest src/analytics/__tests__/PrivacyNoticeSheet.test.tsx src/i18n/__tests__/usage-notice.test.ts --runInBand: PASS (exit 0; 2 suites, 11 tests)
+git diff --check: PASS (exit 0)
+Exact CN substitutions / existing catalog values / unchanged usage-notice assertions: PASS
+```
+
+同一上下文自审：Standards 未发现范围或文案落点违规；Spec 未发现缺做、多做或做错。T0 文案任务未运行独立双轴审查。本次未运行模拟器视觉验收，不以 Jest 渲染自检代替上机验收。
+
+改动文件：`src/analytics/PrivacyNoticeSheet.tsx`、`src/analytics/__tests__/PrivacyNoticeSheet.test.tsx`、`src/i18n/catalog/RnExtras.json`、`docs/CODEX-JOURNAL.md`。交付未提交工作区改动；未 commit、push 或开 PR，未读取/输出 .env、密钥或凭证文件，未在工作树留下临时日志。

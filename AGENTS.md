@@ -4,7 +4,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 
 # meetpr-rn 身份卡
 
-MeetPR 安卓端(React Native/Expo)。⚖️2026-07-19 拍板 C:RN 只做安卓,iOS(`apps/MeetPR`,SwiftUI)保持不动;本仓目标 = **1:1 复刻 iOS `beta/1.0-22` @ `0748931563fefea14e7f50a7c9ee7330b5501bea` 的 Global 轨**(David 2026-09-21 授权追齐 build 22;历史参照包保留原 SHA),遵守安卓系统惯例,v1 严禁夹带新功能。英文为主语言,CN 轨 v1 不做。
+MeetPR 安卓端(React Native/Expo)。⚖️2026-07-19 拍板 C:RN 只做安卓,iOS(`apps/MeetPR`,SwiftUI)保持不动;本仓目标 = **1:1 复刻 iOS `beta/1.0-22` @ `0748931563fefea14e7f50a7c9ee7330b5501bea` 的 Global 轨**(David 2026-09-21 授权追齐 build 22;历史参照包保留原 SHA),遵守安卓系统惯例,v1 严禁夹带新功能。英文为主语言。⚖️2026-10-10 David 立项 CN 轨首版(`specs/091-cn-android-first/SPEC.md`):同一份代码按构建轨出两种包,CN 轨只用邮箱登录注册(注册带验证码),此前「CN 轨 v1 不做」作废。
 
 ## 三份根文档
 - `PLAN.md` — 施工蓝图(W0-W4 分波、技术底座、三级分发路径)。改动方向先读它。
@@ -17,10 +17,10 @@ MeetPR 安卓端(React Native/Expo)。⚖️2026-07-19 拍板 C:RN 只做安卓,
 - 凭证:expo-secure-store;密码/密钥永不入 repo/对话。
 
 ## 红线
-- 包名 `com.meetpr.app` 与 release keystore 一经对外发包终身锁死。
+- 包名按构建轨:CN 轨 `com.meetpr.app`,Global 轨 `com.meetpr.global`(spec 091)。包名与 release keystore 一经对外发包终身锁死;keystore 与口令永不入仓,出包走 `scripts/pack-android.sh`,签名值只经环境变量传入。
 - CI 只跑 ubuntu runner,不碰 macOS runner。
 - 评估期硬封存照抄(BindGate 直进 tabs),xlsx 导入不复刻(正典在 plan-web)。
-- 后端 = Global 生产 `https://api.meetpr.app`(DO NYC + R2);CN staging `121.40.160.241:3000` 仅作对照。原则零后端改动;发现 iOS 假设开 backend 小卡,不在本仓绕(已知一张:Google 多 audience)。
+- 后端:Global 轨 = Global 生产 `https://api.meetpr.app`(DO NYC + R2);CN 轨 = 国内 staging `http://121.40.160.241:3000`(明文,HTTPS 通后两端一起切)。原则零后端改动;发现 iOS 假设开 backend 小卡,不在本仓绕(已知一张:Google 多 audience)。
 - 凭证/密钥(Google OAuth client、keystore、测试账号密码)只在 Bitwarden,永不入卡与对话。
 
 ## 协作

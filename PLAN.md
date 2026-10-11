@@ -76,6 +76,7 @@
 
 ## 7. 海外优先改向(⚖️2026-09-04 David 拍板:①优先开发海外版本 ②先重 pin 基线再开工)
 
+- **⚖️2026-10-10 更新**:CN 轨已立项首版(`specs/091-cn-android-first/SPEC.md`),登录方式改为邮箱(不是下文写的手机号),本条「CN 轨 v1 不做」与「不删已写的手机号登录代码」就此作废;手机号登录页已从 App 移除,后端手机号接口保留。
 - **目标形态**:安卓 v1 = iOS **Global 轨**的 1:1 复刻(英文 UI、`https://api.meetpr.app`、邮箱密码 + Google 登录、注册角色固定 coached_student、设备时区契约)。CN 轨(手机号登录、121.40.160.241、中文)**v1 不做**,只保留 build variant 切轨口,不删已写的手机号登录代码。§6 的三级国内分发路径整体后移到 CN 轨启动时再议,备案/软著/国内商店零动作。
 - **基线纪律**:每波开工前按 iOS RELEASES/NEXT-RELEASE 现场核实实际发版线与候选 SHA;基线只在波边界重 pin,波内不追。w1g/w1h/w1i 已进入本地 W3 集成基线,继续按 PARITY 复核;不要重复派旧悬空卡。
 - **登录**:SiwA 安卓不做(Apple 的 Android 方案是 web JS 流,内测形态不值当,⚖️待拍确认);当前 RN 实装为 Google OAuth PKCE;原 Credential Manager 方案尚未落地,需按当前实现核验 client/audience,**backend `GOOGLE_CLIENT_ID` 需放行多 audience**(小卡,零迁移)。Google Cloud 里建 Android/Web OAuth client 与 SHA-1 指纹登记 = David 亲手项。

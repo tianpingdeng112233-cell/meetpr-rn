@@ -3,6 +3,7 @@ import { Linking, Modal, ScrollView, StyleSheet, Text, View } from 'react-native
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
+import { BUILD_TRACK } from '@/config/build-track';
 import { AppButton } from '@/design/AppButton';
 import { useColors } from '@/design/theme';
 import { type Colors, radius, spacing, typography } from '@/design/tokens';
@@ -54,7 +55,9 @@ export function PrivacyNoticeSheet({
         <View style={styles.sheet}>
           <Text style={styles.title}>{t('appShell.privacy.analytics.title')}</Text>
           <ScrollView style={styles.bodyScroll}>
-            <Text style={styles.body}>{t('appShell.privacy.analytics.body')}</Text>
+            <Text style={styles.body}>{t(BUILD_TRACK === 'china'
+              ? 'appShell.privacy.analytics.bodyChina'
+              : 'appShell.privacy.analytics.body')}</Text>
           </ScrollView>
           <Pressable
             accessibilityRole="link"
