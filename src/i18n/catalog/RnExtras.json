@@ -326,6 +326,8 @@
 "student.rn.today.sets.one": { "en": "{0} set", "zh": "{0} 组" },
 "student.rn.today.sets": { "en": "{0} sets", "zh": "{0} 组" },
 "student.rn.today.summary": { "en": "{0} · {1}", "zh": "{0} · {1}" },
+"student.completedDay.loggedSets %lld %lld": {"en": "%lld/%lld sets logged", "zh": "已记 %lld/%lld 组"},
+"student.completedDay.addedSets %lld": {"en": "Added · %lld logged", "zh": "自加 · 已记 %lld 组"},
 "student.added.addSet": {"en": "Add set", "zh": "加一组"},
 "student.added.extra": {"en": "Extra", "zh": "额外"},
 "student.added.removeSet": {"en": "Remove set", "zh": "移除这组"},

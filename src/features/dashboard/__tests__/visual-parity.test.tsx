@@ -107,8 +107,10 @@ test.each(['list', 'recording'] as const)('the training tab in %s mode renders n
     : renderer.root.findAllByProps({ testID: 'training.completedDay' }).length > 0;
   await waitUntil(loaded);
   expect(loaded()).toBe(true);
+  // A completed day reuses the overview card layout, so it keeps the one title; no set hero either way.
   const heroTitles = renderer.root.findAllByType(Text).filter((node) => node.props.children === "Today's workout");
-  expect(heroTitles).toHaveLength(mode === 'list' ? 1 : 0);
+  expect(heroTitles).toHaveLength(1);
+  if (mode === 'recording') expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
   expect(queryAllByTestId('eyebrow')).toHaveLength(0);
 });

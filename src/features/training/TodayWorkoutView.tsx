@@ -1069,27 +1069,9 @@ export function TodayWorkoutView() {
         ) : null}
         {state.kind === 'loaded' || state.kind === 'recording' ? (
           <>
-            {dayState?.kind === 'completed' ? (
-              // One quiet status row: the undo stays reachable without a bordered card above the workout.
-              <View testID="training.completedDay" style={styles.completedRow}>
-                <MaterialCommunityIcons color={colors.success} name="check-circle" size={18} />
-                <Text style={styles.completedText}>{t('student.todayWorkoutScreen.copy009')}</Text>
-                <View style={styles.completedSpacer} />
-                {dayState.canUndo ? (
-                  <Pressable
-                    accessibilityLabel={t('student.todayWorkoutScreen.copy023')}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: undoCompletion.isPending }}
-                    disabled={undoCompletion.isPending}
-                    onPress={() => void completeDay(true)}
-                    style={styles.completedUndo}>
-                    <Text style={styles.completedUndoText}>{t('student.todayWorkoutScreen.copy023')}</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ) : null}
             <WorkoutBody
               key={startKey}
+              completedDay={dayState?.kind === 'completed' ? { canUndo: dayState.canUndo, undoing: undoCompletion.isPending, onUndo: () => void completeDay(true) } : undefined}
               inlineEdits={{ values: accessoryEdits, onChange: (id, edit) => setAccessoryEdits(current => ({ ...current, [id]: edit })) }}
               onAddSet={exercise => {
                 if (!editable) return;
@@ -1382,9 +1364,4 @@ const createStyles = (colors: Colors) =>
     emptyTitle: { color: colors.textPrimary, ...typography.headline },
     emptySub: { color: colors.textSecondary, ...typography.body },
     retry: { color: colors.gold500, ...typography.bodyEmphasis },
-    completedRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, minHeight: spacing.minimumHitTarget },
-    completedText: { color: colors.textSecondary, ...typography.footnote },
-    completedSpacer: { flex: 1 },
-    completedUndo: { justifyContent: 'center', minHeight: spacing.minimumHitTarget, paddingLeft: spacing.sm },
-    completedUndoText: { color: colors.textMuted, ...typography.footnote },
   });

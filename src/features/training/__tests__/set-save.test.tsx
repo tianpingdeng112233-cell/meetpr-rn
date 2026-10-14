@@ -648,19 +648,26 @@ test.each(['delete', 'cancel'] as const)('extra %s immediately refreshes the cur
   expect(suggestion()).toBe(baseline);
 });
 
-test('completed detail keeps the hero on prescription rows when extra and student-added records exist', async () => {
+test('a completed day shows the overview card with logged counts and expandable sets instead of a set hero', async () => {
   servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' }] };
   const base: SetLog = { id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' };
-  storedLogs = [base, { ...base, id: '80000000-0000-4000-8000-000000000001', set_index: 1 }, { ...base, id: '80000000-0000-4000-8000-000000000002', exercise_id: '60000000-0000-4000-8000-000000000002', plan_exercise_id: null, plan_day_id: plan.days[0].id, adhoc: true }];
+  storedLogs = [base, { ...base, id: '80000000-0000-4000-8000-000000000001', set_index: 1, weight_kg: '85' }, { ...base, id: '80000000-0000-4000-8000-000000000002', exercise_id: '60000000-0000-4000-8000-000000000002', plan_exercise_id: null, plan_day_id: plan.days[0].id, adhoc: true }];
   await mount();
   await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  const copy = renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ');
-  expect(copy).toContain(t('student.todayWorkoutPresentation.copy002', [1, 1]));
-  expect(copy).not.toContain(t('student.todayWorkoutPresentation.copy002', [1, 0]));
-  expect(copy).not.toContain(t('student.todayWorkoutPresentation.copy002', [2, 1]));
+  const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ');
+  expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
+  expect(renderer.root.findAllByProps({ testID: 'completed-day-card' }).length).toBeGreaterThan(0);
+  // The extra set is logged but never inflates the prescription count.
+  expect(copy()).toContain(t('student.completedDay.loggedSets %lld %lld', [1, 1]));
+  expect(copy()).toContain(t('student.completedDay.addedSets %lld', [1]));
+  expect(copy()).not.toContain('85 kg × 5');
+  const rows = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false && typeof node.props.onPress === 'function');
+  await act(async () => { rows[0].props.onPress(); });
+  expect(copy()).toContain('80 kg × 5');
+  expect(copy()).toContain(t('student.added.extra'));
+  expect(copy()).toContain('85 kg × 5');
 });
-
 
 test('removing a student-added card stops on a feedback conflict without restoring earlier deletions', async () => {
   const base: SetLog = { id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: null, plan_day_id: plan.days[0].id, exercise_id: '60000000-0000-4000-8000-000000000002', set_index: 0, weight_kg: '10', reps: 12, rpe: null, completed: true, failed: false, assumed: false, adhoc: true, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' };

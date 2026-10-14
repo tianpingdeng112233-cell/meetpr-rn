@@ -10,14 +10,17 @@ David 2026-10-14 在安卓 CN 包上走查注册引导与训练页，提出三�
 
 安卓的滑条原来是一排可点的刻度点，现在可按住拖动、读屏可左右调整。iOS 用的是系统 `Slider`，本来就能拖；同样只需真机确认。
 
-## 3. 训练页：已完成那天的「撤销完成」（iOS 要改）
+## 3. 训练页：已完成的训练日（iOS 要改）
 
-David 选的方案 A：
+David 先选了方案 A（一行状态条 + 右侧「撤销完成」），随后进一步定为：**已完成的训练日与未开始时的「今日训练」概览卡同一排版，用界面表现已完成状态；原来的「当前组」大卡片不再出现。** 明细收进卡里（David 选「收进卡里」）。
 
-- 去掉原来带边框的块（上一行「已完成 · 不可修改」，下一行「撤销完成 ›」链接）。
-- 换成一行状态条，不带边框、不带底色：左边绿色对勾图标 + 「已完成」（`student.todayWorkoutScreen.copy009`，英文 `Completed`），中间留空，右边浅色小字按钮「撤销完成」（`student.todayWorkoutScreen.copy023`，英文 `Undo completion`）。
-- 「撤销完成」只在原来能撤销时出现（当天最新结算的那一天），规则不变；不能撤销时这一行只有「✓ 已完成」。
-- 行高与按钮点击区至少 44pt；文字用脚注字号，「已完成」次要文字色，「撤销完成」更浅的弱化色。
-- 「已完成 · 不可修改」这条文案不再出现在页面上（安卓仍在「所选日已不可写」的保存拦截弹窗里用它，iOS 同理不动弹窗）。
+- 卡片：与未开始时的概览卡相同的外框、圆角与左侧色条（色条改为成功绿）。标题仍是「今日训练」（`student.todayWorkoutScreen.copy017`）。
+- 标题右侧：原来「问教练」的位置换成浅绿底胶囊「✓ 已完成」（`copy009`）。
+- 副标题：「共 N 个动作 · M 组」，同概览卡（`copy018` / `copy019`，M 只数处方组）。
+- 每个动作一行，样式同概览卡的动作行：处方组全部记完时左侧序号换成绿色对勾，否则仍是序号；右侧「已记 x/y 组」（`student.completedDay.loggedSets %lld %lld`，y 只数处方组，额外组不计入）+ 展开箭头。学员自加的动作排在计划动作之后，右侧「自加 · 已记 N 组」（`student.completedDay.addedSets %lld`）。
+- 点一行在卡内展开该动作的每组记录：组号（额外组显示「额外」）+「重量 单位 × 次数 · RPE」，没记的处方组显示「—」，失败组用警示色。再点收起。
+- 卡底部右侧：能撤销时显示浅色小字「撤销完成」（`copy023`），规则不变（当天最新结算的那一天）；不能撤销时不显示。
+- 卡下面不再重复列出各动作的明细卡；「查看总结」横幅照旧。
+- 「已完成 · 不可修改」不再出现在页面上（保存拦截弹窗里照旧）。
 
-安卓实现：`src/features/training/TodayWorkoutView.tsx` 里 `testID="training.completedDay"` 的那一行；测试见 `completion-entry.test.tsx` 末尾两条。
+安卓实现：`src/features/training/WorkoutBody.tsx` 的 `completedDay` 分支（`testID="completed-day-card"`）；测试见 `set-save.test.tsx`「a completed day shows the overview card…」与 `completion-entry.test.tsx` 末尾两条。
