@@ -4,9 +4,10 @@ import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-nati
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { getLocale, t } from '@/i18n';
-import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
+import { Card, font, useColors, radius, Screen, spacing, typography } from '@/design';
 import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
 import type { SetLog } from '@/api/domains';
+import { decodePrescription, prescribed } from '@/domain/plan/prescription';
 
 import { ProgressPageHeader } from './ProgressPageHeader';
 import { HistoryStatsCard } from './HistoryStatsCard';
@@ -162,16 +163,34 @@ function HistoryDayCard({ day }: { day: HistoryDay }) {
   );
 }
 
+/** iOS `StudentFormatting.result`: "142.5kg × 5 @ RPE 7.5". */
 function recordedSetText(row: SetLog): string {
-  return `${formatKg(Number(row.weight_kg))} kg × ${row.reps}${row.rpe === null ? '' : ` @ RPE ${Number(row.rpe).toFixed(1)}`}`;
+  return `${formatKg(Number(row.weight_kg))}kg × ${row.reps}${row.rpe === null ? '' : ` @ RPE ${formatKg(Number(row.rpe))}`}`;
+}
+
+/** iOS `HistorySetRow`: one row shape for prescribed, extra and student-added sets. */
+function HistorySetRow({ label, result, completed }: { label: string; result: string; completed: boolean | null }) {
+  const { colors, styles } = useStyles();
+  return (
+    <View style={styles.setRow}>
+      <Text style={styles.setLabel}>{label}</Text>
+      <Text style={[styles.setValue, completed === null
+        ? { color: colors.textMuted }
+        : { ...font.mono(11, 'bold'), color: completed ? colors.success : colors.textSecondary }]}>
+        {result}
+      </Text>
+    </View>
+  );
 }
 
 function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
   const { colors, styles } = useStyles();
   return (
     <View style={styles.exerciseBlock}>
-      <Text style={styles.exerciseName}>{exercise.name}</Text>
-      {exercise.studentAdded ? <Text style={styles.noteText}>{t('student.added.added')}</Text> : null}
+      <View style={styles.exerciseNameRow}>
+        <Text style={styles.exerciseName}>{exercise.name}</Text>
+        {exercise.studentAdded ? <Text style={styles.addedTag}>{t('student.added.added')}</Text> : null}
+      </View>
       {exercise.notes.map((note) => (
         <View key={note} style={styles.notePill}>
           <MaterialCommunityIcons color={colors.gold500} name="message-text-outline" size={14} />
@@ -182,23 +201,23 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
         const index = set.set_number - 1;
         const row = exercise.logs.find((log) => log.set_index === index);
         return (
-          <View key={index} style={styles.setRow}>
-            <Text style={styles.setLabel}>{t('student.historyEntriesView.copy001', [index + 1])}</Text>
-            <Text style={[styles.setValue, { color: row?.completed ? colors.success : row ? colors.textSecondary : colors.textMuted }]}>
-              {row
-                ? recordedSetText(row)
-                : `${set.intensity_mode === 'weight' ? `${formatKg(Number(set.target_value))} kg × ` : ''}${set.target_reps}${set.target_reps_max === null ? '' : `–${set.target_reps_max}`}${set.intensity_mode === 'rpe' ? ` @ RPE ${set.target_value}` : ''}`}
-            </Text>
-          </View>
+          <HistorySetRow
+            completed={row ? row.completed : null}
+            key={index}
+            label={t('student.historyEntriesView.copy001', [index + 1])}
+            result={row ? recordedSetText(row) : prescribed(decodePrescription(set))}
+          />
         );
       })}
       {exercise.logs.filter(log => exercise.studentAdded || log.set_index >= exercise.plannedSets.length).map(log => (
-        <View key={log.id} style={styles.setRow}>
-          <Text style={styles.setLabel}>{exercise.studentAdded
+        <HistorySetRow
+          completed={log.completed}
+          key={log.id}
+          label={exercise.studentAdded
             ? t('student.historyEntriesView.copy001', [log.set_index + 1])
-            : t('student.added.extra')}</Text>
-          <Text style={[styles.setValue, { color: log.completed ? colors.success : colors.textSecondary }]}>{recordedSetText(log)}</Text>
-        </View>
+            : t('student.added.extra')}
+          result={recordedSetText(log)}
+        />
       ))}
     </View>
   );
@@ -245,7 +264,9 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
   dayProgress: { ...typography.footnote, fontWeight: '600' },
   rest: { color: colors.textMuted, paddingVertical: spacing.sm, ...typography.body },
   exerciseBlock: { borderTopColor: colors.borderDefault, borderTopWidth: 1, gap: spacing.sm, paddingTop: spacing.md },
-  exerciseName: { color: colors.textPrimary, ...typography.bodyEmphasis },
+  exerciseNameRow: { alignItems: 'baseline', flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  exerciseName: { color: colors.textPrimary, ...font.body(13, 'bold') },
+  addedTag: { color: colors.textMuted, ...font.body(11) },
   notePill: {
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -259,8 +280,8 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
   },
   noteText: { color: colors.textSecondary, flexShrink: 1, ...typography.caption },
   setRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 },
-  setLabel: { color: colors.textSecondary, ...typography.footnote },
-  setValue: { color: colors.textPrimary, fontVariant: ['tabular-nums'], ...typography.footnote },
+  setLabel: { color: colors.textMuted, ...font.mono(11, 'medium') },
+  setValue: { ...font.mono(11, 'medium') },
   scrim: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'flex-end' },
   choiceSheet: {
     backgroundColor: colors.surfaceCard,
