@@ -992,27 +992,21 @@ export function TodayWorkoutView() {
         {state.kind === 'loaded' || state.kind === 'recording' ? (
           <>
             {dayState?.kind === 'completed' ? (
-              <View
-                style={[
-                  styles.readOnly,
-                  {
-                    borderWidth: 1,
-                    borderColor: colors.borderSubtle,
-                    borderRadius: 12,
-                    gap: 10,
-                  },
-                ]}
-              >
-                <Text style={styles.readOnlyText}>
-                  {t('student.todayWorkoutScreen.copy024')}
-                </Text>
+              // One quiet status row: the undo stays reachable without a bordered card above the workout.
+              <View testID="training.completedDay" style={styles.completedRow}>
+                <MaterialCommunityIcons color={colors.success} name="check-circle" size={18} />
+                <Text style={styles.completedText}>{t('student.todayWorkoutScreen.copy009')}</Text>
+                <View style={styles.completedSpacer} />
                 {dayState.canUndo ? (
-                  <AppButton
-                    variant="link"
-                    label={t('student.todayWorkoutScreen.copy023')}
+                  <Pressable
+                    accessibilityLabel={t('student.todayWorkoutScreen.copy023')}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: undoCompletion.isPending }}
                     disabled={undoCompletion.isPending}
                     onPress={() => void completeDay(true)}
-                  />
+                    style={styles.completedUndo}>
+                    <Text style={styles.completedUndoText}>{t('student.todayWorkoutScreen.copy023')}</Text>
+                  </Pressable>
                 ) : null}
               </View>
             ) : null}
@@ -1295,14 +1289,9 @@ const createStyles = (colors: Colors) =>
     emptyTitle: { color: colors.textPrimary, ...typography.headline },
     emptySub: { color: colors.textSecondary, ...typography.body },
     retry: { color: colors.gold500, ...typography.bodyEmphasis },
-    readOnly: {
-      backgroundColor: colors.bgInset,
-      borderRadius: 8,
-      padding: spacing.md,
-    },
-    readOnlyText: {
-      color: colors.textSecondary,
-      textAlign: 'center',
-      ...typography.footnote,
-    },
+    completedRow: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs, minHeight: spacing.minimumHitTarget },
+    completedText: { color: colors.textSecondary, ...typography.footnote },
+    completedSpacer: { flex: 1 },
+    completedUndo: { justifyContent: 'center', minHeight: spacing.minimumHitTarget, paddingLeft: spacing.sm },
+    completedUndoText: { color: colors.textMuted, ...typography.footnote },
   });

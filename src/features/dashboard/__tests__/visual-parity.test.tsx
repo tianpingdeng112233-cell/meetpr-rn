@@ -102,9 +102,11 @@ test.each(['list', 'recording'] as const)('the training tab in %s mode renders n
   await act(async () => {
     renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>);
   });
-  const loadedTitle = mode === 'list' ? "Today's workout" : t('student.todayWorkoutScreen.copy024');
-  await waitUntil(() => textCopy().includes(loadedTitle));
-  expect(textCopy()).toContain(loadedTitle);
+  const loaded = () => mode === 'list'
+    ? textCopy().includes("Today's workout")
+    : renderer.root.findAllByProps({ testID: 'training.completedDay' }).length > 0;
+  await waitUntil(loaded);
+  expect(loaded()).toBe(true);
   const heroTitles = renderer.root.findAllByType(Text).filter((node) => node.props.children === "Today's workout");
   expect(heroTitles).toHaveLength(mode === 'list' ? 1 : 0);
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
