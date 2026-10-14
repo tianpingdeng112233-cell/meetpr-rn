@@ -5,7 +5,7 @@ import { sequenceDays } from '@/domain/plan/sequence';
 import { localDateText } from '@/domain/plan/workout-date-policy';
 import type { WorkoutSetDraft } from './model';
 
-export type QuickLogRow = { draft: WorkoutSetDraft; included: boolean; automaticWeight: boolean };
+export type QuickLogRow = { draft: WorkoutSetDraft; included: boolean; automaticWeight: boolean; readOnly?: boolean };
 export type QuickLogPlan = { dayId: string; selectedDate: string; minimumDate: string; maximumDate: string; rows: QuickLogRow[] };
 export function localNoon(date: string): Date {
   const [year, month, day] = date.split('-').map(Number);
@@ -24,7 +24,7 @@ export function makeQuickLogPlan({ plan, day, drafts, logs, now = new Date(), su
   return { dayId: day.id, selectedDate: today, minimumDate: lower > today ? today : lower, maximumDate: today,
     rows: day.exercises.flatMap(exercise => drafts.filter(draft => draft.exercise.id === exercise.id)).map(draft => {
       const weight = draft.weightText === '' ? suggestedWeight?.(draft) : null;
-      return { draft: { ...draft, weightText: weight == null ? draft.weightText : String(weight) }, included: true, automaticWeight: weight != null };
+      return { draft: { ...draft, weightText: weight == null ? draft.weightText : String(weight) }, included: !draft.kind, readOnly: Boolean(draft.kind), automaticWeight: !draft.kind && weight != null };
     }) };
 }
 export type QuickLogOutcome = { kind: 'completed' } | { kind: 'empty' } | { kind: 'busy' } | { kind: 'invalid' } | { kind: 'partialFailure'; written: number; remaining: number } | { kind: 'completionFailed' };
@@ -39,7 +39,7 @@ export class QuickLogAttempt {
     if (this.completed) return { kind: 'completed' };
     if (this.inFlight) return { kind: 'busy' };
     const plan = this.snapshot ?? input;
-    const rows = plan.rows.filter(row => row.included);
+    const rows = plan.rows.filter(row => row.included && !row.readOnly && !row.draft.kind);
     if (!rows.length) return { kind: 'empty' };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(plan.selectedDate) || localDateText(localNoon(plan.selectedDate)) !== plan.selectedDate || plan.selectedDate < plan.minimumDate || plan.selectedDate > plan.maximumDate) return { kind: 'invalid' };
     if (rows.some(({ draft }) => !validateSetLogInput(draft).writable)) return { kind: 'invalid' };

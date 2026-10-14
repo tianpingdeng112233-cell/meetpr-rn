@@ -206,7 +206,8 @@ export function OnboardingWizard({
             <ActivityIndicator color={colors.gold500} size="large" />
           </View>
         ) : (
-          <KeyboardAvoidingView style={styles.root}>
+          // Without a behavior the view never moves on Android, so the keyboard covered lower fields.
+          <KeyboardAvoidingView behavior="padding" style={styles.root}>
             <View style={styles.nav}>
               <Pressable disabled={editing} onPress={() => void saveAndExit()}>
                 <Text style={[styles.exit, editing && styles.disabled]}>{t('student.onboardingWizardView.copy011')}</Text>

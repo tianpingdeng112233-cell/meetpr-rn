@@ -27,6 +27,7 @@ export type GrowthStats = {
 };
 
 export type HistoryExercise = {
+  studentAdded?: boolean;
   planExercise: PlanExercise;
   name: string;
   notes: string[];

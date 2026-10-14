@@ -54,3 +54,13 @@ test('calendar-today remains today before the gym-day boundary and local noon su
     expect(`${noon.getFullYear()}-${String(noon.getMonth() + 1).padStart(2, '0')}-${String(noon.getDate()).padStart(2, '0')}`).toBe(date);
   }
 });
+
+test('existing extra sets remain visible but cannot be selected or written by quick log', async () => {
+  const extra = { ...synthesizeDrafts(current, [])[0], kind: 'extra' as const, stableSetId: 'extra', setIndex: 2 };
+  const model = makeQuickLogPlan({ plan: cycle, day: current, drafts: [...synthesizeDrafts(current, []), extra], logs: [], now: new Date(2026, 8, 21, 10) });
+  expect(model.rows.at(-1)).toMatchObject({ readOnly: true, included: false, draft: { stableSetId: 'extra' } });
+  const persist = jest.fn(async () => {});
+  const attempt = new QuickLogAttempt({ persist, complete: async () => {} });
+  expect(await attempt.submit({ ...model, rows: model.rows.map(row => ({ ...row, included: true })) })).toEqual({ kind: 'completed' });
+  expect(persist).toHaveBeenCalledTimes(2);
+});

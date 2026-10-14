@@ -94,6 +94,20 @@ afterEach(() => {
 });
 
 describe('API error classification', () => {
+  test.each([
+    [400, 'SETS_PLAN_DAY_NOT_PUBLISHED'],
+    [409, 'SETS_ADHOC_DAY_CONFLICT'],
+    [409, 'SET_NOT_STUDENT_ADDED'],
+    [409, 'SET_HAS_ATTACHMENT'],
+    [409, 'SET_HAS_COACH_FEEDBACK'],
+    [404, 'SET_NOT_FOUND'],
+  ] satisfies [number, string][])('preserves student-added HTTP %s %s as a backend ApiError', async (status, code) => {
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(status, { error: code }));
+    const error = await apiRequest('/sets/log', { method: 'POST' }).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ kind: 'backend', status, code, envelope: { error: code } });
+  });
+
   test('preserves CHAT_BIND_REQUIRED so student chat can show binding-invalidated copy', async () => {
     jest.mocked(fetch).mockResolvedValueOnce(mockResponse(403, { error: 'CHAT_BIND_REQUIRED' }));
     await expect(apiRequest('/conversations', { method: 'POST' })).rejects.toMatchObject({

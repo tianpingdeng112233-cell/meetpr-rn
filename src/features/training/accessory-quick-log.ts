@@ -11,6 +11,7 @@ export function isAccessoryExercise(exerciseType: string | null | undefined): bo
 }
 
 export type AccessoryRow = {
+  kind?: 'extra' | 'added';
   stableSetId: string;
   setIndex: number;
   status: DraftStatus;
@@ -38,24 +39,25 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
     ? metricDisplay(String(kg), POUNDS_PER_KG) : formatWeight(kg);
   return drafts.map(draft => {
     const prescription = decodePrescription(draft.planSet);
-    const prior = previousLogs.find(log => log.set_index === draft.setIndex);
+    const prior = draft.kind === 'extra' ? undefined : previousLogs.find(log => log.set_index === draft.setIndex);
     const previous = prior ? { weightText: weightText(Number(prior.weight_kg)), reps: prior.reps } : null;
     const intensity = prescription.intensity;
     const source = draft.sourceLog;
     const note = draft.planSet.coach_note;
     const isBodyweight = /自重|bodyweight/i.test(note ?? '');
     return {
+      kind: draft.kind,
       stableSetId: draft.stableSetId,
       setIndex: draft.setIndex,
       status: draft.status,
       hasVideo: videoById[draft.stableSetId] ?? false,
       unit,
-      weightText: isBodyweight ? 'BW' : source ? weightText(Number(source.weight_kg))
+      weightText: draft.kind ? (draft.weightText === '' ? '' : weightText(Number(draft.weightText))) : isBodyweight ? 'BW' : source ? weightText(Number(source.weight_kg))
         : prescription.weightKg == null ? '' : weightText(prescription.weightKg),
       weightPlaceholder: previous?.weightText ?? '',
-      repsText: String(source?.reps ?? prescription.reps),
+      repsText: draft.kind ? draft.repsText : String(source?.reps ?? prescription.reps),
       rpeText: source?.rpe == null ? '' : formatWeight(Number(source.rpe)),
-      rpePlaceholder: intensity?.kind === 'rir' ? { kind: 'rir' as const, value: intensity.value }
+      rpePlaceholder: draft.kind ? '' : intensity?.kind === 'rir' ? { kind: 'rir' as const, value: intensity.value }
         : intensity?.kind === 'rpe' ? formatWeight(intensity.value) : '',
       isBodyweight,
       previous,
@@ -102,7 +104,7 @@ export function rowsToCompleteAll(rows: readonly AccessoryRow[], editedById: Rea
   const toWrite: AccessoryRow[] = [];
   const skipped: AccessoryRow[] = [];
   for (const row of [...rows].sort((a, b) => a.setIndex - b.setIndex)) {
-    if (row.status !== 'pending') continue;
+    if (row.kind || row.status !== 'pending') continue;
     (accessoryRowWritable(row, editedById[row.stableSetId] ?? row).writable ? toWrite : skipped).push(row);
   }
   return { toWrite, skipped };

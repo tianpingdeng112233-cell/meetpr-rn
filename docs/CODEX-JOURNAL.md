@@ -4291,3 +4291,393 @@ Exact CN substitutions / existing catalog values / unchanged usage-notice assert
 同一上下文自审：Standards 未发现范围或文案落点违规；Spec 未发现缺做、多做或做错。T0 文案任务未运行独立双轴审查。本次未运行模拟器视觉验收，不以 Jest 渲染自检代替上机验收。
 
 改动文件：`src/analytics/PrivacyNoticeSheet.tsx`、`src/analytics/__tests__/PrivacyNoticeSheet.test.tsx`、`src/i18n/catalog/RnExtras.json`、`docs/CODEX-JOURNAL.md`。交付未提交工作区改动；未 commit、push 或开 PR，未读取/输出 .env、密钥或凭证文件，未在工作树留下临时日志。
+
+## 2026-10-14 · Spec 092 Card A · flexible days / student-added sets
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-092`，分支 `feat/092-flexible-day-self-added`，基线 `f6edf99`。启动第一条命令在当前目录创建并删除临时文件成功（exit 0），初始工作区干净；未切换到主仓。已读 CONTEXT、AGENTS/CLAUDE、092 SPEC 全文及屏幕稿/文案表、CARD-A、089 SPEC、工程工作流及历史 journal；查阅 Expo SDK 57 官方版本文档。`node_modules -> ../meetpr-rn/node_modules` 保持原软链，未重装。未读取 .env，全部检查设置 `EXPO_NO_DOTENV=1`。未 commit、push、开 PR；未改 coach、android、依赖、SPEC、CONTEXT、PARITY。
+
+交付状态：授权目录内已实装、自测；不是功能验收通过。两处跨目录缺口已提出范围澄清，尚未收到扩围授权，停在下述边界。
+
+### 实现与工程细节
+
+- 本周所有未结算日共用可写判定，保存前复查已发布计划；默认恢复 gym-day 内最后一条真实记录所在未结算日。首次加载后保留当前页选日，跨 04:00 不跳页，新访问重新计算。撤销仍只允许当日最后实际结算的训练日，排序由计划顺序纠正为 completed_at；接口不变，周条外观不变。
+- 额外组使用 coached 请求及处方之后的 set_index，稳定 ID 与处方分离；预填最近真实记录，否则末组处方，纯 RPE 处方不塞重量，RPE 可空。进度/剩余/批量完成只计处方，补记已有额外组只读。主项复用完整录入与视频路径；辅助项用行内表格。休息不继承教练末组处方，按已有学生设置与动作类型选规则。
+- 自加动作使用 adhoc + plan_day_id；训练页两个读取范围明确 scope=all，其他消费者默认范围未改。卡内全组首次发出请求时钉住 logged_date；网络错误保留该日期供幂等重试（响应丢失不等于服务端未写入），删掉最后一行/整卡后清日期，重加采用新 gym-day。未保存输入随切日保留，换账号清空。每日 10 动作、每动作 10 组、每计划动作 10 额外组。
+- 删除逐条串行，遇错误停止，已成功删除不回滚；同步可见行、查询缓存、本地 e1RM/PR 派生记录及当前页建议。自加卡无视频/完整录入/全部完成。选择页使用三组可折行标签、中英联合搜索和不可选原因；现有 DTO 无 alias 字段，未虚构别名搜索。
+- 行内完成调用 Vibration.vibrate(15) 一次；取消、无效、重复、批量不调用。用户明确要求批量不震，优先于 SPEC §3b 括号中“沿用按钮现有反馈”，该按钮显式 haptic="none"。
+
+### 先红后绿与审查证据
+
+沿用 domain/plan 纯函数、training 模型/屏幕、API schema 三类 seam。原始日志均在 `/tmp/092-*.log`，未提交日志文件。
+
+- `092-sequence-red.log`：新增可写/默认日/乱序撤销 3 条失败；实现后 17 条通过。
+- `092-rows-red.log`：额外组未并入导致失败；`092-added-red.log`：自加模型/请求未实现的 2 条失败。后续组模型、进度、上限及日期钉住通过。
+- `092-api-red.log`：缺 plan_day_id 与删除方法，2 条失败；`092-errors-red.log`：4 个新错误提示仍返回通用提示，4 条失败；契约替身层已绿（不代表真实 API 传输层已支持，见阻塞）。
+- `092-haptic-red.log`：完成未震的断言失败；修后补取消、禁用、防重、失败不补震、批量不震及保留输入。`092-picker-red.log`：模块尚未实现；实现后族/肌群/中英筛选通过。
+- `092-screen-red.log`：本周非游标日仍只读，主路径失败；`092-quick-red.log`：额外组可被补记写入，失败；`092-completion-red.log`：附加组撑大处方总数，失败；均修复。
+- `092-delete-history-red.log`：缺删除本地 e1RM 方法，失败；`092-editor-red.log`：额外组完整录入自动填 RPE，失败；`092-review-red.log`：跨 04:00 自动跳页、trap 肌群漏项 2 条失败；`092-rest-red.log`：额外组未采用学生自定义 RPE 休息时长，失败；均修复。
+- `092-final-review-red.log`：删除/取消后建议仍为 83.33、应回到 76.92，两条失败；已结算详情显示 Set 1 of 0，一条失败。修复后 set-save 31/31；追加整卡部分删除冲突测试通过。初版 UI 测试也曾因 dynamic import 测试配置失败，已改静态 import；不把该脚手架失败算成产品行为红证据。
+- 独立 Standards / Spec 各完成两轮只读审查（review-loop 本地流程）。仓缺 `docs/agents/issue-tracker.md`，未私建 tracker，也未声称执行完整 tracker 版 code-review。Standards：日期 pin 生命周期、删除后页面 e1RM 陈旧已修，API 白名单问题保留。Spec：主项额外组空 RPE/重量、选日跨 04:00、trap、单位、日期 pin、只读详情 hero 处方计数已修；历史/进步读取缺口保留。第二轮发现均定向补红绿，未开始第三轮泛审。无“收货通过”结论。
+
+### SPEC 学员端验收项 → 测试名
+
+以下名称均为 Jest 原名；“覆盖”只指自动化覆盖，未代替 Opus 验收。
+
+| 项 | 对应测试名与范围 |
+|---|---|
+| 1 本周换日记录、互不影响 | `in-week switch starts, logs and settles the selected day without changing the cursor day`；`inline drafts survive switching cards and preserve values in both days`。覆盖选日→开始→写入→结算目标及跨卡输入隔离。 |
+| 2 乱序结算、游标、撤销 | 上述屏幕主路径；`out-of-order completion can only undo the latest actual completion`；既有 `defaults to the current week and keeps selection independent of day progress`。完整 D2 两组→D4 记满→两次结算的连续上机路径待验。 |
+| 3 其他周/已结算只读 | `every unsettled day in the cursor week is writable, other weeks and unpublished plans are not`；`completed detail keeps the hero on prescription rows when extra and student-added records exist`。 |
+| 4 重进恢复、跨 04:00 | `default returns to latest real log in the gym-day and resets across 04:00`；`restored non-cursor selection stays on the open day across 04:00 and a new visit returns to the cursor`。 |
+| 5 主项额外组 | `extra rows merge after prescriptions with stable identities and never replace missing prescription results`；`main-lift extra full entry keeps RPE optional and unprescribed weight empty`；`extra main-lift rest uses student RPE settings instead of prescription rest`；`delete uses DELETE sets/id, accepts an already deleted row and propagates feedback conflicts`；`student-added error SET_HAS_ATTACHMENT gives its specific recovery message`。实际视频上传→教练待看未验，真实删除错误受白名单阻塞。 |
+| 6 辅助额外组、批量排除 | `extra rows merge after prescriptions with stable identities and never replace missing prescription results`（含 rowsToCompleteAll 与 coached 请求）；`busy duplicate and batch completion do not add tick vibration; failed saves keep typed values`；`extra and student-added saves retain their identities and card date across 04:00; deleting updates the visible day`。 |
+| 7 2 处方+1 额外仍缺1 | `extra rows merge after prescriptions with stable identities and never replace missing prescription results` 明确断言三段进度为 complete/complete/current；`extra work contributes actual volume without inflating prescription completion totals`。 |
+| 8 自加动作、搜索、删卡、历史/进步 | `picker family %s includes main lifts and variations`；`picker muscle %s maps to %s`；`picker combines bilingual search and one tag; multi-muscle and missing metadata remain predictable`；`student-added card records inline with a day-bound adhoc request and offers no video or complete-all`；`student-added cards hydrate by training day and pin every group to the first logged gym-day`；`extra and student-added saves retain their identities and card date across 04:00; deleting updates the visible day`；`removing a student-added card stops on a feedback conflict without restoring earlier deletions`；`extra delete immediately refreshes the current e1RM suggestion` / `extra cancel immediately refreshes the current e1RM suggestion`。训练页与本地派生状态覆盖；历史页标记/远端进步读取未完成，见阻塞。 |
+| 9 上限 | `extra prefill falls back to the last prescription and stops at ten additional rows`；`student-added exercise and set limits are ten and cannot duplicate a planned or already added exercise`。模型拒绝第11项；置灰的真屏表现待验。 |
+| 9b 震动 | `inline completion vibrates once immediately; cancellation and disabled rows do not vibrate`；`busy duplicate and batch completion do not add tick vibration; failed saves keep typed values`。断言调用15ms一次及负面路径。 |
+| 10 老用户升级 | `old responses default plan_day_id to null and new responses retain the training day`；默认日测试；既有 `an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and save failures retain retry inputs`；`removing a student-added log clears only its local e1RM points and leaves other students and sets intact`。无本地存储迁移；带历史安装升级第一屏未验。 |
+| 11 断网、保留输入、重试 | `busy duplicate and batch completion do not add tick vibration; failed saves keep typed values`；既有 `an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and save failures retain retry inputs`。替身覆盖失败输入保留及重试；真实断网/恢复未验。 |
+
+额外要求：`existing extra sets remain visible but cannot be selected or written by quick log` 覆盖补记只读，并拒绝伪造 included=true 的额外组。API 新响应/旧响应各自解析通过。
+
+### 待 Opus 上模拟器验
+
+- 第 1–4 项完整双日流程、真进程退出重进、跨凌晨和“回到今天”；第 10 项带历史的安装升级第一屏。路径 TodayWorkoutView → TrainingWeekStrip / WorkoutBody；周条无样式改动。
+- 第 5、6、8、9 项按屏幕稿第 1–4 张核对中英、Light/Dark、窄屏/大字体、标签全可见无横滑、键盘不遮挡、上限入口置灰、已结算详情。路径 StudentExercisePicker、WorkoutBody、AccessoryLogCard、SetEntrySheet。未运行 Android 构建/模拟器，未产出视觉截图。
+- 第 5 项额外组视频从拍摄上传到教练待看、已有附件删除拦截；第 8 项整卡删除部分成功/教练反馈冲突、同日另一训练日冲突；需后端 spec 050 部署且解决错误白名单后联调。契约替身不证明后端部署。
+- 第 9b 项模拟器验 Vibration 调用及取消/批量负面路径，约15ms体感另需真机。第 11 项两类附加记录实际断网、恢复重试且输入不丢；代码路径 AccessoryLogCard.saveRow / SetEntrySheet → TodayWorkoutView.commit。
+- 第 8 项历史/进步远端可见性须先处理下述范围缺口，再验；本轮不得勾为通过。
+
+### 停下待裁决的事项（硬范围冲突）
+
+1. 历史/进步：实际入口在 `src/features/history/TrainingHistoryScreen.tsx`、`src/features/history/use-history.ts` 及关联 model。当前 `dashboardE1RMRange`（`src/features/dashboard/model.ts`）刻意省略 scope，使用 plan 默认，无法在历史/进步远端查询拿回新 adhoc。CARD-A 同时要求第8项历史标记/进步可见，又只授权 training/domain-plan/student-route/sets/i18n。未越界修改。建议明确允许 history 的读取/归集/显示及相关测试（局部 scope=all，避免改所有默认消费者），再补该项；本轮只完成训练页、已结算详情及既有本地 e1RM/PR 记录路径。
+2. API 新错误码：`src/api/client.ts` 白名单未包含 `SETS_PLAN_DAY_NOT_PUBLISHED`、`SETS_ADHOC_DAY_CONFLICT`、`SET_NOT_STUDENT_ADDED`、`SET_HAS_ATTACHMENT`、`SET_HAS_COACH_FEEDBACK`、`SET_NOT_FOUND`，未知400/404/409被转换成没有 code/envelope 的 network ApiError。sets.ts/save-errors 已按新契约处理，但真实响应到不了这些分支：404不能视作已删，409只能给通用失败提示。建议限定扩围到 client.ts 白名单及其测试；未获授权，保持文件不动。当前错误测试直接注入带 code 的 ApiError，只是契约替身，不能据此宣称传输层完成。
+
+两项已在会话中分别发起范围澄清，写本节时未获答复。除此之外未发现需要另立产品取舍的分支；未自行扩围或绕过门禁。
+
+### 最终自检
+
+全部在本工作树执行，前缀 `EXPO_NO_DOTENV=1`；三条均实际运行成功，无沙箱执行失败项。
+
+```text
+npx jest --runInBand
+Test Suites: 174 passed, 174 total
+Tests:       1648 passed, 1648 total
+Snapshots:   0 total
+Time:        23.678 s
+Ran all test suites.
+exit 0
+
+npx tsc --noEmit
+(no output)
+exit 0
+
+npm run lint
+> meetpr-rn@1.0.0 lint
+> expo lint
+exit 0
+
+git diff --check
+(no output)
+exit 0
+```
+
+原始最终输出：`/tmp/092-final-jest.log`、`/tmp/092-final-tsc.log`、`/tmp/092-final-lint.log`。Jest 有现有测试的预期错误路径控制台输出，但结果无失败；tsc 无输出；lint 未报错误或警告。
+
+### 改动文件清单
+
+```text
+docs/CODEX-JOURNAL.md
+src/api/domains/__tests__/student-added-sets.test.ts
+src/api/domains/sets.ts
+src/domain/plan/__tests__/sequence.test.ts
+src/domain/plan/sequence.ts
+src/features/training/AccessoryLogCard.tsx
+src/features/training/QuickLogSheet.tsx
+src/features/training/SetEntrySheet.tsx
+src/features/training/StudentExercisePicker.tsx
+src/features/training/TodayWorkoutView.tsx
+src/features/training/WorkoutBody.tsx
+src/features/training/__tests__/accessory-log-card.test.tsx
+src/features/training/__tests__/completion-presentation.test.ts
+src/features/training/__tests__/exercise-picker.test.ts
+src/features/training/__tests__/quick-log.test.ts
+src/features/training/__tests__/save-errors.test.ts
+src/features/training/__tests__/set-save.test.tsx
+src/features/training/__tests__/storage-isolation.test.ts
+src/features/training/__tests__/student-added.test.ts
+src/features/training/accessory-quick-log.ts
+src/features/training/completion-presentation.ts
+src/features/training/drafts.ts
+src/features/training/exercise-picker.ts
+src/features/training/exercise-progress.ts
+src/features/training/model.ts
+src/features/training/quick-log.ts
+src/features/training/save-errors.ts
+src/features/training/storage.ts
+src/i18n/catalog/RnExtras.json
+```
+
+### 收尾（2026-10-14 · Opus 三项裁决落地）
+
+接手前已确认上一写者结束，本轮独占同一工作树；保留上一线程全部实现与本节以上 JOURNAL 原文。上文“两处停下待裁决”已由本轮用户转达的 Opus 答复放行并完成，无剩余待裁决事项。依然不 commit/push/开 PR，不改 SPEC、CONTEXT、PARITY、coach、android、依赖或权限，不读 .env。
+
+1. **历史 / 进步**：仅 `useHistoryViewModel` 的读取显式传 `scope: 'all'`，覆盖历史与进步共同使用的数据源。`dashboardE1RMRange` 本身、API 默认值、其他调用方和 history 路由均无需修改。历史以 `plan_day_id + exercise_id` 区分自加动作，并保留实际 `logged_date`（含计划结束后的实际训练日）；自加动作排在计划动作之后，只读且有「自加」标记；额外组在处方行后有「额外」标记。处方进度按组序去重，只计处方内的完成记录，不被自加/额外记录撑大。e1RM/PR 沿用现有计算与来源详情，无新计算规则。
+   - 红：`progress explicitly requests all logs and includes student-added family records in e1RM and PR series` 得到空 e1RM（1 failed）；局部 scope 接线后绿，断言 100 kg、PR series 与来源 setLogId。
+   - 红：`history groups student-added records by their training day and actual date without inflating prescribed progress` 缺自加记录（1 failed / 24 passed）；归集后 25/25 通过，含不同训练日隔离、排除外计划/旧无归属 adhoc、仅自加的实际日、处方计数与原计划不变。
+   - 红：`history renders student-added and extra records with localized markers in %s` 的 en/zh 缺标记（2 failed / 1 passed）；渲染后绿。另加 `legacy history responses without plan_day_id keep prescribed records visible when scope is ignored`，验证旧响应仍显示原处方记录且不出现新标记；该屏幕套件最终 4/4。
+2. **API 错误白名单**：`src/api/client.ts` 只追加获准六项，错误分类逻辑及已有 code 原样保留。
+   - 测试 `preserves student-added HTTP %s %s as a backend ApiError`：通过 fetch 替身返回真实形态的 400/404/409 JSON error envelope，检查 ApiError 实例、backend kind、status、code 与 envelope。红阶段六项均得到 network/缺 code（6 failed / 32 passed）；加白名单后，与删除契约及保存提示测试合跑 3 suites / 46 tests 全绿。
+   - 六项为 `SETS_PLAN_DAY_NOT_PUBLISHED`、`SETS_ADHOC_DAY_CONFLICT`、`SET_NOT_STUDENT_ADDED`、`SET_HAS_ATTACHMENT`、`SET_HAS_COACH_FEEDBACK`、`SET_NOT_FOUND`。真实传输分类缺口已补，后端部署与设备联调仍不由替身测试证明。
+3. **批量按钮震动改回**：删掉 `AccessoryLogCard` 中 Complete all as planned 的 `haptic="none"`，恢复 AppButton 既有反馈。上文“用户明确要求批量不震”的解释由本轮裁决纠正：批量不额外加 15ms 勾完成震动，但保留原按钮反馈。
+   - 测试改名为 `busy duplicate does not add tick vibration; batch retains button feedback without a 15ms tick and failures keep input`。按真实底层按钮 onPress，单组完成/重复防护/失败保留输入后清空 spy，再按批量按钮，断言无 15ms、恰好一次既有 10ms。红阶段为 0 次按钮反馈（1 failed / 10 passed），移除覆盖属性后 11/11 通过。原 `inline completion vibrates once immediately; cancellation and disabled rows do not vibrate` 保持通过。
+
+**验收表第 8 项补充（替代上表该项末尾的未完成描述，保留历史原文）**：历史/进步现已完成代码接线。对应测试为：
+
+- `history groups student-added records by their training day and actual date without inflating prescribed progress`
+- `history renders student-added and extra records with localized markers in %s`（en、zh）
+- `progress explicitly requests all logs and includes student-added family records in e1RM and PR series`
+- `legacy history responses without plan_day_id keep prescribed records visible when scope is ignored`
+
+工程决定：复用现有 HistoryExercise 的只读展示适配形态，追加可选 `studentAdded` 标识，不向 PlanDetail 写动作/处方；使用已有 i18n 标记与历史行样式。需要 all 的读取点只在 history hook，未放宽全局默认，避免影响既有 dashboard/其他消费者。原 API schema 缺 plan_day_id 默认为 null 的测试继续保留。
+
+**审查**：使用 review-loop 的本地独立双轴审查，限定本轮 10 个代码/测试文件；Standards 无发现，Spec 无发现。未声称执行缺 tracker 配置的完整 tracker 版 code-review，也不把开发自测当作 Opus 终验。只读 reviewers 未改文件。审查后的唯一代码调整为 Jest 参数表类型 `as const` 改 `satisfies [number, string][]`，断言与运行行为未变。
+
+**验证过程**：首轮全量 Jest 为 `175 passed, 175 total` / `1659 passed, 1659 total`，tsc 发现新增参数表 readonly tuple 的 TS2345 后修复，复跑 tsc exit 0；lint exit 0、无警告。一次早期 tsc 包装命令误用 zsh 只读变量 `status`，包装层报 `zsh:1: read-only variable: status`，随后改为任务变量 `result_code`；未将该次包装命令当作通过。红绿原始输出在 `/tmp/092-close-*-red.log`、`/tmp/092-close-*-green.log`。本收尾节落盘后再运行最终全量 Jest、tsc、lint，以满足“最后一次改动之后跑”；最终输出分别为 `/tmp/092-close-final-jest.log`、`/tmp/092-close-final-tsc.log`、`/tmp/092-close-final-lint.log`，退出结果由交付回报列明，不再回改本节。
+
+**待 Opus 上模拟器验**：沿用前节设备验收清单；新增历史页中英文「自加/额外」排版、深色及窄屏大字号，部署 spec 050 后历史/进步真实读取及 400/404/409 恢复提示；批量原反馈与单组 15ms 体感需真机。未运行 Android 构建/模拟器、无新增截图；无产品或范围待裁决事项。
+
+本轮改动文件（不含仅保留的上一线程文件）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/api/client.ts
+src/api/__tests__/api-auth-session.test.ts
+src/features/history/HistoryEntriesView.tsx
+src/features/history/model.ts
+src/features/history/types.ts
+src/features/history/use-history.ts
+src/features/history/__tests__/model.test.ts
+src/features/history/__tests__/student-added-history.test.tsx
+src/features/training/AccessoryLogCard.tsx
+src/features/training/__tests__/accessory-log-card.test.tsx
+```
+
+## 2026-10-14 · Spec 092 卡 B · 教练端学员自加记录
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-092b`，分支 `feat/092b-coach-student-added`，基线 `f6edf99`。第一条命令在该树内 mktemp 后删除成功（exit 0），初始工作区干净。已读 CONTEXT、AGENTS、CLAUDE、SPEC 092 全文、CARD-B、PLAN、历史 JOURNAL、工程规约和 Expo SDK 57 文档。未重装 node_modules（仍为 `../meetpr-rn/node_modules` 软链），未读 .env；所有 Expo/Jest 自检设置 `EXPO_NO_DOTENV=1`。未 commit、push、开 PR，未改 SPEC、CONTEXT、PARITY 或卡 A 路径。
+
+实现：计划动作的处方组与额外组按 set_index 排序分开；小灰字「学员自加」只出现于两段之间，行继续复用 ReadOnlySet，x / y 只数处方内记录。自加动作按 plan_day_id 归日、exercise_id 分卡，标题不带标签，副标题按定稿中英文，卡内只读。详情读取 scope=all；响应 plan_day_id 可省略并默认 null，保留可选 TypeScript 属性以兼容既有调用。共享 sets.ts 只加字段，RnExtras.json 只加两个键，旧键逐项比对未变。按屏幕稿补页头计划日编号与该日结算状态。
+
+### 先红后绿
+
+沿卡片已确认的领域函数、API/schema、组件 seam 逐项实施，没有另设验收矩阵。各红阶段均先运行测试，再实现对应行为：
+
+- Schema：1 failed；旧 schema 丢弃 plan_day_id。加可选字段及缺省后 1 passed。
+- 自加动作归日：1 failed / 4 passed；按记录日期落到错误训练日。改按 owner 归日后 5 passed；补合法训练日 fixture（含计划动作）区分 freeLog 分支。
+- 动作分组与额外组划分：1 failed / 5 passed（executionExercises 尚不存在），实现后 6 passed。
+- 中英文详情组件：2 failed（额外组把处方计数撑大且无副标题）；实现后修正测试的只读行选择器，排除同样 accessible 的返回按钮，最终组件初轮 4 passed（含刷新与 freeLog 回归）。
+- 同日 D2/D4：1 failed / 6 passed，D4 记录错误落进 D2；按计划动作归日、按 completed_at 判定后 7 passed。旧「有完成组即完成」测试改为缺失 completed_at 的旧契约 fixture，并修正原 fixture 跨两个训练日复用同一计划动作 ID 的不合法数据；原 fallback 断言保留。
+- 名单周视图：1 failed / 3 passed，D2 被同日记录误标完成；传递各日结算信息后 4 passed。
+- 未训练信号：1 failed / 3 passed，提前结算的训练日因当天没有记录被误计漏练；修正后 4 passed。
+- 实际读取 hook → repository → HTTP：1 failed，请求仍为 scope=plan；改 all 后 1 passed，覆盖删除刷新与旧响应。
+- Spec 审查发现页头遗漏，新增页头测试先 1 failed / 4 passed，补齐后 5 passed。
+- 首轮 lint 报测试探针在 render 中赋外部变量；改到 useEffect，并用可观察条件等待刷新。最终 lint 0 errors / 0 warnings。
+
+### 验收项与测试名
+
+验收 12（额外组/自加动作可见、标记位置、处方计数、删除后刷新）：
+
+- `exercise cards sort and separate extra sets, count only prescription slots, and group student-added exercises` — 处方/额外排序、x 计数用的处方集合、多个自加动作分组、同动作组顺序、忽略无 plan_day_id 行。
+- `student-added exercises belong to plan_day_id rather than the logging date` — owner 优先、不串日、忽略未知 owner、无 owner 不混入计划动作详情、保留无计划自由记录。
+- `day detail shows a separate muted student-added divider and read-only exercise card (en)` / `(zh)` — 双语准确文案、分隔字在额外组前、相同行样式且行无标签、卡标题无标签、无新增编辑按钮。
+- `refreshing the day removes deleted student-added records and preserves ordinary cards` — 新数据重渲染后额外组与自加卡消失，普通处方卡保留。
+- `coach detail requests scope=all and refresh drops deleted student-added logs with old-backend compatibility` — HTTP 请求真实查询参数、读取结果归日、刷新清空已删除记录、旧后端不返回新字段仍加载成功。
+- `coach set schema retains plan_day_id and defaults an old backend response to null` — 新字段保留、显式 null 与旧响应缺字段兼容。
+- `free-log and empty rest-day branches keep their existing presentation` — 原自由记录与空休息日分支不改。
+
+验收 13（D4 先结算，D2 仍未完成）：
+
+- `D4 settlement leaves D2 unfinished even when both days have completed sets on the same date` — 计划动作记录按所属训练日归集；D2 未完成、D4 完成，概览/计划卡数据 1 / 2。
+- `roster week cells use each day settlement rather than same-date logs for D2 and D4` — 从实际计划投影到名单/首页周视图，D2 未完成、D4 完成，完成率 50%。
+- `out-of-order settlement prevents missed-day alerts even when its logs were written on another day` — 不把已提前结算的天算漏练。
+- `day header displays its plan day code and individual settlement status` — 详情页头编号与状态逐日准确，不以先后顺序推测。
+- `legacy days without settlement fields retain completed-set fallback and free logs do not increase completion` — completed_at 缺失时保留旧 fallback，不把休息日自由记录计成计划完成。
+
+### 教练侧逐项核对结论
+
+- 未发现使用学员训练游标推断之前/之后都完成/未完成的教练逻辑；`receiving-api.ts` 的 cursor 是并发读取数组下标，与训练进度无关。
+- 发现实际等价风险是按记录日期推断训练日完成。详情 `makeExecutionDays` 现按 plan_exercise_id 对应的计划动作归日，自加动作按 plan_day_id 归日，避免同日 D2/D4 串记录；无归属的历史数据保留日期 fallback。
+- 学员详情周列表（OverviewSection）与概览/计划卡进度（makeOverview → StudentDetailScreen）改用逐日 completed_at：null 为未结算，有值为已结算，字段缺失才回退历史「有完成组」。计划卡 planCardState 只判断加载/失败/有无计划，无游标假设，无需改。
+- 名单/首页周表（projectCoachPlan → pairTrainingDays → makeSummary → CoachDashboardScreen）保留并读取结算字段；日期早晚仍只影响未完成格的既有 missed/upcoming 外观。名单 StudentRosterRow 的短横条是完成数量累计而非某一天的标记，无游标假设，保留。
+- triage 的未训练信号使用同一逐日结算依据，避免提前结算后仍误报；最近活跃和待回复依旧按真实记录时间，未改时间窗口/阈值，没有新增通知或跳练标记。
+- 视频补读、待看视频、聊天组卡片/反馈维持原链路与 scope=plan；额外组仍是普通计划内行，不需要新增视频逻辑。scope=all 只用于本卡训练日详情读取。freeLog 原组件分支保留。
+
+### 独立审查、最终自检与开放项
+
+本仓缺 `docs/agents/issue-tracker.md`，已告知完整 tracker 流程需 `$setup-matt-pocock-skills`，未私建。按 review-loop 的本地双轴路径，两个独立只读 reviewer 审 HEAD 起本卡 diff 及新增测试；报告按本卡只追加 JOURNAL 的约束记录于此。Standards 初审与增量补审均 0 findings；Spec 初审 1 项（屏幕稿第 5 张页头编号/状态遗漏），定向修复并复审后未决 0。主代理亲读最终 diff。代码自检不等于 Opus 收货或真机验收。
+
+最终命令均设置 `EXPO_NO_DOTENV=1`，结果：
+
+```text
+npx jest --runInBand: exit 0
+Test Suites: 174 passed, 174 total
+Tests:       1607 passed, 1607 total
+Snapshots:   0 total
+Time:        33.848 s
+Ran all test suites.
+npx tsc --noEmit: exit 0 (no output)
+npm run lint: exit 0; final nonempty output line: > expo lint
+0 errors / 0 warnings
+git diff --check: exit 0 (no output)
+```
+
+原始最终日志位于本机临时目录：`/tmp/092b-jest-full-final.log`、`/tmp/092b-tsc-final.log`、`/tmp/092b-lint-final.log`；红阶段日志 `/tmp/092b-{schema,group,cards,ui,completion,roster,triage,read,header}-red.log`（不作为长期仓证据）。全量包含既有 React 测试 act/native warning 输出，未跳测试、改超时或压制它们。
+
+Android 上机验证未完成：尝试 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices -l`，exit 1，原始关键报错 `could not install *smartsocket* listener: Operation not permitted`，随后 `adb: failed to check server version: cannot connect to daemon`。沙箱禁止监听 ADB 5037，未尝试绕过或转到主仓；未运行 expo run:android、未取得截图。不以组件测试代替模拟器验收。后端 spec 050 按卡片用 HTTP 替身验证，未部署或实机联调；删除刷新为 hook 与组件两层证据，完整真实 UI 操作仍待可用环境验证。
+
+需要产品裁决而停下的事项：无。开放验收项仅 Android 视觉/真实刷新路径与新后端联调。
+
+改动文件（17）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/api/domains/sets.ts
+src/api/domains/__tests__/coach-added-sets.test.ts
+src/domain/coach/detail-week.ts
+src/domain/coach/triage.ts
+src/domain/coach/week-overview.ts
+src/domain/coach/__tests__/detail-week.test.ts
+src/domain/coach/__tests__/triage.test.ts
+src/domain/coach/__tests__/week-overview.test.ts
+src/features/coach/roster/load-roster.ts
+src/features/coach/student-detail/CoachDayDetailView.tsx
+src/features/coach/student-detail/OverviewSection.tsx
+src/features/coach/student-detail/StudentDetailScreen.tsx
+src/features/coach/student-detail/use-student-detail.ts
+src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx
+src/features/coach/student-detail/__tests__/student-detail-read.test.tsx
+src/i18n/catalog/RnExtras.json
+```
+
+### 返修第 1 轮（2026-10-14 · Opus 收货 R1 / R2）
+
+本轮按 David 转交的 R1/R2 实施，取代上一节中「有 completed_at 字段就只按结算判完成」「无 owner 的 adhoc 从归集中过滤」「周外 owner 记录丢弃」等错误实现及结论。开工先读 CARD-B、本卡 JOURNAL 和未提交 diff；轮前快照保存在 `/tmp/092b-r1-before`，用于限定本轮差异。继续使用已确认的教练域层 seam 先红后绿。未 commit/push/开 PR，未读 .env、未改 SPEC/CONTEXT/PARITY、未重装依赖。
+
+R1：`log-ownership.ts` 集中解释归属。计划动作通过当前计划的动作 ID 找训练日；自加动作通过 adhoc + plan_day_id 找训练日；没有归属或计划动作不在当前计划中的旧记录按原 logged_at 当地日期回退。详情、名单周表、triage 统一为「已结算 OR 至少一条属于该日的已完成记录」。有归属的别日记录不会替当天消除漏练。CoachPlan / CoachLog 及派生类型只新增可选信息；load-roster 投影保留训练日 ID、动作 ID，现有完整 SetLog 继续传入。名单有计划时也请求 scope=all，否则真实后端不会返回自加动作记录；无计划名单保留 scope=plan。原详情 scope=all、sets.ts schema、i18n 与已通过的 UI 生产文件逐字节保持不变。
+
+R2：归属日仅在当前显示的 7 天里时才将记录移动到归属日；否则按 logged_at 留在日期对应的 day.logs。无 plan_day_id 的 adhoc 不再过滤。完成归属与展示日期分别计算，所以旧周记录出现在本周日期格内，也不会误把本周另一个计划日算成练过。makeOverview 新增可选 allLogs 输入，useStudentDetail 传入本次读取的全部记录，latestActivityAt 不再依赖显示窗口是否接住这些记录。没有新增跨周记录 UI。
+
+红阶段证据（均先跑测试再写对应实现）：
+
+- R1 练过未结算：detail-week 2 failed / 7 passed，planned、student-added 两种都错误得到 false；共享完成归属接通后 detail-week + week-overview + triage 共 17 passed。
+- R2 周外归属：2 failed / 9 passed，旧实现丢掉两种记录；加入可见日判断与日期 fallback 后 11 passed。
+- R2 全量活跃时间：1 failed / 11 passed，预期最新时间而得到 null；allLogs 参数与生产调用接线后 12 passed。
+- R1 名单实际读取：1 failed / 4 passed，scope=plan 没读到自加记录；有计划读 all 后，名单域测试与既有 roster-state 共 15 passed。
+- 补充已结算无记录、旧记录日期 fallback、triage 不串日等回归；未改原有测试断言。首轮 tsc 指出本轮新增学生 fixture 缺 evaluationEndAt，补 null 后类型检查通过，相关 suite 5 passed。
+
+验收要求对应测试（新增均位于 `src/domain/coach/__tests__/`）：
+
+| 要求 | 测试名 |
+| --- | --- |
+| R1 / 测试 1：练过未结算，详情概览/名单算练过，triage 不误计漏练 | `R1 owned planned logs count as trained without settlement across coach views`；`R1 owned student-added logs count as trained without settlement across coach views` |
+| R1 / 测试 2：已结算无记录仍完成 | `R1 settled days count as trained without any logs across coach views` |
+| R1 / 测试 3：D4 有记录并结算，D2 同日无自身记录 | 保留并修正上轮 `D4 settlement leaves D2 unfinished when only D4 has completed sets on the same date`；保留 `roster week cells use each day settlement rather than same-date logs for D2 and D4` |
+| R1：名单实际读取自加记录 | `R1 roster reads student-added logs with their day ownership` |
+| R1：其他日记录不能掩盖两天漏练 | `R1 planned logs do not hide two untrained days sharing their recording date`；`R1 student-added logs do not hide two untrained days sharing their recording date` |
+| R2 / 测试 4：周外归属按记录日保留且可取活跃时间，不误计当前日完成 | `R2 off-window planned logs remain on their logging date without completing another day`；`R2 off-window student-added logs remain on their logging date without completing another day` |
+| R2：即使显示窗口内无法落位，活跃时间仍使用全部读取记录 | `R2 latest activity uses all fetched logs even when none can appear in the seven-day window` |
+| R1/R2 / 测试 5：无归属、动作不在当前计划的旧记录按日期 | `R1/R2 legacy no-owner logs retain date fallback across coach views`；`R1/R2 legacy removed-exercise logs retain date fallback across coach views` |
+
+是否改过自己上一轮断言：是，且仅改自己新增的内容。
+
+- 上轮 D2/D4 详情测试错误地给 D2 一条完成记录，却要求 D2 未完成。现删除 D2 的那条输入记录，将 D2 day.logs 的期望从一条改为空，并改测试名为 only D4；仍断言 D2 未完成、D4 完成、总进度 1 / 2。
+- 上轮 `student-added exercises belong to plan_day_id rather than the logging date` 曾期待无 owner 与未知 owner 被丢掉；按 R2 改为两条留在 logged_at 当天，总记录数从 1 改为 3。
+- 上轮名单 D2/D4 测试的记录补 `plan_exercise_id: 'b'`，明确属于 D4；断言不变。
+- 上轮页头组件测试两个训练日错误复用同一计划动作 ID。为避免它继续隐含「练过但未结算=未练」，仅将 earlier 的动作 fixture 改为独立 ID；页头断言不变，UI 生产代码不动。
+- 本轮没有修改卡 B 实装前（HEAD=f6edf99）已有的测试断言；前述旧日期 fallback 断言及名单 ±36 小时边界测试仍通过。
+
+独立定向复审：review-loop 两个只读 reviewer 对比轮前快照与本轮改动；Standards 0 findings，Spec 0 findings。主代理亲读最终增量。没有待产品裁决事项。本轮未新增 UI 验收主张，上一轮模拟器/后端联调限制仍在。
+
+最终自检（全部设置 EXPO_NO_DOTENV=1）：
+
+```text
+EXPO_NO_DOTENV=1 npx jest --runInBand: exit 0
+Test Suites: 174 passed, 174 total
+Tests:       1618 passed, 1618 total
+Snapshots:   0 total
+Time:        24.207 s, estimated 34 s
+Ran all test suites.
+npx tsc --noEmit: exit 0 (no output)
+npm run lint: exit 0; final nonempty output line: > expo lint
+0 errors / 0 warnings
+git diff --check: exit 0 (no output)
+```
+
+全量 Jest 后仅给测试 fixture 补齐 TypeScript 所需的 evaluationEndAt: null，没有生产语义改动；该 suite 再跑 5 passed，tsc/lint 复跑通过。原始日志：`/tmp/092b-r1-full.log`、`/tmp/092b-r1-tsc-final.log`、`/tmp/092b-r1-lint-final.log`、`/tmp/092b-r1-fixture-final.log`。上述测试结果为本地自检，不替代 Opus 最终收货。
+
+本轮改动文件（11）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/domain/coach/log-ownership.ts
+src/domain/coach/detail-week.ts
+src/domain/coach/triage.ts
+src/domain/coach/week-overview.ts
+src/domain/coach/__tests__/detail-week.test.ts
+src/domain/coach/__tests__/triage.test.ts
+src/domain/coach/__tests__/week-overview.test.ts
+src/features/coach/roster/load-roster.ts
+src/features/coach/student-detail/use-student-detail.ts
+src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx
+```
+
+### 返修第 2 轮（2026-10-14 · 同一计划周内归属）
+
+开工先读 CONTEXT；本线程保留卡 B 全部前序工作，复核本轮涉及的域函数、测试与当前工作区。轮前快照：`/tmp/092b-r2-before`。以本轮 David 转交的 Opus 意见为准：第 1 轮「全计划按归属判断」适用范围过大，本节替代其跨周口径。未 commit/push/开 PR、未读 .env、未改 SPEC/CONTEXT/PARITY、未改已通过的界面/API/i18n。
+
+实现：DayOwnership 只新增可选 week_number，projectCoachPlan 与 makeExecutionDays 带入实际计划周。log-ownership.ts 的 logBelongsToDay 为统一规则：已知归属日且与目标日同计划周时按训练日 ID；跨周、无归属或无法取得归属日/计划周时按 logged_at 当地日期。hasCompletedDayLog 在该规则之上检查 completed；详情 day.logs 也用同一函数过滤。删除 visibleDayIds，不再维护「是否在七天窗口里」的独立归属规则。triage 与名单周表通过原 hasCompletedDayLog 调用共用修正；完成仍为「已结算 OR 按本轮规则有完成记录」。latestActivityAt 继续使用本次读取的全部记录。
+
+先红后绿：
+
+- 先新增跨周 planned / student-added 两种 W4 日历练 W2 场景，并将本卡自加的 off-window 完成断言改成新要求；未改实现时 detail-week 为 4 failed / 13 passed，均复现“按日期应完成但得到未完成”。原始日志 `/tmp/092b-r2-week-red.log`。
+- 同周规则、周字段传递、落位统一后，detail-week / week-overview / triage 为 3 suites passed、28 tests passed。原始日志 `/tmp/092b-r2-week-green.log`。
+- 再补两条移期边界，detail-week 为 19 passed。原始日志 `/tmp/092b-r2-boundaries.log`。
+
+本轮测试映射：
+
+| 要求 | 测试名与结果 |
+| --- | --- |
+| 1. 日历 W4、实际 W2，最近七天仍训练，三处均保持原日期口径 | `round 2 cross-week planned logs preserve date-based training status in all coach views`；`round 2 cross-week student-added logs preserve date-based training status in all coach views`。断言详情两天完成、名单两个 completed 格且 active、triage 无 notTrained、活跃时间保留 |
+| 2. 同周 D4 先练并结算、D2 无自己的记录 | 保留 `D4 settlement leaves D2 unfinished when only D4 has completed sets on the same date`、`roster week cells use each day settlement rather than same-date logs for D2 and D4`；均通过，断言未改 |
+| 3. 练过未结算 | 保留 `R1 owned planned logs count as trained without settlement across coach views`、`R1 owned student-added logs count as trained without settlement across coach views`；均通过，断言未改 |
+| 4. 无归属旧形态、计划动作不在当前计划 | 保留 `R1/R2 legacy no-owner logs retain date fallback across coach views`、`R1/R2 legacy removed-exercise logs retain date fallback across coach views`；均通过，断言未改 |
+| 跨周 off-window 的完成口径 | 上轮自加测试改名为 `R2 off-window %s logs retain cross-week date-based completion`，planned / student-added 两种均通过 |
+| 同计划周优先于显示范围 | `round 2 same-plan-week ownership wins even when the owner is shifted outside the visible window` |
+| 跨计划周优先于显示范围 | `round 2 cross-plan-week date fallback applies even when both owners are visible` |
+
+边界说明（按本轮明确要求以同一计划周为准）：
+
+- 同计划周 D4 因 shifted_to_date 移到当前七天窗口外，记录写在 D2 日期：D2 不接手这条记录、不据此算完成；该窗口不展示这条记录，但 latestActivityAt 仍从全部读取记录取得它。与上一轮「窗口外一律日期接手」不等价。
+- 不同计划周的两个日子因移期同时出现在一个七天窗口：对记录日期上的另一周训练日，按日期回退；对记录的归属日，按同周归属判断。因此同一记录可能进入两个日期桶、两日均算练过。这是逐目标日应用本轮三条规则的结果，测试已明确锁定；未擅加唯一落位或去重口径。
+
+自己此前测试的修改：
+
+- 按用户明确授权，将第 1 轮自加 off-window 两种用例的 isExecutionDayComplete 期望 false → true，completedTrainingDays 期望 0 → 1，并改测试名；记录保留与 latestActivityAt 断言不变。
+- 第 1 轮自加 triage 两种防串日用例，仅给三天的 fixture 补 week_number: 1，明确它们在同一计划周；断言不变。
+- 卡 B 实装前 HEAD=f6edf99 的原有测试断言本轮未改；上轮 D2/D4、练过未结算、无归属 fallback 回归均保留。
+
+review-loop 独立定向复审：Standards 0 findings，Spec 0 findings；两位只读 reviewer 对比本轮快照审查 5 个代码/测试文件。主代理亲读最终增量；没有待产品裁决事项。
+
+本轮改动文件（6，含本节）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/domain/coach/log-ownership.ts
+src/domain/coach/detail-week.ts
+src/domain/coach/__tests__/detail-week.test.ts
+src/domain/coach/__tests__/triage.test.ts
+src/features/coach/roster/load-roster.ts
+```
+
+最终验证时序：先写完本节并冻结全部代码、测试及 JOURNAL，再执行 `EXPO_NO_DOTENV=1 npx jest --runInBand` 全量、`EXPO_NO_DOTENV=1 npx tsc --noEmit`、`EXPO_NO_DOTENV=1 npm run lint`；不以定向 suite 替代最终全量。结果及原始末行见本轮交付回报与 `/tmp/092b-r2-full-final.log`、`/tmp/092b-r2-tsc-final.log`、`/tmp/092b-r2-lint-final.log`。本节不预填尚未完成的最终结果；验证结束后核对文件摘要无变化，不再改动本节。

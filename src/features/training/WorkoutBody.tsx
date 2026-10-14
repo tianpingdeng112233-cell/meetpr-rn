@@ -1,3 +1,4 @@
+import { metricDisplay, POUNDS_PER_KG } from '@/domain/measurement';
 import type { ComponentProps } from 'react';
 import { AccessoryLogCard } from './AccessoryLogCard';
 import { accessoryRows, isAccessoryExercise } from './accessory-quick-log';
@@ -72,7 +73,15 @@ export function WorkoutBody({
   onAccessoryInputFocus,
   onExerciseCompleted,
   onCompletedRowLayout,
+  onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, inlineEdits, completedDay,
 }: {
+  /** A settled day: the overview card shows what was logged instead of a hero for the next set. */
+  completedDay?: { canUndo: boolean; undoing: boolean; onUndo: () => void };
+  onAddSet?: (exercise: PlanExercise) => void;
+  onRemoveSet?: (draft: WorkoutSetDraft) => void;
+  onAddExercise?: () => void;
+  onRemoveExercise?: (exercise: PlanExercise) => void;
+  inlineEdits?: ComponentProps<typeof AccessoryLogCard>['inlineEdits'];
   onExerciseCompleted?: (exerciseId: string) => void;
   onCompletedRowLayout?: (exerciseId: string, layout: LayoutRectangle) => void;
   unit?: 'kg' | 'lb';
@@ -100,11 +109,12 @@ export function WorkoutBody({
   // The light success token is below 4.5:1 on successTint; retain a readable existing ink token.
   const completedLabelColor = scheme === 'light' ? colors.textPrimary : colors.successSoft;
   const [accentSize, setAccentSize] = useState({ width: 0, height: 0 });
+  const [expandedSummary, setExpandedSummary] = useState<Record<string, boolean>>({});
   const hasCamera = useCameraAvailability();
   const progressFlow = recording && editable && !preview;
   const reducedMotion = useReducedMotion();
   const initiallyCompleted = exercises.filter(exercise => {
-    const rows = drafts.filter(draft => draft.exercise.id === exercise.id);
+    const rows = drafts.filter(draft => !draft.kind && draft.exercise.id === exercise.id);
     return rows.length > 0 && rows.every(draft => progressFlow ? !needsSetResult(draft) : isDraftTerminal(draft));
   }).map(exercise => exercise.id);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => Object.fromEntries(initiallyCompleted.map(id => [id, true])));
@@ -125,7 +135,7 @@ export function WorkoutBody({
   const progress = partitionExerciseProgress(groups);
   const active = progressFlow
     ? progress.active?.drafts.find(needsSetResult)
-    : drafts.find(needsSetResult) ?? drafts[drafts.length - 1];
+    : drafts.find(needsSetResult) ?? drafts.filter(draft => !draft.kind).at(-1);
   const completedSectionY = useRef<number | null>(null);
   const completedRowLayouts = useRef(new Map<string, LayoutRectangle>());
   const reportCompletedRow = (exerciseId: string, layout: LayoutRectangle) => {
@@ -171,11 +181,32 @@ export function WorkoutBody({
         ? t('student.todayWorkoutTypes.copy019', [targetWeight])
         : String(targetWeight)
       : intensityText(p?.intensity) || '—';
+  const previousFor = (exercise: PlanExercise) => {
+    const relevant = historyLogs.filter(log => log.exercise_id === exercise.exercise_id && log.plan_exercise_id !== exercise.id && log.plan_day_id !== exercise.plan_day_id && log.completed && !log.failed && !log.assumed);
+    const last = [...relevant].sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
+    return last ? relevant.filter(log => log.logged_date === last.logged_date && log.plan_exercise_id === last.plan_exercise_id) : [];
+  };
+  const inlineCard = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <AccessoryLogCard drafts={rows} previousLogs={previousFor(exercise)} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} readOnly={!editable}
+    onAddSet={editable && onAddSet ? () => onAddSet(exercise) : undefined} onRemoveSet={onRemoveSet} />;
+  const extrasFor = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}>
+    {rows.filter(row => row.kind === 'extra').map(draft => <View key={draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: spacing.point1, borderColor: colors.borderStrong, borderRadius: radius.inset, backgroundColor: isDraftTerminal(draft) ? colors.successTint : colors.surfaceCard }}>
+      <Text style={{ ...font.body(fontMetrics.size11), color: colors.textMuted }}>{t('student.added.extra')}</Text>
+      <Text style={{ flex: 1, ...font.mono(fontMetrics.size13), color: colors.textPrimary }}>{draft.weightText ? unit === 'lb' ? metricDisplay(draft.weightText, POUNDS_PER_KG) : draft.weightText : '—'} {unit} × {draft.repsText || '—'}{draft.rpeText ? ` · RPE ${draft.rpeText}` : ''}</Text>
+      {editable ? <>
+        <AppButton variant="link" label={t('student.todayWorkoutScreen.copy015')} onPress={() => onRecord(draft)} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet?.(draft)} style={{ minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: colors.textMuted }}>×</Text></Pressable>
+      </> : null}
+      <SetVideoUploadIndicator studentId={studentId} stableSetId={draft.stableSetId} />
+    </View>)}
+    {editable && onAddSet ? <AppButton variant="link" label={t('student.added.addSet')} disabled={rows.filter(row => row.kind === 'extra').length >= 10} onPress={() => onAddSet(exercise)} /> : null}
+    {editable || rows.some(row => row.kind === 'extra') ? <Text style={{ ...font.body(fontMetrics.size12), color: colors.textMuted }}>{t('student.added.extraHint')}</Text> : null}
+  </View>;
+  const addedGroups = [...new Set(drafts.filter(draft => draft.kind === 'added').map(draft => draft.exercise.id))].map(id => ({ exercise: drafts.find(draft => draft.exercise.id === id)!.exercise, rows: drafts.filter(draft => draft.exercise.id === id) }));
   const renderGroup = ({ exercise, drafts: rows }: ExerciseProgressGroup, completed: boolean) => (
     <RollUpCard key={exercise.id} collapsed={Boolean(collapsed[exercise.id])} completed={completed}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={completed ? t(rows.length === 1 ? 'student.trainingFlow.completedAccessibilityOne' : 'student.trainingFlow.completedAccessibilityMany', [exerciseTitle(resolveExerciseMetadata(exercise.exercise_id)), rows.length]) : undefined}
+        accessibilityLabel={completed ? t(rows.filter(row => !row.kind).length === 1 ? 'student.trainingFlow.completedAccessibilityOne' : 'student.trainingFlow.completedAccessibilityMany', [exerciseTitle(resolveExerciseMetadata(exercise.exercise_id)), rows.filter(row => !row.kind).length]) : undefined}
         accessibilityState={{ expanded: !collapsed[exercise.id] }}
         onPress={() =>
           setCollapsed((current) => ({
@@ -195,7 +226,7 @@ export function WorkoutBody({
         >
           {exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}
         </Text>
-        {completed ? <Text style={{ color: completedLabelColor, ...font.mono(fontMetrics.size12, 'semibold') }}>{t(rows.length === 1 ? 'student.trainingFlow.completedOne' : 'student.trainingFlow.completedMany', [rows.length])}</Text> : null}
+        {completed ? <Text style={{ color: completedLabelColor, ...font.mono(fontMetrics.size12, 'semibold') }}>{t(rows.filter(row => !row.kind).length === 1 ? 'student.trainingFlow.completedOne' : 'student.trainingFlow.completedMany', [rows.filter(row => !row.kind).length])}</Text> : null}
         <Text style={{ color: completed ? completedLabelColor : colors.textMuted }}>
           {collapsed[exercise.id] ? '›' : '⌄'}
         </Text>
@@ -207,7 +238,7 @@ export function WorkoutBody({
           {t('student.todayWorkoutScreen.copy014')} · {exercise.notes}
         </Text>
       ) : null}
-        <>
+        {editable && !collapsed[exercise.id] && isAccessoryExercise(resolveExerciseMetadata(exercise.exercise_id)?.exerciseType) && exercise.id !== active?.exercise.id ? inlineCard(exercise, rows) : <>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {[
               '#',
@@ -229,7 +260,7 @@ export function WorkoutBody({
               </Text>
             ))}
           </View>
-          {rows.map((draft) => (
+          {rows.filter(draft => !draft.kind).map((draft) => (
             <View
               key={draft.stableSetId}
               style={{
@@ -334,7 +365,8 @@ export function WorkoutBody({
               {reference(historyLogs, exercise.exercise_id)}
             </Text>
           ) : null}
-        </>
+          {editable && isAccessoryExercise(resolveExerciseMetadata(exercise.exercise_id)?.exerciseType) && exercise.id === active?.exercise.id ? null : extrasFor(exercise, rows)}
+        </>}
       </View>
       </RollUpBody>
     </RollUpCard>
@@ -357,7 +389,56 @@ export function WorkoutBody({
           reportCompletedRow(group.exercise.id, layout);
         }}
       >{renderGroup(group, true)}</View>)}</View> : null}
-      {(!progressFlow || active) ? <Card
+      {completedDay ? <Card testID="completed-day-card" style={{ backgroundColor: colors.bgInset, borderColor: colors.borderStrong, borderWidth: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 16, borderBottomRightRadius: 16, padding: 16, paddingLeft: 19, gap: 14, overflow: 'hidden' }}>
+        <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: spacing.point3, backgroundColor: colors.success }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{t('student.todayWorkoutScreen.copy017')}</Text>
+          <View testID="training.completedDay" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 36, paddingHorizontal: 13, borderRadius: radius.pill, backgroundColor: colors.successTint }}>
+            <MaterialCommunityIcons name="check" size={spacing.point14} color={completedLabelColor} />
+            <Text style={{ ...font.body(13, 'bold'), color: completedLabelColor }}>{t('student.todayWorkoutScreen.copy009')}</Text>
+          </View>
+        </View>
+        <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
+          {t('student.todayWorkoutScreen.copy018', [groups.length])}
+          {t('student.todayWorkoutScreen.copy019', [drafts.filter(draft => !draft.kind).length])}
+        </Text>
+        {[...groups.map(group => ({ exercise: group.exercise, rows: group.drafts, added: false })), ...addedGroups.map(group => ({ ...group, added: true }))].map(({ exercise, rows, added }, index) => {
+          const prescribed = rows.filter(draft => !draft.kind);
+          const logged = rows.filter(draft => isDraftTerminal(draft) && (added || !draft.kind)).length;
+          const done = added || (prescribed.length > 0 && logged === prescribed.length);
+          const open = Boolean(expandedSummary[exercise.id]);
+          const recorded = rows.filter(draft => added || !draft.kind || isDraftTerminal(draft));
+          const title = exerciseTitle(resolveExerciseMetadata(exercise.exercise_id));
+          return <View key={exercise.id} style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: open }} onPress={() => setExpandedSummary(current => ({ ...current, [exercise.id]: !open }))}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11, minHeight: spacing.minimumHitTarget }}>
+              {done ? <View style={{ width: 22, height: 22, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.successTint }}>
+                <MaterialCommunityIcons name="check" size={spacing.point14} color={completedLabelColor} />
+              </View> : <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>}
+              <Text style={{ flex: 1, color: colors.textPrimary, ...font.body(14, 'bold') }}>{title}</Text>
+              <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>{added ? t('student.completedDay.addedSets %lld', [logged]) : t('student.completedDay.loggedSets %lld %lld', [logged, prescribed.length])}</Text>
+              <Text style={{ color: colors.textMuted }}>{open ? '⌄' : '›'}</Text>
+            </Pressable>
+            {open ? <View style={{ paddingHorizontal: 13, paddingBottom: 11, gap: spacing.xs }}>
+              {recorded.map(draft => {
+                const terminal = isDraftTerminal(draft);
+                const weight = draft.weightText ? unit === 'lb' ? metricDisplay(draft.weightText, POUNDS_PER_KG) : draft.weightText : '—';
+                return <View key={draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <Text style={{ width: 36, color: colors.textMuted, ...font.mono(12) }}>{draft.kind === 'extra' ? t('student.added.extra') : draft.setIndex + 1}</Text>
+                  <Text style={{ flex: 1, color: !terminal ? colors.textMuted : draft.status === 'failed' ? colors.danger : colors.textPrimary, ...font.mono(13) }}>
+                    {terminal ? `${weight} ${unit} × ${draft.repsText || '—'}${draft.rpeText ? ` · RPE ${draft.rpeText}` : ''}` : '—'}
+                  </Text>
+                </View>;
+              })}
+            </View> : null}
+          </View>;
+        })}
+        {completedDay.canUndo ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.todayWorkoutScreen.copy023')} accessibilityState={{ disabled: completedDay.undoing }} disabled={completedDay.undoing} onPress={completedDay.onUndo}
+          style={{ alignSelf: 'flex-end', justifyContent: 'center', minHeight: spacing.minimumHitTarget }}>
+          <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.todayWorkoutScreen.copy023')}</Text>
+        </Pressable> : null}
+      </Card> : null}
+      {!completedDay && (!progressFlow || active) ? <Card
         testID="workout-hero"
         style={{
           backgroundColor: colors.bgInset,
@@ -389,7 +470,7 @@ export function WorkoutBody({
             <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textMuted, ...font.mono(fontMetrics.size12) }}>{[
               t('student.accessory.accessory'),
               accessoryRows({ drafts: accessoryDrafts, previousLogs, unit }).every(row => row.isBodyweight) ? t('student.accessory.bodyweight') : null,
-              prescriptionSummary(accessoryDrafts.map(draft => ({ prescription: decodePrescription(draft.planSet), resolution: suggestionForDraft(draft).percentage }))),
+              prescriptionSummary(accessoryDrafts.filter(draft => !draft.kind).map(draft => ({ prescription: decodePrescription(draft.planSet), resolution: suggestionForDraft(draft).percentage }))),
               t('student.todayWorkoutPresentation.copy003', [active.exerciseOrdinal + 1, groups.length]),
             ].filter(Boolean).join(' · ')}</Text>
           </View> : <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{preview?.title ?? (recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017'))}</Text>}
@@ -403,9 +484,9 @@ export function WorkoutBody({
         {!recording ? (
           <>
             <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>
-              {preview ? t('student.trainingWeekStrip.summary', [groups.length]) + t('student.todayWorkoutScreen.copy019', [drafts.length]) : <>
+              {preview ? t('student.trainingWeekStrip.summary', [groups.length]) + t('student.todayWorkoutScreen.copy019', [drafts.filter(draft => !draft.kind).length]) : <>
                 {t('student.todayWorkoutScreen.copy018', [groups.length])}
-                {t('student.todayWorkoutScreen.copy019', [drafts.length])}
+                {t('student.todayWorkoutScreen.copy019', [drafts.filter(draft => !draft.kind).length])}
               </>}
             </Text>
             {groups.map((group, index) => (
@@ -447,7 +528,7 @@ export function WorkoutBody({
               </View>
               <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size15, 'medium'), lineHeight: fontMetrics.size21 }}>{coachNotes.exerciseNote}</Text>
             </View> : null}
-            {accessory ? <AccessoryLogCard key={active.exercise.id} drafts={accessoryDrafts} previousLogs={previousLogs} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} /> : <>
+            {accessory ? <AccessoryLogCard key={active.exercise.id} drafts={accessoryDrafts} previousLogs={previousLogs} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} onAddSet={onAddSet ? () => onAddSet(active.exercise) : undefined} onRemoveSet={onRemoveSet} /> : <>
             <View
               style={{
                 flexDirection: 'row',
@@ -523,9 +604,23 @@ export function WorkoutBody({
           </>
         ) : null}
       </Card> : null}
-      {recording ? (progressFlow
+      {recording && !completedDay ? (progressFlow
         ? groups.filter(group => !progress.completed.includes(group))
         : groups).map(group => renderGroup(group, false)) : null}
+      {recording && !completedDay ? addedGroups.map(({ exercise, rows }) => <Card key={exercise.id} style={{ gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text style={{ flex: 1, ...font.body(fontMetrics.size16, 'bold'), color: colors.textPrimary }}>{exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}</Text>
+          <Text style={{ ...font.body(fontMetrics.size11), color: colors.textMuted, backgroundColor: colors.bgInset, padding: spacing.xs, borderRadius: radius.inset }}>{t('student.added.added')}</Text>
+          {editable && onRemoveExercise ? <AppButton variant="link" label={t('student.added.remove')} onPress={() => onRemoveExercise(exercise)} /> : null}
+        </View>
+        {inlineCard(exercise, rows)}
+      </Card>) : null}
+      {editable && recording && onAddExercise ? <>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('student.added.addExercise')} disabled={addedGroups.length >= 10} onPress={onAddExercise} style={{ minHeight: spacing.minimumHitTarget, borderWidth: spacing.point1, borderColor: colors.borderStrong, borderStyle: 'dashed', borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ ...font.body(fontMetrics.size15), color: colors.goldText }}>＋ {t('student.added.addExercise')}</Text>
+        </Pressable>
+        <Text style={{ ...font.body(fontMetrics.size12), color: colors.textMuted, textAlign: 'center' }}>{t('student.added.addedHint')}</Text>
+      </> : null}
     </>
   );
 }

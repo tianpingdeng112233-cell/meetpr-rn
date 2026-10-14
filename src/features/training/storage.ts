@@ -80,6 +80,14 @@ function mutate(
 }
 
 export class AsyncStorageE1RMRepository implements E1RMRepository {
+  async removeSetLog(studentId: string, setLogId: string): Promise<void> {
+    await mutate(stored => {
+      const removed = new Set(stored.points.filter(point => point.studentId === studentId && point.setLogId === setLogId).map(point => point.id));
+      stored.points = stored.points.filter(point => !removed.has(point.id));
+      stored.prs = stored.prs.filter(event => event.studentId !== studentId || !removed.has(event.pointId));
+    });
+  }
+
   async historySnapshot(studentId: string): Promise<E1RMHistorySnapshot> {
     await mutationChain;
     const stored = await readE1RM();

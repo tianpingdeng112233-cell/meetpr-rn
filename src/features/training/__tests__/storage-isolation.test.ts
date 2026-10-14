@@ -102,3 +102,13 @@ describe('per-student and per-day training persistence', () => {
     ]);
   });
 });
+
+test('removing a student-added log clears only its local e1RM points and leaves other students and sets intact', async () => {
+  const repository = new AsyncStorageE1RMRepository();
+  await repository.recordPoint(point('1'));
+  await repository.recordPoint(point('2'));
+  await repository.recordPoint({ ...point('1'), id: 'other', studentId: 'student-2' });
+  await repository.removeSetLog('student-1', 'set-1');
+  expect((await repository.historySnapshot('student-1')).points.map(point => point.setLogId)).toEqual(['set-2']);
+  expect((await repository.historySnapshot('student-2')).points.map(point => point.setLogId)).toEqual(['set-1']);
+});

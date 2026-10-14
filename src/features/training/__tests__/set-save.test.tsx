@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { E1RMRecorder } from '@/domain/e1rm';
+import { ApiError } from '@/api/client';
 import { trainingE1RMRepository } from '../storage';
 import { STORAGE_KEYS } from '../constants';
+import { StudentExercisePicker } from '../StudentExercisePicker';
+import { TrainingWeekStrip } from '../TrainingWeekStrip';
+import { HoldToCompleteButton } from '../HoldToCompleteButton';
 import { WorkoutBody } from '../WorkoutBody';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
 import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
@@ -119,6 +123,27 @@ const openSet = async () => {
   await act(async () => { renderer.root.findByType(WorkoutBody).props.onRecord(renderer.root.findByType(WorkoutBody).props.drafts[0]); });
 };
 const saveButton = (failed = false) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t(failed ? 'student.setEntrySheet.copy009' : 'student.setEntrySheet.copy012')))[0];
+const loadFailedTitle = () => renderer.root.findAll(node => node.type === Text && node.props.children === t('student.todayWorkoutScreen.copy001'));
+test('a rate-limited background refetch keeps the loaded workout instead of replacing it with the load error', async () => {
+  await mount();
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/plans') || path === `/plans/${plan.id}` || (path.includes('/sets') && path !== '/sets/log'))
+      throw new ApiError('backend', 'Unexpected HTTP response 429', { status: 429 });
+    return original(path, options);
+  });
+  await act(async () => { await client.refetchQueries(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+  expect(loadFailedTitle()).toHaveLength(0);
+});
+test('a first load that fails still shows the load error with retry', async () => {
+  jest.mocked(authenticatedRequest).mockImplementation(async () => { throw new ApiError('backend', 'Unexpected HTTP response 429', { status: 429 }); });
+  await mount();
+  expect(loadFailedTitle()).toHaveLength(1);
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(0);
+});
 test('a slow set save immediately disables both actions and shows progress until success', async () => {
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   let finish!: () => void;
@@ -461,4 +486,209 @@ test('an accessory recorded through its full entry also uses accessory rest and 
   await act(async () => saveButton().props.onPress());
   expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(60);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
+});
+
+
+test('in-week switch starts, logs and settles the selected day without changing the cursor day', async () => {
+  const d4 = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000004', day_of_week: 4,
+    exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000004', plan_day_id: '40000000-0000-4000-8000-000000000004',
+      sets: [{ ...plan.days[0].exercises[0].sets[0], id: '70000000-0000-4000-8000-000000000004' }] }] };
+  servedPlan = { ...plan, days: [...plan.days, d4] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === `/plans/days/${d4.id}/complete`) {
+      servedPlan = { ...servedPlan, days: servedPlan.days.map(day => day.id === d4.id ? { ...day, completed_at: new Date().toISOString() } : day) };
+      return { id: 'completion', plan_day_id: d4.id, completed_at: new Date().toISOString() } as never;
+    }
+    return original(path, options);
+  });
+  await mount();
+  await act(async () => { renderer.root.findByType(TrainingWeekStrip).props.onSelect(d4.id); });
+  for (let i = 0; i < 3; i++) await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  let body = renderer.root.findByType(WorkoutBody);
+  expect(body.props.editable).toBe(true);
+  expect(body.props.preview?.unlockMessage).toBeUndefined();
+  await act(async () => body.props.onStart());
+  body = renderer.root.findByType(WorkoutBody);
+  await act(async () => body.props.onRecord(body.props.drafts[0]));
+  await act(async () => saveButton().props.onPress());
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
+    .toMatchObject({ plan_exercise_id: d4.exercises[0].id, set_index: 0 });
+  await act(async () => renderer.root.findByType(HoldToCompleteButton).props.onComplete());
+  expect(jest.mocked(authenticatedRequest).mock.calls.some(([path]) => path.includes(d4.id) && path.endsWith('/complete'))).toBe(true);
+  expect(servedPlan.days[0].completed_at).toBeUndefined();
+});
+
+test('extra and student-added saves retain their identities and card date across 04:00; deleting updates the visible day', async () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  const requests: SetLogUpsertRequest[] = [];
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/sets/log') {
+      const body = options!.body as SetLogUpsertRequest;
+      requests.push(body);
+      const id = `80000000-0000-4000-8000-${String(requests.length).padStart(12, '0')}`;
+      const log: SetLog = { id, student_id: studentId, plan_exercise_id: 'plan_exercise_id' in body ? body.plan_exercise_id : null,
+        plan_day_id: 'plan_day_id' in body ? body.plan_day_id : null,
+        exercise_id: 'exercise_id' in body ? body.exercise_id : plan.days[0].exercises[0].exercise_id,
+        set_index: body.set_index, weight_kg: body.weight_kg, reps: body.reps, rpe: body.rpe ?? null, completed: body.completed, failed: body.failed ?? false,
+        adhoc: 'exercise_id' in body, assumed: false, logged_date: body.logged_date ?? '2026-10-14', logged_at: new Date().toISOString() };
+      storedLogs.push(log);
+      return { id, logged_at: log.logged_at } as never;
+    }
+    if (options?.method === 'DELETE') { storedLogs = storedLogs.filter(log => !path.endsWith(log.id)); return undefined as never; }
+    return original(path, options);
+  });
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  await act(async () => body().props.onStart());
+  await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
+  const extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
+  expect(extra).toMatchObject({ setIndex: 1, weightText: '80', rpeText: '' });
+  await act(async () => body().props.onAccessorySave(extra, { plan_exercise_id: extra.exercise.id, set_index: extra.setIndex, weight_kg: '85', reps: 4, completed: true }, 'single'));
+  expect(requests[0]).toMatchObject({ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1 });
+  expect(body().props.drafts.filter((draft: { kind?: string; status: string }) => !draft.kind && draft.status === 'pending')).toHaveLength(1);
+  await act(async () => body().props.onAddExercise());
+  const picker = renderer.root.findByType(StudentExercisePicker);
+  await act(async () => picker.props.onSelect('60000000-0000-4000-8000-000000000009'));
+  let added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  jest.useFakeTimers({ now: new Date(2026, 9, 15, 3, 59) });
+  await act(async () => body().props.onAccessorySave(added, { exercise_id: added.exercise.exercise_id, plan_day_id: plan.days[0].id, set_index: 0, logged_date: '2026-10-14', weight_kg: '12.5', reps: 12, completed: true }, 'single'));
+  await act(async () => { await jest.advanceTimersByTimeAsync(50); });
+  added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  await act(async () => body().props.onAddSet(added.exercise));
+  jest.setSystemTime(new Date(2026, 9, 15, 4, 1));
+  const second = body().props.drafts.find((draft: { kind?: string; setIndex: number }) => draft.kind === 'added' && draft.setIndex === 1);
+  await act(async () => body().props.onAccessorySave(second, { exercise_id: added.exercise.exercise_id, plan_day_id: plan.days[0].id, set_index: 1, logged_date: '2026-10-15', weight_kg: '12.5', reps: 12, completed: true }, 'single'));
+  expect(requests.slice(1).map(request => request.logged_date)).toEqual(['2026-10-14', '2026-10-14']);
+  await act(async () => body().props.onRemoveExercise(added.exercise));
+  const confirm = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive');
+  expect(confirm).toBeDefined();
+  await act(async () => { confirm?.onPress?.(); });
+  expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added')).toHaveLength(0);
+  expect(storedLogs).toHaveLength(1);
+  await act(async () => body().props.onAddExercise());
+  await act(async () => renderer.root.findByType(StudentExercisePicker).props.onSelect(added.exercise.exercise_id));
+  const replacement = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  await act(async () => body().props.onAccessorySave(replacement, { exercise_id: added.exercise.exercise_id, plan_day_id: plan.days[0].id, set_index: 0, logged_date: '2026-10-15', weight_kg: '10', reps: 10, completed: true }, 'single'));
+  expect(requests.at(-1)?.logged_date).toBe('2026-10-15');
+});
+
+test('main-lift extra full entry keeps RPE optional and unprescribed weight empty', async () => {
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  await act(async () => body().props.onStart());
+  await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
+  let extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
+  await act(async () => body().props.onRecord(extra));
+  await act(async () => saveButton().props.onPress());
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body).toMatchObject({ rpe: null });
+  await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
+  extra = { ...body().props.drafts.find((draft: { kind?: string; setIndex: number }) => draft.kind === 'extra' && draft.setIndex === 2), weightText: '' };
+  // The full-entry seam receives an unprescribed, empty-weight row from pure RPE prescriptions.
+  await act(async () => { renderer.update(<SetEntrySheet studentId={studentId} draft={extra} collarOn={false} editable exerciseName="Squat" onChangeCollar={() => {}} onClose={() => {}} onSave={async () => {}} ensureSetLog={async () => "unused"} suggestion={null} suggestionReason={null} />); });
+  expect(saveButton().props.disabled).toBe(true);
+});
+
+test('restored non-cursor selection stays on the open day across 04:00 and a new visit returns to the cursor', async () => {
+  const d4 = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000004', day_of_week: 4,
+    exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000004', plan_day_id: '40000000-0000-4000-8000-000000000004' }] };
+  servedPlan = { ...plan, days: [...plan.days, d4] };
+  jest.useFakeTimers({ now: new Date(2026, 9, 15, 3, 59) });
+  storedLogs = [{ id: '80000000-0000-4000-8000-000000000004', student_id: studentId, plan_exercise_id: d4.exercises[0].id, exercise_id: d4.exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 20).toISOString() }];
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+  for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(d4.id);
+  await act(async () => { await jest.advanceTimersByTimeAsync(120_000); });
+  for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(d4.id);
+  await act(async () => renderer.unmount());
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+  for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
+});
+
+test('extra main-lift rest uses student RPE settings instead of prescription rest', async () => {
+  mockFocused = true;
+  await writeRestPreference(studentId, { mode: 'custom', low: 90, mid: 150, high: 210 });
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  await act(async () => body().props.onStart());
+  await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
+  const extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
+  await act(async () => body().props.onAccessorySave(extra, { plan_exercise_id: extra.exercise.id, set_index: 1, weight_kg: '80', reps: 5, rpe: '9', completed: true }, 'single'));
+  expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(210);
+});
+
+test.each(['delete', 'cancel'] as const)('extra %s immediately refreshes the current e1RM suggestion', async action => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{ ...exercise.sets[0], load_mode: 'pct', pct_anchor: 'e1rm', target_pct: '75', target_weight: null }] }] }] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/exercises') return { exercises: [{ id: exercise.exercise_id, name: 'Bench press', name_en: 'Bench press', main_lift_family: 'bench', is_competition_lift: true, competition_stance: null }] } as never;
+    if (options?.method === 'DELETE') { storedLogs = []; return undefined as never; }
+    return original(path, options);
+  });
+  await new E1RMRecorder(trainingE1RMRepository).record({ studentId, exerciseId: exercise.exercise_id, setLogId: 'previous', family: 'bench', weightKg: 60, reps: 5, rpe: 8, completed: true, failed: false });
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  const suggestion = () => body().props.suggestionForDraft(body().props.drafts[0]).percentage.anchorKg;
+  const baseline = suggestion();
+  expect(baseline).toBeGreaterThan(0);
+  await act(async () => body().props.onStart());
+  await act(async () => body().props.onAddSet(exercise));
+  const extra = () => body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
+  await act(async () => body().props.onAccessorySave(extra(), { plan_exercise_id: exercise.id, set_index: 1, weight_kg: '65', reps: 5, rpe: '8', completed: true }, 'single'));
+  expect(suggestion()).toBeGreaterThan(baseline);
+  if (action === 'delete') {
+    await act(async () => body().props.onRemoveSet(extra()));
+    await act(async () => { jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive')?.onPress?.(); });
+  } else {
+    await act(async () => body().props.onAccessorySave(extra(), { plan_exercise_id: exercise.id, set_index: 1, weight_kg: '65', reps: 5, rpe: '8', completed: false }, 'single'));
+  }
+  expect(suggestion()).toBe(baseline);
+});
+
+test('a completed day shows the overview card with logged counts and expandable sets instead of a set hero', async () => {
+  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' }] };
+  const base: SetLog = { id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' };
+  storedLogs = [base, { ...base, id: '80000000-0000-4000-8000-000000000001', set_index: 1, weight_kg: '85' }, { ...base, id: '80000000-0000-4000-8000-000000000002', exercise_id: '60000000-0000-4000-8000-000000000002', plan_exercise_id: null, plan_day_id: plan.days[0].id, adhoc: true }];
+  await mount();
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ');
+  expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
+  expect(renderer.root.findAllByProps({ testID: 'completed-day-card' }).length).toBeGreaterThan(0);
+  // The extra set is logged but never inflates the prescription count.
+  expect(copy()).toContain(t('student.completedDay.loggedSets %lld %lld', [1, 1]));
+  expect(copy()).toContain(t('student.completedDay.addedSets %lld', [1]));
+  expect(copy()).not.toContain('85 kg × 5');
+  const rows = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false && typeof node.props.onPress === 'function');
+  await act(async () => { rows[0].props.onPress(); });
+  expect(copy()).toContain('80 kg × 5');
+  expect(copy()).toContain(t('student.added.extra'));
+  expect(copy()).toContain('85 kg × 5');
+});
+
+test('removing a student-added card stops on a feedback conflict without restoring earlier deletions', async () => {
+  const base: SetLog = { id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: null, plan_day_id: plan.days[0].id, exercise_id: '60000000-0000-4000-8000-000000000002', set_index: 0, weight_kg: '10', reps: 12, rpe: null, completed: true, failed: false, assumed: false, adhoc: true, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' };
+  storedLogs = [base, { ...base, id: '80000000-0000-4000-8000-000000000001', set_index: 1 }, { ...base, id: '80000000-0000-4000-8000-000000000002', set_index: 2 }];
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  const deleted: string[] = [];
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (options?.method === 'DELETE') {
+      deleted.push(path);
+      if (deleted.length === 2) throw Object.assign(new ApiError('backend', 'Rated', { status: 409 }), { code: 'SET_HAS_COACH_FEEDBACK' });
+      storedLogs = storedLogs.filter(log => !path.endsWith(log.id));
+      return undefined as never;
+    }
+    return original(path, options);
+  });
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  const added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  await act(async () => body().props.onRemoveExercise(added.exercise));
+  await act(async () => { jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive')?.onPress?.(); });
+  expect(deleted).toEqual(['/sets/80000000-0000-4000-8000-000000000000', '/sets/80000000-0000-4000-8000-000000000001']);
+  expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added').map((draft: { setIndex: number }) => draft.setIndex)).toEqual([1, 2]);
+  expect(jest.mocked(Alert.alert).mock.calls.at(-1)?.[1]).toBe(t('student.added.rated'));
 });
