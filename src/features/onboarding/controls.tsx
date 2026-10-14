@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { PanResponder, ScrollView, StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { Card, useColors, useTheme, type Colors, radius, spacing, typography } from '@/design';
@@ -168,6 +168,17 @@ export function Scale({
   );
 }
 
+const SLIDER_HIT_WIDTH = 20;
+
+/** Marks sit at the centres of fixed-width hit areas spread across the slider. */
+export function sliderValueAt(x: number, width: number, min: number, max: number, step: number): number {
+  const count = Math.round((max - min) / step);
+  const usable = width - SLIDER_HIT_WIDTH;
+  if (count <= 0 || usable <= 0) return min;
+  const index = Math.min(count, Math.max(0, Math.round(((x - SLIDER_HIT_WIDTH / 2) / usable) * count)));
+  return min + index * step;
+}
+
 export function DiscreteSlider({
   max,
   min,
@@ -188,20 +199,48 @@ export function DiscreteSlider({
     (_, index) => min + index * step,
   );
   const progress = ((value - min) / (max - min)) * 100;
+  const [width, setWidth] = useState(0);
+  const startX = useRef(0);
+  // The responder lives for the whole drag, so it reads the latest props instead of being rebuilt per value.
+  const latest = useRef({ max, min, onChange, step, value, width });
+  useEffect(() => { latest.current = { max, min, onChange, step, value, width }; });
+  // PanResponder.create only stores callbacks; native events own all ref reads/writes.
+  // eslint-disable-next-line react-hooks/refs
+  const [pan] = useState(() => {
+    const select = (x: number) => {
+      const current = latest.current;
+      const next = sliderValueAt(x, current.width, current.min, current.max, current.step);
+      if (next === current.value) return;
+      current.value = next;
+      current.onChange(next);
+    };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      // Android's native ScrollView must be allowed to take a vertical drag.
+      onShouldBlockNativeResponder: () => false,
+      onPanResponderGrant: (event) => { startX.current = event.nativeEvent.locationX; select(startX.current); },
+      onPanResponderMove: (_, gesture) => select(startX.current + gesture.dx),
+    });
+  });
   return (
-    <View accessibilityRole="adjustable" style={styles.slider}>
+    <View
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      accessibilityRole="adjustable"
+      accessibilityValue={{ max, min, now: value }}
+      accessible
+      onAccessibilityAction={(event) => {
+        const next = value + (event.nativeEvent.actionName === 'increment' ? step : -step);
+        if (next >= min && next <= max) onChange(next);
+      }}
+      style={styles.slider}>
       <View style={styles.sliderRail}>
         <View style={[styles.sliderFill, { width: `${progress}%` }]} />
       </View>
-      <View style={styles.sliderMarks}>
+      <View {...pan.panHandlers} onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={styles.sliderMarks}>
         {values.map((candidate) => (
-          <Pressable
-            accessibilityLabel={String(candidate)}
-            key={candidate}
-            onPress={() => onChange(candidate)}
-            style={styles.sliderHit}>
+          <View key={candidate} pointerEvents="none" style={styles.sliderHit}>
             <View style={[styles.sliderMark, candidate === value && styles.sliderThumb]} />
-          </Pressable>
+          </View>
         ))}
       </View>
     </View>
@@ -365,7 +404,7 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   sliderRail: { backgroundColor: colors.bgStack, borderRadius: radius.pill, height: 4, left: 10, position: 'absolute', right: 10 },
   sliderFill: { backgroundColor: colors.gold500, borderRadius: radius.pill, height: 4 },
   sliderMarks: { flexDirection: 'row', justifyContent: 'space-between' },
-  sliderHit: { alignItems: 'center', height: 44, justifyContent: 'center', width: 20 },
+  sliderHit: { alignItems: 'center', height: 44, justifyContent: 'center', width: SLIDER_HIT_WIDTH },
   sliderMark: { backgroundColor: colors.borderStrong, borderRadius: radius.pill, height: 8, width: 8 },
   sliderThumb: { backgroundColor: colors.gold500, borderColor: colors.textPrimary, borderWidth: 2, height: 20, width: 20 },
   dateWheel: { flexDirection: 'row', gap: spacing.sm },
