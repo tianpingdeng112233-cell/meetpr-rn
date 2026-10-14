@@ -82,3 +82,8 @@ test('a recorded set without actual RPE falls back to the unrounded prescription
   const logs = [{ id: 'log', student_id: 'student', plan_exercise_id: 'main', exercise_id: 'squat', set_index: 0, weight_kg: '100', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-09', logged_at: '2026-09-09T12:00:00Z' }];
   expect(workoutCompletionPresentation({ ...input, planDay: prescribedDay, drafts: synthesizeDrafts(prescribedDay, logs) }).exercises[0].bestSetText).toBe('100kg × 5 @8.25');
 });
+
+test('extra work contributes actual volume without inflating prescription completion totals', () => {
+  const extra = { ...drafts[0], kind: 'extra' as const, stableSetId: 'extra', setIndex: 2 };
+  expect(workoutCompletionPresentation({ ...input, drafts: [...drafts, extra] })).toMatchObject({ totalPlannedSets: 3, completedSuccessfulSets: 2, completedSetCount: 4, totalReps: 20 });
+});

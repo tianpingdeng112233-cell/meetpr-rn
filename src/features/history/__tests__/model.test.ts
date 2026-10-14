@@ -328,3 +328,26 @@ test('real growth curves preserve every Total update and sum the latest all-hist
   ]);
   expect(total.at(-1)?.valueKg).toBe(families.reduce((sum, family) => sum + growthSnapshot(curves[family], 'all', now).samples.at(-1)!.valueKg, 0));
 });
+
+test('history groups student-added records by their training day and actual date without inflating prescribed progress', () => {
+  const exercise = { id: 'plan-exercise', plan_day_id: 'day', exercise_id: 'squat', is_main_lift: true, sort_order: 0, notes: null, sets: [makeSet(), makeSet({ id: 'second', set_number: 2 })] };
+  const plan = makePlan([makeDay('day', { exercises: [exercise] }), makeDay('other-day', { day_of_week: 4 })]);
+  const logs = [
+    log('prescribed', '2026-09-09', 'squat'),
+    log('extra', '2026-09-09', 'squat', { set_index: 2 }),
+    log('added', '2026-09-09', 'bench', { plan_exercise_id: null, plan_day_id: 'day', adhoc: true }),
+    log('other-day', '2026-09-09', 'bench', { plan_exercise_id: null, plan_day_id: 'other-day', adhoc: true, set_index: 1 }),
+    log('outside-plan', '2026-09-09', 'bench', { plan_exercise_id: null, plan_day_id: 'foreign-day', adhoc: true }),
+    log('legacy-adhoc', '2026-09-09', 'bench', { plan_exercise_id: null, adhoc: true }),
+    log('only-added', '2026-09-21', 'deadlift', { plan_exercise_id: null, plan_day_id: 'day', adhoc: true }),
+  ];
+  const days = buildHistoryWeeks([plan], logs, new Map(), '2026-09-21').flatMap(week => week.days);
+  const recorded = days.find(day => day.date === '2026-09-09')!;
+  expect(recorded.exercises.map(exercise => exercise.logs.map(log => log.id))).toEqual([['prescribed', 'extra'], ['added'], ['other-day']]);
+  expect(recorded).toMatchObject({ done: 1, total: 2, isRest: false });
+  expect(recorded.exercises.slice(1).map(exercise => exercise.planExercise.plan_day_id)).toEqual(['day', 'other-day']);
+  expect(recorded.exercises.slice(1).every(exercise => exercise.plannedSets.length === 0)).toBe(true);
+  expect(days.find(day => day.date === '2026-09-21')).toMatchObject({ done: 0, total: 0, isRest: false });
+  expect(days.find(day => day.date === '2026-09-21')?.exercises[0].logs[0].id).toBe('only-added');
+  expect(plan.days[0].exercises).toEqual([exercise]);
+});

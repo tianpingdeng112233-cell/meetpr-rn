@@ -6,6 +6,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { getLocale, t } from '@/i18n';
 import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
 import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
+import type { SetLog } from '@/api/domains';
 
 import { ProgressPageHeader } from './ProgressPageHeader';
 import { HistoryStatsCard } from './HistoryStatsCard';
@@ -161,11 +162,16 @@ function HistoryDayCard({ day }: { day: HistoryDay }) {
   );
 }
 
+function recordedSetText(row: SetLog): string {
+  return `${formatKg(Number(row.weight_kg))} kg × ${row.reps}${row.rpe === null ? '' : ` @ RPE ${Number(row.rpe).toFixed(1)}`}`;
+}
+
 function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
   const { colors, styles } = useStyles();
   return (
     <View style={styles.exerciseBlock}>
       <Text style={styles.exerciseName}>{exercise.name}</Text>
+      {exercise.studentAdded ? <Text style={styles.noteText}>{t('student.added.added')}</Text> : null}
       {exercise.notes.map((note) => (
         <View key={note} style={styles.notePill}>
           <MaterialCommunityIcons color={colors.gold500} name="message-text-outline" size={14} />
@@ -180,12 +186,20 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
             <Text style={styles.setLabel}>{t('student.historyEntriesView.copy001', [index + 1])}</Text>
             <Text style={[styles.setValue, { color: row?.completed ? colors.success : row ? colors.textSecondary : colors.textMuted }]}>
               {row
-                ? `${formatKg(Number(row.weight_kg))} kg × ${row.reps}${row.rpe === null ? '' : ` @ RPE ${Number(row.rpe).toFixed(1)}`}`
+                ? recordedSetText(row)
                 : `${set.intensity_mode === 'weight' ? `${formatKg(Number(set.target_value))} kg × ` : ''}${set.target_reps}${set.target_reps_max === null ? '' : `–${set.target_reps_max}`}${set.intensity_mode === 'rpe' ? ` @ RPE ${set.target_value}` : ''}`}
             </Text>
           </View>
         );
       })}
+      {exercise.logs.filter(log => exercise.studentAdded || log.set_index >= exercise.plannedSets.length).map(log => (
+        <View key={log.id} style={styles.setRow}>
+          <Text style={styles.setLabel}>{exercise.studentAdded
+            ? t('student.historyEntriesView.copy001', [log.set_index + 1])
+            : t('student.added.extra')}</Text>
+          <Text style={[styles.setValue, { color: log.completed ? colors.success : colors.textSecondary }]}>{recordedSetText(log)}</Text>
+        </View>
+      ))}
     </View>
   );
 }

@@ -1,12 +1,18 @@
+import { StudentExercisePicker } from './StudentExercisePicker';
+import type { AccessoryEdits } from './AccessoryLogCard';
+import { useVideoUploadStore } from './video-upload/store';
 import { isAccessoryExercise } from './accessory-quick-log';
 import { readRestPreference } from '@/features/settings/storage';
-import type { SetLogUpsertRequest } from '@/api/domains/sets';
+import { restSecondsForRPE } from '@/features/settings/rest-timer';
+import type { SetLogUpsertRequest, SetLog } from '@/api/domains/sets';
 import { localDateText } from '@/domain/plan/workout-date-policy';
 import { chatRepository, type Conversation } from '@/api/domains/chat';
 import { SetRefEntryVisibility } from '@/features/chat/set-ref';
 import { SetRefSharePicker, loadTodaySetRefCandidates } from '@/features/chat/SetRefSharePicker';
 import {
   cursorDay,
+  canWriteTrainingDay,
+  defaultTrainingDay,
   recommendedDate,
   sequenceDays,
   selectCurrentPlan,
@@ -55,7 +61,7 @@ import {
   type PlanDetail,
 } from '@/api/domains/plans';
 import { readinessKeys, useReadiness } from '@/api/domains/readiness';
-import { useSetLogs, useUpsertSetLog, setKeys } from '@/api/domains/sets';
+import { useSetLogs, useUpsertSetLog, setKeys, setsRepository } from '@/api/domains/sets';
 import { useSessionStore } from '@/api/session';
 import {
   AppButton,
@@ -78,7 +84,7 @@ import { useStudentTabsStore } from '@/features/student-tabs';
 import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
 import { workoutCompletionPresentation, type CompletionReference } from './completion-presentation';
 import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
-import { isDraftTerminal, synthesizeDrafts } from './drafts';
+import { isDraftTerminal, synthesizeDrafts, studentAddedDrafts, addExtraDraft, addStudentExercise, addStudentSet } from './drafts';
 import { recordTrainingSetE1RM } from './e1rm-live';
 import {
   exerciseTitle,
@@ -181,6 +187,15 @@ export function TodayWorkoutView() {
   const [draftOverrides, setDraftOverrides] = useState<
     Record<string, WorkoutSetDraft>
   >({});
+  const [accessoryEdits, setAccessoryEdits] = useState<AccessoryEdits>({});
+  const pinnedDates = useRef(new Map<string, string>());
+  const [removedLogs, setRemovedLogs] = useState<ReadonlySet<string>>(new Set());
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [draftOwner, setDraftOwner] = useState(studentId);
+  if (draftOwner !== studentId) {
+    setDraftOwner(studentId); setRequestedDayID(null); setDraftOverrides({}); setAccessoryEdits({}); setRemovedLogs(new Set()); setPickerVisible(false);
+  }
+  useEffect(() => { pinnedDates.current.clear(); }, [studentId]);
   const [editingPlan, setEditingPlan] = useState<PlanDetail | null>(null);
   const [recordingSetId, setRecordingSetId] = useState<string | null>(null);
   const [collarState, setCollarState] = useState({
@@ -192,6 +207,7 @@ export function TodayWorkoutView() {
   const [restExerciseName, setRestExerciseName] = useState('');
   const [restGeneration, setRestGeneration] = useState(0);
   const trainingFocused = useRef(true);
+  const [trainingVisible, setTrainingVisible] = useState(true);
   const restRevision = useRef(0);
   const endRest = useCallback(() => {
     restRevision.current += 1;
@@ -236,9 +252,19 @@ export function TodayWorkoutView() {
   const planQuery = usePlan(selectedPlan?.id ?? '');
   const plan =
     editingPlan?.trainee_id === studentId ? editingPlan : planQuery.data;
+  const range = plan
+    ? { ...planLogRange(plan), scope: 'all' as const }
+    : { from: today, to: today, scope: 'all' as const };
+  const logsQuery = useSetLogs(studentId, range, Boolean(plan));
+  const logs = useMemo(
+    () => logsQuery.data?.logs ?? [],
+    [logsQuery.data?.logs],
+  );
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
-  const weekStrip = trainingWeekStrip(plan, requestedDayID, today);
+  const initialDayID = defaultTrainingDay(orderedDays, logs, clockNow)?.id;
+  if (trainingVisible && requestedDayID === null && logsQuery.isSuccess && initialDayID) setRequestedDayID(initialDayID);
+  const weekStrip = trainingWeekStrip(plan, requestedDayID ?? initialDayID, today);
   const viewedWeek = weekStrip.week;
   const weekIsBehind = viewedWeek?.status === 'current' && weekStrip.daysBehind > 0;
   const weekStatus = weekIsBehind ? t('student.trainingWeekStrip.daysBehind', [weekStrip.daysBehind])
@@ -249,7 +275,7 @@ export function TodayWorkoutView() {
   const dayState = planDay
     ? workoutDayState(orderedDays, planDay, clockNow)
     : null;
-  const editable = dayState?.kind === 'current';
+  const editable = Boolean(plan && selectedDayID && canWriteTrainingDay(plan, selectedDayID));
   const reviewKey = `${studentId}:${selectedDayID}`;
   const review =
     reviewState.key === reviewKey && reviewState.status === 'loaded'
@@ -262,29 +288,25 @@ export function TodayWorkoutView() {
   const readinessSkipKey = `${studentId}:${today}`;
   const readinessSkipped =
     readinessSkipState.key === readinessSkipKey && readinessSkipState.value;
-  const range = plan
-    ? planLogRange(plan)
-    : { from: today, to: today, scope: 'plan' as const };
-  const logsQuery = useSetLogs(studentId, range, Boolean(plan));
   const historyQuery = useSetLogs(
     studentId,
-    { from: '1970-01-01', to: localDateText(clockNow) },
+    { from: '1970-01-01', to: localDateText(clockNow), scope: 'all' },
     Boolean(plan),
   );
   const readinessQuery = useReadiness(studentId, today);
   const upsert = useUpsertSetLog();
   const completion = useDayCompletion(plan?.id ?? '');
   const undoCompletion = useDayCompletion(plan?.id ?? '', true);
-  const logs = useMemo(
-    () => logsQuery.data?.logs ?? [],
-    [logsQuery.data?.logs],
-  );
   const e1rmKey = `${studentId}:${planDay?.id ?? ''}`;
   const e1rmByExercise =
     e1rmState.key === e1rmKey ? e1rmState.values : EMPTY_E1RM_BY_EXERCISE;
-  const synthesizedDrafts = planDay ? synthesizeDrafts(planDay, logs) : [];
+  const availableLogs = logs.filter(log => !removedLogs.has(log.id));
+  const synthesizedDrafts = planDay ? [...synthesizeDrafts(planDay, availableLogs), ...studentAddedDrafts(planDay.id, availableLogs)] : [];
+  const synthesizedIDs = new Set(synthesizedDrafts.map(draft => draft.stableSetId));
+  synthesizedDrafts.push(...Object.values(draftOverrides).filter(draft => draft.kind && draft.exercise.plan_day_id === selectedDayID && !synthesizedIDs.has(draft.stableSetId) &&
+    (draft.kind === 'added' || planDay?.exercises.some(exercise => exercise.id === draft.exercise.id))));
   const liveDrafts = synthesizedDrafts.map((draft) =>
-    draftOverrides[draft.stableSetId]?.sourceLog?.student_id === studentId
+    draftOverrides[draft.stableSetId] && (!draftOverrides[draft.stableSetId].sourceLog || draftOverrides[draft.stableSetId].sourceLog?.student_id === studentId)
       ? draftOverrides[draft.stableSetId]
       : draft,
   );
@@ -428,10 +450,12 @@ export function TodayWorkoutView() {
   useFocusEffect(
     useCallback(() => {
       trainingFocused.current = true;
+      setTrainingVisible(true);
       setClockNow(new Date());
       void refreshRef.current(throttle.current.refreshWhenReturning());
       return () => {
         trainingFocused.current = false;
+        setTrainingVisible(false);
         endRest();
         setRequestedDayID(null);
       };
@@ -511,6 +535,7 @@ export function TodayWorkoutView() {
             : { kind: 'loaded', planDay, drafts: liveDrafts };
 
   const outcomeForDraft = (draft: WorkoutSetDraft): SuggestionOutcome => {
+    if (draft.kind) return { suggestion: null, reason: null };
     const family =
       resolveExerciseMetadata(draft.exercise.exercise_id)?.competitionFamily ??
       null;
@@ -548,6 +573,15 @@ export function TodayWorkoutView() {
     ? outcomeForDraft(selectedDraft)
     : null;
   const suggestion = suggestionOutcome?.suggestion ?? null;
+  const removeRecordedE1RM = async (draft: WorkoutSetDraft, setLogId: string) => {
+    await trainingE1RMRepository.removeSetLog(studentId, setLogId);
+    const exerciseId = draft.exercise.exercise_id;
+    const history = await trainingE1RMRepository.fetchHistory(studentId, exerciseId);
+    const metadata = resolveExerciseMetadata(exerciseId);
+    const value = metadata ? buildE1RMSeries(history, metadata.competitionFamily).currentKg : null;
+    const key = `${studentId}:${draft.exercise.plan_day_id}`;
+    setE1rmState(current => current.key === key ? { key, values: { ...current.values, [exerciseId]: value } } : current);
+  };
   const openDraft = (draft: WorkoutSetDraft) => {
     if (editable && plan) {
       endRest();
@@ -559,7 +593,7 @@ export function TodayWorkoutView() {
   const selectDay = (id: string | null) => {
     // Re-selecting the current day must not clear data whose load key is unchanged.
     if ((id ?? weekStrip.todayDay?.id) === selectedDayID) {
-      setRequestedDayID(id);
+      setRequestedDayID(id ?? cursor?.id ?? null);
       return;
     }
     endRest();
@@ -571,10 +605,11 @@ export function TodayWorkoutView() {
       value: null,
     });
     setCompletionPhase(null);
+    setPickerVisible(false);
     setE1rmState({ key: '', values: {} });
     setRecordingSetId(null);
     setEditingPlan(null);
-    setRequestedDayID(id);
+    setRequestedDayID(id ?? cursor?.id ?? null);
   };
   const refreshToday = async () => {
     if (refreshing) return;
@@ -628,7 +663,7 @@ export function TodayWorkoutView() {
         !editable ||
         (latestPlan &&
           (latestPlan.status !== 'published' ||
-            cursorDay(latestPlan.days)?.id !== selectedDayID))
+            !canWriteTrainingDay(latestPlan, selectedDayID ?? '')))
       ) {
         if (!input.attachmentOnly && !input.quickLogDate) Alert.alert(
           t('student.setEntrySheet.copy010'),
@@ -637,7 +672,10 @@ export function TodayWorkoutView() {
         throw new Error('Selected day is no longer current');
       }
       if (input.accessory?.mode === 'single' && input.completed) { endRest(); restRevisionAtSave = restRevision.current; }
-      const logDate = input.quickLogDate ?? gymDayText(new Date());
+      const logDate = draft.kind === 'added'
+        ? draft.loggedDate ?? pinnedDates.current.get(draft.exercise.id) ?? gymDayText(new Date())
+        : input.quickLogDate ?? gymDayText(new Date());
+      if (draft.kind === 'added') pinnedDates.current.set(draft.exercise.id, logDate);
       const completed = input.completed ?? true;
       const weight = parseFiniteDecimal(input.weightText);
       const reps = Number(input.repsText);
@@ -658,7 +696,8 @@ export function TodayWorkoutView() {
         throw new Error('Invalid set input');
       }
       try {
-        const response = await upsert.mutateAsync(input.accessory?.request ?? {
+        const inlineRequest = input.accessory?.request;
+        const response = await upsert.mutateAsync(inlineRequest ? { ...inlineRequest, ...(draft.kind === 'added' ? { logged_date: logDate } : {}) } : {
           plan_exercise_id: draft.exercise.id,
           ...(input.quickLogDate ? { logged_date: input.quickLogDate } : {}),
           set_index: draft.setIndex,
@@ -677,6 +716,7 @@ export function TodayWorkoutView() {
           candidate.stableSetId === draft.stableSetId
             ? ({
                 ...candidate,
+                ...(draft.kind === 'added' ? { loggedDate: logDate } : {}),
                 status: nextStatus,
                 weightText: input.weightText,
                 repsText: input.repsText,
@@ -684,7 +724,8 @@ export function TodayWorkoutView() {
                 sourceLog: {
                   id: response.id,
                   student_id: studentId,
-                  plan_exercise_id: draft.exercise.id,
+                  plan_exercise_id: draft.kind === 'added' ? null : draft.exercise.id,
+                  plan_day_id: draft.kind === 'added' ? draft.exercise.plan_day_id : null,
                   exercise_id: draft.exercise.exercise_id,
                   set_index: draft.setIndex,
                   weight_kg: String(weight),
@@ -693,12 +734,12 @@ export function TodayWorkoutView() {
                   completed: completed && !input.failed,
                   failed: input.failed,
                   assumed: false,
-                  adhoc: false,
+                  adhoc: draft.kind === 'added',
                   logged_date: logDate,
                   logged_at: input.quickLogDate ? localNoon(input.quickLogDate).toISOString() : response.logged_at,
                 },
               } satisfies WorkoutSetDraft)
-            : candidate,
+            : draft.kind === 'added' && candidate.exercise.id === draft.exercise.id ? { ...candidate, loggedDate: logDate } : candidate,
         );
         if (input.accessory) accessoryDraftsRef.current = nextDrafts;
         const updatedDraft = nextDrafts.find(
@@ -707,9 +748,10 @@ export function TodayWorkoutView() {
         if (updatedDraft) {
           setDraftOverrides((current) => ({
             ...current,
-            [updatedDraft.stableSetId]: updatedDraft,
+            ...Object.fromEntries(nextDrafts.filter(candidate => candidate.stableSetId === updatedDraft.stableSetId || (draft.kind === 'added' && candidate.exercise.id === draft.exercise.id)).map(candidate => [candidate.stableSetId, candidate])),
           }));
         }
+        if (draft.kind && (!completed || input.failed)) await removeRecordedE1RM(draft, response.id);
         if (input.attachmentOnly) return response.id;
         setRecordingSetId(null);
         setEditingPlan(null);
@@ -749,10 +791,11 @@ export function TodayWorkoutView() {
           }
           if (
             trainingFocused.current && !input.quickLogDate && (usesAccessoryRest || draft.status !== 'complete') &&
-            (usesAccessoryRest ? input.accessory?.mode !== 'all' && nextDrafts.some(candidate => candidate.exercise.id === draft.exercise.id && !isDraftTerminal(candidate)) : nextDrafts.some((candidate) => !isDraftTerminal(candidate)))
+            (draft.kind ? input.accessory?.mode !== 'all' : usesAccessoryRest ? input.accessory?.mode !== 'all' && nextDrafts.some(candidate => candidate.exercise.id === draft.exercise.id && !isDraftTerminal(candidate)) : nextDrafts.some((candidate) => !isDraftTerminal(candidate)))
           ) {
             const accessoryPreference = usesAccessoryRest ? await readRestPreference(studentId) : null;
-            const preference = usesAccessoryRest ? null : await readNumber(
+            const addedPreference = draft.kind && !usesAccessoryRest ? await readRestPreference(studentId) : null;
+            const preference = usesAccessoryRest || addedPreference ? null : await readNumber(
               STORAGE_KEYS.restPreference(studentId),
             );
             if (!trainingFocused.current || restRevision.current !== restRevisionAtSave) return response.id;
@@ -761,10 +804,10 @@ export function TodayWorkoutView() {
             setRestExerciseName(restExercise ? exerciseTitle(restExercise) : '');
             setRestGeneration(value => value + 1);
             setRestSeconds(
-              accessoryPreference ? resolveAccessoryRestSeconds({ prescribed: draft.planSet.rest_seconds, preference: accessoryPreference }) : resolveRestSeconds({
+              accessoryPreference ? resolveAccessoryRestSeconds({ prescribed: draft.planSet.rest_seconds, preference: accessoryPreference }) : addedPreference ? restSecondsForRPE(addedPreference, rpe) : resolveRestSeconds({
                 prescribed: draft.planSet.rest_seconds,
                 preference,
-                rpe: prescriptionRestRPE(draft.planSet),
+                rpe: draft.kind ? rpe : prescriptionRestRPE(draft.planSet),
               }),
             );
           }
@@ -778,6 +821,40 @@ export function TodayWorkoutView() {
       }
     };
     return saveQueue.current.enqueue(operation);
+  };
+
+  const requestRemoval = (rows: readonly WorkoutSetDraft[], wholeExercise: boolean) => {
+    if (!editable || rows.some(row => !row.kind)) return;
+    const remove = async () => {
+      try {
+        await saveQueue.current.enqueue(async () => {
+          for (const original of rows) {
+            if (useSessionStore.getState().user?.id !== studentId) throw new Error('Session changed');
+            const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan?.id ?? ''));
+            if (!latest || !canWriteTrainingDay(latest, original.exercise.plan_day_id)) throw new Error('Selected day is no longer writable');
+            const draft = accessoryDraftsRef.current.find(row => row.stableSetId === original.stableSetId) ?? original;
+            const attachment = useVideoUploadStore.getState().records[`${studentId}:${draft.stableSetId}`];
+            if (attachment && attachment.status !== 'none') { showToast(t('student.added.hasVideo')); return; }
+            if (draft.sourceLog) {
+              await setsRepository.remove(draft.sourceLog.id);
+              await removeRecordedE1RM(draft, draft.sourceLog.id);
+              setRemovedLogs(current => new Set([...current, draft.sourceLog!.id]));
+              queryClient.setQueriesData<{ logs: SetLog[] }>({ queryKey: setKeys.all }, previous => previous ? { ...previous, logs: previous.logs.filter(log => log.id !== draft.sourceLog!.id) } : previous);
+            }
+            setAccessoryEdits(current => { const next = { ...current }; delete next[draft.stableSetId]; return next; });
+            accessoryDraftsRef.current = accessoryDraftsRef.current.filter(row => row.stableSetId !== draft.stableSetId);
+            if (draft.kind === 'added' && !accessoryDraftsRef.current.some(row => row.exercise.id === draft.exercise.id)) pinnedDates.current.delete(draft.exercise.id);
+            setDraftOverrides(current => { const next = { ...current }; delete next[draft.stableSetId]; return next; });
+          }
+        });
+      } catch (error) { Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error)); }
+      finally { void queryClient.invalidateQueries({ queryKey: setKeys.all }); }
+    };
+    if (!wholeExercise && rows.every(row => !row.sourceLog)) { void remove(); return; }
+    Alert.alert(t(wholeExercise ? 'student.added.confirmExercise' : 'student.added.confirmSet'), undefined, [
+      { text: t('student.added.cancel'), style: 'cancel' },
+      { text: t('student.added.remove'), style: 'destructive', onPress: () => void remove() },
+    ]);
   };
 
   const openQuickLog = () => {
@@ -821,11 +898,11 @@ export function TodayWorkoutView() {
   );
   const recording =
     dayState?.kind === 'completed' ||
-    (dayState?.kind === 'current' &&
+    (editable &&
       (Boolean(startedDays[startKey]) || realDrafts.length > 0));
   const remaining = liveDrafts.filter(
     (draft) =>
-      !draft.sourceLog || draft.sourceLog.assumed || !isDraftTerminal(draft),
+      !draft.kind && (!draft.sourceLog || draft.sourceLog.assumed || !isDraftTerminal(draft)),
   );
   const completionUI = completionAvailability({
     editable,
@@ -1018,6 +1095,15 @@ export function TodayWorkoutView() {
             ) : null}
             <WorkoutBody
               key={startKey}
+              inlineEdits={{ values: accessoryEdits, onChange: (id, edit) => setAccessoryEdits(current => ({ ...current, [id]: edit })) }}
+              onAddSet={exercise => {
+                if (!editable) return;
+                const next = exercise.id.startsWith('added:') ? addStudentSet(exercise, liveDrafts) : addExtraDraft(exercise, liveDrafts);
+                if (next) setDraftOverrides(current => ({ ...current, [next.stableSetId]: next }));
+              }}
+              onRemoveSet={draft => requestRemoval([draft], false)}
+              onAddExercise={() => setPickerVisible(true)}
+              onRemoveExercise={exercise => requestRemoval(liveDrafts.filter(draft => draft.exercise.id === exercise.id), true)}
               onExerciseCompleted={markExerciseCompleted}
               onCompletedRowLayout={revealCompletedRow}
               preview={dayState?.kind === 'upcoming' && plan ? {
@@ -1128,6 +1214,11 @@ export function TodayWorkoutView() {
         return outcome;
       }} /> : null}
       {shareRoute ? <SetRefSharePicker conversationId={shareRoute.conversationId} initialSetLogID={shareRoute.initialSetLogID} loadCandidates={loadShareCandidates} onClose={() => setShareRoute(null)} onStaged={() => router.navigate({ pathname: '/(student)/chat', params: { conversationId: shareRoute.conversationId, coachName: shareRoute.coachName } })} /> : null}
+      {pickerVisible && editable && planDay ? <StudentExercisePicker planned={planDay.exercises.map(exercise => exercise.exercise_id)} added={liveDrafts.filter(draft => draft.kind === 'added').map(draft => draft.exercise.exercise_id)} onClose={() => setPickerVisible(false)} onSelect={exerciseId => {
+        if (availableLogs.some(log => log.adhoc && log.exercise_id === exerciseId && log.logged_date === today && log.plan_day_id && log.plan_day_id !== planDay.id)) { showToast(t('student.added.dayConflict')); return; }
+        const draft = addStudentExercise(planDay, exerciseId, liveDrafts);
+        if (draft) { setDraftOverrides(current => ({ ...current, [draft.stableSetId]: draft })); setPickerVisible(false); }
+      }} /> : null}
       {selectedDraft ? (
         <SetEntrySheet
           key={selectedDraft.stableSetId}
@@ -1206,7 +1297,8 @@ export function TodayWorkoutView() {
             await writeReview(studentId, selectedDayID!, next);
             setReviewState({ key: reviewKey, status: 'loaded', value: next });
             setCompletionPhase(null);
-            setRequestedDayID(null);
+            const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan.id));
+            setRequestedDayID(cursorDay(latest?.days ?? orderedDays)?.id ?? null);
             router.navigate('/(student)/today');
             await track(AnalyticsEvent.WorkoutLogSave, {
               date: today,

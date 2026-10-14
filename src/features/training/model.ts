@@ -17,6 +17,9 @@ export type TrainingLoadState =
 export type DraftStatus = 'pending' | 'complete' | 'failed';
 
 export type WorkoutSetDraft = {
+  /** Absent on existing prescription drafts. */
+  kind?: 'extra' | 'added';
+  loggedDate?: string;
   stableSetId: string;
   exercise: PlanExercise;
   planSet: PlanSet;
