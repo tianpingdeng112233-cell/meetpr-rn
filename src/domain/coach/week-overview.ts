@@ -1,6 +1,10 @@
 import { addDays, sameDay, startOfDay } from './calendar';
 import type { CoachPlan, CoachLog, CoachFeedback, TriageSignal } from './triage';
-export type TrainingDay = { date: Date; completedLogDates: Date[] };
+import { hasCompletedDayLog } from './log-ownership';
+export type TrainingDay = { date: Date; completedLogDates: Date[]; completedAt?: string | null; hasCompletedLogs?: boolean };
+function isCompleted(day: TrainingDay): boolean {
+  return day.completedAt != null || (day.hasCompletedLogs ?? day.completedLogDates.some(log => sameDay(log, day.date)));
+}
 export type RosterRow = {
   student: { id: string; displayName: string; status: string; evaluationEndAt?: string | null };
   triageInput?: { plan: CoachPlan | null; logs: readonly CoachLog[]; feedback: readonly CoachFeedback[] };
@@ -10,7 +14,11 @@ export type WeekGroup = 'active' | 'idle' | 'attention';
 export type WeekCell = { kind: 'rest' | 'completed' | 'upcoming' } | { kind: 'missed'; isAttention: boolean };
 export function pairTrainingDays(plan: CoachPlan | null, logs: readonly CoachLog[]): TrainingDay[] {
   const completed = logs.filter(log => log.completed).map(log => new Date(log.logged_at));
-  return (plan?.days ?? []).filter(day => day.exercises.length).map(day => ({ date: day.date, completedLogDates: completed.filter(log => Math.abs(log.getTime() - day.date.getTime()) <= 36 * 3600000) }));
+  return (plan?.days ?? []).filter(day => day.exercises.length).map(day => ({
+    date: day.date, completedAt: day.completedAt,
+    ...(day.id ? { hasCompletedLogs: hasCompletedDayLog(day, plan!.days, logs) } : {}),
+    completedLogDates: completed.filter(log => Math.abs(log.getTime() - day.date.getTime()) <= 36 * 3600000),
+  }));
 }
 export function makeSummary(rows: readonly RosterRow[], now: Date) {
   const today = startOfDay(now);
@@ -18,12 +26,12 @@ export function makeSummary(rows: readonly RosterRow[], now: Date) {
   const days = Array.from({ length: 7 }, (_, index) => addDays(monday, index));
   const weekRows = rows.map(row => {
     const plannedDays = row.trainingDays.filter(day => day.date >= monday && day.date < addDays(monday, 7));
-    const completed = plannedDays.filter(day => day.completedLogDates.some(log => sameDay(log, day.date))).length;
+    const completed = plannedDays.filter(isCompleted).length;
     const group: WeekGroup = row.triageSignals.length ? 'attention' : completed ? 'active' : 'idle';
     const cells: WeekCell[] = days.map(date => {
       const planned = plannedDays.filter(day => sameDay(day.date, date));
       if (!planned.length) return { kind: 'rest' };
-      if (planned.some(day => day.completedLogDates.some(log => sameDay(log, date)))) return { kind: 'completed' };
+      if (planned.some(isCompleted)) return { kind: 'completed' };
       return date < today ? { kind: 'missed', isAttention: group === 'attention' } : { kind: 'upcoming' };
     });
     return { ...row, group, cells, completed, planned: plannedDays.length };

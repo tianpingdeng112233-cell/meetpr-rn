@@ -57,6 +57,8 @@ export const SetLogSchema = z.object({
   id: UuidSchema,
   student_id: UuidSchema,
   plan_exercise_id: UuidSchema.nullable(),
+  /** Student-added exercise owner; older backends omit this field. */
+  plan_day_id: UuidSchema.nullable().default(null).optional(),
   exercise_id: UuidSchema,
   set_index: z.number().int(),
   /** Decimal wire value; kept as a string. */

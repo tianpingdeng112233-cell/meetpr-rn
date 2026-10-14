@@ -3,7 +3,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { Ionicons } from '@expo/vector-icons';
 import type { PlanDetail } from '@/api/domains/plans';
 import type { FeedbackItem } from '@/api/domains/feedback';
-import { type ExecutionDay, localDay, makeOverview } from '@/domain/coach/detail-week';
+import { type ExecutionDay, localDay, makeOverview, isExecutionDayComplete } from '@/domain/coach/detail-week';
 import { useColors } from '@/design';
 import { dayCode } from '@/domain/plan/sequence';
 import { t } from '@/i18n';
@@ -26,7 +26,7 @@ export function OverviewSection({ plan, days, feedback, readiness, now, exercise
       {!trainingDays.length && <Copy>{t('coach.detail.noTrainingThisWeek')}</Copy>}
       {trainingDays.map((day, index) => {
         const planned = day.planDay!;
-        const completed = day.logs.some((log) => log.completed);
+        const completed = isExecutionDayComplete(day);
         const badge = planned.shifted_to_date ? t('coach.detail.adjusted') : index === 0 && (plan?.total_shift_days ?? 0) > 0 ? t('coach.studentDetail.shiftedDays %lld', [plan!.total_shift_days]) : null;
         return <Pressable key={planned.id} testID={`coach.detail.day.${localDay(day.date)}`} accessibilityRole="button" onPress={() => onDay(day)} style={({ pressed }) => [styles.row, { paddingVertical: 9 }, pressed && { transform: [{ scale: 0.97 }] }]}>
           <View style={{ flex: 1, gap: 5 }}><Copy size={14} bold>{`${dayCode(planned, plan?.days ?? [])} · ${exerciseName(planned.exercises[0].exercise_id)}`}</Copy>

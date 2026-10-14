@@ -10,7 +10,7 @@ import { pairTrainingDays, type RosterRow } from '@/domain/coach/week-overview';
 
 type Readers = { plan(id: string): Promise<PlanDetail | null>; logs: typeof setsRepository.range; feedback: typeof feedbackRepository.list };
 export function projectCoachPlan(plan: PlanDetail | null): CoachPlan | null {
-  return plan && { days: plan.days.map(day => ({ date: parseDay(day.shifted_to_date ?? recommendedDate(plan, day)), exercises: day.exercises })) };
+  return plan && { days: plan.days.map(day => ({ id: day.id, week_number: day.week_number, planExerciseIds: day.exercises.map(exercise => exercise.id), date: parseDay(day.shifted_to_date ?? recommendedDate(plan, day)), exercises: day.exercises, completedAt: day.completed_at })) };
 }
 /** Four sliding student slots. Each slot completes before taking the next student. */
 export async function loadRosterRows(students: readonly CoachStudent[], now: Date, cache: QueryClient, readers?: Readers, onCached?: (rows: RosterRow[]) => void): Promise<RosterRow[]> {
@@ -44,7 +44,7 @@ export async function loadRosterRows(students: readonly CoachStudent[], now: Dat
       try {
         const plan = await source.plan(student.id);
         const lookback = localDayString(addDays(startOfDay(now), -7));
-        const range: SetLogRange = { from: plan && plan.start_date < lookback ? plan.start_date : lookback, to: localDayString(addDays(startOfDay(now), 1)), scope: 'plan' };
+        const range: SetLogRange = { from: plan && plan.start_date < lookback ? plan.start_date : lookback, to: localDayString(addDays(startOfDay(now), 1)), scope: plan ? 'all' : 'plan' };
         // Sequential within a slot also caps HTTP fan-out at four requests.
         const { logs } = await source.logs(student.id, range);
         const { items: feedback } = await source.feedback(student.id);
