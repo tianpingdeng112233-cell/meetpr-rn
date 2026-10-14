@@ -20,3 +20,20 @@ test('reply requires a recent completed log without equally recent feedback', ()
   expect(triageSignals({ ...input, logs: [{ completed: false, logged_at: now.toISOString() }] })).toEqual([]);
   expect(triageSignals({ ...input, logs: [{ completed: true, logged_at: new Date(2026, 8, 10).toISOString() }] })).toEqual([]);
 });
+
+test('out-of-order settlement prevents missed-day alerts even when its logs were written on another day', () => {
+  expect(triageSignals({ now, logs: [], feedback: [], plan: { days: [
+    { ...day('2026-09-07'), completedAt: null },
+    { ...day('2026-09-08'), completedAt: '2026-09-07T12:00:00Z' },
+  ] } })).toEqual([]);
+});
+
+test.each(['planned', 'student-added'] as const)('R1 %s logs do not hide two untrained days sharing their recording date', kind => {
+  const days = [
+    { ...day('2026-09-07'), id: 'd1', week_number: 1, planExerciseIds: ['a'], completedAt: null },
+    { ...day('2026-09-08'), id: 'd2', week_number: 1, planExerciseIds: ['b'], completedAt: null },
+    { ...day('2026-09-10'), id: 'd4', week_number: 1, planExerciseIds: ['c'], completedAt: null },
+  ];
+  const owned = { completed: true, logged_at: '2026-09-07T12:00:00', ...(kind === 'planned' ? { plan_exercise_id: 'c' } : { adhoc: true, plan_day_id: 'd4' }) };
+  expect(triageSignals({ plan: { days }, logs: [owned], feedback: [{ posted_at: owned.logged_at }], now })).toEqual([{ kind: 'notTrained', daysMissed: 2 }]);
+});
