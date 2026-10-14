@@ -123,6 +123,27 @@ const openSet = async () => {
   await act(async () => { renderer.root.findByType(WorkoutBody).props.onRecord(renderer.root.findByType(WorkoutBody).props.drafts[0]); });
 };
 const saveButton = (failed = false) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t(failed ? 'student.setEntrySheet.copy009' : 'student.setEntrySheet.copy012')))[0];
+const loadFailedTitle = () => renderer.root.findAll(node => node.type === Text && node.props.children === t('student.todayWorkoutScreen.copy001'));
+test('a rate-limited background refetch keeps the loaded workout instead of replacing it with the load error', async () => {
+  await mount();
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/plans') || path === `/plans/${plan.id}` || (path.includes('/sets') && path !== '/sets/log'))
+      throw new ApiError('backend', 'Unexpected HTTP response 429', { status: 429 });
+    return original(path, options);
+  });
+  await act(async () => { await client.refetchQueries(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+  expect(loadFailedTitle()).toHaveLength(0);
+});
+test('a first load that fails still shows the load error with retry', async () => {
+  jest.mocked(authenticatedRequest).mockImplementation(async () => { throw new ApiError('backend', 'Unexpected HTTP response 429', { status: 429 }); });
+  await mount();
+  expect(loadFailedTitle()).toHaveLength(1);
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(0);
+});
 test('a slow set save immediately disables both actions and shows progress until success', async () => {
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   let finish!: () => void;

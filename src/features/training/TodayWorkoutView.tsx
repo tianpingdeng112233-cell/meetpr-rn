@@ -518,7 +518,8 @@ export function TodayWorkoutView() {
     (selectedPlan && (planQuery.isLoading || logsQuery.isLoading)) ||
     (Boolean(planDay) && startedLoaded !== startKey)
       ? { kind: 'loading' }
-      : plansQuery.isError || planQuery.isError || logsQuery.isError
+      // A failed background refetch keeps the loaded day; only a load with nothing to show is an error.
+      : plansQuery.isLoadingError || planQuery.isLoadingError || logsQuery.isLoadingError
         ? {
             kind: 'error',
             error: plansQuery.error ?? planQuery.error ?? logsQuery.error,
