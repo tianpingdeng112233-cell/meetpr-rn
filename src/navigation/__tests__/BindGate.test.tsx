@@ -2,11 +2,13 @@ import { t } from '@/i18n';
 
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
 import { Modal, Text, TextInput } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { ApiError } from '@/api/client';
 import { bindRepository, onboardingRepository, type OnboardingProfile } from '@/api/domains';
+import * as buildTrack from '@/config/build-track';
 import { inviteStashStorage } from '@/features/onboarding/storage';
 
 import { BindGate } from '../BindGate';
@@ -19,6 +21,12 @@ jest.mock('@react-native-community/netinfo', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require('@react-native-community/netinfo/jest/netinfo-mock');
 });
+
+jest.mock('@/config/build-track', () => ({
+  __esModule: true,
+  ...jest.requireActual<typeof import('@/config/build-track')>('@/config/build-track'),
+  BUILD_TRACK: 'global',
+}));
 
 const STUDENT_ID = '10000000-0000-4000-8000-000000000000';
 const completedProfile: OnboardingProfile = {
@@ -103,4 +111,36 @@ test.each([
   await act(async () => press(t('student.bindEnterCodeSubviews.copy005')));
   expect(renderer.root.findByProps({ placeholder: 'XXXXXXXXXX' }).props.value).toBe('');
   expect(renderer.root.findByProps({ placeholder: t('student.enterCodeView.copy002') }).props.value).toBe(stash.displayName);
+});
+
+const codeField = () => renderer.root.findByProps({ placeholder: 'XXXXXXXXXX' });
+const hasText = (value: string) => renderer.root.findAllByType(Text).some((node) => node.props.children === value);
+
+test('pasting a whole invite message into the code field keeps the code (spec 093)', async () => {
+  await renderGate();
+  act(() => codeField().props.onChangeText('点这个链接安装 App：http://121.40.160.241:3000/i/XK7MPQ2RVT\n或输入：XK7M PQ2 RVT'));
+  expect(codeField().props.value).toBe('XK7M PQ2 RVT');
+});
+
+test('Global track has no paste button', async () => {
+  await renderGate();
+  expect(hasText(t('student.inviteCode.paste'))).toBe(false);
+});
+
+test('China track paste button fills the code from a copied invite message', async () => {
+  jest.replaceProperty(buildTrack, 'BUILD_TRACK', 'china');
+  jest.spyOn(Clipboard, 'getStringAsync').mockResolvedValue('安装：http://121.40.160.241:3000/i/XK7MPQ2RVT —— 王教练');
+  await renderGate();
+  await act(async () => press(t('student.inviteCode.paste')));
+  expect(codeField().props.value).toBe('XK7M PQ2 RVT');
+  expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(false);
+});
+
+test('China track paste button explains when the clipboard has no code', async () => {
+  jest.replaceProperty(buildTrack, 'BUILD_TRACK', 'china');
+  jest.spyOn(Clipboard, 'getStringAsync').mockResolvedValue('明天见');
+  await renderGate();
+  await act(async () => press(t('student.inviteCode.paste')));
+  expect(codeField().props.value).toBe('');
+  expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(true);
 });

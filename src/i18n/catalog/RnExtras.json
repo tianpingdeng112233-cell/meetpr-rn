@@ -1,4 +1,8 @@
 {
+"coach.invites.share": {"en": "Share", "zh": "分享"},
+"coach.invites.message": {"en": "I'm using MeetPR to plan your training and review your lift videos.\n1. Install the app: {0}\n2. Open it and create an account\n3. On the invite code screen, tap Paste invite code, or enter: {1}\nOnce I accept, your plan will show up. — {2}", "zh": "我在用 MeetPR 给你排训练计划和看动作视频。\n1. 点这个链接安装 App：{0}\n2. 打开 App 注册账号\n3. 在「输入邀请码」页点「粘贴邀请码」，或输入：{1}\n我这边确认后你就能看到训练计划了。—— {2}"},
+"student.inviteCode.paste": {"en": "Paste invite code", "zh": "粘贴邀请码"},
+"student.inviteCode.pasteEmpty": {"en": "No invite code found in what you copied", "zh": "复制的内容里没有找到邀请码"},
 "student.added.cancel": {"en": "Cancel", "zh": "取消"},
 "coach.execution.addedByStudent": {"en": "Added by student", "zh": "学员自加"},
 "coach.execution.studentAddedSets %lld": {"en": "Added by student · not in plan · %lld sets logged", "zh": "学员自加 · 不在计划里 · 记录了 %lld 组"},

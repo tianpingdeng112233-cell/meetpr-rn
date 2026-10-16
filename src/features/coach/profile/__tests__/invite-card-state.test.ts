@@ -87,6 +87,16 @@ test('copy writes the raw code, and reports success only after the clipboard acc
   expect(model.getSnapshot().actionError).toBe(true);
 });
 
+test('copy writes the text the screen formats for the code', async () => {
+  const clipboard = { setString: jest.fn(async (_value: string) => undefined) };
+  const repository = { listCodes: async () => [code], createCode: jest.fn(async () => code), revokeCode: jest.fn(async () => undefined) };
+  const model = new InviteCodesModel(repository, clipboard);
+  await model.reload();
+  await model.copyCode(code.id, Date.parse('2026-09-05T12:00:00Z'), value => `invite ${value}`);
+  expect(clipboard.setString).toHaveBeenCalledWith('invite XK7MPQ2RVT');
+  expect(model.getSnapshot().copiedCodeID).toBe(code.id);
+});
+
 test('revoke accepts repeated 204 responses and re-lists; defunct codes cannot be copied', async () => {
   const inactive = { ...code, type: 'single_use', revoked_at: '2026-09-05T13:00:00Z' };
   const fetcher = jest.fn<typeof fetch>().mockResolvedValueOnce(response(204))
