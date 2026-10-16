@@ -1,0 +1,52 @@
+# Spec 093 · 给 Codex 的卡（2026-10-16，Claude 拆）
+
+规则照各仓 AGENTS.md：一卡一个 worktree、一个写者；做完写收货记录（改了什么、怎么验的、哪些没验到），PR 等 David 合并。Claude 负责验收。口径以同目录 `SPEC.md` 为准，本文只写分工与完成标准。
+
+顺序：**B0 → B → W → 发 App 包**；W0、I1 可与 B 并行；I2 跟 I1 一起发。
+
+## B0 · 两个老账号补邮箱身份（运维，David + Codex）
+
+- 仓：MeetPR-backend。照 backend `specs/048-email-signup-verification/SPEC.md` §5 执行。
+- 前置：David 给出两个老账号（一个教练、一个学员）要用的邮箱。
+- 完成标准：两个账号用「邮箱 + 原密码」能在国内 staging 登录，用户 id 不变，手机号登录仍可用；执行记录写进 backend 部署文档。
+- 这是 I1 发 TestFlight 的硬前置。
+
+## B · 后端：教练申请、审批、设密码、公开查码（MeetPR-backend，staging 分支）
+
+SPEC §4 B1–B5：
+
+1. 新表 `coach_applications`（迁移按仓内账本规矩）+ `POST /coach-applications`（公开，按 IP 与邮箱限速；同邮箱 pending 不重复建）。
+2. 管理端接口：列申请、通过、拒绝（admin 角色）。「通过」在一个事务里：建教练账号（邮箱身份、无密码，参照 `scripts/provision-coach-global.ts` 的建号逻辑）→ 生成 `personal_permanent` 邀请码 → 发中文欢迎信（带设密码链接）。邮箱已是学员账号 → 返回明确错误码，不自动转。
+3. 设密码：复用 `/auth/email/forgot|reset` 的令牌机制，有效期 7 天，单独邮件模板；提供「重新发送」。
+4. `GET /public/invites/:code`（公开，限速）→ `{ valid, coach_display_name }`，失效码 `valid:false`，不返回其它字段。
+5. 埋点 `POST /events` 接受 `platform=web`。
+- 完成标准：单测覆盖以上每条的正常与错误路径；真实 PostgreSQL 上迁移干净执行与重入；部署国内 staging 后用 curl 走通「申请 → 通过 → 收信 → 设密码 → 邮箱登录 → 查码」并留证据。Global 部署不动。
+
+## W · plan-web：申请页、设密码页、入驻完成页、学员落地页、审批（meetpr-plan-web）
+
+SPEC §3 全部 + §4 B2 的界面：
+
+1. 公开页（不用登录）：`/coach` 申请、设密码页、`/i/<码>` 学员落地页（按 iPhone／安卓／电脑／微信分流，SPEC §3.5）。
+2. 教练登录后：入驻完成页（装 App、去排计划、邀请链接 + 二维码 + 「复制邀请消息」，消息文案与安卓 `src/i18n/catalog/RnExtras.json` 的 `coach.invites.message` 一致）。
+3. 管理台（`src/features/admin/AdminWorkspace.tsx`）加「教练申请」分区：列表 + 通过／拒绝（二次确认）。
+4. TestFlight 公开链接与 APK 网盘链接做成配置项，不写死。
+5. 部署照 README「后端同源 serve」流程，链接形如 `http://121.40.160.241:3000/i/<码>`。
+- 完成标准：`npm test`、`npm run lint`、`npm run build` 通过；在手机浏览器、电脑、微信内置浏览器各打开一次落地页截图；失效码页面截图；SPA 回退下 `/coach`、`/i/<码>` 刷新不 404。
+
+## W0 · plan-web 邮箱登录收口（meetpr-plan-web，可与 B 并行）
+
+SPEC §11：登录框文案改「邮箱」（背后仍接受手机号）；管理台用户列表加邮箱列、能按邮箱搜（若后端 admin 接口没返回邮箱，开 backend 小卡补字段）。完成标准：测试、类型检查通过；截图。
+
+## I1 / I2 · iOS（meetpr 仓，苹果端会话）
+
+见同目录 `IOS-HANDOFF.md`。I1 = CN 轨邮箱登录注册找回；I2 = 认码、粘贴按钮、复制整段邀请消息。需在 Mac 上 Xcode 编译、模拟器截图。I1 的 TestFlight 等 B0 完成；I2 的第 3 条等 W 上线。
+
+## R-verify · 安卓卡 R 上机（meetpr-rn，分支 `claude/blissful-curie-wk8cxa`）
+
+代码已实装（SPEC「实装记录」），云端没有模拟器，补上机：
+
+1. `EXPO_PUBLIC_BUILD_TRACK=china npx expo run:android`，AVD `meetpr`（中文系统）。
+2. 学员：绑定页有「粘贴邀请码」；复制整段邀请消息后点它能填对码；剪贴板是无关文字时出提示；把整段消息长按粘进码框也能填对。
+3. 教练：「我的」点复制、邀请码页点复制与分享，粘到备忘录里看消息内容（链接、分组码、教练名）。
+4. Global 包：绑定页无粘贴按钮，教练复制仍只复制码。
+- 完成标准：截图放 `docs/evidence/spec093-<日期>/`，收货记录补进 SPEC「实装记录」；全量 `npx jest`、`npx tsc --noEmit`、`npx expo lint` 通过。
