@@ -334,7 +334,12 @@ function EnterCodeView({
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={500}
-        onChangeText={(value) => setCode((value.length > 12 ? extractInviteCode(value) : null) ?? normalizeInviteCode(value))}
+        numberOfLines={1}
+        onChangeText={(value) => {
+          const nextCode = (value.length > 12 ? extractInviteCode(value) : null) ?? normalizeInviteCode(value);
+          setCode(nextCode);
+          if (isValidInviteCode(nextCode)) setBanner(null);
+        }}
         placeholder="XXXXXXXXXX"
         label={t('student.inviteCodeEntry.copy001')}
         helper={t('student.enterCodeViewModel.copy002')}

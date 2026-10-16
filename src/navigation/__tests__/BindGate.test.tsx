@@ -144,3 +144,17 @@ test('China track paste button explains when the clipboard has no code', async (
   expect(codeField().props.value).toBe('');
   expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(true);
 });
+
+test.each([
+  ['typed code', 'XK7MPQ2RVT'],
+  ['native pasted invite', '安装：https://example.com/i/XK7MPQ2RVT\n教练邀请你加入'],
+])('entering a valid %s clears the earlier empty-clipboard notice', async (_kind, input) => {
+  jest.replaceProperty(buildTrack, 'BUILD_TRACK', 'china');
+  jest.spyOn(Clipboard, 'getStringAsync').mockResolvedValue('明天见');
+  await renderGate();
+  await act(async () => press(t('student.inviteCode.paste')));
+  expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(true);
+  act(() => codeField().props.onChangeText(input));
+  expect(codeField().props.value).toBe('XK7M PQ2 RVT');
+  expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(false);
+});

@@ -247,3 +247,10 @@ English:
 - 测试：`model.test.ts`（11 条取码用例）、`invite-message.test.ts`（新）、`invite-card-state.test.ts`（复制自定义文本）、`BindGate.test.tsx`（整段粘贴、两轨按钮有无、粘贴成功与失败）。`tsc`、`lint` 通过。
 - **未做**：模拟器上机截图（本会话在云端容器，没有 AVD）；plan-web 落地页未上线，所以 A3 的包暂时不能发（见 §5 发包顺序）。
 
+### 卡 R-verify（Android 开发自测，2026-10-17，Codex）
+
+- 基于上述分支 `3697ca5`，China / Global 原生 debug 构建在中文 AVD `meetpr` 上验证。隔离 OS user 10 与本机合成 API，未写真实 staging 数据。
+- China：粘贴按钮识别整段消息、无关文字报错、系统长按粘贴；教练「我的」和邀请码页复制完整邀请消息；永久码分享打开系统面板。Global：绑定页无粘贴按钮，两处复制均为纯码。截图和复现入口：[原始证据](../../docs/evidence/spec093-2026-10-17/README.md)。
+- 现场定向修复：邀请码 TextField 限单行，避免原生长消息粘贴后高度从 164 px 膨胀到 529 px；修复后 164→160 px。直接输入/原生粘贴有效码清旧错误 banner，两条行为回归先红后绿。另把 native prebuild 暴露的既有 AccessoryLogCard 宽 ViewStyle 返回类型收窄为 flex/minWidth，未改运行时样式。
+- 验证：全量 Jest 180 suites / 1718 tests 通过；类型收窄后 tsc、expo lint 通过，组件既有 11 tests 通过。主代理安排原实现与两次增量 Standards / Spec 独立审查，均无 findings；此为开发自审，不替代 Opus 终验。完整收货记录见 `docs/CODEX-JOURNAL.md`。
+- 未验：真实 staging 邀请码/绑定持久化、真实教练姓名、生产链接下载/安装、分享发出、物理安卓机与 iOS。截图中的姓名/码/链接为合成 fixture，不能据此宣称 §9 整体通过。未发包，A3 仍受 §5 的网页上线顺序约束。

@@ -1,0 +1,6 @@
+native paste value=ABCD 234 567 height_before=164px height_after=529px
+Traceback (most recent call last):
+  File "/tmp/spec093-r-native-height.py", line 16, in <module>
+    assert after==before,'Native paste enlarged the single-line invite field'
+           ^^^^^^^^^^^^^
+AssertionError: Native paste enlarged the single-line invite field

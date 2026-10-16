@@ -4681,3 +4681,19 @@ src/features/coach/roster/load-roster.ts
 ```
 
 最终验证时序：先写完本节并冻结全部代码、测试及 JOURNAL，再执行 `EXPO_NO_DOTENV=1 npx jest --runInBand` 全量、`EXPO_NO_DOTENV=1 npx tsc --noEmit`、`EXPO_NO_DOTENV=1 npm run lint`；不以定向 suite 替代最终全量。结果及原始末行见本轮交付回报与 `/tmp/092b-r2-full-final.log`、`/tmp/092b-r2-tsc-final.log`、`/tmp/092b-r2-lint-final.log`。本节不预填尚未完成的最终结果；验证结束后核对文件摘要无变化，不再改动本节。
+
+## 2026-10-17 · Spec093 R-verify（Android 原始收货记录）
+
+从用户指定分支 `origin/claude/blissful-curie-wk8cxa` 的 `3697ca5` 接续，在 `verify/093-android-invites` 验证既有 R 实装。已读完整 CARDS/SPEC、仓规与 Expo v57 文档；冲突以 SPEC 为准，未读 iOS handoff。此节记录开发自测，功能终验与 PARITY 正典留 Opus。
+
+改动：现场复现两处绑定输入问题后，仅邀请码 TextField 加 `numberOfLines={1}`，防止原生长消息粘贴把单行框撑高；输入或原生粘贴有效码时清除之前的错误 banner，补两条组件行为回归。未改共享 TextField、未硬编码输入框高度。另在 native prebuild 暴露的既有类型错误上，把 AccessoryLogCard 的 column 返回类型从整个 ViewStyle 收窄为实际 flex/minWidth；运行时样式不变。
+
+验证：中文 AVD `meetpr` 新建隔离 OS user 10，以本机合成 API seam 运行 China/Global 两个原生 debug 构建。China 整段消息按钮粘贴、无关内容报错、系统长按粘贴、教练我的与邀请码页复制完整消息、永久码系统分享面板均留截图；Global 无粘贴入口，两个复制入口均从真实剪贴板读到纯码。没有选择外部分享收件人。原用户 0 账号/数据未清理。
+
+先红后绿：有效码清错误用例 2 failed / 9 passed → 11 passed；原生粘贴 EditText 高度 164→529 px 失败 → 164→160 px 通过，值始终正确归一化。原生脚本、失败日志与前后截图见 [证据目录](evidence/spec093-2026-10-17/README.md)。该高度回归依赖原生测量，不以只断言 React prop 的测试替代。
+
+最终检查：全量 Jest 180 suites / 1718 tests 通过；类型收窄后全量 `tsc --noEmit`、`expo lint` exit 0，AccessoryLogCard 既有 11 tests 通过。首次 tsc 的空日志发生在 npm 安装期间，不能作为完整依赖基线通过证据；prebuild 后失败的 TS2769 原始日志已保存，根因是 Expo types 扩展 ViewStyle.userSelect 后宽返回类型污染 TextStyle。代码增量经主代理安排 Standards / Spec 两轴只读审查，均 0 findings。
+
+未验到：真实 staging 的邀请码/绑定持久化、生产邀请落地页/安装链路、真实姓名和跨端真实账户链路、分享发出、物理安卓机与 iOS。本卡未执行任何远端 API 写入、账号创建或数据库写入，未分发含本机 fixture 地址的包。截图只含合成码、合成姓名和本机地址，不含真实账号邮箱/手机/凭证。系统分享、原生剪贴板与输入框证据不替代上述未验项。
+
+收尾：仅恢复本轮生成的 tracked `modules/training-video/android/build` 产物；未改业务外文件。本轮临时 fixture 与两轨 Metro 已停止，adb reverse 已移除，AVD 已切回 user 0；user 10 保留，未删任何用户数据。目录保留启动脚本供复现。此卡不 commit/push/merge，由主代理统一交付 PR 等 David 合并。
