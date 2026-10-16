@@ -7,7 +7,8 @@
 ## B0 · 两个老账号补邮箱身份（运维，David + Codex）
 
 - 仓：MeetPR-backend。照 backend `specs/048-email-signup-verification/SPEC.md` §5 执行。
-- 前置：David 给出两个老账号（一个教练、一个学员）要用的邮箱。
+- 前置：两个老账号（内测仅有的一个教练、一个学员，都是手机号账号）的目标邮箱 David 已于 2026-10-16 在会话中给出。**本仓是公开仓，邮箱不写进任何文件或提交**，由 David 直接交给执行者。
+- 执行门禁（048 §5）：先导出两行 `users` 与其 `user_identities` 作备份、核对目标邮箱未被占用，脚本与备份给 David 过目、拿到明确同意后才对国内库执行。
 - 完成标准：两个账号用「邮箱 + 原密码」能在国内 staging 登录，用户 id 不变，手机号登录仍可用；执行记录写进 backend 部署文档。
 - 这是 I1 发 TestFlight 的硬前置。
 
