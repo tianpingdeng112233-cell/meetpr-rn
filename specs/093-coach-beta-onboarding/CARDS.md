@@ -4,6 +4,14 @@
 
 顺序：**B0 → B → W → 发 App 包**；W0、I1 可与 B 并行；I2 跟 I1 一起发。
 
+## 一次性执行（David 2026-10-17：一口气做完、一次验收）
+
+1. **写代码**：B、W、W0、I1、I2 全部实装（iOS 在本机 Xcode 编译、模拟器截图），R-verify 上机；B0 只准备脚本与备份，不执行。各仓各开分支、各开 PR，不合并。
+2. **唯一一次停下等 David**：一次性提交「B0 脚本 + 备份」和「后端迁移 + 部署国内 staging + plan-web 换装」的执行清单，David 一句同意后连续执行。
+3. **部署后端到端走一遍**：申请 → 审批 → 收欢迎信 → 设密码 → 安卓与 iOS 模拟器邮箱登录 → 复制邀请消息 → 落地页 → 学员注册 → 粘贴邀请码 → 教练接受；老账号邮箱登录看到原数据。
+4. **交验收包**：写 `docs/verification-spec093-<日期>.md`，逐张卡列 PR 链接、测试命令与结果、截图路径、没验到的项与原因。然后交 Claude 一次验收。
+5. 不做：发 TestFlight、发 APK（等验收通过后 David 决定）。
+
 ## B0 · 两个老账号补邮箱身份（运维，David + Codex）
 
 - 仓：MeetPR-backend。照 backend `specs/048-email-signup-verification/SPEC.md` §5 执行。
