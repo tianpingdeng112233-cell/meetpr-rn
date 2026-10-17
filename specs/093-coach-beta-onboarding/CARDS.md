@@ -45,7 +45,7 @@ SPEC §3 全部 + §4 B2 的界面：
 
 ## W0 · plan-web 邮箱登录收口（meetpr-plan-web，可与 B 并行）
 
-SPEC §11：登录框文案改「邮箱」（背后仍接受手机号）；管理台用户列表加邮箱列、能按邮箱搜（若后端 admin 接口没返回邮箱，开 backend 小卡补字段）。完成标准：测试、类型检查通过；截图。
+SPEC §11：登录框文案改「邮箱」（背后仍接受手机号）；管理台用户列表加邮箱列、能按邮箱搜（若后端 admin 接口没返回邮箱，开 backend 小卡补字段）；**登录页加「忘记密码？」**（David 2026-10-17 加）：填邮箱 → `POST /auth/email/forgot` → 填 6 位验证码与新密码（8–72 位，确认密码）→ `POST /auth/email/reset` → 回登录页用新密码登录。流程与文案照安卓找回密码（`src/features/auth/GlobalForgotPasswordScreen.tsx` 与 `RnExtras.json` 的 `auth.*`）；只支持邮箱账号，填手机号时提示「请填写注册时用的邮箱」。完成标准：测试、类型检查通过；四个状态截图（填邮箱、已发码、错码、改密成功）。
 
 ## I1 / I2 · iOS（meetpr 仓，苹果端会话）
 
