@@ -12,6 +12,7 @@ import { BUILD_TRACK } from '@/config/build-track';
 import { CoachHelpFeedbackSheet, CoachPrivacyTermsSheet } from './CoachProfileSheets';
 import { Capsule, Confirmation, ProfileText, profileStyles } from './ProfileComponents';
 import { inviteCardState } from './invite-card-state';
+import { inviteCopyText } from './invite-message';
 import { useInviteCodes, type InviteDependencies } from './use-invite-codes';
 
 export function CoachMyProfileScreen(dependencies: InviteDependencies = {}) {
@@ -45,7 +46,7 @@ export function CoachMyProfileScreen(dependencies: InviteDependencies = {}) {
             <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t('coach.profile.inviteUsage %lld', [code.used_count])}</ProfileText>
           </> : <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t(subtitle)}</ProfileText>}
         </Pressable>
-        {code ? <Pressable testID="coach.profile.copyInvite" accessibilityRole="button" accessibilityLabel={t('coach.profile.copyInvite')} onPress={() => void model.copyCode(code.id, now)}
+        {code ? <Pressable testID="coach.profile.copyInvite" accessibilityRole="button" accessibilityLabel={t('coach.profile.copyInvite')} onPress={() => void model.copyCode(code.id, now, value => inviteCopyText(value, user?.name))}
           style={({ pressed }) => [{ position: 'absolute', top: 6, right: 16, minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.inset }, pressed && { transform: [{ scale: 0.95 }] }]}>
           <ProfileText style={font.body(12, 'semibold')}>{t('coach.profile.copy')}</ProfileText>
         </Pressable> : null}

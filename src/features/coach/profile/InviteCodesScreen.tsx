@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Share, View, useWindowDimensions } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import type { InviteCode } from '@/api/domains/invite-codes';
+import { useSessionStore } from '@/api/session';
 import { AppButton, Card, Screen, font, spacing, useColors } from '@/design';
 import { InviteCodeFormat } from '@/domain/coach/invite-code-format';
 import { inviteCodeStatus, isDefunct, type InviteCodeStatus } from '@/domain/coach/invite-code-status';
@@ -13,6 +14,7 @@ import { CoachNavHeader } from '../CoachNavHeader';
 import { CreateInviteCodeSheet } from './CreateInviteCodeSheet';
 import { Confirmation, InviteSecondaryButton, ProfileText, profileStyles } from './ProfileComponents';
 import { inviteCardState } from './invite-card-state';
+import { inviteCopyText, sharesInviteMessage } from './invite-message';
 import { useInviteCodes, type InviteDependencies } from './use-invite-codes';
 
 function statusLabel(status: InviteCodeStatus) {
@@ -24,6 +26,8 @@ export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
   const { fontScale } = useWindowDimensions();
   const createButtonStyle = { flexBasis: spacing.minimumHitTarget * 3 * fontScale, paddingHorizontal: spacing.sm };
   const { snapshot, model, now } = useInviteCodes(dependencies);
+  const coachName = useSessionStore(state => state.user?.name);
+  const copyText = (code: string) => inviteCopyText(code, coachName);
   const personal = inviteCardState(snapshot).code;
   const secondary = snapshot.codes.filter(code => code.type !== 'personal_permanent');
   const live = secondary.filter(code => !isDefunct(inviteCodeStatus(code, now)));
@@ -43,7 +47,7 @@ export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
       accessibilityLabel={`${InviteCodeFormat.grouped(code.code)}, ${statusLabel(status)}`}
       accessibilityActions={inactive ? [] : [{ name: 'revoke', label: t('coach.invites.revoke') }]}
       onAccessibilityAction={event => { if (!snapshot.mutating && event.nativeEvent.actionName === 'revoke') setConfirm({ kind: 'revoke', id: code.id }); }}
-      onPress={() => void model.copyCode(code.id, now)} style={[profileStyles.row, { backgroundColor: colors.surfaceCard }]}>
+      onPress={() => void model.copyCode(code.id, now, copyText)} style={[profileStyles.row, { backgroundColor: colors.surfaceCard }]}>
       <View style={{ flex: 1, gap: 3 }}>
         <ProfileText style={font.mono(14, 'semibold')}>{InviteCodeFormat.grouped(code.code)}</ProfileText>
         <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t(code.type === 'single_use' ? 'coach.invites.singleUse' : 'coach.invites.timeLimited')}{code.label ? ` · ${code.label}` : ''}</ProfileText>
@@ -70,7 +74,8 @@ export function InviteCodesScreen(dependencies: InviteDependencies = {}) {
           <ProfileText numberOfLines={1} adjustsFontSizeToFit style={font.mono(28, 'bold')}>{InviteCodeFormat.grouped(personal.code)}</ProfileText>
           <ProfileText style={{ ...font.body(12), color: colors.textSecondary }}>{t('coach.invites.usedCount %lld', [personal.used_count])}</ProfileText>
           <View style={profileStyles.actions}>
-            <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t(snapshot.copiedCodeID === personal.id ? 'coach.invites.copied' : 'coach.invites.copy')} onPress={() => void model.copyCode(personal.id, now)} />
+            <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t(snapshot.copiedCodeID === personal.id ? 'coach.invites.copied' : 'coach.invites.copy')} onPress={() => void model.copyCode(personal.id, now, copyText)} />
+            {sharesInviteMessage() ? <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t('coach.invites.share')} onPress={() => void Share.share({ message: copyText(personal.code) }).catch(() => undefined)} /> : null}
             <InviteSecondaryButton style={createButtonStyle} disabled={snapshot.mutating} label={t('coach.invites.regenerate')} onPress={() => setConfirm({ kind: 'regenerate' })} />
           </View>
         </> : <>

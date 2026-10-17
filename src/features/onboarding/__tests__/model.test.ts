@@ -8,6 +8,7 @@ import {
   completionValidationResult,
   createEmptyOnboardingForm,
   estimateOneRepMax,
+  extractInviteCode,
   formFromServer,
   fullOnboardingPatch,
   groupedInviteCode,
@@ -156,6 +157,29 @@ describe('invite-code formatting', () => {
 
   test.each(['IO01ABCD23', 'ABCDEFGHIJ', 'XK7MPQ2RV'])('rejects %s', (code) => {
     expect(isValidInviteCode(code)).toBe(false);
+  });
+});
+
+describe('extractInviteCode (spec 093)', () => {
+  test.each([
+    ['bare code', 'xk7mpq2rvt'],
+    ['grouped code', ' XK7M PQ2 RVT '],
+    ['invite link', 'http://121.40.160.241:3000/i/XK7MPQ2RVT'],
+    ['zh invite message', '我在用 MeetPR。\n1. 点这个链接安装 App：http://121.40.160.241:3000/i/XK7MPQ2RVT\n3. 或输入：XK7M PQ2 RVT\n—— 王教练'],
+    ['en invite message', "I'm using MeetPR.\n1. Install the app: http://121.40.160.241:3000/i/XK7MPQ2RVT\n— Coach"],
+    ['message without link', '邀请码：XK7M PQ2 RVT，注册后填写'],
+    ['dashed code in text', 'code XK7M-PQ2-RVT thanks'],
+  ])('finds the code in a %s', (_label, text) => {
+    expect(extractInviteCode(text)).toBe('XK7MPQ2RVT');
+  });
+
+  test.each([
+    ['empty', ''],
+    ['unrelated text', '今天练得不错，明天见'],
+    ['link with an invalid code', 'http://121.40.160.241:3000/i/IO01ABCD23'],
+    ['short code', 'XK7MPQ2RV'],
+  ])('returns null for %s', (_label, text) => {
+    expect(extractInviteCode(text)).toBeNull();
   });
 });
 

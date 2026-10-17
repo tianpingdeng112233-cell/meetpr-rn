@@ -51,12 +51,12 @@ export class InviteCodesModel {
   }
 
   clearCopied = () => { this.update({ copiedCodeID: null }); };
-  copyCode = async (id: string, now: number) => {
+  copyCode = async (id: string, now: number, text: (code: string) => string = code => code) => {
     const code = this.snapshot.codes.find(item => item.id === id);
     if (!code || isDefunct(inviteCodeStatus(code, now))) return;
     this.update({ copiedCodeID: null, actionError: false });
     try {
-      await this.clipboard.setString(code.code);
+      await this.clipboard.setString(text(code.code));
       this.update({ copiedCodeID: id, copyRevision: this.snapshot.copyRevision + 1 });
     } catch {
       this.update({ actionError: true });

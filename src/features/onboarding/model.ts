@@ -455,6 +455,22 @@ export function isValidInviteCode(value: string): boolean {
   return INVITE_ALPHABET.test(normalizeInviteCode(value));
 }
 
+const INVITE_LINK_CODE = /\/i\/([A-Za-z0-9]{10})(?![A-Za-z0-9])/;
+const INVITE_CODE_IN_TEXT = /(?<![A-Z0-9])([A-HJ-NP-Z2-9]{4})[ -]?([A-HJ-NP-Z2-9]{3})[ -]?([A-HJ-NP-Z2-9]{3})(?![A-Z0-9])/;
+
+/**
+ * Finds an invite code in pasted text: a bare code, an invite link (`…/i/<code>`),
+ * or the coach's whole invite message. Returns null when nothing valid is found.
+ */
+export function extractInviteCode(text: string): string | null {
+  const link = INVITE_LINK_CODE.exec(text)?.[1];
+  if (link) return isValidInviteCode(link) ? normalizeInviteCode(link) : null;
+  const trimmed = text.trim();
+  if (trimmed.length <= 12 && isValidInviteCode(trimmed)) return normalizeInviteCode(trimmed);
+  const match = INVITE_CODE_IN_TEXT.exec(text.toUpperCase());
+  return match ? `${match[1]}${match[2]}${match[3]}` : null;
+}
+
 export function groupedInviteCode(value: string): string {
   const code = normalizeInviteCode(value);
   return [code.slice(0, 4), code.slice(4, 7), code.slice(7, 10)]
