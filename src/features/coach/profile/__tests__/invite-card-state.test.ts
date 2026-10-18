@@ -9,6 +9,14 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import type { InviteDependencies } from '../use-invite-codes';
 import { CoachMyProfileScreen } from '../CoachMyProfileScreen';
 import { setLocaleOverride } from '@/i18n';
+import { Text } from 'react-native';
+import * as buildTrack from '@/config/build-track';
+
+jest.mock('@/config/build-track', () => ({
+  __esModule: true,
+  ...jest.requireActual<typeof import('@/config/build-track')>('@/config/build-track'),
+  BUILD_TRACK: 'global',
+}));
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -25,7 +33,7 @@ beforeEach(() => {
   resetSessionForTests();
   jest.mocked(SecureStore.getItemAsync).mockImplementation(async key => key === 'accessToken' ? 'test-access-token' : null);
 });
-afterEach(() => { globalThis.fetch = originalFetch; jest.clearAllMocks(); jest.useRealTimers(); setLocaleOverride(null); });
+afterEach(() => { globalThis.fetch = originalFetch; jest.clearAllMocks(); jest.restoreAllMocks(); jest.useRealTimers(); setLocaleOverride(null); });
 const response = (status: number, body?: unknown) => ({ ok: status < 400, status, text: async () => body === undefined ? '' : JSON.stringify(body) }) as Response;
 
 const code: InviteCode = { id: '10000000-0000-4000-8000-000000000000', coach_id: '20000000-0000-4000-8000-000000000000',
@@ -53,6 +61,23 @@ test('the mounted profile only loads, copies raw text and removes its toast afte
     expect(screen.root.findAllByProps({ testID: 'coach.profile.toast' }).length).toBeGreaterThan(0);
     act(() => jest.advanceTimersByTime(1999));
     expect(screen.root.findAllByProps({ testID: 'coach.profile.toast' })).toHaveLength(0);
+  } finally { act(() => screen.unmount()); }
+});
+
+test.each<['china' | 'global', 'en' | 'zh', string]>([
+  ['china', 'en', "You'll need to sign in again."],
+  ['china', 'zh', '退出后需要重新登录。'],
+  ['global', 'en', 'You will need to sign in again to access your account.'],
+  ['global', 'zh', '退出后需重新登录才能访问账号。'],
+])('the %s profile logout confirmation uses neutral %s copy', async (track, locale, message) => {
+  jest.replaceProperty(buildTrack, 'BUILD_TRACK', track);
+  setLocaleOverride(locale);
+  globalThis.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(200, { invite_codes: [] }));
+  let screen!: ReactTestRenderer;
+  await act(async () => { screen = create(createElement(CoachMyProfileScreen)); });
+  try {
+    await act(async () => { screen.root.findByProps({ testID: 'coach.profile.logout' }).props.onPress(); });
+    expect(screen.root.findAllByType(Text).map(node => node.props.children)).toContain(message);
   } finally { act(() => screen.unmount()); }
 });
 
