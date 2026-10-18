@@ -25,7 +25,7 @@
 "auth.forgotLink": {"en": "Forgot password?", "zh": "忘记密码？"},
 "auth.forgotHeader": {"en": "Forgot password", "zh": "找回密码"},
 "auth.globalSlogan": {"en": "Better than\nyesterday", "zh": "Better than\nyesterday"},
-"auth.chinaSlogan": {"en": "Meet Your\nPersonal Record\nHere.", "zh": "Meet Your\nPersonal Record\nHere."},
+"auth.chinaSlogan": {"en": "Meet Your\nPR Here.", "zh": "Meet Your\nPR Here."},
 "auth.or": {"en": "or", "zh": "或"},
 "auth.google": {"en": "Continue with Google", "zh": "使用 Google 继续"},
 "auth.consent": {"en": "By continuing, you agree to our", "zh": "继续即表示你同意我们的"},

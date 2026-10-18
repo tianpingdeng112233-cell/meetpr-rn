@@ -202,7 +202,7 @@ test('CN login route uses email, the fixed slogan and Chinese privacy URL withou
   china();
   const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(undefined);
   act(() => { renderer = create(<LoginRoute />); });
-  expect(copy()).toContain('Meet Your Personal Record Here.');
+  expect(copy()).toContain('Meet Your PR Here.');
   expect(input('EMAIL')).toBeDefined();
   expect(button('Continue with Google')).toBeUndefined();
   expect(renderer.root.findAllByType(Text).some(node => node.props.children === 'or')).toBe(false);
@@ -311,7 +311,7 @@ test('CN existing account failure provides a sign-in link', async () => {
 test('CN Chinese screens use localized copy and light system typography while keeping the slogan', async () => {
   china(); setLocaleOverride('zh');
   act(() => { renderer = create(<GlobalLoginScreen />); });
-  expect(copy()).toContain('Meet Your Personal Record Here.');
+  expect(copy()).toContain('Meet Your PR Here.');
   expect(input(t('auth.email'))).toBeDefined();
   expect(button(t('auth.signIn'))).toBeDefined();
   act(() => renderer.update(<GlobalRegisterScreen />));
