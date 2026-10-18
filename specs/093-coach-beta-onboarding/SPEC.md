@@ -1,6 +1,6 @@
-# Spec 093 · 教练内测入驻：申请 → 注册 → 邀请学员，一条链路走完（草案，待拍板）
+# Spec 093 · 教练内测入驻：申请 → 注册 → 邀请学员，一条链路走完
 
-- 状态：**草案**，2026-10-16 起草；同日 David 拍完 §8 全部 6 题（见「已拍板口径」）。开工前置见 §0。
+- 状态：**已上线（国内 staging + iOS 1.0(25)），主链路 David 人工验收通过（2026-10-18）**；§9 仍有未验项，见 [验收记录](../../docs/verification-spec093-2026-10-17.md)「David 人工验收结论」。2026-10-16 起草，同日 David 拍完 §8 全部 6 题（见「已拍板口径」）。开工前置见 §0。
 - 性质：新功能。AGENTS.md 规定「v1 严禁夹带新功能」，所以本 spec 里**动 App 的部分**（§5）需要 David 单独豁免；不动 App 的部分（§3 网页、§4 后端、§6 运营物料）不受这条约束，可以先做。
 - 涉及四处：后端（backend 仓）、网页（建议放 plan-web 仓）、iOS（`apps/MeetPR`）、安卓（本仓）。本仓只落 §5 里安卓那一半；其余三处在这里写清楚，交接给各自的会话。
 
@@ -254,3 +254,9 @@ English:
 - 现场定向修复：邀请码 TextField 限单行，避免原生长消息粘贴后高度从 164 px 膨胀到 529 px；修复后 164→160 px。直接输入/原生粘贴有效码清旧错误 banner，两条行为回归先红后绿。另把 native prebuild 暴露的既有 AccessoryLogCard 宽 ViewStyle 返回类型收窄为 flex/minWidth，未改运行时样式。
 - 验证：全量 Jest 180 suites / 1718 tests 通过；类型收窄后 tsc、expo lint 通过，组件既有 11 tests 通过。主代理安排原实现与两次增量 Standards / Spec 独立审查，均无 findings；此为开发自审，不替代 Opus 终验。完整收货记录见 `docs/CODEX-JOURNAL.md`。
 - 未验：真实 staging 邀请码/绑定持久化、真实教练姓名、生产链接下载/安装、分享发出、物理安卓机与 iOS。截图中的姓名/码/链接为合成 fixture，不能据此宣称 §9 整体通过。未发包，A3 仍受 §5 的网页上线顺序约束。
+
+### 人工验收（2026-10-18，David；Opus 落档）
+
+- 主链路通过：教练申请 → 审批 → 欢迎信设密 → 两端邮箱登录；学员注册 → 提交邀请码 → 教练接受；老用户覆盖升级后绑定、计划、历史正常；两端找回密码；iPhone 经 App Store → TestFlight → MeetPR 安装引导。
+- 部署：国内 staging 镜像 `e788574a5475da276cd65d687091660d99cd99c7`，[run 39089552055](https://github.com/tianpingdeng112233-cell/MeetPR-backend/actions/runs/39089552055)。iOS 侧见 iOS 仓 `docs/acceptance-spec093-ios-2026-10-18.md`。
+- 未核实 / 未验：TestFlight 外部组 Ceshi 的 1.0(25) 审核结果；QQ 邮箱落收件箱还是垃圾箱；§9 第 1、2、6 条及第 3–5 条的部分子项。逐项见验收记录。
