@@ -1,0 +1,56 @@
+import { z } from 'zod';
+
+export const ANDROID_RELEASE_URL = 'https://dl.meetpr.cn/android/latest.json';
+
+const releaseSchema = z.object({
+  schemaVersion: z.literal(1),
+  packageName: z.literal('com.meetpr.app'),
+  versionCode: z.number().int().positive().max(2100000000),
+  versionName: z.string().trim().min(1).max(32),
+  releaseNotes: z.string().trim().min(1).max(1200),
+  downloadUrl: z.string(),
+}).refine(release => release.downloadUrl ===
+  `https://dl.meetpr.cn/android/releases/${release.versionCode}/meetpr-cn.apk`);
+
+export type AndroidRelease = z.infer<typeof releaseSchema>;
+
+export type InstalledAndroidApp = {
+  platform: string;
+  track: string;
+  applicationId: string | null;
+  buildVersion: string | null;
+};
+
+export async function checkForAndroidUpdate(
+  installed: InstalledAndroidApp,
+  signal?: AbortSignal,
+): Promise<AndroidRelease | null> {
+  const build = Number(installed.buildVersion);
+  if (installed.platform !== 'android' || installed.track !== 'china' ||
+      installed.applicationId !== 'com.meetpr.app' || !Number.isSafeInteger(build) || build < 1 || signal?.aborted) {
+    return null;
+  }
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal?.addEventListener('abort', abort);
+  const timeout = setTimeout(abort, 8000);
+  try {
+    const cancelled = new Promise<null>(resolve => {
+      controller.signal.addEventListener('abort', () => resolve(null), { once: true });
+    });
+    const request = async () => {
+      const response = await fetch(ANDROID_RELEASE_URL, { cache: 'no-store', signal: controller.signal });
+      if (!response.ok) return null;
+      const release = releaseSchema.safeParse(await response.json());
+      return !controller.signal.aborted && release.success && release.data.versionCode > build
+        ? release.data : null;
+    };
+    return await Promise.race([request(), cancelled]);
+  } catch {
+    // Checking for an optional update must never prevent use of the app.
+    return null;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', abort);
+  }
+}
