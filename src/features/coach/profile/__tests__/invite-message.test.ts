@@ -48,14 +48,19 @@ test('China track falls back to the generic coach name', () => {
 });
 
 test.each<['zh' | 'en', string]>([
-  ['zh', '王教练邀请你加入 MeetPR'],
-  ['en', '王教练 invites you to join MeetPR'],
+  ['zh', '王 教练邀请你在 MeetPR 跟练训练计划'],
+  ['en', 'Coach 王 invited you to train with them on MeetPR'],
 ])('share title uses the trimmed coach name in %s', (locale, title) => {
   setLocaleOverride(locale);
-  expect(inviteShareTitle(' 王教练 ')).toBe(title);
+  expect(inviteShareTitle(' 王 ')).toBe(title);
 });
 
-test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
-  setLocaleOverride('zh');
-  expect(inviteShareTitle(name)).toBe(`${t('coach.profile.fallbackName')}邀请你加入 MeetPR`);
+test.each<['zh' | 'en', string]>([
+  ['zh', '你的教练邀请你在 MeetPR 跟练训练计划'],
+  ['en', 'Your coach invited you to train with them on MeetPR'],
+])('share title uses a complete fallback sentence in %s', (locale, title) => {
+  setLocaleOverride(locale);
+  for (const name of [undefined, null, '', '  ']) {
+    expect(inviteShareTitle(name)).toBe(title);
+  }
 });

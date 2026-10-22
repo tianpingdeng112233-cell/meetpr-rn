@@ -4768,3 +4768,18 @@ git diff --check: exit 0
 Opus 原生收货命令与校验方法见 `docs/evidence/invite-share/README.md`：含 `EXPO_ROUTER_APP_ROOT="$PWD/src/app"`、China track、本机 fixture、既有 pack 入口、pack 后 `:app:createBundleReleaseJsAndAssets --rerun-tasks --no-build-cache`、重新 assemble、APK 内 bundle 与输出文件逐字节比对、packager sourcemap 与当前源码比对、安装/运行及截图命名。文档中的 3 段 shell 和内嵌 Python 已做语法检查，未实际构建/执行。
 
 未验项：CN Android 原生构建/运行、中文浅/深色两页及系统分享/菜单截图（由 Opus 收货时补入本证据目录）；微信真机发送和聊天链接点击；真实后端、生产落地页/下载链路。没有本轮截图，不以旧图替代。交付为未提交工作区：四个生产文件、两个既有测试文件、本 JOURNAL 和证据目录；未 commit/push、未改正典台账、未写凭证。
+
+
+## 2026-10-22 · 邀请分享标题文案与缺名整句 fallback
+
+基线：当前 worktree `meetpr-rn-wt-invite-share`，分支 `fix/invite-share-wechat`，HEAD `46fec47`（PR #101）。按 David 本轮拍板，仅改 `RnExtras.json` 的分享标题及新增 `coach.invites.shareTitleFallback`、`inviteShareTitle` 分支与相关单测。标题使用指定中英文；姓名 trim 后为空时直接取完整 fallback 句子，不再使用 `coach.profile.fallbackName`。复制邀请正文不变。David 追加授权后，仅同步 `invite-card-state.test.ts` 中写死的标题期望，未改测试逻辑。
+
+公开测试 seam 沿用本任务指定的 `inviteShareTitle`。真实 red → green：
+- 有名标题：先改中英期望，invite-message suite 为 2 failed / 9 passed；更新 shareTitle 串后定向运行 `-t 'share title uses'`，2 passed / 9 skipped。
+- 缺名标题：再加入中英完整句子的期望，invite-message suite 为 2 failed / 7 passed；实测旧逻辑返回「教练 教练邀请你在 MeetPR 跟练训练计划」及「Coach Coach invited you to train with them on MeetPR」。随后新增 fallback key 与实现分支；覆盖 undefined、null、空串、纯空白四种输入。
+- 最终相关 Jest（invite-message、invite-card-state、i18n/t）：3 suites passed / 0 failed，43 tests passed / 0 failed，exit 0；包含两处真实分享组件参数验证。命令：`EXPO_NO_DOTENV=1 node_modules/.bin/jest --runInBand --watchman=false --cacheDirectory=node_modules/.cache/invite-title-jest --runTestsByPath src/features/coach/profile/__tests__/invite-message.test.ts src/features/coach/profile/__tests__/invite-card-state.test.ts src/i18n/__tests__/t.test.ts`。
+- `EXPO_NO_DOTENV=1 node_modules/.bin/tsc --noEmit`：exit 0，0 errors。
+- `EXPO_NO_DOTENV=1 npm run lint`：exit 0，0 errors / 0 warnings。
+- `git diff --check` 通过。主代理核对 Standards/Spec：改动限定为批准文案、整句 fallback、对应测试及本条 JOURNAL，无无关重构。
+
+未 commit/push；保留开工前已有的 3 个未跟踪原生验证日志。本轮未运行全量 Jest、原生构建或模拟器验证，不将上述开发自测写作原生验收。

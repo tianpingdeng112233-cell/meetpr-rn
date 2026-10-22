@@ -67,7 +67,7 @@ test.each(inviteScreens)('CN %p shows share then copy, shares title/message and 
     expect(buttons.slice(0, 2).every(button => button.props.fullWidth !== false)).toBe(true);
     const message = inviteCopyText(code.code, '王教练');
     await act(async () => { buttons[0].props.onPress(); });
-    expect(share.mock.calls).toEqual([[{ title: '王教练邀请你加入 MeetPR', message }]]);
+    expect(share.mock.calls).toEqual([[{ title: '王教练 教练邀请你在 MeetPR 跟练训练计划', message }]]);
     await act(async () => { buttons[1].props.onPress(); });
     expect(clipboard.setString).toHaveBeenCalledWith(message);
     expect(screen.root.findAllByType(AppButton)[1].props.label).toBe('已复制');

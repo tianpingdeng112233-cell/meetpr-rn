@@ -14,7 +14,8 @@ export function sharesInviteMessage(): boolean {
 }
 
 export function inviteShareTitle(coachName?: string | null): string {
-  return t('coach.invites.shareTitle', [coachName?.trim() || t('coach.profile.fallbackName')]);
+  const name = coachName?.trim();
+  return name ? t('coach.invites.shareTitle', [name]) : t('coach.invites.shareTitleFallback');
 }
 
 /**
