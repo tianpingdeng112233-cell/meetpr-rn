@@ -4867,3 +4867,19 @@ student.e1rmSourceRTS
 - review-loop 本地独立只读双轴审查一轮：Standards 0 findings；Spec 0 findings，无未决项。缺 tracker 配置，已告知需 `$setup-matt-pocock-skills`，未声称运行 tracker 流程或 Opus 终验。[审查记录](evidence/spec094-zh-hant/header-review.txt)；[本轮精确增量](evidence/spec094-zh-hant/header-changes.patch)。
 
 本轮仅客户端语言头及测试返修，未新增原生截图或后端联调；此前跨端/视觉验收边界继续保留。
+
+### v2.2（2026-10-22）
+
+指定可写根临时文件试写、删除成功；现场基线为 Opus 提交 `89b9cff`（`feat/094-zh-hant`）。开工已有 GLOSSARY 的两条修改及未跟踪 AMEND-v22，均原样保留。已读仓内规约、CONTEXT、JOURNAL 末段、094 SPEC/CARD/AMEND-v22/GLOSSARY、工程流程与 tdd，并查阅 Expo SDK 57 版本文档。本轮只执行安卓 v2.2；网页 document.title 条款不适用。
+
+沿用现有生成器读取术语表的机制，执行 `npm run i18n:zh-Hant`，更新 31 条繁体文案（发布→發布、获取→取得）和 2 条生成的反向搜索映射。生成器本身无需修改；简英源 catalog、动作名产物、用户内容处理和运行时逻辑均未修改。
+
+在既有 `zh-hant-catalog.test.js` 产物 seam 新增一条回归，独立断言「發布給學員」「已發布給 {student}」「取得驗證碼」「重新取得」：重生成前 1 failed，之后 1 passed。原始证据：[v2.2-red.txt](evidence/spec094-zh-hant/v2.2-red.txt)、[v2.2-green.txt](evidence/spec094-zh-hant/v2.2-green.txt)。
+
+验证命令均设置 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`：
+
+- `npm test -- --runInBand src/i18n src/features/training/__tests__/exercise-picker.test.ts`：7 suites / 89 tests passed，包含产物键/复数/占位符一致性、零简体特有字、词表覆写、生成幂等性及动作搜索回归。[输出](evidence/spec094-zh-hant/v2.2-targeted.txt)
+- `node scripts/generate-zh-hant.cjs --check`、`npx tsc --noEmit`、`npm run lint` 均 exit 0；`git diff --check` 通过。繁体文案产物「釋出 / 獲取」扫描余数 0。
+- 已亲读本轮全部 diff，自审 Standards / Spec 无未决项。本轮为 T0 术语产物微调，按全局规约免强制独立互审。
+
+未 commit、未 push、未出包；未重跑全仓测试或新增模拟器截图、后端联调，不替代 Opus 跨端及视觉终验。

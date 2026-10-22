@@ -1,0 +1,47 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/zh-hant-catalog.test.js -t v2.2
+
+FAIL src/i18n/__tests__/zh-hant-catalog.test.js
+  ✕ v2.2 generated copy uses 發布 and 取得, including placeholders (4 ms)
+  ○ skipped all Traditional copy has the same keys, plural structure and placeholders as Simplified
+  ○ skipped generated Traditional artifacts contain zero Simplified-only characters
+  ○ skipped every approved glossary override wins over OpenCC with longest phrases first
+  ○ skipped committed generation is deterministic and current
+  ○ skipped v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿
+  ○ skipped v2.1 generated UI copy and exercise names use the approved bar terms
+  ○ skipped v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下
+
+  ● v2.2 generated copy uses 發布 and 取得, including placeholders
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Object {
+    -   "getCode": "取得驗證碼",
+    -   "publish": "發布給學員",
+    -   "publishedTo": "已發布給 {student}",
+    -   "resend": "重新取得",
+    +   "getCode": "獲取驗證碼",
+    +   "publish": "釋出給學員",
+    +   "publishedTo": "已釋出給 {student}",
+    +   "resend": "重新獲取",
+      }
+
+      59 |     getCode: generated['auth.getCode'],
+      60 |     resend: generated['auth.resend'],
+    > 61 |   }).toEqual({
+         |      ^
+      62 |     publish: '發布給學員',
+      63 |     publishedTo: '已發布給 {student}',
+      64 |     getCode: '取得驗證碼',
+
+      at Object.toEqual (src/i18n/__tests__/zh-hant-catalog.test.js:61:6)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 skipped, 8 total
+Snapshots:   0 total
+Time:        0.625 s, estimated 1 s
+Ran all test suites matching /src\/i18n\/__tests__\/zh-hant-catalog.test.js/i with tests matching "v2.2".

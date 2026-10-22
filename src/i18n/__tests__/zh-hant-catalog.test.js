@@ -52,6 +52,20 @@ test('committed generation is deterministic and current', () => {
   expect(() => generate(true)).not.toThrow();
 });
 
+test('v2.2 generated copy uses 發布 and 取得, including placeholders', () => {
+  expect({
+    publish: generated['coach.import.publishToStudent'],
+    publishedTo: generated['coach.import.publishedTo'],
+    getCode: generated['auth.getCode'],
+    resend: generated['auth.resend'],
+  }).toEqual({
+    publish: '發布給學員',
+    publishedTo: '已發布給 {student}',
+    getCode: '取得驗證碼',
+    resend: '重新取得',
+  });
+});
+
 test('v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿', () => {
   // Synthetic copy exercises the converter shared by UI copy and exercise names.
   expect(convert('选择EZ杆，检查杠杆式器械：{name}')).toBe('選擇EZ槓，檢查槓桿式器械：{name}');
