@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Prepare locally; upload the versioned APK and verify it before publishing latest.json.
+const { convert } = require('./generate-zh-hant.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -39,7 +40,7 @@ function prepareAndroidUpdate(options, run = execFileSync, buildTools) {
   };
   const certificateSha256 = certificate(apk);
   if (certificateSha256 !== certificate(previousApk)) throw new Error('Release signing identity changed.');
-  const manifest = { schemaVersion: 1, packageName, versionCode, versionName, releaseNotes,
+  const manifest = { schemaVersion: 1, packageName, versionCode, versionName, releaseNotes, releaseNotesZhHant: convert(releaseNotes),
     downloadUrl: `https://dl.meetpr.cn/android/releases/${versionCode}/meetpr-cn.apk` };
   fs.mkdirSync(output);
   const archive = path.join(output, 'android/releases', String(versionCode));

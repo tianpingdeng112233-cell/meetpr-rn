@@ -1,0 +1,113 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n src/features/training/__tests__/exercise-picker.test.ts
+
+PASS src/i18n/__tests__/zh-hant-catalog.test.js
+PASS src/i18n/__tests__/no-literal-zh.test.ts
+FAIL src/features/training/__tests__/exercise-picker.test.ts
+  ● every generated catalog display name can find its original canonical exercise
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   "低杠位深蹲",
+    - ]
+    + Array []
+
+      45 | test('every generated catalog display name can find its original canonical exercise', () => {
+      46 |   for (const [name, displayName] of Object.entries(translatedNames)) {
+    > 47 |     expect(filterStudentExercises([exercise({ name })], 'all', displayName).map(item => item.name)).toEqual([name]);
+         |                                                                                                     ^
+      48 |   }
+      49 | });
+      50 |
+
+      at Object.toEqual (src/features/training/__tests__/exercise-picker.test.ts:47:101)
+
+  ● v2 alias 保護槓重啟深蹲 finds 架上(PIN)深蹲 without rewriting the catalog
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "架上(PIN)深蹲",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      66 |   const item = exercise({ name });
+      67 |   const before = { ...item };
+    > 68 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      69 |   expect(item).toEqual(before);
+      70 | });
+      71 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:68:56)
+
+  ● v2 alias 保護槓重啟槓鈴深蹲 finds 架上(PIN)深蹲 without rewriting the catalog
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "架上(PIN)深蹲",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      66 |   const item = exercise({ name });
+      67 |   const before = { ...item };
+    > 68 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      69 |   expect(item).toEqual(before);
+      70 | });
+      71 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:68:56)
+
+PASS src/i18n/__tests__/no-i18n-todo.test.ts
+PASS src/i18n/__tests__/t.test.ts
+PASS src/i18n/__tests__/match.test.ts
+PASS src/i18n/__tests__/usage-notice.test.ts
+
+Test Suites: 1 failed, 6 passed, 7 total
+Tests:       3 failed, 85 passed, 88 total
+Snapshots:   0 total
+Time:        2.203 s, estimated 16 s
+Ran all test suites matching /src\/i18n|src\/features\/training\/__tests__\/exercise-picker.test.ts/i.

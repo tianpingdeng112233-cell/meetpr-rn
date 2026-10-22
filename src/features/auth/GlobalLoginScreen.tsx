@@ -38,7 +38,7 @@ export default function GlobalLoginScreen() {
   };
   return <AuthForm brand title={t(BUILD_TRACK === 'china' ? 'auth.chinaSlogan' : 'auth.globalSlogan')}>
     <EmailField value={email} onChangeText={setEmail} editable={!busy} />
-    <GlobalAuthField label={t('auth.password')} placeholder={getLocale() === 'zh' ? t('auth.loginPasswordPlaceholder') : undefined} error={password.length > 0 && !isValidPassword(password) ? t('auth.invalidPassword') : undefined}
+    <GlobalAuthField label={t('auth.password')} placeholder={getLocale() !== 'en' ? t('auth.loginPasswordPlaceholder') : undefined} error={password.length > 0 && !isValidPassword(password) ? t('auth.invalidPassword') : undefined}
       secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="current-password" value={password} onChangeText={setPassword} editable={!busy} />
     <AuthNotice success={passwordResetNotice} message={passwordResetNotice ? t('auth.passwordUpdated') : message} />
     <GlobalAuthButton label={t('auth.signIn')} loading={busy} disabled={!isValidEmail(email) || !isValidPassword(password)} onPress={() => void run(() => useSessionStore.getState().loginWithEmail({ email, password }))} />

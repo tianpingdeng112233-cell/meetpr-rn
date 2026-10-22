@@ -308,8 +308,8 @@ test('CN existing account failure provides a sign-in link', async () => {
   expect(router.replace).toHaveBeenCalledWith('/login');
 });
 
-test('CN Chinese screens use localized copy and light system typography while keeping the slogan', async () => {
-  china(); setLocaleOverride('zh');
+test.each(['zh', 'zh-Hant'] as const)('CN %s screens use localized copy and light system typography while keeping the slogan', async locale => {
+  china(); setLocaleOverride(locale);
   act(() => { renderer = create(<GlobalLoginScreen />); });
   expect(copy()).toContain('Meet Your PR Here.');
   expect(input(t('auth.email'))).toBeDefined();

@@ -1,0 +1,17 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n src/features/training/__tests__/exercise-picker.test.ts
+
+PASS src/features/training/__tests__/exercise-picker.test.ts
+PASS src/i18n/__tests__/no-literal-zh.test.ts
+PASS src/i18n/__tests__/zh-hant-catalog.test.js
+PASS src/i18n/__tests__/no-i18n-todo.test.ts
+PASS src/i18n/__tests__/usage-notice.test.ts
+PASS src/i18n/__tests__/t.test.ts
+PASS src/i18n/__tests__/match.test.ts
+
+Test Suites: 7 passed, 7 total
+Tests:       88 passed, 88 total
+Snapshots:   0 total
+Time:        0.974 s, estimated 2 s
+Ran all test suites matching /src\/i18n|src\/features\/training\/__tests__\/exercise-picker.test.ts/i.

@@ -3,6 +3,7 @@ import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { setLocaleOverride, type Locale } from '@/i18n';
 import { getAccessToken } from '@/api/token-store';
 
 import {
@@ -113,6 +114,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  setLocaleOverride(null);
   resetAnalyticsForTests();
   jest.useRealTimers();
   jest.restoreAllMocks();
@@ -652,4 +654,22 @@ test('30-minute background boundary resets session and seq, while shorter gaps p
     ['11111111-1111-4111-8111-111111111111', 1],
     ['22222222-2222-4222-8222-222222222222', 0],
   ]);
+});
+
+test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('analytics config and events report the interface locale without overriding platform language (%s)', async (locale, expected) => {
+  setLocaleOverride(locale);
+  const queue = new AnalyticsQueue();
+  await queue.enqueue(event(0));
+  const fetchImplementation = jest.fn<typeof fetch>()
+    .mockResolvedValueOnce(response(200, { enabled: true, sample_rate: 1 }))
+    .mockResolvedValueOnce(response(204));
+  const flusher = makeFlusher(queue, fetchImplementation);
+  await flusher.fetchConfig();
+  await flusher.flush();
+  expect(fetchImplementation).toHaveBeenCalledTimes(2);
+  for (const [, options] of fetchImplementation.mock.calls) {
+    const headers = options?.headers as Record<string, string>;
+    expect(headers['X-MeetPR-Locale']).toBe(expected);
+    expect(Object.keys(headers).map(key => key.toLowerCase())).not.toContain('accept-language');
+  }
 });

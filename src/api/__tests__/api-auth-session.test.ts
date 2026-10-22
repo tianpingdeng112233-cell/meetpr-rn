@@ -9,6 +9,7 @@ import {
   registerRequest,
   UserSchema,
 } from '../auth';
+import { setLocaleOverride, type Locale } from '@/i18n';
 import { ApiError, apiRequest } from '../client';
 import {
   authenticatedRequest,
@@ -91,6 +92,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.clearAllMocks();
+  setLocaleOverride(null);
 });
 
 describe('API error classification', () => {
@@ -192,6 +194,7 @@ describe('auth wire format', () => {
     });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -221,6 +224,7 @@ describe('auth wire format', () => {
     });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -241,6 +245,7 @@ describe('auth wire format', () => {
     expect(requestBody(init)).toEqual({ refresh_token: 'refresh-old' });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -258,6 +263,7 @@ describe('auth wire format', () => {
     expect(requestBody(init)).toEqual({ snake_case: true });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
       authorization: 'Bearer access-token',
     });
@@ -626,4 +632,15 @@ describe('credential mutation races', () => {
 
 test('ApiError remains identifiable across callers', () => {
   expect(new ApiError('network', 'offline')).toBeInstanceOf(ApiError);
+});
+
+test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('every API request reports a single interface language (%s)', async (locale, expected) => {
+  setLocaleOverride(locale);
+  jest.mocked(fetch).mockResolvedValue(mockResponse(200, {}));
+  await apiRequest('/auth/signup-code', { method: 'POST', body: { email: 'locale@example.test' } });
+  await apiRequest('/me', { accessToken: 'test-token' });
+  for (const [, options] of jest.mocked(fetch).mock.calls) {
+    expect(requestHeaders(options)['X-MeetPR-Locale']).toBe(expected);
+    expect(Object.keys(requestHeaders(options)).map(key => key.toLowerCase())).not.toContain('accept-language');
+  }
 });

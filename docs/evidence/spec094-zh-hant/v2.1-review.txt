@@ -1,0 +1,18 @@
+v2.1 local review-loop — 2026-10-22
+Scope: v2.1-changes.patch against pre-task /tmp/094-v2.1-baseline snapshots.
+No prior WIP changes included in this review. Reviewers were independent and read-only.
+
+Standards: 0 findings.
+Generation uses existing public seams and development-only OpenCC. Source catalogs,
+persistence and custom content unchanged. No material code smell identified.
+Reviewer checked normalization consistency of all 46 affected exercise names.
+
+Spec: 0 findings.
+AMEND-v2 section v2.1 applies 杠杆 before 杆, updates UI and exercise artifacts,
+and retains search compatibility. No translated-name collisions found.
+Generation --check, red/green evidence and 27 suites / 354 tests inspected.
+Root .094-*.log remaining: 0.
+
+Main agent final validation: npx tsc --noEmit, npm run lint, generation --check exit 0.
+JOURNAL v2.1 appended. No commit/push; no native visual or backend acceptance claim.
+Missing tracker setup remains; local review-loop path used, not tracker workflow.

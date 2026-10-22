@@ -22,7 +22,7 @@ test('release preparation derives metadata from the APK and bundles the immutabl
   const { options, run } = fixture();
   prepareAndroidUpdate(options, run, '/sdk/build-tools/36.0.0');
   const manifest = JSON.parse(fs.readFileSync(path.join(options.output, 'android/latest.json'), 'utf8'));
-  expect(manifest).toEqual({ schemaVersion: 1, packageName: 'com.meetpr.app', versionCode: 2, versionName: '0.1.0', releaseNotes: '新增版本更新提醒', downloadUrl: 'https://dl.meetpr.cn/android/releases/2/meetpr-cn.apk' });
+  expect(manifest).toEqual({ schemaVersion: 1, packageName: 'com.meetpr.app', versionCode: 2, versionName: '0.1.0', releaseNotes: '新增版本更新提醒', releaseNotesZhHant: '新增版本更新提醒', downloadUrl: 'https://dl.meetpr.cn/android/releases/2/meetpr-cn.apk' });
   expect(fs.readFileSync(path.join(options.output, 'android/releases/2/meetpr-cn.apk'), 'utf8')).toBe('new-apk');
   expect(fs.readFileSync(path.join(options.output, 'android/meetpr-cn.apk'), 'utf8')).toBe('new-apk');
 });

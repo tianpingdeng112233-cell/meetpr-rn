@@ -1,0 +1,10 @@
+2026-10-22 · Local independent review-loop against ccc42b5
+
+Standards initial: 0 documented-standard violations; 1 actionable defect: Taiwan phrase 觸控 did not match canonical 触摸. Fixed with generated reverse Taiwan phrase mappings; named regression red→green; all 1261 catalog translations now match their canonical name and reverse lookup has zero collisions.
+Standards final targeted review: 0 unresolved violations / substantive smells. Local displayExerciseName does not enter API requests; body/setRef and retry identity remain canonical, user notes are retained.
+
+Spec initial: 1 defect: Traditional exerciseDisplayName flowed into SetRef canonical body/set_ref. Fixed by separating candidate displayExerciseName from canonical source.exerciseName. Real picker→stage tests for Simplified and Traditional backend names red→green.
+Spec first re-review: 1 remaining defect: failed pending share/composer preview lost the local display name. Fixed by propagating displayExerciseName through local staging and translating only the generated preview line. Real picker→send failure→retry regression red→green.
+Spec final targeted review: both findings closed, no new definite code defects. Historical sent snapshots remain frozen; server response fields without source identity depend on backend 052. Native screen/language regression acceptance remains unverified.
+
+Reviewers were independent read-only Codex sub-agents, no file edits. Two repair/re-review rounds. This is developer self-review, not Opus product acceptance.

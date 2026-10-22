@@ -3,7 +3,7 @@ import { Alert, AppState, Linking, Platform } from 'react-native';
 import * as Application from 'expo-application';
 import { t } from '@/i18n';
 import { BUILD_TRACK } from '@/config/build-track';
-import { checkForAndroidUpdate, type AndroidRelease } from './android-update';
+import { androidReleaseNotes, checkForAndroidUpdate, type AndroidRelease } from './android-update';
 
 function offerUpdate(release: AndroidRelease) {
   const download = () => {
@@ -15,7 +15,7 @@ function offerUpdate(release: AndroidRelease) {
     });
   };
   Alert.alert(t('androidUpdate.title', [release.versionName]),
-    `${release.releaseNotes}\n\n${t('androidUpdate.installHint')}`, [
+    [androidReleaseNotes(release), t('androidUpdate.installHint')].filter(Boolean).join('\n\n'), [
       { text: t('androidUpdate.later'), style: 'cancel' },
       { text: t('androidUpdate.download'), onPress: download },
     ], { cancelable: true });

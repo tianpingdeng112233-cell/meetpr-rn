@@ -4783,3 +4783,167 @@ Opus 原生收货命令与校验方法见 `docs/evidence/invite-share/README.md`
 - `git diff --check` 通过。主代理核对 Standards/Spec：改动限定为批准文案、整句 fallback、对应测试及本条 JOURNAL，无无关重构。
 
 未 commit/push；保留开工前已有的 3 个未跟踪原生验证日志。本轮未运行全量 Jest、原生构建或模拟器验证，不将上述开发自测写作原生验收。
+## 2026-10-22 · 094-Android 繁体中文实装（Claude 派卡）
+
+入口：在指定可写根试写 `.codex-write-check-094` 成功后删除；读取 CONTEXT、AGENTS、CLAUDE（仅引用 AGENTS）、094 CARD/SPEC/GLOSSARY、PLAN、工程流程与 tdd。FOLLOWUPS.md 不存在。现场分支 `feat/094-zh-hant`，基线 `ccc42b5`，初始工作区干净；依赖已安装，新增仅开发依赖 `opencc-js@1.0.5`。遵守仓内 ESLint/TypeScript/Jest 配置，未改配置、超时值、版本或界面结构。Expo SDK 57 版本文档已读。
+
+### 改动与实现边界
+
+- 系统 `zh-Hant*`、zh-TW/HK/MO，以及中文的 Hant script / TW/HK/MO region 元数据选择 `zh-Hant`；其他中文保持 zh，其他语言保持 en。繁体→简体→key 回退，参数文本不转换。
+- `npm run i18n:zh-Hant` 使用 OpenCC s2twp（cn→twp）和批准的 Markdown 术语表，最长词先标记、转换后还原覆写。2393 条文案独立生成入仓，原 `src/i18n/catalog/*.json` 简英内容零改动；保留复数结构、所有占位符、品牌名，邮箱标签「電子郵件」、句中「信箱」。运行时只读 JSON，不导入 OpenCC。
+- 1261 个系统动作名称对照表，明确 `created_by_coach_id === null` 才按系统名称表展示；自建/未知来源名称原样。动作选择器及历史动作筛选支持双字形与台湾词组（含「肩部觸控」）；未改存储对象。本仓无自由文本速记解析器，QuickLog 是结构化输入，未添加新解析功能。
+- API、analytics config/event、WebSocket 握手、更新检查显式发送单值 `Accept-Language: zh-Hans|zh-Hant|en`。注册/找回邮件经原 API seam 继承头；邮件/远端推送与缺少来源标识的视频嵌入名称，由后端 052 卡履约，本仓不转换无法辨别的自写内容。
+- 既有通知渠道、休息/训练提醒、错误与更新 UI 的 t() 文案自动取繁体；日期 short weekday 实测单测「週日」，中文排版与分隔符分支包含 zh-Hant。
+- 远端更新说明原 manifest 仅有 releaseNotes：既有开发期发布准备脚本现在同时生成可选 releaseNotesZhHant，旧客户端兼容。已公开 build 2 文案加入生成的旧格式 fallback；其他未知旧 manifest 的繁体界面只显示已有安装提示/下载按钮，不显示未翻译说明。简英仍显示原 releaseNotes。未执行出包或发布脚本的真实 APK 路径。
+- 训练分享 candidate/staging 单独携带本地 displayExerciseName；发送 body/set_ref 仍为 canonical 名，重试 payload 不变。繁体发送失败气泡与 composer 使用本地显示名，用户备注原样。已发送 ChatSetRefV1 是冻结聊天快照，保留原文，不按名称猜测系统/自建来源；此边界须在 Opus 跨端收货时明确核对。
+
+数据来源：`scripts/i18n/exercise-names-zh.json` 为 iOS `c3d27ccbe585522474a9b7c5ee16ebc6dd98229a` 的 `Modules/CoachKit/Sources/CoachKit/Resources/exercise-catalog-v2.json` + backend `1e494dbd46952ffcb6a07577a12133efaed7e917` 的 exercises migrations 中系统名称快照，并含三主项简称。以后增补简体源再重跑；不依赖兄弟仓运行时路径。旧更新说明来源为 2026-10-22 只读获取 `https://dl.meetpr.cn/android/latest.json` 的 build 2 文案。
+
+共享字集：`scripts/i18n/simplified-only.txt`，3800 字；从固定 OpenCC 字典取简体源字，排除合法繁体词组/台湾变体目标字（避免把皇后/公里等误判）。SHA-256 `d56ee6e9f456e92519e21498acad5e1c8c9f3a7e75bf9157d4c88e105be5f2b2`。本卡只写当前 worktree；四仓文件逐字统一交 Opus 分发核对，未宣称其他仓已同步。
+
+### 测试与审查证据
+
+所有 npm 命令前设 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`；全量复跑的 TMPDIR 为本 worktree `node_modules/.cache/tmp`。脚本与原始红绿片段见 [spec094 证据](evidence/spec094-zh-hant/)。
+
+- `npm test -- --runInBand src/i18n/__tests__/t.test.ts`：首轮 9 failed / 11 passed → 20 passed；后补缺繁体回退与用户参数保持原文。
+- `npm test -- --runInBand src/features/training/__tests__/exercise-picker.test.ts`：8 failed / 24 passed → green；后补台湾词组回归与 1261 个生成动作名全表匹配。
+- `npm test -- --runInBand src/api/__tests__/api-auth-session.test.ts`：新增语言头 3 failed / 38 passed；实现后按新契约补原有 exact-header 预期，定向检查全绿。
+- auth / update UI / release-preparation 三 suites：3 failed / 44 passed → green。通知、日期、catalog、API 等合并定向 13 suites / 142 tests 通过。
+- 产物扫描验证所有 key/复数结构/占位符一致、简体特有字零命中、每个 glossary 覆写与复合词、品牌/引号、生成幂等。该测试首跑是路径错误，修正后通过；不将导入错误当作行为红测试证据。lint 首跑发现新 JS 测试 __dirname 未声明，改用 require.resolve 定位根目录后通过，未改变 lint 配置。
+- 第一轮独立审查捕获台湾词组搜索与 SetRef 落库问题，新增真实路径回归 3 failed / 39 passed → 4 suites / 55 tests 通过；追加动作全表检查后 2 suites / 43 tests 通过。
+- 第二轮定向复审捕获分享失败待发预览遗漏：单条新回归先红（显示 `[训练计划] 卧推`）→ 整个 chat 定向 3 suites / 52 tests 通过，覆盖 picker→发送失败→重试。
+- 初轮全量 3 suites / 65 tests failed：三个首用例超时造成 act/renderer 连锁失败；保留失败记录，未改业务或超时配置。相同三个 suites 单独复跑 103 tests 全过；随后全量 184 suites / 1789 tests 全过。此事实只说明未稳定复现超时，不断言已找到或修复其根因；最后预览修复后的一轮 182 suites / 1787 tests 通过、2 suites / 3 tests 超时；现场读取 10 逻辑核、load average 约 253，失败项为 completion-entry 与 profile/editor 的 5000ms 超时。未修改这些测试或配置，再次串行全量确认（结果见下）。
+- 最终 typecheck 曾指出新更新说明测试的 fixture literal 被拓宽成 number/string；仅给 fixture 加 `as const` 收窄，未改 tsconfig。
+- 本地 review-loop 两位只读 reviewer 独立报告：Standards 与 Spec 最终各 0 未决代码 findings；两轮定向返修，记录见 [review.txt](evidence/spec094-zh-hant/review.txt)。缺 docs/agents/issue-tracker.md，已提示配置需 `$setup-matt-pocock-skills`，使用本地卡片审查，未冒称 tracker 流程或 Opus 功能终验。
+
+### 偏离、未验与交接
+
+AVD `emulator-5554` 初期 shell/console 5–8 秒超时、package service 尚不可用；定向 reconnect 后能读到 boot_completed=1 和已装 com.meetpr.app，但 dumpsys package 又超时，无法确认可加载本次 JS 的 native debug 环境。没有出包、替换安装或改用户数据，没有取得本次原生截图。SPEC 的逐屏繁体与简英 5/2 屏截图、带历史老用户升级首屏、真实后端 052 推送/邮件/出参联调，留 Opus 按原验收清单收货；单测绿不代表这些通过。未改 PARITY/发布正典，未 push、开 PR、出包或改版本。
+
+### v2 返修（2026-10-22）
+
+接续上一轮模型容量错误中断的工作区。指定根目录临时文件试写成功并删除；重读 AGENTS/CLAUDE、CONTEXT、094 SPEC/CARD/AMEND-v2/GLOSSARY、JOURNAL 末段、工程流程及记忆索引，核对 worktree/status/log 与 staged/unstaged diff。保留全部原有改动；基线仍为 `feat/094-zh-hant @ ccc42b5`。未 commit、未 push，未改版本、出包或改正典 spec/glossary；先前的 `android-update.test.ts` fixture `as const` 修正保持原样。
+
+改动：生成脚本只把文案表用于展示覆写，把 v2 别名表独立生成搜索 JSON；计划及复合词使用「課表」，反馈使用「反饋」，「发布计划」按 glossary 明示示例生成「發布課表」。reps 仅使用 `scripts/i18n/reps-keys.json` 的 57 个显式 key 改成「下數／下」；训练频次、上次数值、第 N 次及次日不改。源简英 catalog 不变，生成产物保持 key、复数结构及占位符，简体特有字扫描零命中。
+
+17 个动作别名先按与搜索一致的繁→简口径生成（包括 OpenCC 的「抬／擡」等价规范），运行时只读 JSON。动作选择器和历史筛选共用 `matchesExerciseSearch`：保留原名子串匹配，再追加 canonical 匹配；名称末尾数字括号规格支持半角/全角混用，如「（2cm)」，保留 `(PIN)` 等命名变式。显示/存储原文不变；模糊的 Cable 三头及上斜窄握写法不强配。所有新增动作 fixture 为合成行，无真实教练课表。本仓没有自由文本速记解析器，AMEND-v2 第 3 条不适用，未添加速记或 Excel 导入。
+
+测试与证据（所有 npm 命令前 `export PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`）：
+
+- catalog v2 现有红测试：2 failed / 3 passed；首次生成后发现 OpenCC 把「发布」转换为「釋出」，按 glossary 示例修正后 5 passed。
+- 别名 seam：19 failed / 35 passed → 2 suites / 59 tests passed；中间两条后脚抬高别名因「抬／擡」规范不一致失败，修复后全绿。
+- 初次定向：18 suites / 276 tests passed。
+- **本轮唯一一次全量** `npm test -- --runInBand`：exit 0，184 suites / 1811 tests passed，130.832 秒，无超时；原始日志 `/tmp/094-v2-full.log`。此运行在下面的原名子串修复之前，未把它声称为最终文件状态的全量结果，未再跑第二次全量。
+- 独立 Spec 审查发现原名子串搜索退化：新增真实 picker seam 回归先红 1 failed / 54 passed；修复后最终定向（原 18 suites + history 全目录）**27 suites / 352 tests passed**，24.904 秒。精确命令及 suite 结果见 [v2-validation.txt](evidence/spec094-zh-hant/v2-validation.txt)，原始日志 `/tmp/094-v2-targeted-final.log`。
+- 最终 `npx tsc --noEmit`、`npm run lint` 均 exit 0；`node scripts/generate-zh-hant.cjs --check` 与 `git diff --check` 通过。未修改任何测试超时或测试配置；没有为超时放宽测试。
+- 按 tdd 公开 seam 完成返修，review-loop 两位独立只读 reviewer 分轴审查：Standards 初审/复审 0 findings；Spec 初审 1 个 P2，定向修复后 0 未决。主代理亲读最终增量。详见 [v2-review.txt](evidence/spec094-zh-hant/v2-review.txt)；未冒称 tracker 流程或 Opus 功能终验。
+
+边界：本轮未新增原生截图、逐屏视觉验收或后端邮件/推送联调证据，上一节未验项继续保留。按批准词表机械生成的「課表表」「有比賽課表」未擅增例外，交 Opus 后续审阅词表；这不属于本轮实现偏离。
+
+本轮 reps 覆写实际命中的全部 57 个 key（均在当前源 catalog 存在）：
+
+```text
+chat.load
+chat.attachmentReps
+coach.planning.common.reps
+coach.planning.count.rep %lld
+coach.planning.count.repPlural %lld
+coach.planning.count.setsAndReps %lld %@ %lld
+coach.planning.editor.addRepMaximum
+coach.planning.editor.removeRepMaximum
+coach.planning.editor.repMaximum
+coach.planning.progression.repDecrease
+coach.planning.progression.repIncrease
+coach.planning.step4.setRepIntensity %lld %@ %@
+coach.planning.step4.setRepsIntensity %lld %@ %@
+coach.planning.step4.setsRepIntensity %lld %@ %@
+coach.planning.step4.setsRepsIntensity %lld %@ %@
+coach.planning.validation.incompleteWeekOneSetSpecs
+coach.planning.validation.invalidWeekOneSetSpec
+coach.videoFeedback.reps
+coach.videoFeedback.repsValue %lld
+designSystem.numberPad.enterReps
+designSystem.preview.timesUnit
+designSystem.reps
+designSystem.repsUnit
+designSystem.setRow.metrics %@ %@ %@
+student.accessory.repsLabel
+student.quickLog22.reps
+student.quickLog22.invalid
+student.quickLog22.field.reps
+student.exportDataSheet.copy005
+student.feedbackVideoPresentation.copy002
+student.feedbackVideoPresentation.copy002.one
+student.feedbackVideoPresentation.copy003
+student.feedbackVideoPresentation.copy003.one
+student.growthCurveView.copy010
+student.sessionSummaryView.copy008
+student.setEntryRpe.copy001
+student.setEntryRpe.copy002
+student.setEntryRpe.copy003
+student.setEntryRpe.copy004
+student.setEntryRpe.copy005
+student.setEntryRpe.copy006
+student.setEntryRpe.copy007
+student.setEntryRpe.copy008
+student.setEntryRpe.copy009
+student.setEntryRpe.copy010
+student.setEntrySheet.copy003
+student.setEntrySheet.copy004
+student.step3StrengthSection.copy008
+student.step3StrengthSection.copy009
+student.step3StrengthSection.copy010
+student.step3StrengthSection.copy014
+student.todayWorkoutScreen.copy012
+student.todayWorkoutTypes.copy003
+student.todayWorkoutTypes.copy004
+student.workoutCompletionPresentation.copy003
+student.workoutCompletionPresentation.copy003.one
+student.e1rmSourceRTS
+```
+
+### v2.1（2026-10-22）
+
+在指定 worktree 先用临时文件确认可写后删除；保留上一轮所有 WIP，只执行 AMEND-v2 的 v2.1。生成器剥离术语源列末尾的括号说明，沿用最长词优先与占位保护：先匹配「杠杆→槓桿」，再匹配「杆→槓」。界面文案和动作名共用此转换；`npm run i18n:zh-Hant` 已重跑，更新 10 条界面文案、46 个系统动作名。示例产物为「硬舉專項槓(軟槓)」「EZ槓二頭彎舉」「坐姿槓桿臂屈伸」。简英源 catalog、自建内容和存储规则不变。
+
+新增两条生成 seam 测试均先红后绿，覆盖合成文案、两类动作名、复合词与占位符，以及界面/动作 JSON 实际产物。重生成首次触发现有动作全表搜索和两个 v2 别名测试失败：反向词表把「槓」映射到「杆」，与 canonical「杠」不一致。已仅在生成的搜索索引统一这组字形（包括复合词目标），修复后原有 1261 个动作名全表匹配与别名测试均通过，未改展示或落库名称。
+
+验证（命令均设 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`）：
+
+- 转换回归：1 failed → 1 passed；产物回归：1 failed → passed；原始红绿及搜索失败证据见 [v2.1-red.txt](evidence/spec094-zh-hant/v2.1-red.txt)、[v2.1-green.txt](evidence/spec094-zh-hant/v2.1-green.txt)、[v2.1-artifacts-red.txt](evidence/spec094-zh-hant/v2.1-artifacts-red.txt)、[v2.1-search-red.txt](evidence/spec094-zh-hant/v2.1-search-red.txt)。
+- `npm test -- --runInBand src/i18n src/features/training/__tests__/exercise-picker.test.ts`：7 suites / 88 tests 全绿；沿用 v2 最终定向范围（含 history 全目录）共 27 suites / 354 tests 全绿，11.51 秒。命令和结果见 [v2.1-validation.txt](evidence/spec094-zh-hant/v2.1-validation.txt)。Jest 输出 React act 与 Expo Go push 警告，未改测试配置或超时。本轮未重跑全仓测试。
+- `npx tsc --noEmit`、`npm run lint`、`node scripts/generate-zh-hant.cjs --check` 均 exit 0。本轮代码/产物/JOURNAL 路径的 `git diff --check` 通过；全工作区检查仍报告旧证据 surfaces-red.txt、targeted.txt、v2-changes.patch 的空白，未修改前轮证据。
+- 已删除仓根全部 24 个 `.094-*.log`，复核余数 0；`docs/evidence` 既有证据保留。本轮增量见 [v2.1-changes.patch](evidence/spec094-zh-hant/v2.1-changes.patch)。
+
+未 commit、未 push、未改 spec/glossary 或发布正典。未新增原生截图或后端联调，上一轮视觉验收边界保留。
+
+本轮按 review-loop 的改前快照做独立只读双轴审查：Standards 0 findings；Spec 0 findings。确认无新增动作繁体重名碰撞，46 个受影响动作的简繁搜索归一一致。记录见 [v2.1-review.txt](evidence/spec094-zh-hant/v2.1-review.txt)。缺 tracker 配置，使用本地审查路径，未声称 Opus 功能终验。
+
+
+### 语言头返修（2026-10-22）
+
+按更新后的 SPEC「共享契约」及 AMEND-header 客户端要求，在既有未提交改动上完成。开工先创建并删除临时文件确认可写；未 commit/push，未修改 spec、glossary 或发布正典。
+
+- API（含未登录 auth）、WebSocket 握手、更新检查、analytics config/events 共 5 处显式语言头全部改为 `X-MeetPR-Locale`，不再手动设置 `Accept-Language`，恢复平台默认行为。
+- `getAcceptLanguage` 改名为 `getLocaleHeader`，调用点同步；语言值保持 `zh-Hans | zh-Hant | en`，原有界面语言判定不变。
+- 复用现有公开网络 seam 逐处先红后绿。API：7 failed / 34 passed → 41 passed；WebSocket：5 failed / 3 passed → 8 passed；更新检查：3 failed / 23 passed → 26 passed；analytics：3 failed / 24 passed → 27 passed。测试覆盖三种语言，使用负断言或精确 headers 断言保证不再显式发送旧头。原始证据：[header-red-green.txt](evidence/spec094-zh-hant/header-red-green.txt)。
+- 最终定向测试（API/auth、WebSocket、analytics、更新检查/session、i18n）**6 suites / 129 tests passed**；`npx tsc --noEmit`、`npm run lint` 均 exit 0。命令均设置 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`。代码与 JOURNAL 定向 `git diff --check` 通过；生产代码旧头赋值与旧 helper 扫描余数 0。未重跑全仓测试。精确命令和输出：[header-validation.txt](evidence/spec094-zh-hant/header-validation.txt)。
+- review-loop 本地独立只读双轴审查一轮：Standards 0 findings；Spec 0 findings，无未决项。缺 tracker 配置，已告知需 `$setup-matt-pocock-skills`，未声称运行 tracker 流程或 Opus 终验。[审查记录](evidence/spec094-zh-hant/header-review.txt)；[本轮精确增量](evidence/spec094-zh-hant/header-changes.patch)。
+
+本轮仅客户端语言头及测试返修，未新增原生截图或后端联调；此前跨端/视觉验收边界继续保留。
+
+### v2.2（2026-10-22）
+
+指定可写根临时文件试写、删除成功；现场基线为 Opus 提交 `89b9cff`（`feat/094-zh-hant`）。开工已有 GLOSSARY 的两条修改及未跟踪 AMEND-v22，均原样保留。已读仓内规约、CONTEXT、JOURNAL 末段、094 SPEC/CARD/AMEND-v22/GLOSSARY、工程流程与 tdd，并查阅 Expo SDK 57 版本文档。本轮只执行安卓 v2.2；网页 document.title 条款不适用。
+
+沿用现有生成器读取术语表的机制，执行 `npm run i18n:zh-Hant`，更新 31 条繁体文案（发布→發布、获取→取得）和 2 条生成的反向搜索映射。生成器本身无需修改；简英源 catalog、动作名产物、用户内容处理和运行时逻辑均未修改。
+
+在既有 `zh-hant-catalog.test.js` 产物 seam 新增一条回归，独立断言「發布給學員」「已發布給 {student}」「取得驗證碼」「重新取得」：重生成前 1 failed，之后 1 passed。原始证据：[v2.2-red.txt](evidence/spec094-zh-hant/v2.2-red.txt)、[v2.2-green.txt](evidence/spec094-zh-hant/v2.2-green.txt)。
+
+验证命令均设置 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`：
+
+- `npm test -- --runInBand src/i18n src/features/training/__tests__/exercise-picker.test.ts`：7 suites / 89 tests passed，包含产物键/复数/占位符一致性、零简体特有字、词表覆写、生成幂等性及动作搜索回归。[输出](evidence/spec094-zh-hant/v2.2-targeted.txt)
+- `node scripts/generate-zh-hant.cjs --check`、`npx tsc --noEmit`、`npm run lint` 均 exit 0；`git diff --check` 通过。繁体文案产物「釋出 / 獲取」扫描余数 0。
+- 已亲读本轮全部 diff，自审 Standards / Spec 无未决项。本轮为 T0 术语产物微调，按全局规约免强制独立互审。
+
+未 commit、未 push、未出包；未重跑全仓测试或新增模拟器截图、后端联调，不替代 Opus 跨端及视觉终验。

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
-import { getLocale, t } from '@/i18n';
+import { getLocale, matchesExerciseSearch, t } from '@/i18n';
 import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
 import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
 import type { SetLog } from '@/api/domains';
@@ -47,7 +47,7 @@ export function HistoryEntriesView({
       ),
     ];
   }, [weeks]);
-  const filteredChoices = choices.filter(choice => !query.trim() || (choice.id !== null && choice.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
+  const filteredChoices = choices.filter(choice => !query.trim() || (choice.id !== null && matchesExerciseSearch(choice.name, query)));
   const selection = choices.find((choice) => choice.id === exerciseId) ?? choices[0];
 
   const content = <Screen edges={['top', 'left', 'right']}>

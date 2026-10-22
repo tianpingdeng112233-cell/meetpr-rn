@@ -7,9 +7,10 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-test.each<['en' | 'zh', string]>([
+test.each<['en' | 'zh' | 'zh-Hant', string]>([
   ['en', 'Rest between sets'],
   ['zh', '组间休息'],
+  ['zh-Hant', '組間休息'],
 ])('passes a static localized title without a countdown template (%s)', (locale, title) => {
   const native = { show: jest.fn<(endAt: number, body: string, labels: Record<string, string>) => void>() };
   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(native);

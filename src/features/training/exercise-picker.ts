@@ -1,3 +1,4 @@
+import { matchesExerciseSearch } from '@/i18n';
 import type { Exercise } from '@/api/domains/exercises';
 
 export const studentExerciseTagRows = [
@@ -20,7 +21,6 @@ export function exerciseTags(exercise: Pick<Exercise, 'exercise_type' | 'main_li
   return [...tags];
 }
 export function filterStudentExercises(exercises: readonly Exercise[], tag: StudentExerciseTag, search: string): Exercise[] {
-  const query = search.trim().toLocaleLowerCase();
   return exercises.filter(exercise => exerciseTags(exercise).includes(tag) &&
-    `${exercise.name} ${exercise.name_en ?? ''}`.toLocaleLowerCase().includes(query));
+    [exercise.name, exercise.name_en ?? ''].some(name => matchesExerciseSearch(name, search)));
 }

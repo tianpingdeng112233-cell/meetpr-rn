@@ -1,0 +1,14 @@
+v2 local review-loop — 2026-10-22
+
+Scope: index-relative v2 changes in scripts/generate-zh-hant.cjs, scripts/i18n/reps-keys.json, src/i18n/index.ts, generated zh-Hant/search/alias JSON, catalog tests, exercise-picker and its tests; final repair additionally covers HistoryEntriesView.tsx. This does not re-review the preceding staged implementation.
+Sources: AGENTS.md, CLAUDE.md, CONTEXT.md, specs/094-zh-hant/AMEND-v2.md and GLOSSARY-zh-Hant.md. No tracker workflow was claimed; docs/agents/issue-tracker.md is absent.
+
+Standards — independent read-only reviewer v2_standards:
+Initial: 0 hard-rule violations, 0 material smells. Final incremental review: 0 findings. Original-name and alias matching share one public seam; picker/history do not duplicate rules; synthetic fixtures preserve source text.
+
+Spec — independent read-only reviewer v2_spec:
+Initial: 1 P2. Replacing candidate names with canonical aliases removed original-name substring matches (custom 不碰胸暫停臥推 queried with 暫停). Regression first failed 1 test / passed 54. Fixed with matchesExerciseSearch: match normalized original text first, then additionally match normalized canonical aliases; both picker and history use it. Final review: original P2 resolved, 0 new findings.
+57 reps keys and 17 input aliases checked. Android has no shorthand parser; amendment item 3 is inapplicable.
+Generated 課表表 and 有比賽課表 follow the approved glossary literally; no unauthorized exceptions added. Opus may review the glossary later.
+
+Verification: final targeted 27 suites / 352 tests passed. The single full run passed 184 suites / 1811 tests before the final search repair; no second full run. Final typecheck and lint pass. Native visual and cross-end acceptance remain unverified.
