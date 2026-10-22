@@ -72,3 +72,13 @@ test('a download-open failure gives a retry without an unhandled rejection', asy
   await act(async () => { alert.mock.calls[1][2]![1].onPress!(); });
   expect(Linking.openURL).toHaveBeenCalledTimes(2);
 });
+
+test('Traditional update prompts use generated release notes and Taiwan UI copy', async () => {
+  setLocaleOverride('zh-Hant');
+  global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response({ ...release, releaseNotesZhHant: '改善教練邀請流程' }));
+  await act(async () => { tree = create(<AndroidUpdateSession enabled />); });
+  expect(alert.mock.calls[0][0]).toBe('發現新版本 0.1.1');
+  expect(alert.mock.calls[0][1]).toContain('改善教練邀請流程');
+  expect(alert.mock.calls[0][1]).not.toContain('改进教练邀请流程');
+  expect(alert.mock.calls[0][2]).toContainEqual(expect.objectContaining({ text: '下載更新' }));
+});

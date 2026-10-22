@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { getLocaleHeader } from '@/i18n';
 import { DEFAULT_API_BASE_URL } from '@/config/build-track';
 
 export { DEFAULT_API_BASE_URL } from '@/config/build-track';
@@ -140,6 +141,7 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   const headers: Record<string, string> = {
     accept: 'application/json',
+    'X-MeetPR-Locale': getLocaleHeader(),
   };
 
   if (options.body !== undefined) {

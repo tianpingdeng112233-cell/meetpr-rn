@@ -1,11 +1,12 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
-import { checkForAndroidUpdate } from '../android-update';
+import { setLocaleOverride, type Locale } from '@/i18n';
+import { androidReleaseNotes, checkForAndroidUpdate } from '../android-update';
 
 const installed = { platform: 'android', track: 'china', applicationId: 'com.meetpr.app', buildVersion: '2' };
-const release = { schemaVersion: 1, packageName: 'com.meetpr.app', versionCode: 10, versionName: '0.1.1', releaseNotes: '改进教练邀请流程', downloadUrl: 'https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk' };
+const release = { schemaVersion: 1, packageName: 'com.meetpr.app', versionCode: 10, versionName: '0.1.1', releaseNotes: '改进教练邀请流程', downloadUrl: 'https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk' } as const;
 const response = (data: unknown, ok = true) => ({ ok, json: async () => data }) as Response;
 const originalFetch = global.fetch;
-afterEach(() => { global.fetch = originalFetch; jest.useRealTimers(); });
+afterEach(() => { setLocaleOverride(null); global.fetch = originalFetch; jest.useRealTimers(); });
 
 test('a newer native build is offered even when numeric build codes have different lengths', async () => {
   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
@@ -66,4 +67,25 @@ test('an aborted startup does not offer an update even if the response arrives l
   const controller = new AbortController();
   global.fetch = jest.fn<typeof fetch>().mockResolvedValue({ ok: true, json: async () => { controller.abort(); return release; } } as Response);
   await expect(checkForAndroidUpdate(installed, controller.signal)).resolves.toBeNull();
+});
+
+test('legacy published release notes have a generated Traditional fallback; new manifests supply translated notes', () => {
+  const legacy = { ...release, releaseNotes: '新增 App 内版本更新提醒，可查看更新内容并下载新版。' };
+  setLocaleOverride('zh-Hant');
+  expect(androidReleaseNotes(legacy)).toBe('新增 App 內版本更新提醒，可檢視更新內容並下載新版。');
+  expect(androidReleaseNotes({ ...release, releaseNotesZhHant: '改善教練邀請流程' })).toBe('改善教練邀請流程');
+  expect(androidReleaseNotes(release)).toBe('');
+  setLocaleOverride('zh');
+  expect(androidReleaseNotes(legacy)).toBe(legacy.releaseNotes);
+  setLocaleOverride('en');
+  expect(androidReleaseNotes(legacy)).toBe(legacy.releaseNotes);
+});
+
+test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('update checks report the interface locale without overriding platform language (%s)', async (locale, expected) => {
+  setLocaleOverride(locale);
+  global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
+  await checkForAndroidUpdate(installed);
+  expect(global.fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+    headers: { 'X-MeetPR-Locale': expected },
+  }));
 });

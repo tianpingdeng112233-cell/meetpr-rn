@@ -38,7 +38,7 @@ export default function GlobalForgotPasswordScreen() {
   return <AuthForm title={t(sent ? 'auth.resetTitle' : 'auth.forgotTitle')} subtitle={sent ? undefined : t('auth.forgotSubtitle')}>
     {sent ? <>
       <Text style={{ ...font.body(13, 'semibold'), ...authTypography(), color: colors.textTertiary }}>{t('auth.resetSent')}</Text>
-      <GlobalAuthField mono label={getLocale() === 'zh' ? t('auth.signupCode') : undefined} placeholder={t('auth.codePlaceholder')} accessibilityLabel={t('auth.codePlaceholder')} keyboardType="number-pad" autoComplete="one-time-code" maxLength={6} value={code} onChangeText={value => setCode(value.replace(/[^0-9]/g, '').slice(0, 6))} editable={!busy} />
+      <GlobalAuthField mono label={getLocale() !== 'en' ? t('auth.signupCode') : undefined} placeholder={t('auth.codePlaceholder')} accessibilityLabel={t('auth.codePlaceholder')} keyboardType="number-pad" autoComplete="one-time-code" maxLength={6} value={code} onChangeText={value => setCode(value.replace(/[^0-9]/g, '').slice(0, 6))} editable={!busy} />
       <GlobalAuthField label={t('auth.newPassword')} placeholder={t('auth.newPasswordPlaceholder')} helper={t('auth.passwordHelper')} error={password.length > 0 && !isValidPassword(password) ? t('auth.invalidPassword') : undefined}
         value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" autoCapitalize="none" autoCorrect={false} editable={!busy} />
     </> : <EmailField value={email} onChangeText={setEmail} editable={!busy} />}

@@ -1,0 +1,244 @@
+--- a/src/analytics/__tests__/analytics.test.ts
++++ b/src/analytics/__tests__/analytics.test.ts
+@@ -3,6 +3,7 @@
+ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+ import { AppState, type AppStateStatus } from 'react-native';
+ 
++import { setLocaleOverride, type Locale } from '@/i18n';
+ import { getAccessToken } from '@/api/token-store';
+ 
+ import {
+@@ -113,6 +114,7 @@
+ });
+ 
+ afterEach(() => {
++  setLocaleOverride(null);
+   resetAnalyticsForTests();
+   jest.useRealTimers();
+   jest.restoreAllMocks();
+@@ -653,3 +655,21 @@
+     ['22222222-2222-4222-8222-222222222222', 0],
+   ]);
+ });
++
++test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('analytics config and events report the interface locale without overriding platform language (%s)', async (locale, expected) => {
++  setLocaleOverride(locale);
++  const queue = new AnalyticsQueue();
++  await queue.enqueue(event(0));
++  const fetchImplementation = jest.fn<typeof fetch>()
++    .mockResolvedValueOnce(response(200, { enabled: true, sample_rate: 1 }))
++    .mockResolvedValueOnce(response(204));
++  const flusher = makeFlusher(queue, fetchImplementation);
++  await flusher.fetchConfig();
++  await flusher.flush();
++  expect(fetchImplementation).toHaveBeenCalledTimes(2);
++  for (const [, options] of fetchImplementation.mock.calls) {
++    const headers = options?.headers as Record<string, string>;
++    expect(headers['X-MeetPR-Locale']).toBe(expected);
++    expect(Object.keys(headers).map(key => key.toLowerCase())).not.toContain('accept-language');
++  }
++});
+--- a/src/analytics/flusher.ts
++++ b/src/analytics/flusher.ts
+@@ -1,4 +1,4 @@
+-import { getAcceptLanguage } from '@/i18n';
++import { getLocaleHeader } from '@/i18n';
+ import { z } from 'zod';
+ 
+ import { isSampledIn } from './sampling';
+@@ -91,7 +91,7 @@
+     try {
+       const response = await this.fetchImplementation(`${this.baseUrl}/events/config`, {
+         method: 'GET',
+-        headers: { accept: 'application/json', 'Accept-Language': getAcceptLanguage() },
++        headers: { accept: 'application/json', 'X-MeetPR-Locale': getLocaleHeader() },
+       });
+       if (response.status === 200) {
+         const parsed = AnalyticsConfigSchema.safeParse(await response.json());
+@@ -196,7 +196,7 @@
+         const token = await this.options.accessTokenProvider?.();
+         const headers: Record<string, string> = {
+           accept: 'application/json',
+-          'Accept-Language': getAcceptLanguage(),
++          'X-MeetPR-Locale': getLocaleHeader(),
+           'content-type': 'application/json',
+         };
+         if (token) {
+--- a/src/api/__tests__/api-auth-session.test.ts
++++ b/src/api/__tests__/api-auth-session.test.ts
+@@ -194,7 +194,7 @@
+     });
+     expect(requestHeaders(init)).toEqual({
+       accept: 'application/json',
+-      'Accept-Language': 'en',
++      'X-MeetPR-Locale': 'en',
+       'content-type': 'application/json',
+     });
+   });
+@@ -224,7 +224,7 @@
+     });
+     expect(requestHeaders(init)).toEqual({
+       accept: 'application/json',
+-      'Accept-Language': 'en',
++      'X-MeetPR-Locale': 'en',
+       'content-type': 'application/json',
+     });
+   });
+@@ -245,7 +245,7 @@
+     expect(requestBody(init)).toEqual({ refresh_token: 'refresh-old' });
+     expect(requestHeaders(init)).toEqual({
+       accept: 'application/json',
+-      'Accept-Language': 'en',
++      'X-MeetPR-Locale': 'en',
+       'content-type': 'application/json',
+     });
+   });
+@@ -263,7 +263,7 @@
+     expect(requestBody(init)).toEqual({ snake_case: true });
+     expect(requestHeaders(init)).toEqual({
+       accept: 'application/json',
+-      'Accept-Language': 'en',
++      'X-MeetPR-Locale': 'en',
+       'content-type': 'application/json',
+       authorization: 'Bearer access-token',
+     });
+@@ -640,6 +640,7 @@
+   await apiRequest('/auth/signup-code', { method: 'POST', body: { email: 'locale@example.test' } });
+   await apiRequest('/me', { accessToken: 'test-token' });
+   for (const [, options] of jest.mocked(fetch).mock.calls) {
+-    expect(requestHeaders(options)['Accept-Language']).toBe(expected);
++    expect(requestHeaders(options)['X-MeetPR-Locale']).toBe(expected);
++    expect(Object.keys(requestHeaders(options)).map(key => key.toLowerCase())).not.toContain('accept-language');
+   }
+ });
+--- a/src/api/__tests__/realtime.test.ts
++++ b/src/api/__tests__/realtime.test.ts
+@@ -1,4 +1,5 @@
+-import { expect, jest, test } from '@jest/globals';
++import { afterEach, expect, jest, test } from '@jest/globals';
++import { setLocaleOverride, type Locale } from '@/i18n';
+ import { createRealtimeClient, type RealtimeSocket } from '../realtime';
+ 
+ class FakeSocket implements RealtimeSocket {
+@@ -25,7 +26,7 @@
+   client.connect(); client.connect();
+   await flush();
+   expect(socketFactory).toHaveBeenCalledTimes(1);
+-  expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, { headers: { 'Accept-Language': 'en', Authorization: 'Bearer test-token' } });
++  expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, { headers: { 'X-MeetPR-Locale': 'en', Authorization: 'Bearer test-token' } });
+   expect(client.state).toBe('disconnected');
+   sockets[0].frame('{"type":"hello","payload":{}}');
+   expect(client.state).toBe('connected');
+@@ -92,7 +93,7 @@
+   client.connect(); client.disconnect(); client.connect(); await flush();
+   finish('old-token'); await flush();
+   expect(socketFactory).toHaveBeenCalledTimes(1);
+-  expect(socketFactory).toHaveBeenCalledWith('ws://api.example/realtime', undefined, { headers: { 'Accept-Language': 'en', Authorization: 'Bearer new-token' } });
++  expect(socketFactory).toHaveBeenCalledWith('ws://api.example/realtime', undefined, { headers: { 'X-MeetPR-Locale': 'en', Authorization: 'Bearer new-token' } });
+   client.disconnect();
+ });
+ 
+@@ -118,3 +119,16 @@
+     expect(socketFactory).toHaveBeenCalledTimes(2);
+   } finally { jest.useRealTimers(); }
+ });
++
++afterEach(() => setLocaleOverride(null));
++
++test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('WebSocket handshake reports the interface locale without overriding platform language (%s)', async (locale, expected) => {
++  setLocaleOverride(locale);
++  const { client, socketFactory } = setup();
++  client.connect();
++  await flush();
++  client.disconnect();
++  expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, {
++    headers: { 'X-MeetPR-Locale': expected, Authorization: 'Bearer test-token' },
++  });
++});
+--- a/src/api/client.ts
++++ b/src/api/client.ts
+@@ -1,6 +1,6 @@
+ import { z } from 'zod';
+ 
+-import { getAcceptLanguage } from '@/i18n';
++import { getLocaleHeader } from '@/i18n';
+ import { DEFAULT_API_BASE_URL } from '@/config/build-track';
+ 
+ export { DEFAULT_API_BASE_URL } from '@/config/build-track';
+@@ -141,7 +141,7 @@
+ ): Promise<T> {
+   const headers: Record<string, string> = {
+     accept: 'application/json',
+-    'Accept-Language': getAcceptLanguage(),
++    'X-MeetPR-Locale': getLocaleHeader(),
+   };
+ 
+   if (options.body !== undefined) {
+--- a/src/api/realtime.ts
++++ b/src/api/realtime.ts
+@@ -1,4 +1,4 @@
+-import { getAcceptLanguage } from '@/i18n';
++import { getLocaleHeader } from '@/i18n';
+ import { z } from 'zod';
+ 
+ export type RealtimeEvent =
+@@ -75,7 +75,7 @@
+         const url = new URL(baseUrl);
+         url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+         url.pathname = `${url.pathname.replace(/\/+$/, '')}/realtime`;
+-        const socket = socketFactory(url.toString(), undefined, { headers: { 'Accept-Language': getAcceptLanguage(), Authorization: `Bearer ${token}` } });
++        const socket = socketFactory(url.toString(), undefined, { headers: { 'X-MeetPR-Locale': getLocaleHeader(), Authorization: `Bearer ${token}` } });
+         await new Promise<void>(resolve => {
+           let ended = false;
+           const finish = () => {
+--- a/src/features/updates/__tests__/android-update.test.ts
++++ b/src/features/updates/__tests__/android-update.test.ts
+@@ -1,5 +1,5 @@
+ import { afterEach, expect, jest, test } from '@jest/globals';
+-import { setLocaleOverride } from '@/i18n';
++import { setLocaleOverride, type Locale } from '@/i18n';
+ import { androidReleaseNotes, checkForAndroidUpdate } from '../android-update';
+ 
+ const installed = { platform: 'android', track: 'china', applicationId: 'com.meetpr.app', buildVersion: '2' };
+@@ -80,3 +80,12 @@
+   setLocaleOverride('en');
+   expect(androidReleaseNotes(legacy)).toBe(legacy.releaseNotes);
+ });
++
++test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('update checks report the interface locale without overriding platform language (%s)', async (locale, expected) => {
++  setLocaleOverride(locale);
++  global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
++  await checkForAndroidUpdate(installed);
++  expect(global.fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
++    headers: { 'X-MeetPR-Locale': expected },
++  }));
++});
+--- a/src/features/updates/android-update.ts
++++ b/src/features/updates/android-update.ts
+@@ -1,5 +1,5 @@
+ import legacyNotes from '@/i18n/generated/android-release-notes-zh-Hant.json';
+-import { getAcceptLanguage, getLocale } from '@/i18n';
++import { getLocaleHeader, getLocale } from '@/i18n';
+ import { z } from 'zod';
+ 
+ export const ANDROID_RELEASE_URL = 'https://dl.meetpr.cn/android/latest.json';
+@@ -49,7 +49,7 @@
+       controller.signal.addEventListener('abort', () => resolve(null), { once: true });
+     });
+     const request = async () => {
+-      const response = await fetch(ANDROID_RELEASE_URL, { cache: 'no-store', signal: controller.signal, headers: { 'Accept-Language': getAcceptLanguage() } });
++      const response = await fetch(ANDROID_RELEASE_URL, { cache: 'no-store', signal: controller.signal, headers: { 'X-MeetPR-Locale': getLocaleHeader() } });
+       if (!response.ok) return null;
+       const release = releaseSchema.safeParse(await response.json());
+       return !controller.signal.aborted && release.success && release.data.versionCode > build
+--- a/src/i18n/index.ts
++++ b/src/i18n/index.ts
+@@ -53,7 +53,7 @@
+     ['TW', 'HK', 'MO'].includes(locale?.regionCode ?? '') ? 'zh-Hant' : 'zh';
+ }
+ 
+-export function getAcceptLanguage(): 'zh-Hans' | 'zh-Hant' | 'en' {
++export function getLocaleHeader(): 'zh-Hans' | 'zh-Hant' | 'en' {
+   const locale = getLocale();
+   return locale === 'zh' ? 'zh-Hans' : locale;
+ }

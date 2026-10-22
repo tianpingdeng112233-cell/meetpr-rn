@@ -1,0 +1,35 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/zh-hant-catalog.test.js -t v2.1 generated
+
+FAIL src/i18n/__tests__/zh-hant-catalog.test.js
+  ✕ v2.1 generated UI copy and exercise names use the approved bar terms (7 ms)
+  ○ skipped all Traditional copy has the same keys, plural structure and placeholders as Simplified
+  ○ skipped generated Traditional artifacts contain zero Simplified-only characters
+  ○ skipped every approved glossary override wins over OpenCC with longest phrases first
+  ○ skipped committed generation is deterministic and current
+  ○ skipped v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿
+  ○ skipped v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下
+
+  ● v2.1 generated UI copy and exercise names use the approved bar terms
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "硬舉專項槓(軟槓)"
+    Received: "硬舉專項杆(軟杆)"
+
+      63 |
+      64 | test('v2.1 generated UI copy and exercise names use the approved bar terms', () => {
+    > 65 |   expect(generated['coach.bind.equipment.deadliftBar']).toBe('硬舉專項槓(軟槓)');
+         |                                                         ^
+      66 |   expect(generated['coach.bind.equipment.powerBar']).toBe('健力專項槓(硬槓)');
+      67 |   expect(generated['coach.bind.equipment.pullupBar']).toBe('引體向上槓');
+      68 |   const exercises = require('../generated/exercise-names-zh-Hant.json');
+
+      at Object.toBe (src/i18n/__tests__/zh-hant-catalog.test.js:65:57)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 skipped, 7 total
+Snapshots:   0 total
+Time:        1.341 s
+Ran all test suites matching /src\/i18n\/__tests__\/zh-hant-catalog.test.js/i with tests matching "v2.1 generated".

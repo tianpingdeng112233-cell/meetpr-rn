@@ -1,0 +1,860 @@
+Language header repair: raw red/green outputs (2026-10-22)
+Each red run changed tests before its production header; each green run followed its corresponding fix.
+Commands used PATH=/opt/homebrew/bin:$PATH and EXPO_NO_DOTENV=1.
+
+=== api red ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/api/__tests__/api-auth-session.test.ts
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      66 | function notificationCenter(): typeof import('expo-notifications') {
+      67 |   // eslint-disable-next-line @typescript-eslint/no-require-imports
+    > 68 |   return require('expo-notifications');
+         |          ^
+      69 | }
+      70 | let revision = 0;
+      71 | export const reminderRevision = () => revision;
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at require (src/features/settings/training-reminder.ts:68:10)
+      at notificationCenter (src/features/settings/training-reminder.ts:79:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/settings/training-reminder.ts:83:2)
+      at apply (src/features/settings/training-reminder.ts:78:28)
+
+FAIL src/api/__tests__/api-auth-session.test.ts
+  ✓ normalizes a phone number to the +86 wire format only when needed
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19T12:00:00.123Z
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19T12:00:00Z
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19
+  ✓ refreshes JWT access tokens at the 60-second expiry boundary (1 ms)
+  ✓ getAccessToken pre-refreshes a JWT expiring within 60 seconds
+  ✓ getAccessToken returns a far-future JWT without refreshing
+  ✓ deduplicates concurrent refresh calls into one request
+  ✓ recovers one 401, retries once, and persists rotated tokens (1 ms)
+  ✓ concurrent 401 recovery reuses a token already rotated by the other request
+  ✓ logs out and clears credentials when the retried request is still 401 (119 ms)
+  ✓ logs out and clears credentials when refresh receives backend 400
+  ✓ logs out and clears credentials when refresh receives backend 401 (1 ms)
+  ✓ ApiError remains identifiable across callers
+  ✕ every API request reports a single interface language (zh)
+  ✕ every API request reports a single interface language (zh-Hant)
+  ✕ every API request reports a single interface language (en)
+  API error classification
+    ✓ preserves student-added HTTP 400 SETS_PLAN_DAY_NOT_PUBLISHED as a backend ApiError (2 ms)
+    ✓ preserves student-added HTTP 409 SETS_ADHOC_DAY_CONFLICT as a backend ApiError
+    ✓ preserves student-added HTTP 409 SET_NOT_STUDENT_ADDED as a backend ApiError (1 ms)
+    ✓ preserves student-added HTTP 409 SET_HAS_ATTACHMENT as a backend ApiError
+    ✓ preserves student-added HTTP 409 SET_HAS_COACH_FEEDBACK as a backend ApiError
+    ✓ preserves student-added HTTP 404 SET_NOT_FOUND as a backend ApiError
+    ✓ preserves CHAT_BIND_REQUIRED so student chat can show binding-invalidated copy
+    ✓ parses a known backend error envelope (1 ms)
+    ✓ classifies BIND_REQUEST_NOT_FOUND as a known backend error
+    ✓ classifies ATTACHMENT_NOT_FOUND as a known backend error
+    ✓ classifies an envelope-free 5xx response as server
+    ✓ classifies a fetch transport failure as network (1 ms)
+  auth wire format
+    ✕ login sends a normalized phone and JSON headers (2 ms)
+    ✕ register sends snake_case-compatible JSON and normalizes +86
+    ✕ refresh pins the refresh_token snake_case key (1 ms)
+    ✕ token-bearing JSON requests use lowercase authorization and content headers
+  session bootstrap failure policy
+    ✓ retains the cached authenticated session after a transport failure (10 ms)
+    ✓ retains the cached authenticated session after a 5xx response (1 ms)
+    ✓ retains the cached authenticated session after a backend 429 response
+    ✓ retains the cached authenticated session after an envelope-free 403 network-kind response
+    ✓ clears credentials and becomes anonymous after backend 400 (1 ms)
+    ✓ clears credentials and becomes anonymous after backend 401
+  credential mutation races
+    ✓ a refresh started immediately after logout cannot resurrect cleared credentials (2 ms)
+    ✓ an old-generation refresh finishing during login cannot overwrite the new account
+
+  ● auth wire format › login sends a normalized phone and JSON headers
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "X-MeetPR-Locale": "en",
+    +   "Accept-Language": "en",
+        "accept": "application/json",
+        "content-type": "application/json",
+      }
+
+      193 |       password: 'secret',
+      194 |     });
+    > 195 |     expect(requestHeaders(init)).toEqual({
+          |                                  ^
+      196 |       accept: 'application/json',
+      197 |       'X-MeetPR-Locale': 'en',
+      198 |       'content-type': 'application/json',
+
+      at Object.toEqual (src/api/__tests__/api-auth-session.test.ts:195:34)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● auth wire format › register sends snake_case-compatible JSON and normalizes +86
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "X-MeetPR-Locale": "en",
+    +   "Accept-Language": "en",
+        "accept": "application/json",
+        "content-type": "application/json",
+      }
+
+      223 |       role: 'coached_student',
+      224 |     });
+    > 225 |     expect(requestHeaders(init)).toEqual({
+          |                                  ^
+      226 |       accept: 'application/json',
+      227 |       'X-MeetPR-Locale': 'en',
+      228 |       'content-type': 'application/json',
+
+      at Object.toEqual (src/api/__tests__/api-auth-session.test.ts:225:34)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● auth wire format › refresh pins the refresh_token snake_case key
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "X-MeetPR-Locale": "en",
+    +   "Accept-Language": "en",
+        "accept": "application/json",
+        "content-type": "application/json",
+      }
+
+      244 |     expect(init?.method).toBe('POST');
+      245 |     expect(requestBody(init)).toEqual({ refresh_token: 'refresh-old' });
+    > 246 |     expect(requestHeaders(init)).toEqual({
+          |                                  ^
+      247 |       accept: 'application/json',
+      248 |       'X-MeetPR-Locale': 'en',
+      249 |       'content-type': 'application/json',
+
+      at Object.toEqual (src/api/__tests__/api-auth-session.test.ts:246:34)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● auth wire format › token-bearing JSON requests use lowercase authorization and content headers
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "X-MeetPR-Locale": "en",
+    +   "Accept-Language": "en",
+        "accept": "application/json",
+        "authorization": "Bearer access-token",
+        "content-type": "application/json",
+      }
+
+      262 |     const [, init] = jest.mocked(fetch).mock.calls[0];
+      263 |     expect(requestBody(init)).toEqual({ snake_case: true });
+    > 264 |     expect(requestHeaders(init)).toEqual({
+          |                                  ^
+      265 |       accept: 'application/json',
+      266 |       'X-MeetPR-Locale': 'en',
+      267 |       'content-type': 'application/json',
+
+      at Object.toEqual (src/api/__tests__/api-auth-session.test.ts:264:34)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● every API request reports a single interface language (zh)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hans"
+    Received: undefined
+
+      641 |   await apiRequest('/me', { accessToken: 'test-token' });
+      642 |   for (const [, options] of jest.mocked(fetch).mock.calls) {
+    > 643 |     expect(requestHeaders(options)['X-MeetPR-Locale']).toBe(expected);
+          |                                                        ^
+      644 |     expect(Object.keys(requestHeaders(options)).map(key => key.toLowerCase())).not.toContain('accept-language');
+      645 |   }
+      646 | });
+
+      at toBe (src/api/__tests__/api-auth-session.test.ts:643:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● every API request reports a single interface language (zh-Hant)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: undefined
+
+      641 |   await apiRequest('/me', { accessToken: 'test-token' });
+      642 |   for (const [, options] of jest.mocked(fetch).mock.calls) {
+    > 643 |     expect(requestHeaders(options)['X-MeetPR-Locale']).toBe(expected);
+          |                                                        ^
+      644 |     expect(Object.keys(requestHeaders(options)).map(key => key.toLowerCase())).not.toContain('accept-language');
+      645 |   }
+      646 | });
+
+      at toBe (src/api/__tests__/api-auth-session.test.ts:643:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● every API request reports a single interface language (en)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "en"
+    Received: undefined
+
+      641 |   await apiRequest('/me', { accessToken: 'test-token' });
+      642 |   for (const [, options] of jest.mocked(fetch).mock.calls) {
+    > 643 |     expect(requestHeaders(options)['X-MeetPR-Locale']).toBe(expected);
+          |                                                        ^
+      644 |     expect(Object.keys(requestHeaders(options)).map(key => key.toLowerCase())).not.toContain('accept-language');
+      645 |   }
+      646 | });
+
+      at toBe (src/api/__tests__/api-auth-session.test.ts:643:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 34 passed, 41 total
+Snapshots:   0 total
+Time:        0.626 s, estimated 1 s
+Ran all test suites matching /src\/api\/__tests__\/api-auth-session.test.ts/i.
+
+=== api green ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/api/__tests__/api-auth-session.test.ts
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      66 | function notificationCenter(): typeof import('expo-notifications') {
+      67 |   // eslint-disable-next-line @typescript-eslint/no-require-imports
+    > 68 |   return require('expo-notifications');
+         |          ^
+      69 | }
+      70 | let revision = 0;
+      71 | export const reminderRevision = () => revision;
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at require (src/features/settings/training-reminder.ts:68:10)
+      at notificationCenter (src/features/settings/training-reminder.ts:79:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/settings/training-reminder.ts:83:2)
+      at apply (src/features/settings/training-reminder.ts:78:28)
+
+PASS src/api/__tests__/api-auth-session.test.ts
+  ✓ normalizes a phone number to the +86 wire format only when needed
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19T12:00:00.123Z
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19T12:00:00Z
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19 (1 ms)
+  ✓ refreshes JWT access tokens at the 60-second expiry boundary
+  ✓ getAccessToken pre-refreshes a JWT expiring within 60 seconds
+  ✓ getAccessToken returns a far-future JWT without refreshing
+  ✓ deduplicates concurrent refresh calls into one request
+  ✓ recovers one 401, retries once, and persists rotated tokens (1 ms)
+  ✓ concurrent 401 recovery reuses a token already rotated by the other request
+  ✓ logs out and clears credentials when the retried request is still 401 (110 ms)
+  ✓ logs out and clears credentials when refresh receives backend 400
+  ✓ logs out and clears credentials when refresh receives backend 401
+  ✓ ApiError remains identifiable across callers
+  ✓ every API request reports a single interface language (zh)
+  ✓ every API request reports a single interface language (zh-Hant)
+  ✓ every API request reports a single interface language (en)
+  API error classification
+    ✓ preserves student-added HTTP 400 SETS_PLAN_DAY_NOT_PUBLISHED as a backend ApiError (1 ms)
+    ✓ preserves student-added HTTP 409 SETS_ADHOC_DAY_CONFLICT as a backend ApiError
+    ✓ preserves student-added HTTP 409 SET_NOT_STUDENT_ADDED as a backend ApiError
+    ✓ preserves student-added HTTP 409 SET_HAS_ATTACHMENT as a backend ApiError
+    ✓ preserves student-added HTTP 409 SET_HAS_COACH_FEEDBACK as a backend ApiError
+    ✓ preserves student-added HTTP 404 SET_NOT_FOUND as a backend ApiError
+    ✓ preserves CHAT_BIND_REQUIRED so student chat can show binding-invalidated copy (1 ms)
+    ✓ parses a known backend error envelope
+    ✓ classifies BIND_REQUEST_NOT_FOUND as a known backend error
+    ✓ classifies ATTACHMENT_NOT_FOUND as a known backend error
+    ✓ classifies an envelope-free 5xx response as server (1 ms)
+    ✓ classifies a fetch transport failure as network
+  auth wire format
+    ✓ login sends a normalized phone and JSON headers (1 ms)
+    ✓ register sends snake_case-compatible JSON and normalizes +86
+    ✓ refresh pins the refresh_token snake_case key
+    ✓ token-bearing JSON requests use lowercase authorization and content headers
+  session bootstrap failure policy
+    ✓ retains the cached authenticated session after a transport failure (11 ms)
+    ✓ retains the cached authenticated session after a 5xx response
+    ✓ retains the cached authenticated session after a backend 429 response (1 ms)
+    ✓ retains the cached authenticated session after an envelope-free 403 network-kind response
+    ✓ clears credentials and becomes anonymous after backend 400
+    ✓ clears credentials and becomes anonymous after backend 401
+  credential mutation races
+    ✓ a refresh started immediately after logout cannot resurrect cleared credentials (2 ms)
+    ✓ an old-generation refresh finishing during login cannot overwrite the new account (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       41 passed, 41 total
+Snapshots:   0 total
+Time:        0.546 s, estimated 1 s
+Ran all test suites matching /src\/api\/__tests__\/api-auth-session.test.ts/i.
+
+=== realtime red ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/api/__tests__/realtime.test.ts
+
+  console.debug
+    [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+  console.debug
+    [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+          at _loop.next (<anonymous>)
+
+  console.debug
+    [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+  console.debug
+    [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+
+FAIL src/api/__tests__/realtime.test.ts
+  ✕ appends realtime to the API path and authenticates; only hello establishes connected state (7 ms)
+  ✓ ignores malformed and future frames and converts message/read pointers to camel case (2 ms)
+  ✓ retries with capped exponential full jitter, resets after hello and cancels sleeping generations (9 ms)
+  ✕ a token lookup crossing disconnect cannot construct a socket in the next generation (1 ms)
+  ✓ token and constructor failures retry silently; disconnect cancels the native sleep timer (4 ms)
+  ✕ WebSocket handshake reports the interface locale without overriding platform language (zh)
+  ✕ WebSocket handshake reports the interface locale without overriding platform language (zh-Hant)
+  ✕ WebSocket handshake reports the interface locale without overriding platform language (en) (1 ms)
+
+  ● appends realtime to the API path and authenticates; only hello establishes connected state
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "wss://api.example/api/realtime",
+      undefined,
+      Object {
+        "headers": Object {
+    +     "Accept-Language": "en",
+          "Authorization": "Bearer test-token",
+    -     "X-MeetPR-Locale": "en",
+        },
+      },
+
+    Number of calls: 1
+
+      27 |   await flush();
+      28 |   expect(socketFactory).toHaveBeenCalledTimes(1);
+    > 29 |   expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, { headers: { 'X-MeetPR-Locale': 'en', Authorization: 'Bearer test-token' } });
+         |                         ^
+      30 |   expect(client.state).toBe('disconnected');
+      31 |   sockets[0].frame('{"type":"hello","payload":{}}');
+      32 |   expect(client.state).toBe('connected');
+
+      at Object.toHaveBeenCalledWith (src/api/__tests__/realtime.test.ts:29:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a token lookup crossing disconnect cannot construct a socket in the next generation
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "ws://api.example/realtime",
+      undefined,
+      Object {
+        "headers": Object {
+    +     "Accept-Language": "en",
+          "Authorization": "Bearer new-token",
+    -     "X-MeetPR-Locale": "en",
+        },
+      },
+
+    Number of calls: 1
+
+      94 |   finish('old-token'); await flush();
+      95 |   expect(socketFactory).toHaveBeenCalledTimes(1);
+    > 96 |   expect(socketFactory).toHaveBeenCalledWith('ws://api.example/realtime', undefined, { headers: { 'X-MeetPR-Locale': 'en', Authorization: 'Bearer new-token' } });
+         |                         ^
+      97 |   client.disconnect();
+      98 | });
+      99 |
+
+      at Object.toHaveBeenCalledWith (src/api/__tests__/realtime.test.ts:96:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WebSocket handshake reports the interface locale without overriding platform language (zh)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "wss://api.example/api/realtime",
+      undefined,
+      Object {
+        "headers": Object {
+    +     "Accept-Language": "zh-Hans",
+          "Authorization": "Bearer test-token",
+    -     "X-MeetPR-Locale": "zh-Hans",
+        },
+      },
+
+    Number of calls: 1
+
+      130 |   await flush();
+      131 |   client.disconnect();
+    > 132 |   expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, {
+          |                         ^
+      133 |     headers: { 'X-MeetPR-Locale': expected, Authorization: 'Bearer test-token' },
+      134 |   });
+      135 | });
+
+      at toHaveBeenCalledWith (src/api/__tests__/realtime.test.ts:132:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WebSocket handshake reports the interface locale without overriding platform language (zh-Hant)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "wss://api.example/api/realtime",
+      undefined,
+      Object {
+        "headers": Object {
+    +     "Accept-Language": "zh-Hant",
+          "Authorization": "Bearer test-token",
+    -     "X-MeetPR-Locale": "zh-Hant",
+        },
+      },
+
+    Number of calls: 1
+
+      130 |   await flush();
+      131 |   client.disconnect();
+    > 132 |   expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, {
+          |                         ^
+      133 |     headers: { 'X-MeetPR-Locale': expected, Authorization: 'Bearer test-token' },
+      134 |   });
+      135 | });
+
+      at toHaveBeenCalledWith (src/api/__tests__/realtime.test.ts:132:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● WebSocket handshake reports the interface locale without overriding platform language (en)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "wss://api.example/api/realtime",
+      undefined,
+      Object {
+        "headers": Object {
+    +     "Accept-Language": "en",
+          "Authorization": "Bearer test-token",
+    -     "X-MeetPR-Locale": "en",
+        },
+      },
+
+    Number of calls: 1
+
+      130 |   await flush();
+      131 |   client.disconnect();
+    > 132 |   expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, {
+          |                         ^
+      133 |     headers: { 'X-MeetPR-Locale': expected, Authorization: 'Bearer test-token' },
+      134 |   });
+      135 | });
+
+      at toHaveBeenCalledWith (src/api/__tests__/realtime.test.ts:132:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 3 passed, 8 total
+Snapshots:   0 total
+Time:        0.335 s, estimated 1 s
+Ran all test suites matching /src\/api\/__tests__\/realtime.test.ts/i.
+
+=== realtime green ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/api/__tests__/realtime.test.ts
+
+  console.debug
+    [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+  console.debug
+    [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+
+  console.debug
+    [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+  console.debug
+    [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+          at _loop.next (<anonymous>)
+
+  console.debug
+    [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+  console.debug
+    [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+
+PASS src/api/__tests__/realtime.test.ts
+  ✓ appends realtime to the API path and authenticates; only hello establishes connected state (14 ms)
+  ✓ ignores malformed and future frames and converts message/read pointers to camel case (3 ms)
+  ✓ retries with capped exponential full jitter, resets after hello and cancels sleeping generations (4 ms)
+  ✓ a token lookup crossing disconnect cannot construct a socket in the next generation (1 ms)
+  ✓ token and constructor failures retry silently; disconnect cancels the native sleep timer (12 ms)
+  ✓ WebSocket handshake reports the interface locale without overriding platform language (zh) (1 ms)
+  ✓ WebSocket handshake reports the interface locale without overriding platform language (zh-Hant)
+  ✓ WebSocket handshake reports the interface locale without overriding platform language (en) (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        0.518 s, estimated 1 s
+Ran all test suites matching /src\/api\/__tests__\/realtime.test.ts/i.
+
+=== update red ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/updates/__tests__/android-update.test.ts
+
+FAIL src/features/updates/__tests__/android-update.test.ts
+  ✓ a newer native build is offered even when numeric build codes have different lengths (1 ms)
+  ✓ build 2 is not offered to an equal or newer installed build
+  ✓ build 1 is not offered to an equal or newer installed build
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"global","applicationId":"com.meetpr.app","buildVersion":"2"}
+  ✓ unsupported installed app does not contact the release host: {"platform":"ios","track":"china","applicationId":"com.meetpr.app","buildVersion":"2"}
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"china","applicationId":"com.meetpr.global","buildVersion":"2"} (1 ms)
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"china","applicationId":"com.meetpr.app","buildVersion":null}
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"china","applicationId":"com.meetpr.app","buildVersion":"not-a-build"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.global","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":2,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":"10","versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"} (1 ms)
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"http://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://evil.example/meetpr.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn@evil.example/meetpr.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/9/meetpr-cn.apk"}
+  ✓ network failure leaves startup usable without an update prompt (1 ms)
+  ✓ http failure leaves startup usable without an update prompt
+  ✓ json failure leaves startup usable without an update prompt
+  ✓ a stalled request times out and cannot offer an update after the deadline (4 ms)
+  ✓ an aborted startup does not offer an update even if the response arrives later
+  ✓ legacy published release notes have a generated Traditional fallback; new manifests supply translated notes
+  ✕ update checks report the interface locale without overriding platform language (zh) (1 ms)
+  ✕ update checks report the interface locale without overriding platform language (zh-Hant) (1 ms)
+  ✕ update checks report the interface locale without overriding platform language (en)
+
+  ● update checks report the interface locale without overriding platform language (zh)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: Any<String>, ObjectContaining {"headers": {"X-MeetPR-Locale": "zh-Hans"}}
+    Received: "https://dl.meetpr.cn/android/latest.json", {"cache": "no-store", "headers": {"Accept-Language": "zh-Hans"}, "signal": {Symbol(kEvents): Map {"abort" => {"next": {"callback": [Function anonymous], "flags": 1, "listener": [Function anonymous], "next": undefined, "previous": [Circular]}, "resistStopPropagation": false, "size": 1}}, Symbol(events.maxEventTargetListeners): 0, Symbol(events.maxEventTargetListenersWarned): false, Symbol(kHandlers): Map {}, Symbol(kAborted): false, Symbol(kReason): undefined, Symbol(kComposite): false}}
+
+    Number of calls: 1
+
+      87 |   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
+      88 |   await checkForAndroidUpdate(installed);
+    > 89 |   expect(global.fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+         |                        ^
+      90 |     headers: { 'X-MeetPR-Locale': expected },
+      91 |   }));
+      92 | });
+
+      at toHaveBeenCalledWith (src/features/updates/__tests__/android-update.test.ts:89:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● update checks report the interface locale without overriding platform language (zh-Hant)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: Any<String>, ObjectContaining {"headers": {"X-MeetPR-Locale": "zh-Hant"}}
+    Received: "https://dl.meetpr.cn/android/latest.json", {"cache": "no-store", "headers": {"Accept-Language": "zh-Hant"}, "signal": {Symbol(kEvents): Map {"abort" => {"next": {"callback": [Function anonymous], "flags": 1, "listener": [Function anonymous], "next": undefined, "previous": [Circular]}, "resistStopPropagation": false, "size": 1}}, Symbol(events.maxEventTargetListeners): 0, Symbol(events.maxEventTargetListenersWarned): false, Symbol(kHandlers): Map {}, Symbol(kAborted): false, Symbol(kReason): undefined, Symbol(kComposite): false}}
+
+    Number of calls: 1
+
+      87 |   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
+      88 |   await checkForAndroidUpdate(installed);
+    > 89 |   expect(global.fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+         |                        ^
+      90 |     headers: { 'X-MeetPR-Locale': expected },
+      91 |   }));
+      92 | });
+
+      at toHaveBeenCalledWith (src/features/updates/__tests__/android-update.test.ts:89:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● update checks report the interface locale without overriding platform language (en)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: Any<String>, ObjectContaining {"headers": {"X-MeetPR-Locale": "en"}}
+    Received: "https://dl.meetpr.cn/android/latest.json", {"cache": "no-store", "headers": {"Accept-Language": "en"}, "signal": {Symbol(kEvents): Map {"abort" => {"next": {"callback": [Function anonymous], "flags": 1, "listener": [Function anonymous], "next": undefined, "previous": [Circular]}, "resistStopPropagation": false, "size": 1}}, Symbol(events.maxEventTargetListeners): 0, Symbol(events.maxEventTargetListenersWarned): false, Symbol(kHandlers): Map {}, Symbol(kAborted): false, Symbol(kReason): undefined, Symbol(kComposite): false}}
+
+    Number of calls: 1
+
+      87 |   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
+      88 |   await checkForAndroidUpdate(installed);
+    > 89 |   expect(global.fetch).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+         |                        ^
+      90 |     headers: { 'X-MeetPR-Locale': expected },
+      91 |   }));
+      92 | });
+
+      at toHaveBeenCalledWith (src/features/updates/__tests__/android-update.test.ts:89:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 23 passed, 26 total
+Snapshots:   0 total
+Time:        0.326 s, estimated 1 s
+Ran all test suites matching /src\/features\/updates\/__tests__\/android-update.test.ts/i.
+
+=== update green ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/updates/__tests__/android-update.test.ts
+
+PASS src/features/updates/__tests__/android-update.test.ts
+  ✓ a newer native build is offered even when numeric build codes have different lengths (2 ms)
+  ✓ build 2 is not offered to an equal or newer installed build (1 ms)
+  ✓ build 1 is not offered to an equal or newer installed build
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"global","applicationId":"com.meetpr.app","buildVersion":"2"}
+  ✓ unsupported installed app does not contact the release host: {"platform":"ios","track":"china","applicationId":"com.meetpr.app","buildVersion":"2"}
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"china","applicationId":"com.meetpr.global","buildVersion":"2"}
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"china","applicationId":"com.meetpr.app","buildVersion":null} (1 ms)
+  ✓ unsupported installed app does not contact the release host: {"platform":"android","track":"china","applicationId":"com.meetpr.app","buildVersion":"not-a-build"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.global","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":2,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":"10","versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"} (1 ms)
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","downloadUrl":"https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"http://dl.meetpr.cn/android/releases/10/meetpr-cn.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://evil.example/meetpr.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn@evil.example/meetpr.apk"}
+  ✓ invalid or incompatible release metadata is ignored: {"schemaVersion":1,"packageName":"com.meetpr.app","versionCode":10,"versionName":"0.1.1","releaseNotes":"改进教练邀请流程","downloadUrl":"https://dl.meetpr.cn/android/releases/9/meetpr-cn.apk"}
+  ✓ network failure leaves startup usable without an update prompt
+  ✓ http failure leaves startup usable without an update prompt
+  ✓ json failure leaves startup usable without an update prompt (1 ms)
+  ✓ a stalled request times out and cannot offer an update after the deadline (4 ms)
+  ✓ an aborted startup does not offer an update even if the response arrives later
+  ✓ legacy published release notes have a generated Traditional fallback; new manifests supply translated notes
+  ✓ update checks report the interface locale without overriding platform language (zh)
+  ✓ update checks report the interface locale without overriding platform language (zh-Hant)
+  ✓ update checks report the interface locale without overriding platform language (en)
+
+Test Suites: 1 passed, 1 total
+Tests:       26 passed, 26 total
+Snapshots:   0 total
+Time:        0.424 s, estimated 1 s
+Ran all test suites matching /src\/features\/updates\/__tests__\/android-update.test.ts/i.
+
+=== analytics red ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/analytics/__tests__/analytics.test.ts
+
+FAIL src/analytics/__tests__/analytics.test.ts
+  ✓ batch envelope has the exact wire shape and an explicit android platform (1 ms)
+  ✓ 413 recursively bisects a multi-event batch until acknowledged (1 ms)
+  ✓ 429 uses the exact retry backoff sequence and retains an unacknowledged event (1 ms)
+  ✓ a closed privacy gate never sends queued events
+  ✓ the AsyncStorage queue survives a new queue instance (1 ms)
+  ✓ queue storage validates each element and drops malformed JSON records
+  ✓ corrupt auxiliary indexes degrade alone and never drop queued events
+  ✓ anon_id is generated once and reused for the installation (1 ms)
+  ✓ a local single event over 1 MiB is replaced by client_error without a request (9 ms)
+  ✓ a server-side single-event 413 is persistently isolated from later flushes
+  ✓ flush truncates a batch at 50 events (1 ms)
+  ✓ the 30-second periodic trigger flushes, while enqueue itself does not (2 ms)
+  ✓ an unreachable-to-reachable network edge triggers a flush
+  ✓ configured batches read the current stored access token for the request header (1 ms)
+  ✓ 5xx uses the full backoff sequence while a non-retry status is attempted once
+  ✓ only 204 dequeues events, not status 200 (1 ms)
+  ✓ only 204 dequeues events, not status 201
+  ✓ only 204 dequeues events, not status 400
+  ✓ 204 dequeues acknowledged events
+  ✓ concurrent flush calls share one in-flight request
+  ✓ privacy confirmation persists and is the trigger that releases queued events
+  ✓ config failure is fail-open and collection continues
+  ✓ 30-minute background boundary resets session and seq, while shorter gaps preserve both (3 ms)
+  ✕ analytics config and events report the interface locale without overriding platform language (zh) (1 ms)
+  ✕ analytics config and events report the interface locale without overriding platform language (zh-Hant)
+  ✕ analytics config and events report the interface locale without overriding platform language (en)
+  FNV-1a sampling
+    ✓ matches the standard FNV vector and the iOS UUID bucket golden value (1 ms)
+
+  ● analytics config and events report the interface locale without overriding platform language (zh)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hans"
+    Received: undefined
+
+      671 |   for (const [, options] of fetchImplementation.mock.calls) {
+      672 |     const headers = options?.headers as Record<string, string>;
+    > 673 |     expect(headers['X-MeetPR-Locale']).toBe(expected);
+          |                                        ^
+      674 |     expect(Object.keys(headers).map(key => key.toLowerCase())).not.toContain('accept-language');
+      675 |   }
+      676 | });
+
+      at toBe (src/analytics/__tests__/analytics.test.ts:673:40)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● analytics config and events report the interface locale without overriding platform language (zh-Hant)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: undefined
+
+      671 |   for (const [, options] of fetchImplementation.mock.calls) {
+      672 |     const headers = options?.headers as Record<string, string>;
+    > 673 |     expect(headers['X-MeetPR-Locale']).toBe(expected);
+          |                                        ^
+      674 |     expect(Object.keys(headers).map(key => key.toLowerCase())).not.toContain('accept-language');
+      675 |   }
+      676 | });
+
+      at toBe (src/analytics/__tests__/analytics.test.ts:673:40)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● analytics config and events report the interface locale without overriding platform language (en)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "en"
+    Received: undefined
+
+      671 |   for (const [, options] of fetchImplementation.mock.calls) {
+      672 |     const headers = options?.headers as Record<string, string>;
+    > 673 |     expect(headers['X-MeetPR-Locale']).toBe(expected);
+          |                                        ^
+      674 |     expect(Object.keys(headers).map(key => key.toLowerCase())).not.toContain('accept-language');
+      675 |   }
+      676 | });
+
+      at toBe (src/analytics/__tests__/analytics.test.ts:673:40)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 24 passed, 27 total
+Snapshots:   0 total
+Time:        0.521 s, estimated 3 s
+Ran all test suites matching /src\/analytics\/__tests__\/analytics.test.ts/i.
+
+=== analytics green ===
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/analytics/__tests__/analytics.test.ts
+
+PASS src/analytics/__tests__/analytics.test.ts
+  ✓ batch envelope has the exact wire shape and an explicit android platform (1 ms)
+  ✓ 413 recursively bisects a multi-event batch until acknowledged (1 ms)
+  ✓ 429 uses the exact retry backoff sequence and retains an unacknowledged event (1 ms)
+  ✓ a closed privacy gate never sends queued events
+  ✓ the AsyncStorage queue survives a new queue instance (1 ms)
+  ✓ queue storage validates each element and drops malformed JSON records (1 ms)
+  ✓ corrupt auxiliary indexes degrade alone and never drop queued events
+  ✓ anon_id is generated once and reused for the installation
+  ✓ a local single event over 1 MiB is replaced by client_error without a request (14 ms)
+  ✓ a server-side single-event 413 is persistently isolated from later flushes (1 ms)
+  ✓ flush truncates a batch at 50 events (1 ms)
+  ✓ the 30-second periodic trigger flushes, while enqueue itself does not (6 ms)
+  ✓ an unreachable-to-reachable network edge triggers a flush
+  ✓ configured batches read the current stored access token for the request header (1 ms)
+  ✓ 5xx uses the full backoff sequence while a non-retry status is attempted once
+  ✓ only 204 dequeues events, not status 200
+  ✓ only 204 dequeues events, not status 201
+  ✓ only 204 dequeues events, not status 400 (1 ms)
+  ✓ 204 dequeues acknowledged events
+  ✓ concurrent flush calls share one in-flight request
+  ✓ privacy confirmation persists and is the trigger that releases queued events
+  ✓ config failure is fail-open and collection continues (1 ms)
+  ✓ 30-minute background boundary resets session and seq, while shorter gaps preserve both (3 ms)
+  ✓ analytics config and events report the interface locale without overriding platform language (zh)
+  ✓ analytics config and events report the interface locale without overriding platform language (zh-Hant)
+  ✓ analytics config and events report the interface locale without overriding platform language (en) (1 ms)
+  FNV-1a sampling
+    ✓ matches the standard FNV vector and the iOS UUID bucket golden value (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        0.408 s, estimated 1 s
+Ran all test suites matching /src\/analytics\/__tests__\/analytics.test.ts/i.

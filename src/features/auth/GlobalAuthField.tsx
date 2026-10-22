@@ -22,7 +22,7 @@ export function GlobalAuthField({ label, helper, error, mono = false, trailing, 
   const [hasUncontrolledText, setHasUncontrolledText] = useState(Boolean(props.defaultValue));
   const hasText = props.value === undefined ? hasUncontrolledText : props.value.length > 0;
   const passwordPlaceholder = secureTextEntry && !hasText;
-  const codePlaceholder = mono && !hasText && getLocale() === 'zh';
+  const codePlaceholder = mono && !hasText && getLocale() !== 'en';
   return <View style={{ gap: 6 }}>
     <View style={{
       backgroundColor: colors.surfaceCard, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,

@@ -408,3 +408,29 @@ test.each(['', '   '])('a coach without a display name renders a localized fallb
   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy014', [t('student.dashboardView.copy003')]));
   expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.dashboardView.copy003'))).toBe(true);
 });
+
+test('Traditional picker send failure keeps a Traditional preview and canonical retry payload', async () => {
+  setLocaleOverride('zh-Hant');
+  const summary = plan([day(studentId, { exercises: [{ id: studentId, plan_day_id: studentId, exercise_id: coachId, sort_order: 0, is_main_lift: true, notes: null, sets: [set({ id: conversationId, plan_exercise_id: studentId })] }] })], { id: conversationId, trainee_id: studentId });
+  plans = [summary];
+  const previous = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === `/plans/${conversationId}`) return summary as never;
+    if (path.includes('/sets?')) return { logs: [] } as never;
+    if (path === '/exercises') return { exercises: [{ id: coachId, name: '卧推', name_en: 'Bench Press', created_by_coach_id: null }] } as never;
+    return previous(path, options);
+  });
+  jest.mocked(chatRepository.sendSetRef).mockRejectedValue(new Error('offline'));
+  await renderScreen();
+  await act(async () => { renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('student.studentBlackGoldChatView.copy006')).props.onPress(); });
+  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress(); });
+  await act(async () => { await renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.sendToCoach')).props.onPress(); });
+  expect(chatRepository.sendSetRef).toHaveBeenCalledWith(conversationId, expect.objectContaining({ setRef: expect.objectContaining({ exerciseName: '卧推' }), body: expect.stringContaining('卧推') }));
+  expect(copy()).toContain(t('chat.trainingShareFailed'));
+  expect(copy().join(' ')).toContain('臥推');
+  expect(copy().join(' ')).not.toContain('卧推');
+  const retryText = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.studentBlackGoldChatView.copy026'))!;
+  let retry = retryText.parent!; while (!retry.props.onPress) retry = retry.parent!;
+  await act(async () => { await retry.props.onPress(); });
+  expect(chatRepository.sendSetRef).toHaveBeenNthCalledWith(2, ...jest.mocked(chatRepository.sendSetRef).mock.calls[0]);
+});

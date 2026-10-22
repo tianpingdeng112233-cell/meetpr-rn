@@ -63,10 +63,12 @@
     "eslint-config-expo": "^57.0.0",
     "jest": "^29.7.0",
     "jest-expo": "^57.0.2",
+    "opencc-js": "1.0.5",
     "patch-package": "^8.0.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "i18n:zh-Hant": "node scripts/generate-zh-hant.cjs",
     "start": "expo start",
     "android": "expo run:android",
     "lint": "expo lint",

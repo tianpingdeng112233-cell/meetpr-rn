@@ -9,6 +9,7 @@ export type SetRefSendIntent = {
   clientId: string;
   setRef: ChatSetRef;
   body: string;
+  displayExerciseName?: string;
   video: Exclude<SetRefVideo, { state: 'failed' }> | null;
 };
 export const useSetRefStagingStore = create<{

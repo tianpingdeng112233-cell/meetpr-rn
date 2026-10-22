@@ -1,0 +1,103 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-picker.test.ts
+
+FAIL src/features/training/__tests__/exercise-picker.test.ts
+  ✓ picker family squat includes main lifts and variations (4 ms)
+  ✓ picker family bench includes main lifts and variations (2 ms)
+  ✓ picker family deadlift includes main lifts and variations (1 ms)
+  ✓ picker muscle core maps to core (1 ms)
+  ✓ picker muscle chest maps to chest
+  ✓ picker muscle back maps to back (2 ms)
+  ✓ picker muscle shoulder maps to shoulders
+  ✓ picker muscle biceps maps to biceps (2 ms)
+  ✓ picker muscle triceps maps to triceps
+  ✓ picker muscle trap maps to traps
+  ✓ picker muscle traps maps to traps
+  ✓ picker muscle forearm maps to forearms (1 ms)
+  ✓ picker muscle quad maps to quads
+  ✓ picker muscle glute maps to glutes (1 ms)
+  ✓ picker muscle hamstring maps to hamstrings
+  ✓ picker muscle calf maps to calves
+  ✓ picker muscle adductor maps to adductors (1 ms)
+  ✓ picker muscle hip maps to hips (1 ms)
+  ✓ picker muscle grip maps to forearms
+  ✓ picker muscle hip_flexor maps to hips (1 ms)
+  ✓ picker muscle tibialis maps to calves
+  ✓ picker muscle mobility maps to other
+  ✓ picker muscle cardio maps to other
+  ✓ picker combines bilingual search and one tag; multi-muscle and missing metadata remain predictable (7 ms)
+  ✓ search 臥推 finds canonical 卧推 without changing stored data (2 ms)
+  ✓ search 硬舉 finds canonical 相扑硬拉 without changing stored data (1 ms)
+  ✓ search 相撲硬舉 finds canonical 相扑硬拉 without changing stored data
+  ✓ search 二頭彎舉 finds canonical 二头弯举 without changing stored data
+  ✓ search 啞鈴 finds canonical 哑铃弯举 without changing stored data (1 ms)
+  ✓ search 槓鈴 finds canonical 杠铃划船 without changing stored data
+  ✓ search 肩部觸控 finds canonical 熊爬肩部触摸 without changing stored data (1 ms)
+  ✓ Traditional catalog names display locally while custom names remain verbatim (1 ms)
+  ✓ search works with Traditional backend names and Simplified input too
+  ✓ every generated catalog display name can find its original canonical exercise (275 ms)
+  ✓ v2 alias 滑輪下拉 finds 高位下拉 without rewriting the catalog
+  ✓ v2 alias 窄臥推 finds 窄握卧推 without rewriting the catalog
+  ✓ v2 alias 槓鈴窄臥推 finds 窄握卧推 without rewriting the catalog (1 ms)
+  ✓ v2 alias 不碰胸暫停臥推 finds spoto 卧推 without rewriting the catalog
+  ✓ v2 alias 不碰胸暫停1秒臥推 finds spoto 卧推 without rewriting the catalog
+  ✓ v2 alias 不碰胸暫停1秒槓鈴臥推 finds spoto 卧推 without rewriting the catalog
+  ✓ v2 alias 不碰胸臥推 finds spoto 卧推 without rewriting the catalog (1 ms)
+  ✓ v2 alias 保護槓重啟深蹲 finds 架上(PIN)深蹲 without rewriting the catalog (2 ms)
+  ✓ v2 alias 保護槓重啟槓鈴深蹲 finds 架上(PIN)深蹲 without rewriting the catalog
+  ✓ v2 alias 彈力繩臥推 finds 弹力带卧推 without rewriting the catalog
+  ✓ v2 alias 彈力繩槓鈴臥推 finds 弹力带卧推 without rewriting the catalog
+  ✓ v2 alias 彈力繩相撲硬舉 finds 弹力带辅助相扑硬拉 without rewriting the catalog
+  ✓ v2 alias 屈體划船 finds 杠铃划船 without rewriting the catalog (1 ms)
+  ✓ v2 alias 槓鈴屈體划船 finds 杠铃划船 without rewriting the catalog
+  ✓ v2 alias 槓鈴早安 finds 早安式 without rewriting the catalog
+  ✓ v2 alias 後腳抬高蹲 finds 后脚抬高分腿蹲 without rewriting the catalog
+  ✓ v2 alias 啞鈴後腳抬高蹲 finds 后脚抬高分腿蹲 without rewriting the catalog (1 ms)
+  ✓ v2 alias 不碰胸暫停1秒槓鈴臥推（2cm) finds spoto 卧推 without rewriting the catalog
+  ✓ v2 alias 不碰胸暂停1秒杠铃卧推(2cm) finds spoto 卧推 without rewriting the catalog
+  ✓ v2 search leaves ambiguous aliases unmatched and preserves display specifications (1 ms)
+  ✕ v2 aliases extend search while retaining original name substrings (7 ms)
+
+  ● v2 aliases extend search while retaining original name substrings
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": "synthetic-coach",
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "不碰胸暫停臥推（3cm)",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      84 |   const custom = exercise({ name: '不碰胸暫停臥推（3cm)', created_by_coach_id: 'synthetic-coach' });
+      85 |   for (const query of ['暫停', '暂停', '不碰胸', 'spoto', '不碰胸暂停卧推']) {
+    > 86 |     expect(filterStudentExercises([custom], 'all', query)).toEqual([custom]);
+         |                                                            ^
+      87 |   }
+      88 |   expect(custom.name).toBe('不碰胸暫停臥推（3cm)');
+      89 | });
+
+      at Object.toEqual (src/features/training/__tests__/exercise-picker.test.ts:86:60)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 54 passed, 55 total
+Snapshots:   0 total
+Time:        4.649 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-picker.test.ts/i.

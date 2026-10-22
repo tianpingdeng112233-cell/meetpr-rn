@@ -1,0 +1,64 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/chat/__tests__/student-conversation-screen.test.tsx -t Traditional picker send failure
+
+FAIL src/features/chat/__tests__/student-conversation-screen.test.tsx
+  ✕ Traditional picker send failure keeps a Traditional preview and canonical retry payload (422 ms)
+  ○ skipped empty conversation invites a message to the coach and shows tonight online
+  ○ skipped shows both sides and marks my bubble read when the coach read cursor covers it
+  ○ skipped unread coach feedback is present in the conversation with its unread badge
+  ○ skipped opening the new plan persists its seen signature and goes to Training
+  ○ skipped sending text clears the composer and shows the confirmed message
+  ○ skipped failed sends retain their text and retry with the same idempotency key
+  ○ skipped initial load failure offers retry and can recover to the empty conversation
+  ○ skipped reading the latest message updates the shared unread cache immediately
+  ○ skipped header opens the bound coach once and navigates with conversation ID and name
+  ○ skipped the visible history sentinel requests older messages without discarding the loaded page
+  ○ skipped valid training shares render their metrics and note, invalid snapshots fall back to ordinary text
+  ○ skipped feedback becomes read only when at least 55 percent of its height is visible, once per card
+  ○ skipped initial scroll aligns the first unread feedback bottom, and prepending history preserves the visible message
+  ○ skipped header counts the unseen plan plus feedback plus only the bound coach conversation
+  ○ skipped opening failure noCoach uses the matching iOS alert
+  ○ skipped opening failure binding uses the matching iOS alert
+  ○ skipped opening failure network uses the matching iOS alert
+  ○ skipped returning to foreground drains all incremental pages and reads their latest sequence
+  ○ skipped a feedback video opens the shared player with W3-a markers and unknown duration
+  ○ skipped a Global feedback chat card and its player keep the embedded English exercise name
+  ○ skipped explicit unavailable feedback metadata does not offer another playback: null
+  ○ skipped explicit unavailable feedback metadata does not offer another playback: {"exercise_name": "Other clip", "id": "30000000-0000-4000-8000-000000000000", "set_index": 0}
+  ○ skipped staged composer accepts an optional note, sends the canonical body and clears on success
+  ○ skipped uploading share waits, then sends the selected video; HTTP retries keep body and client id
+  ○ skipped waiting upload failed never sends a wrong video and can be discarded
+  ○ skipped waiting upload removed never sends a wrong video and can be discarded
+  ○ skipped waiting upload replaced never sends a wrong video and can be discarded
+  ○ skipped oversized staged body disables sending and shows the canonical-inclusive UTF-16 count
+  ○ skipped chat plus opens the real picker and sends a prescribed set in one step
+  ○ skipped an upload session can renew its remote attachment id without replacing the selected local video
+  ○ skipped poll acknowledgement clears a staged send whose HTTP response was lost
+  ○ skipped a coach without a display name renders a localized fallback ("")
+  ○ skipped a coach without a display name renders a localized fallback ("   ")
+
+  ● Traditional picker send failure keeps a Traditional preview and canonical retry payload
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "臥推"
+    Received string:    "󰅁 Alex ● 線上 9月2日 13:00 󰃭 新計畫 教練釋出了新計畫 第 1 週計畫已可檢視 · 點按進入訓練 󰅂 [训练计划] 卧推 第1组/1 计划 0kg×5 (2026-09-07) 󰑐 重試 󰇦 [訓練計畫] 卧推 第1組/1 計畫 0kg×5 (2026-09-07) 󰅙 這組記錄暫時無法傳送 37/4000 󰐕 󰁝"
+
+      428 |   expect(chatRepository.sendSetRef).toHaveBeenCalledWith(conversationId, expect.objectContaining({ setRef: expect.objectContaining({ exerciseName: '卧推' }), body: expect.stringContaining('卧推') }));
+      429 |   expect(copy()).toContain(t('chat.trainingShareFailed'));
+    > 430 |   expect(copy().join(' ')).toContain('臥推');
+          |                            ^
+      431 |   expect(copy().join(' ')).not.toContain('卧推');
+      432 |   const retryText = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.studentBlackGoldChatView.copy026'))!;
+      433 |   let retry = retryText.parent!; while (!retry.props.onPress) retry = retry.parent!;
+
+      at Object.toContain (src/features/chat/__tests__/student-conversation-screen.test.tsx:430:28)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 33 skipped, 34 total
+Snapshots:   0 total
+Time:        4.746 s
+Ran all test suites matching /src\/features\/chat\/__tests__\/student-conversation-screen.test.tsx/i with tests matching "Traditional picker send failure".

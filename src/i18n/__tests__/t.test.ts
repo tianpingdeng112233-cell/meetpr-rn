@@ -4,6 +4,11 @@ import { getLocales } from 'expo-localization';
 import student from '../../../docs/w0-reference/i18n/StudentKit.json';
 import { getLocale, setLocaleOverride, t } from '..';
 
+jest.mock('../catalog/RnExtras.json', () => ({
+  ...jest.requireActual<Record<string, unknown>>('../catalog/RnExtras.json'),
+  'test.fallback': { zh: '简体回退' },
+}));
+
 jest.mock('expo-localization', () => ({
   getLocales: jest.fn(() => [{ languageTag: 'en-US' }]),
 }));
@@ -15,7 +20,7 @@ beforeEach(() => {
 
 test('uses the device language, with English for non-Chinese locales', () => {
   expect(t('student.bindGateView.copy001')).toBe('Checking connection status');
-  for (const languageTag of ['zh-CN', 'zh-Hant-TW']) {
+  for (const languageTag of ['zh-CN', 'zh-SG', 'zh-Hans']) {
     jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
     expect(getLocale()).toBe('zh');
     expect(t('student.bindGateView.copy001')).toBe('正在检查绑定状态');
@@ -93,4 +98,24 @@ test('plural sibling keys (<key>.one) are used for a count of exactly one in Eng
   setLocaleOverride('zh');
   expect(t('student.todayWorkoutScreen.copy019', [1])).toBe('1 组');
   setLocaleOverride(null);
+});
+
+test.each(['zh-Hant-TW', 'zh-HK', 'zh-MO', 'zh-TW', 'zh-Hant'])('selects Taiwan Traditional copy for %s', languageTag => {
+  jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
+  expect(getLocale()).toBe('zh-Hant');
+  expect(t('student.bindGateView.copy001')).toBe('正在檢查繫結狀態');
+});
+
+test.each([{ languageTag: 'zh', languageScriptCode: 'Hant' }, { languageTag: 'zh', regionCode: 'TW' }, { languageTag: 'zh', regionCode: 'HK' }, { languageTag: 'zh', regionCode: 'MO' }])('recognizes native script/region metadata: %j', locale => {
+  jest.mocked(getLocales).mockReturnValue([locale] as unknown as ReturnType<typeof getLocales>);
+  expect(getLocale()).toBe('zh-Hant');
+});
+
+test('missing Traditional falls back to Simplified, then unknown key; interpolated user text is untouched', () => {
+  setLocaleOverride('zh-Hant');
+  // @ts-expect-error Test-only entry has no generated Traditional translation.
+  expect(t('test.fallback')).toBe('简体回退');
+  // @ts-expect-error Unknown runtime keys fall back to the original key.
+  expect(t('missing.key')).toBe('missing.key');
+  expect(t('student.filter.accessibilityLabel %@', ['我的卧推'])).toContain('我的卧推');
 });

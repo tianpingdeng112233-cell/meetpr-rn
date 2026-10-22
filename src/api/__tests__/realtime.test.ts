@@ -1,4 +1,5 @@
-import { expect, jest, test } from '@jest/globals';
+import { afterEach, expect, jest, test } from '@jest/globals';
+import { setLocaleOverride, type Locale } from '@/i18n';
 import { createRealtimeClient, type RealtimeSocket } from '../realtime';
 
 class FakeSocket implements RealtimeSocket {
@@ -25,7 +26,7 @@ test('appends realtime to the API path and authenticates; only hello establishes
   client.connect(); client.connect();
   await flush();
   expect(socketFactory).toHaveBeenCalledTimes(1);
-  expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, { headers: { Authorization: 'Bearer test-token' } });
+  expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, { headers: { 'X-MeetPR-Locale': 'en', Authorization: 'Bearer test-token' } });
   expect(client.state).toBe('disconnected');
   sockets[0].frame('{"type":"hello","payload":{}}');
   expect(client.state).toBe('connected');
@@ -92,7 +93,7 @@ test('a token lookup crossing disconnect cannot construct a socket in the next g
   client.connect(); client.disconnect(); client.connect(); await flush();
   finish('old-token'); await flush();
   expect(socketFactory).toHaveBeenCalledTimes(1);
-  expect(socketFactory).toHaveBeenCalledWith('ws://api.example/realtime', undefined, { headers: { Authorization: 'Bearer new-token' } });
+  expect(socketFactory).toHaveBeenCalledWith('ws://api.example/realtime', undefined, { headers: { 'X-MeetPR-Locale': 'en', Authorization: 'Bearer new-token' } });
   client.disconnect();
 });
 
@@ -117,4 +118,17 @@ test('token and constructor failures retry silently; disconnect cancels the nati
     await jest.advanceTimersByTimeAsync(30000);
     expect(socketFactory).toHaveBeenCalledTimes(2);
   } finally { jest.useRealTimers(); }
+});
+
+afterEach(() => setLocaleOverride(null));
+
+test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('WebSocket handshake reports the interface locale without overriding platform language (%s)', async (locale, expected) => {
+  setLocaleOverride(locale);
+  const { client, socketFactory } = setup();
+  client.connect();
+  await flush();
+  client.disconnect();
+  expect(socketFactory).toHaveBeenCalledWith('wss://api.example/api/realtime', undefined, {
+    headers: { 'X-MeetPR-Locale': expected, Authorization: 'Bearer test-token' },
+  });
 });
