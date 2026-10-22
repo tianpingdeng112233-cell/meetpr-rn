@@ -1,0 +1,22 @@
+● Validation Error:
+
+  An unknown error occurred in jest-expo:
+
+  The React Native Jest preset that jest-expo relies on has moved to a separate package.
+To migrate, please install "@react-native/jest-preset" to fulfill jest-expo's peer dependency.
+  Error: The React Native Jest preset that jest-expo relies on has moved to a separate package.
+To migrate, please install "@react-native/jest-preset" to fulfill jest-expo's peer dependency.
+    at Object.<anonymous> (/Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/jest-expo/jest-preset.js:16:13)
+    at Module._compile (node:internal/modules/cjs/loader:1829:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1969:10)
+    at Module.load (node:internal/modules/cjs/loader:1552:32)
+    at Module._load (node:internal/modules/cjs/loader:1354:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1575:12)
+    at require (node:internal/modules/helpers:191:16)
+    at requireOrImportModule (/Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/jest-util/build/requireOrImportModule.js:44:28)
+    at setupPreset (/Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/jest-config/build/normalize.js:235:58)
+
+  Configuration Documentation:
+  https://jestjs.io/docs/configuration
+

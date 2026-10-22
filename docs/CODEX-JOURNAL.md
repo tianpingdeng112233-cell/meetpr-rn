@@ -4718,3 +4718,68 @@ Implementation defaults: one optional native alert per cold startup after privac
 - Native arm64 QA release build (explicit debug signing, NOT FOR DISTRIBUTION) succeeded. Real component/native Alert visually checked with an ignored local harness that supplies release metadata at the external fetch boundary. Screenshot `update-dialog.png`, cancellation/foreground evidence `update-cancel.xml`, cold-reopen/download evidence under `/Users/david/Projects/scratch/android-update-20261019/`. Generated Gradle entry override restored after harness; no fixture code is included in tracked source.
 - Independent review-loop: Standards 0 unresolved; Spec 0 unresolved after repairing the equal/older fixture test. Review record `/Users/david/CodexConfig/reviews/2026-10-19-android-cn-update.md`. Matt tracker setup is absent; used review-loop's local dual-axis path, not a configured tracker workflow.
 - Release boundary: signing credentials and OSS upload access are not present in this session; David has been asked asynchronously for an approved channel. Do not distribute the debug-signed QA artifacts. Formal signing, public asset replacement and end-to-end installed-update validation are still pending; developer tests do not assert those steps succeeded. Opus owns canonical acceptance/release closeout.
+
+## 2026-10-22 · CN 教练码分享方案 A（测试准备，环境阻塞）
+
+David 直驱 P0，指定当前 worktree、`fix/invite-share-wechat`，基线与 `origin/main` 均现场核实为 `c565eb4b5a77424cff40d1df6d65b576f69c9586`。开工工作区干净，先读 CONTEXT 与本日志末尾，再读仓内 AGENTS/CLAUDE/PLAN 和邀请码实现、既有测试与 spec093 原始验证记录。遵守本轮仅当前 worktree 的文件访问限制，未读取外部技能、记忆、其他 worktree 源码或依赖。未 commit/push，未改正典台账。
+
+已在两个既有测试文件准备方案 A 的回归：邀请消息唯一链接独占末行；中英标题和缺失姓名 fallback；两个真实屏幕 CN 主分享/次复制按钮顺序、Share.share 的 title/message、复制反馈与管理入口；Global 纯码复制、原卡片入口、无分享/溢出菜单；CN 菜单重新生成需原二次确认，取消不写入。未改生产实现，测试引用的 `inviteShareTitle` 尚待实现。
+
+环境阻塞：当前 worktree 起初没有 node_modules 或 Android 工程。`npm ci --cache "$PWD/.task-tmp/npm-cache" --no-audit --no-fund` 返回 exit 1，registry 下载连接被沙箱以 EPERM 拒绝；没有升级权限重试。安装只留下不完整的 node_modules。直接运行仓内 Jest 入口也在 preset 初始化时失败；进一步定位为缺失 `react-native`，不是已验证的行为失败。不得将该失败计作 TDD 红阶段。
+
+证据：`docs/evidence/invite-share/install.log`、`docs/evidence/invite-share/jest-preflight-blocked.log`。测试实际执行 0 项；全量 Jest、tsc、lint、CN Android 中文浅/深色截图、系统分享面板与菜单截图均未验证。微信物理安卓机也未验证。`git diff --check` 通过。本轮没有新截图，不复用历史截图充当本次证据。临时 npm 缓存移入当前 worktree 的 `node_modules/.cache/invite-share-task` 保留；不完整依赖和缓存均被既有 gitignore 排除。
+
+已向 David 提出依赖/Android 工具文件只读访问边界问题，尚未收到答复。恢复后须先取得真实行为红结果，再实现并转绿，完成全量检查及当前构建的模拟器截图；本条不代表方案 A 实装或验收完成。
+
+### 续条：方案 A 实装与开发自测交付
+
+David 随后在本 worktree 安装好依赖，并授权 Android 工具文件只读访问；本轮直接使用本地 node_modules，没有复用其他 worktree。adb 尝试因沙箱禁止本地 socket 监听而失败。David 后续明确将 CN 构建、运行和截图交给 Opus 沙箱外收货，本轮停止原生验证。保留上述历史阻塞记录；当前开发检查已恢复且完成，不再处于依赖阻塞状态。
+
+实现限于 China track（`sharesInviteMessage()` 为 true）：
+
+- `invite-message.ts` 增加 `inviteShareTitle`，修剪教练名，缺失时使用既有 fallbackName；两处实际调用 `Share.share({ title, message })`。
+- `RnExtras.json` 添加 shareToStudent、copyMessage、manage、shareTitle 四组中英串；原邀请语保留步骤和姓名，将唯一链接移至末行并独占一行。Global 的复制仍返回裸码。
+- `CoachMyProfileScreen.tsx` 有永久码时显示金色小标题、右上「管理 ›」、大号码、使用次数、满宽 AppButton 主分享/次复制；复制成功按钮显示「已复制」。本体为 View，管理入口单独导航。无永久码、加载和失败继续原分支。
+- `InviteCodesScreen.tsx` CN 永久码区改为主分享/次复制；CoachNavHeader trailing 的「…」打开沿用仓内 Modal + SafeAreaView 模式的底部动作面板，重新生成仍进入原 Confirmation。Global 保留行内复制/重新生成。未改 AppButton、导航/tab、API、包配置或依赖；按最小改动选择不添加分享图标。
+
+分享参数依据：已读 Expo v57 文档及 RN Share 官方文档，并核对本 worktree 安装的 `react-native/ReactAndroid/.../ShareModule.kt`：message → `Intent.EXTRA_TEXT`、title → `Intent.EXTRA_SUBJECT`、类型为 `text/plain`；dialogTitle 仅传给 chooser，不构成微信链接识别保证，因此不额外添加。官方参考：<https://docs.expo.dev/versions/v57.0.0/>、<https://reactnative.dev/docs/share>。
+
+先红后绿证据均在 `docs/evidence/invite-share/`：
+
+1. `red-behavior-final.log`：生产改动前，2 suites failed；11 failed / 23 passed。两处 CN 按钮、菜单位置、链接末行和标题缺失均复现；Global 回归通过。之前遇到的 native worklets/gesture 初始化错误不算行为红；测试仅 mock 原生手势容器与 Swipeable，仍挂载真实 screen、model、AppButton 和 Confirmation。
+2. `green.log`：实装后同样 2 suites / 34 tests passed。组件测试验证主次顺序/文案、完整 Share.share 参数、复制成功反馈、管理导航、本体不可点击、Global 原入口、重新生成取消不写入与确认才写入。
+3. 首次 tsc 指出本轮新增 title 参数表的 readonly 元组类型不匹配（`tsc.log`）；显式声明 `test.each<['zh' | 'en', string]>` 后通过，输入与行为断言未变。未修改任何实装前既有断言。
+
+最终开发验证（所有命令设置 `EXPO_NO_DOTENV=1`；Jest 缓存在当前 worktree）：
+
+```text
+jest --runInBand --watchman=false: exit 0
+Test Suites: 183 passed, 183 total
+Tests:       1767 passed, 1767 total
+Snapshots:   0 total
+Time:        230.159 s
+tsc --noEmit: exit 0
+npm run lint / expo lint: exit 0（无 lint errors/warnings）
+git diff --check: exit 0
+```
+
+日志：`jest-full.log`、`tsc-final.log`、`lint.log`。全量 Jest 最后执行本轮两个 suite，已覆盖类型注解修正后的文件。主代理完成 Standards/Spec 两轴自审：CN 分支范围、原状态保留、文案与 theme token、Share 参数、导航及确认链均核对；这不是独立验收，不替代 Opus 收货。
+
+Opus 原生收货命令与校验方法见 `docs/evidence/invite-share/README.md`：含 `EXPO_ROUTER_APP_ROOT="$PWD/src/app"`、China track、本机 fixture、既有 pack 入口、pack 后 `:app:createBundleReleaseJsAndAssets --rerun-tasks --no-build-cache`、重新 assemble、APK 内 bundle 与输出文件逐字节比对、packager sourcemap 与当前源码比对、安装/运行及截图命名。文档中的 3 段 shell 和内嵌 Python 已做语法检查，未实际构建/执行。
+
+未验项：CN Android 原生构建/运行、中文浅/深色两页及系统分享/菜单截图（由 Opus 收货时补入本证据目录）；微信真机发送和聊天链接点击；真实后端、生产落地页/下载链路。没有本轮截图，不以旧图替代。交付为未提交工作区：四个生产文件、两个既有测试文件、本 JOURNAL 和证据目录；未 commit/push、未改正典台账、未写凭证。
+
+
+## 2026-10-22 · 邀请分享标题文案与缺名整句 fallback
+
+基线：当前 worktree `meetpr-rn-wt-invite-share`，分支 `fix/invite-share-wechat`，HEAD `46fec47`（PR #101）。按 David 本轮拍板，仅改 `RnExtras.json` 的分享标题及新增 `coach.invites.shareTitleFallback`、`inviteShareTitle` 分支与相关单测。标题使用指定中英文；姓名 trim 后为空时直接取完整 fallback 句子，不再使用 `coach.profile.fallbackName`。复制邀请正文不变。David 追加授权后，仅同步 `invite-card-state.test.ts` 中写死的标题期望，未改测试逻辑。
+
+公开测试 seam 沿用本任务指定的 `inviteShareTitle`。真实 red → green：
+- 有名标题：先改中英期望，invite-message suite 为 2 failed / 9 passed；更新 shareTitle 串后定向运行 `-t 'share title uses'`，2 passed / 9 skipped。
+- 缺名标题：再加入中英完整句子的期望，invite-message suite 为 2 failed / 7 passed；实测旧逻辑返回「教练 教练邀请你在 MeetPR 跟练训练计划」及「Coach Coach invited you to train with them on MeetPR」。随后新增 fallback key 与实现分支；覆盖 undefined、null、空串、纯空白四种输入。
+- 最终相关 Jest（invite-message、invite-card-state、i18n/t）：3 suites passed / 0 failed，43 tests passed / 0 failed，exit 0；包含两处真实分享组件参数验证。命令：`EXPO_NO_DOTENV=1 node_modules/.bin/jest --runInBand --watchman=false --cacheDirectory=node_modules/.cache/invite-title-jest --runTestsByPath src/features/coach/profile/__tests__/invite-message.test.ts src/features/coach/profile/__tests__/invite-card-state.test.ts src/i18n/__tests__/t.test.ts`。
+- `EXPO_NO_DOTENV=1 node_modules/.bin/tsc --noEmit`：exit 0，0 errors。
+- `EXPO_NO_DOTENV=1 npm run lint`：exit 0，0 errors / 0 warnings。
+- `git diff --check` 通过。主代理核对 Standards/Spec：改动限定为批准文案、整句 fallback、对应测试及本条 JOURNAL，无无关重构。
+
+未 commit/push；保留开工前已有的 3 个未跟踪原生验证日志。本轮未运行全量 Jest、原生构建或模拟器验证，不将上述开发自测写作原生验收。
