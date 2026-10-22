@@ -3,13 +3,18 @@ import { InviteCodesModel, inviteCardState } from '../invite-card-state';
 import type { InviteCode } from '@/api/domains/invite-codes';
 import { inviteCodesRepository } from '@/api/domains/invite-codes';
 import * as SecureStore from 'expo-secure-store';
-import { resetSessionForTests } from '@/api/session';
+import { resetSessionForTests, useSessionStore } from '@/api/session';
 import { createElement } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import type { InviteDependencies } from '../use-invite-codes';
 import { CoachMyProfileScreen } from '../CoachMyProfileScreen';
-import { setLocaleOverride } from '@/i18n';
-import { Text } from 'react-native';
+import { InviteCodesScreen } from '../InviteCodesScreen';
+import { inviteCopyText } from '../invite-message';
+import { setLocaleOverride, t } from '@/i18n';
+import { Share, Text } from 'react-native';
+import { AppButton } from '@/design';
+import { FeedbackPressable } from '@/design/FeedbackPressable';
+import { router } from 'expo-router';
 import * as buildTrack from '@/config/build-track';
 
 jest.mock('@/config/build-track', () => ({
@@ -19,7 +24,8 @@ jest.mock('@/config/build-track', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  router: { push: jest.fn(), canGoBack: jest.fn(() => false), navigate: jest.fn() },
+  useRouter: () => jest.requireMock<typeof import('expo-router')>('expo-router').router,
   useFocusEffect: (callback: () => (() => void)) => {
     const React = jest.requireActual<typeof import('react')>('react');
     React.useEffect(callback, [callback]);
@@ -27,6 +33,9 @@ jest.mock('expo-router', () => ({
 }));
 
 jest.mock('expo-secure-store');
+// Swipe gestures are a native boundary; these tests exercise the permanent-code actions.
+jest.mock('react-native-gesture-handler', () => ({ GestureHandlerRootView: jest.requireActual<typeof import('react-native')>('react-native').View }));
+jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => jest.requireActual<typeof import('react-native')>('react-native').View);
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 const originalFetch = globalThis.fetch;
 beforeEach(() => {
@@ -38,6 +47,87 @@ const response = (status: number, body?: unknown) => ({ ok: status < 400, status
 
 const code: InviteCode = { id: '10000000-0000-4000-8000-000000000000', coach_id: '20000000-0000-4000-8000-000000000000',
   code: 'XK7MPQ2RVT', type: 'personal_permanent', used_count: 3, max_uses: null, revoked_at: null, expires_at: null, label: null, created_at: '2026-09-05T12:00:00Z' };
+
+const inviteScreens = [CoachMyProfileScreen, InviteCodesScreen];
+
+test.each(inviteScreens)('CN %p shows share then copy, shares title/message and confirms copying', async Component => {
+  jest.replaceProperty(buildTrack, 'BUILD_TRACK', 'china');
+  setLocaleOverride('zh');
+  useSessionStore.setState({ user: { id: code.coach_id, name: ' 王教练 ', role: 'coach', phone: null, created_at: code.created_at } });
+  const repository = { listCodes: async () => [code], createCode: jest.fn(async () => code), revokeCode: jest.fn(async () => undefined) };
+  const clipboard = { setString: jest.fn(async (_value: string) => undefined) };
+  const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+  let screen!: ReactTestRenderer;
+  await act(async () => { screen = create(createElement<InviteDependencies>(Component, { repository, clipboard })); });
+  try {
+    const buttons = screen.root.findAllByType(AppButton);
+    expect(buttons.slice(0, 2).map(button => button.props.label)).toEqual(['分享给学员', '复制邀请语']);
+    expect(buttons[0].props.variant ?? 'primary').toBe('primary');
+    expect(buttons[1].props.variant).toBe('secondary');
+    expect(buttons.slice(0, 2).every(button => button.props.fullWidth !== false)).toBe(true);
+    const message = inviteCopyText(code.code, '王教练');
+    await act(async () => { buttons[0].props.onPress(); });
+    expect(share.mock.calls).toEqual([[{ title: '王教练 教练邀请你在 MeetPR 跟练训练计划', message }]]);
+    await act(async () => { buttons[1].props.onPress(); });
+    expect(clipboard.setString).toHaveBeenCalledWith(message);
+    expect(screen.root.findAllByType(AppButton)[1].props.label).toBe('已复制');
+    if (Component === CoachMyProfileScreen) {
+      expect(screen.root.findAllByType(FeedbackPressable).some(button => button.props.testID === 'coach.profile.inviteCard')).toBe(false);
+      expect(screen.root.findAllByProps({ testID: 'coach.profile.copyInvite' })).toHaveLength(0);
+      const manage = screen.root.findAllByType(FeedbackPressable).find(button => button.props.accessibilityLabel === '管理');
+      expect(manage).toBeDefined();
+      await act(async () => { manage!.props.onPress(); });
+      expect(router.push).toHaveBeenCalledWith('/(coach)/invite-codes');
+    }
+  } finally { act(() => screen.unmount()); }
+});
+
+test.each(inviteScreens)('Global %p preserves raw-code copying without share or overflow buttons', async Component => {
+  setLocaleOverride('en');
+  const repository = { listCodes: async () => [code], createCode: jest.fn(async () => code), revokeCode: jest.fn(async () => undefined) };
+  const clipboard = { setString: jest.fn(async (_value: string) => undefined) };
+  let screen!: ReactTestRenderer;
+  await act(async () => { screen = create(createElement<InviteDependencies>(Component, { repository, clipboard })); });
+  try {
+    const buttons = screen.root.findAllByType(FeedbackPressable);
+    expect(buttons.some(button => /share/i.test(button.props.accessibilityLabel ?? ''))).toBe(false);
+    expect(screen.root.findAllByProps({ testID: 'coach.invites.more' })).toHaveLength(0);
+    const copy = Component === CoachMyProfileScreen
+      ? screen.root.findByProps({ testID: 'coach.profile.copyInvite' })
+      : buttons.find(button => button.props.accessibilityLabel === t('coach.invites.copy'))!;
+    await act(async () => { copy.props.onPress(); });
+    expect(clipboard.setString).toHaveBeenCalledWith(code.code);
+    if (Component === CoachMyProfileScreen) {
+      await act(async () => { screen.root.findByProps({ testID: 'coach.profile.inviteCard' }).props.onPress(); });
+      expect(router.push).toHaveBeenCalledWith('/(coach)/invite-codes');
+    } else {
+      expect(buttons.some(button => button.props.accessibilityLabel === t('coach.invites.regenerate'))).toBe(true);
+    }
+  } finally { act(() => screen.unmount()); }
+});
+
+test('CN overflow opens regeneration confirmation; cancellation never mutates and confirmation does', async () => {
+  jest.replaceProperty(buildTrack, 'BUILD_TRACK', 'china');
+  setLocaleOverride('zh');
+  const repository = { listCodes: async () => [code], createCode: jest.fn(async () => code), revokeCode: jest.fn(async () => undefined) };
+  let screen!: ReactTestRenderer;
+  await act(async () => { screen = create(createElement<InviteDependencies>(InviteCodesScreen, { repository })); });
+  try {
+    const openRegenerate = async () => {
+      expect(screen.root.findAllByType(FeedbackPressable).some(button => button.props.accessibilityLabel === t('coach.invites.regenerate'))).toBe(false);
+      await act(async () => { screen.root.findByProps({ testID: 'coach.invites.more' }).props.onPress(); });
+      const regenerate = screen.root.findAllByType(FeedbackPressable).find(button => button.props.accessibilityLabel === t('coach.invites.regenerate'))!;
+      await act(async () => { regenerate.props.onPress(); });
+      expect(screen.root.findAllByType(Text).map(node => node.props.children)).toContain(t('coach.invites.regenerateMessage'));
+      expect(repository.createCode).not.toHaveBeenCalled();
+    };
+    await openRegenerate();
+    await act(async () => { screen.root.findByProps({ testID: 'coach.invites.regenerate.cancel' }).props.onPress(); });
+    await openRegenerate();
+    await act(async () => { screen.root.findByProps({ testID: 'coach.invites.regenerate.confirm' }).props.onPress(); });
+    expect(repository.createCode).toHaveBeenCalledWith({ type: 'personal_permanent', label: undefined });
+  } finally { act(() => screen.unmount()); }
+});
 
 test('the mounted profile only loads, copies raw text and removes its toast after two seconds', async () => {
   jest.useFakeTimers();

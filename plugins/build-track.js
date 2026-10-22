@@ -1,5 +1,5 @@
 // 每次对外发包 +1。
-const CN_ANDROID_VERSION_CODE = 2;
+const CN_ANDROID_VERSION_CODE = 3;
 const GLOBAL_ANDROID_VERSION_CODE = 1;
 
 /** @param {string | undefined} track */

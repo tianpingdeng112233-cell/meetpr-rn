@@ -1,0 +1,3 @@
+APK SHA256: 860d4fddf455795fa862bb7012d06483c7d6eb7d10bd1c85bc1a2ca3af46598f
+Bundle SHA256: 887f82c52fb1d2589bf02a0484b054cf4759586859c5f88281832977027c63cb
+APK bundle and current source map contents verified.

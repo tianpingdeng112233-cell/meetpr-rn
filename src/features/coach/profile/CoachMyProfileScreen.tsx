@@ -1,18 +1,18 @@
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, Share, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { PRIVACY_POLICY_URL } from '@/analytics/PrivacyNoticeSheet';
 import { useSessionStore } from '@/api/session';
-import { Card, Screen, font, radius, useColors } from '@/design';
+import { AppButton, Card, Screen, font, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { BUILD_TRACK } from '@/config/build-track';
 import { CoachHelpFeedbackSheet, CoachPrivacyTermsSheet } from './CoachProfileSheets';
 import { Capsule, Confirmation, ProfileText, profileStyles } from './ProfileComponents';
 import { inviteCardState } from './invite-card-state';
-import { inviteCopyText } from './invite-message';
+import { inviteCopyText, inviteShareTitle, sharesInviteMessage } from './invite-message';
 import { useInviteCodes, type InviteDependencies } from './use-invite-codes';
 
 export function CoachMyProfileScreen(dependencies: InviteDependencies = {}) {
@@ -38,18 +38,34 @@ export function CoachMyProfileScreen(dependencies: InviteDependencies = {}) {
       <ProfileText accessibilityRole="header" style={font.display(34)}>{t('coach.profile.title')}</ProfileText>
       <Card><ProfileText testID="coach.profile.displayName" style={font.body(17, 'bold')}>{user?.name?.trim() || t('coach.profile.fallbackName')}</ProfileText></Card>
       <Card style={{ padding: 0 }}>
-        <Pressable testID="coach.profile.inviteCard" accessibilityRole="button" onPress={() => router.push('/(coach)/invite-codes')}
-          style={({ pressed }) => [{ padding: 16, gap: 10 }, pressed && { transform: [{ scale: 0.98 }] }]}>
-          <ProfileText style={{ ...font.body(12, 'semibold'), color: colors.gold500, paddingRight: code ? 74 : 0 }}>{t('coach.profile.permanentInvite')}</ProfileText>
-          {code ? <>
-            <ProfileText numberOfLines={1} adjustsFontSizeToFit style={{ ...font.mono(26, 'bold'), letterSpacing: 26 * 0.14, marginTop: 10 }}>{code.code}</ProfileText>
-            <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t('coach.profile.inviteUsage %lld', [code.used_count])}</ProfileText>
-          </> : <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t(subtitle)}</ProfileText>}
-        </Pressable>
-        {code ? <Pressable testID="coach.profile.copyInvite" accessibilityRole="button" accessibilityLabel={t('coach.profile.copyInvite')} onPress={() => void model.copyCode(code.id, now, value => inviteCopyText(value, user?.name))}
-          style={({ pressed }) => [{ position: 'absolute', top: 6, right: 16, minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.inset }, pressed && { transform: [{ scale: 0.95 }] }]}>
-          <ProfileText style={font.body(12, 'semibold')}>{t('coach.profile.copy')}</ProfileText>
-        </Pressable> : null}
+        {sharesInviteMessage() && code ? <View testID="coach.profile.inviteCard" style={{ padding: spacing.base, gap: spacing.point10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <ProfileText style={{ ...font.body(12, 'semibold'), color: colors.gold500, flex: 1 }}>{t('coach.profile.permanentInvite')}</ProfileText>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('coach.invites.manage')} onPress={() => router.push('/(coach)/invite-codes')}
+              style={{ minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'flex-end' }}>
+              <ProfileText style={{ ...font.body(12, 'semibold'), color: colors.textSecondary }}>{t('coach.invites.manage')} ›</ProfileText>
+            </Pressable>
+          </View>
+          <ProfileText numberOfLines={1} adjustsFontSizeToFit style={{ ...font.mono(26, 'bold'), letterSpacing: 26 * 0.14 }}>{code.code}</ProfileText>
+          <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t('coach.profile.inviteUsage %lld', [code.used_count])}</ProfileText>
+          <AppButton label={t('coach.invites.shareToStudent')} disabled={snapshot.mutating}
+            onPress={() => void Share.share({ title: inviteShareTitle(user?.name), message: inviteCopyText(code.code, user?.name) }).catch(() => undefined)} />
+          <AppButton variant="secondary" label={t(snapshot.copiedCodeID === code.id ? 'coach.invites.copied' : 'coach.invites.copyMessage')} disabled={snapshot.mutating}
+            onPress={() => void model.copyCode(code.id, now, value => inviteCopyText(value, user?.name))} />
+        </View> : <>
+          <Pressable testID="coach.profile.inviteCard" accessibilityRole="button" onPress={() => router.push('/(coach)/invite-codes')}
+            style={({ pressed }) => [{ padding: 16, gap: 10 }, pressed && { transform: [{ scale: 0.98 }] }]}>
+            <ProfileText style={{ ...font.body(12, 'semibold'), color: colors.gold500, paddingRight: code ? 74 : 0 }}>{t('coach.profile.permanentInvite')}</ProfileText>
+            {code ? <>
+              <ProfileText numberOfLines={1} adjustsFontSizeToFit style={{ ...font.mono(26, 'bold'), letterSpacing: 26 * 0.14, marginTop: 10 }}>{code.code}</ProfileText>
+              <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t('coach.profile.inviteUsage %lld', [code.used_count])}</ProfileText>
+            </> : <ProfileText style={{ ...font.body(12), color: colors.textTertiary }}>{t(subtitle)}</ProfileText>}
+          </Pressable>
+          {code ? <Pressable testID="coach.profile.copyInvite" accessibilityRole="button" accessibilityLabel={t('coach.profile.copyInvite')} onPress={() => void model.copyCode(code.id, now, value => inviteCopyText(value, user?.name))}
+            style={({ pressed }) => [{ position: 'absolute', top: 6, right: 16, minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.inset }, pressed && { transform: [{ scale: 0.95 }] }]}>
+            <ProfileText style={font.body(12, 'semibold')}>{t('coach.profile.copy')}</ProfileText>
+          </Pressable> : null}
+        </>}
       </Card>
       {snapshot.actionError ? <ProfileText accessibilityRole="alert" style={{ color: colors.danger }}>{t('coach.invites.operationFailed')}</ProfileText> : null}
       <ProfileText style={{ ...font.mono(12), color: colors.textTertiary, marginTop: 10 }}>{t('coach.profile.general')}</ProfileText>

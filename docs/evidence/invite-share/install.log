@@ -1,0 +1,26 @@
+npm error code EPERM
+npm error syscall connect
+npm error errno EPERM
+npm error FetchError: request to https://registry.npmjs.org/zxing-wasm/-/zxing-wasm-3.1.3.tgz failed, reason: connect EPERM 127.0.0.1:18083 - Local (0.0.0.0:0)
+npm error     at ClientRequest.<anonymous> (/opt/homebrew/lib/node_modules/npm/node_modules/minipass-fetch/lib/index.js:130:14)
+npm error     at ClientRequest.emit (node:events:509:20)
+npm error     at emitErrorEvent (node:_http_client:109:11)
+npm error     at _destroy (node:_http_client:993:9)
+npm error     at onSocketNT (node:_http_client:1013:5)
+npm error     at processTicksAndRejections (node:internal/process/task_queues:91:21)
+npm error     at runNextTicks (node:internal/process/task_queues:69:3)
+npm error     at listOnTimeout (node:internal/timers:567:9)
+npm error     at process.processTimers (node:internal/timers:541:7) {
+npm error   code: 'EPERM',
+npm error   errno: 'EPERM',
+npm error   syscall: 'connect',
+npm error   address: '127.0.0.1',
+npm error   port: 18083,
+npm error   type: 'system'
+npm error }
+npm error
+npm error The operation was rejected by your operating system.
+npm error It is likely you do not have the permissions to access this file as the current user
+npm error
+npm error If you believe this might be a permissions issue, please double-check the permissions of the file and its containing directories, or try running the command again as root/Administrator.
+npm error A complete log of this run can be found in: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/.task-tmp/npm-cache/_logs/2026-10-22T03_17_12_538Z-debug-0.log
