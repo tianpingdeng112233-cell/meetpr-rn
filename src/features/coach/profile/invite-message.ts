@@ -13,6 +13,10 @@ export function sharesInviteMessage(): boolean {
   return buildTrack.BUILD_TRACK === 'china';
 }
 
+export function inviteShareTitle(coachName?: string | null): string {
+  return t('coach.invites.shareTitle', [coachName?.trim() || t('coach.profile.fallbackName')]);
+}
+
 /**
  * Text placed on the clipboard when a coach copies a code. China track: a ready-to-send
  * message with the link, grouped code and coach name. Global track: the bare code (iOS parity).

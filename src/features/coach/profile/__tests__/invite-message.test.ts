@@ -4,7 +4,7 @@ import * as buildTrack from '@/config/build-track';
 import { setLocaleOverride, t } from '@/i18n';
 import { extractInviteCode } from '@/features/onboarding/model';
 
-import { inviteCopyText, inviteLink, sharesInviteMessage } from '../invite-message';
+import { inviteCopyText, inviteLink, inviteShareTitle, sharesInviteMessage } from '../invite-message';
 
 jest.mock('@/config/build-track', () => ({
   __esModule: true,
@@ -32,6 +32,8 @@ test.each(['zh', 'en'] as const)('China track copies the full %s invite message'
   const message = inviteCopyText('XK7MPQ2RVT', ' 王教练 ');
   expect(sharesInviteMessage()).toBe(true);
   expect(message).toContain('/i/XK7MPQ2RVT');
+  expect(message.split('\n').at(-1)).toBe(inviteLink('XK7MPQ2RVT'));
+  expect(message.split(inviteLink('XK7MPQ2RVT'))).toHaveLength(2);
   expect(message).toContain('XK7M PQ2 RVT');
   expect(message).toContain('王教练');
   expect(message).not.toMatch(/\{\d\}/);
@@ -43,4 +45,17 @@ test('China track falls back to the generic coach name', () => {
   jest.replaceProperty(buildTrack, 'BUILD_TRACK', 'china');
   setLocaleOverride('zh');
   expect(inviteCopyText('XK7MPQ2RVT', '  ')).toContain(`—— ${t('coach.profile.fallbackName')}`);
+});
+
+test.each<['zh' | 'en', string]>([
+  ['zh', '王教练邀请你加入 MeetPR'],
+  ['en', '王教练 invites you to join MeetPR'],
+])('share title uses the trimmed coach name in %s', (locale, title) => {
+  setLocaleOverride(locale);
+  expect(inviteShareTitle(' 王教练 ')).toBe(title);
+});
+
+test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
+  setLocaleOverride('zh');
+  expect(inviteShareTitle(name)).toBe(`${t('coach.profile.fallbackName')}邀请你加入 MeetPR`);
 });
