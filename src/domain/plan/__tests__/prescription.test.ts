@@ -9,6 +9,17 @@ import { set } from '../test-fixtures';
 import { setLocaleOverride } from '@/i18n';
 beforeEach(() => setLocaleOverride('en'));
 afterEach(() => setLocaleOverride(null));
+test.each<[import('@/i18n').Locale, string, string]>([
+  ['zh', '力竭', '2 组'], ['zh-Hant', '力竭', '2 組'], ['en', 'to failure', '2 sets'],
+])('formats failed prescriptions in %s without exposing placeholder reps', (locale, label, count) => {
+  setLocaleOverride(locale);
+  const failed = decodePrescription(set({ set_type: 'failed', target_reps: 1, target_reps_max: 8, load_mode: 'rpe', target_weight: '170', target_rpe: '8' }));
+  const working = decodePrescription(set({ set_type: 'working', target_reps: 1, load_mode: 'rpe', target_weight: '170', target_rpe: '8' }));
+  expect(prescribed(failed)).toBe(`170kg × ${label} @8`);
+  expect(prescribed(working)).toBe('170kg × 1 @8');
+  expect(prescriptionSummary([{ prescription: failed }, { prescription: failed }])).toBe(`170kg × ${label} @8 · ${count}`);
+  expect(prescriptionSummary([{ prescription: failed }, { prescription: working }])).toBe(count);
+});
 test.each([
   [{ load_mode: 'pct', target_pct: '72.5', pct_anchor: 'e1rm' }, '72.5% × 5'],
   [{ load_mode: 'rpe', target_rpe: '8' }, 'RPE 8 × 5'],

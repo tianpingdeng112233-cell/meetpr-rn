@@ -1,4 +1,5 @@
 import { t } from '@/i18n';
+import type { PlanSet } from '@/api/domains/plans';
 import { ChatSetRefSchema, type ChatMessage, type ChatSetRef } from '@/api/domains/chat';
 
 // Frozen cross-client message wire copy. Never translate this protocol constant.
@@ -6,8 +7,8 @@ const CANONICAL = { logged: '[训练分享]', planned: '[训练计划]', ordinal
 function repsText(ref: ChatSetRef): string {
   return ref.repsMax != null ? `${ref.reps}-${ref.repsMax}` : String(ref.reps ?? '-');
 }
-function metrics(ref: ChatSetRef): string {
-  return `${ref.weightKg ?? '-'}kg×${repsText(ref)}${ref.rpe == null ? '' : ` @RPE${ref.rpe}`} (${ref.dayDate})`;
+function metrics(ref: ChatSetRef, setType?: PlanSet['set_type']): string {
+  return `${ref.weightKg ?? '-'}kg×${ref.source === 'planned' && setType === 'failed' ? t('plan.reps.toFailure') : repsText(ref)}${ref.rpe == null ? '' : ` @RPE${ref.rpe}`} (${ref.dayDate})`;
 }
 export function canonicalFirstLine(ref: ChatSetRef): string {
   return `${CANONICAL[ref.source]} ${ref.exerciseName} ${CANONICAL.ordinal}${ref.setNumber}${CANONICAL.set}${ref.setTotal == null ? '' : `/${ref.setTotal}`}${ref.source === 'planned' ? CANONICAL.plannedMarker : ''} ${metrics(ref)}`;
@@ -16,9 +17,9 @@ export function canonicalFirstLine(ref: ChatSetRef): string {
 export function canonicalBody(ref: ChatSetRef, note?: string | null): string {
   return canonicalFirstLine(ref) + (note ? `\n${note}` : '');
 }
-export function displayFirstLine(ref: ChatSetRef, exerciseName = ref.exerciseName): string {
+export function displayFirstLine(ref: ChatSetRef, exerciseName = ref.exerciseName, setType?: PlanSet['set_type']): string {
   const position = ref.setTotal == null ? t('chat.setPosition %@', [ref.setNumber]) : t('chat.setPosition %@ of %@', [ref.setNumber, ref.setTotal]);
-  return `${t(ref.source === 'logged' ? 'chat.setReference.loggedTag' : 'chat.setReference.plannedTag')} ${exerciseName} ${position}${ref.source === 'planned' ? t('chat.setReference.plannedMarker') : ''} ${metrics(ref)}`;
+  return `${t(ref.source === 'logged' ? 'chat.setReference.loggedTag' : 'chat.setReference.plannedTag')} ${exerciseName} ${position}${ref.source === 'planned' ? t('chat.setReference.plannedMarker') : ''} ${metrics(ref, setType)}`;
 }
 export type SetRefSource = Omit<ChatSetRef, 'v'> & { v?: 1 };
 export function normalizeSetRef(source: SetRefSource): ChatSetRef {
@@ -46,7 +47,7 @@ export type SetRefVideo =
   | { state: 'ready'; videoId: string }
   | { state: 'uploading'; attachmentId: string | null; recordKey: string; createdAt: number }
   | { state: 'failed' };
-export type SetRefCandidate = { id: string; exerciseId?: string; dayLabel?: string; displayExerciseName?: string; source: SetRefSource; video?: SetRefVideo };
+export type SetRefCandidate = { id: string; exerciseId?: string; dayLabel?: string; setType?: PlanSet['set_type']; displayExerciseName?: string; source: SetRefSource; video?: SetRefVideo };
 export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, videos }: {
   planDay: import('@/api/domains/plans').PlanDay;
   drafts: readonly Pick<import('@/features/training/model').WorkoutSetDraft, 'exercise' | 'setIndex' | 'sourceLog'>[];
@@ -80,7 +81,7 @@ export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, video
         weightKg: set.load_mode == null ? (set.intensity_mode === 'weight' ? set.target_value : null) : set.target_weight ?? null,
         rpe: set.load_mode == null ? (set.intensity_mode === 'rpe' ? set.target_value : null) : set.load_mode === 'rpe' ? set.target_rpe ?? null : null,
         reps: set.target_reps, repsMax: set.target_reps_max, dayDate, setLogId: null, planSetId: set.id };
-      try { normalizeSetRef(source); candidates.push({ id: set.id, exerciseId: exercise.id, source }); } catch { /* iOS excludes invalid prescriptions. */ }
+      try { normalizeSetRef(source); candidates.push({ id: set.id, exerciseId: exercise.id, setType: set.set_type, source }); } catch { /* iOS excludes invalid prescriptions. */ }
     }
   }
   return candidates;
@@ -105,7 +106,7 @@ export class SetRefPickerPresentation {
       const id = candidate.exerciseId ?? source.exerciseName;
       const group = groups.get(id) ?? { id, exerciseName: candidate.displayExerciseName ?? source.exerciseName, dayLabel: candidate.dayLabel, cells: [] };
       group.cells.push({ id: candidate.id, title: t('chat.setPosition %@', [source.setNumber]),
-        metrics: `${source.weightKg ?? '—'}kg × ${source.repsMax != null ? `${source.reps}–${source.repsMax}` : source.reps ?? '—'}`,
+        metrics: `${source.weightKg ?? '—'}kg × ${source.source === 'planned' && candidate.setType === 'failed' ? t('plan.reps.toFailure') : source.repsMax != null ? `${source.reps}–${source.repsMax}` : source.reps ?? '—'}`,
         status: source.source === 'planned' ? t('chat.pickerPlanned') : candidate.video && candidate.video.state !== 'failed'
           ? t('chat.pickerLoggedVideo') : source.rpe != null ? t('chat.pickerLoggedRPE', [source.rpe]) : t('chat.pickerLogged'),
       });

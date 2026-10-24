@@ -290,7 +290,7 @@ export function WorkoutBody({
                 </Text>
                 {[
                   draft.weightText || '—',
-                  draft.repsText || '—',
+                  draft.repsText || (draft.planSet.set_type === 'failed' ? t('plan.reps.toFailure') : '—'),
                   draft.rpeText || '—',
                 ].map((value, i) => (
                   <Text
@@ -322,7 +322,7 @@ export function WorkoutBody({
                     )}
                     onPress={(event) => {
                       event.stopPropagation();
-                      if (!draft.weightText.trim()) onRecord(draft);
+                      if (!draft.weightText.trim() || !draft.repsText.trim()) onRecord(draft);
                       else onToggleComplete(draft);
                     }}
                   >

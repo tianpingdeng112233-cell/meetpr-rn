@@ -1,6 +1,6 @@
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { metricDisplay, metricStored, POUNDS_PER_KG } from '@/domain/measurement';
-import { decodePrescription } from '@/domain/plan/prescription';
+import { decodePrescription, prescribedReps } from '@/domain/plan/prescription';
 import type { DraftStatus, WorkoutSetDraft } from './model';
 import { formatWeight } from './policy';
 import { validateSetLogInput, type SetLogInput, type SetLogValidation } from './set-log-input';
@@ -20,6 +20,7 @@ export type AccessoryRow = {
   weightText: string;
   weightPlaceholder: string;
   repsText: string;
+  repsPlaceholder?: string;
   rpeText: string;
   rpePlaceholder: string | { kind: 'rir'; value: number };
   isBodyweight: boolean;
@@ -55,7 +56,8 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
       weightText: draft.kind ? (draft.weightText === '' ? '' : weightText(Number(draft.weightText))) : isBodyweight ? 'BW' : source ? weightText(Number(source.weight_kg))
         : prescription.weightKg == null ? '' : weightText(prescription.weightKg),
       weightPlaceholder: previous?.weightText ?? '',
-      repsText: draft.kind ? draft.repsText : String(source?.reps ?? prescription.reps),
+      repsText: draft.kind || prescription.setType === 'failed' ? draft.repsText : String(source?.reps ?? prescription.reps),
+      repsPlaceholder: !draft.kind && prescription.setType === 'failed' ? prescribedReps(prescription) : '',
       rpeText: source?.rpe == null ? '' : formatWeight(Number(source.rpe)),
       rpePlaceholder: draft.kind ? '' : intensity?.kind === 'rir' ? { kind: 'rir' as const, value: intensity.value }
         : intensity?.kind === 'rpe' ? formatWeight(intensity.value) : '',

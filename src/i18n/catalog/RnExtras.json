@@ -1,4 +1,5 @@
 {
+"plan.reps.toFailure": {"en": "to failure", "zh": "力竭"},
 "androidUpdate.title": {"en": "New version %@ available", "zh": "发现新版本 %@"},
 "androidUpdate.installHint": {"en": "After downloading, follow your phone’s instructions to install. Keep the current app installed.", "zh": "下载后按手机提示安装即可，无需卸载当前 App。"},
 "androidUpdate.later": {"en": "Not now", "zh": "稍后再说"},

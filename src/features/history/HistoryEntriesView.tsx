@@ -7,6 +7,7 @@ import { getLocale, matchesExerciseSearch, t } from '@/i18n';
 import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
 import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
 import type { SetLog } from '@/api/domains';
+import { decodePrescription, prescribedReps } from '@/domain/plan/prescription';
 
 import { ProgressPageHeader } from './ProgressPageHeader';
 import { HistoryStatsCard } from './HistoryStatsCard';
@@ -187,7 +188,7 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
             <Text style={[styles.setValue, { color: row?.completed ? colors.success : row ? colors.textSecondary : colors.textMuted }]}>
               {row
                 ? recordedSetText(row)
-                : `${set.intensity_mode === 'weight' ? `${formatKg(Number(set.target_value))} kg × ` : ''}${set.target_reps}${set.target_reps_max === null ? '' : `–${set.target_reps_max}`}${set.intensity_mode === 'rpe' ? ` @ RPE ${set.target_value}` : ''}`}
+                : `${set.intensity_mode === 'weight' ? `${formatKg(Number(set.target_value))} kg × ` : ''}${prescribedReps(decodePrescription(set), '–')}${set.intensity_mode === 'rpe' ? ` @ RPE ${set.target_value}` : ''}`}
             </Text>
           </View>
         );

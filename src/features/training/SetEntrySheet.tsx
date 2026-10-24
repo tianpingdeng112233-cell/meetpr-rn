@@ -158,6 +158,7 @@ export function SetEntrySheet({
   const validWeight =
     parseFiniteDecimal(weightText) !== null &&
     (parseFiniteDecimal(weightText) ?? -1) >= 0;
+  const validInput = validWeight && repsText.trim() !== '';
   const parsedWeight = parseFiniteDecimal(weightText) ?? 0;
   const loadout = plateLoadout(parsedWeight, collarOn);
   const rpe = parseFiniteDecimal(rpeText) ?? 8;
@@ -175,7 +176,7 @@ export function SetEntrySheet({
     dispatchWeightEntry({ type: 'userChanged', value: next });
   };
   const save = async (failed: boolean) => {
-    if (!editable || savingRef.current || !validWeight) return;
+    if (!editable || savingRef.current || !validInput) return;
     savingRef.current = true;
     setSaving(true);
     try {
@@ -247,8 +248,8 @@ export function SetEntrySheet({
                     onChange={direction => updateWeight(String(direction < 0 ? Math.max(weightFloor, parsedWeight - TRAINING_LIMITS.weightStepKg) : parsedWeight + TRAINING_LIMITS.weightStepKg))} />
                   {caption ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.caption}>{caption}</Text> : null}
                 </View>
-                <Stepper label={t('student.setEntrySheet.copy003')} stepLabel="± 1" unit={t('student.setEntrySheet.copy004')}
-                  value={repsText} editable={editable} onOpenPad={() => setNumberPad('reps')}
+                <Stepper label={t('student.setEntrySheet.copy003')} stepLabel="± 1" unit={!repsText && prescription.setType === 'failed' ? '' : t('student.setEntrySheet.copy004')}
+                  value={repsText || (prescription.setType === 'failed' ? t('plan.reps.toFailure') : '')} editable={editable} onOpenPad={() => setNumberPad('reps')}
                   onChange={direction => setRepsText(String(Math.max(0, (Number(repsText) || 0) + direction * TRAINING_LIMITS.repsStep)))} />
                 <View style={{ gap: spacing.space2 }}>
                   <View style={styles.sectionHeader}>
@@ -277,7 +278,7 @@ export function SetEntrySheet({
                       logged_date: gymDayText(new Date()),
                       set_index: draft.setIndex,
                       weight_kg: weightText.trim(),
-                      reps: Number(repsText),
+                      reps: Number(repsText.trim() || NaN),
                       rpe: rpeText.trim() || null,
                       completed: draft.status === 'complete',
                       failed: draft.status === 'failed',
@@ -296,12 +297,12 @@ export function SetEntrySheet({
               </View>
             </Animated.ScrollView>
             <View style={styles.footer}>
-              <Pressable accessibilityRole="button" disabled={!editable || saving || !validWeight} accessibilityState={{ busy: saving, disabled: !editable || saving || !validWeight }} onPress={() => void save(false)}
-                style={({ pressed }) => [styles.completeButton, pressed && styles.footerPressed, !validWeight && styles.footerDisabled]}>
+              <Pressable accessibilityRole="button" disabled={!editable || saving || !validInput} accessibilityState={{ busy: saving, disabled: !editable || saving || !validInput }} onPress={() => void save(false)}
+                style={({ pressed }) => [styles.completeButton, pressed && styles.footerPressed, !validInput && styles.footerDisabled]}>
                 {saving ? <ActivityIndicator color={colors.ctaText} /> : <MaterialCommunityIcons color={colors.ctaText} name="check" size={20} />}
                 <Text style={styles.completeText}>{t('student.setEntrySheet.copy012')}</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" disabled={!editable || saving || !validWeight} accessibilityState={{ busy: saving, disabled: !editable || saving || !validWeight }} onPress={() => void save(true)}
+              <Pressable accessibilityRole="button" disabled={!editable || saving || !validInput} accessibilityState={{ busy: saving, disabled: !editable || saving || !validInput }} onPress={() => void save(true)}
                 style={({ pressed }) => [styles.failedButton, pressed && styles.footerPressed]}>
                 <MaterialCommunityIcons color={colors.textMuted} name="close" size={14} />
                 <Text style={styles.failedText}>{t('student.setEntrySheet.copy009')}</Text>

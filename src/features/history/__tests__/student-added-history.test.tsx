@@ -8,6 +8,7 @@ import { day, plan, set } from '@/domain/plan/test-fixtures';
 import { TrainingHistoryScreen } from '../TrainingHistoryScreen';
 import { GrowthSourceSheet } from '../GrowthSourceSheet';
 import { GrowthE1RMCard } from '../GrowthE1RMCard';
+import { HistoryEntriesView } from '../HistoryEntriesView';
 
 const addedLog: SetLog = {
   id: 'added-squat', student_id: 'student', plan_exercise_id: null, plan_day_id: 'day',
@@ -32,6 +33,19 @@ const cycle = plan([day('day', { exercises: [{ id: 'bench-plan', plan_day_id: 'd
   is_main_lift: true, sort_order: 0, notes: null, sets: [set({ target_value: '80' }), set({ id: 'second', set_number: 2, target_value: '80' })] }] })]);
 const prescribedLog: SetLog = { ...addedLog, id: 'bench-log', plan_exercise_id: 'bench-plan', plan_day_id: undefined,
   exercise_id: 'bench', adhoc: false, weight_kg: '80', reps: 5, rpe: null };
+
+test('history distinguishes unlogged failed targets, working targets and actual logged reps', async () => {
+  setLocaleOverride('zh');
+  const plannedSets = [set({ set_type: 'failed', target_reps: 1, target_value: '80' }),
+    set({ id: 'working', set_number: 2, target_reps: 8, target_value: '80' }),
+    set({ id: 'logged-failed', set_number: 3, set_type: 'failed', target_reps: 1, target_value: '80' })];
+  await render(<HistoryEntriesView visible onClose={() => {}} weeks={[{ id: 'week', plan: cycle, weekNumber: 1, startDate: '2026-09-09',
+    days: [{ date: '2026-09-09', done: 1, total: 3, isRest: false, exercises: [{ name: 'Bench', notes: [],
+      planExercise: cycle.days[0].exercises[0], plannedSets, logs: [{ ...prescribedLog, set_index: 2, reps: 12 }] }] }] }]} />);
+  expect(texts()).toContain('80 kg × 力竭');
+  expect(texts()).toContain('80 kg × 8');
+  expect(texts()).toContain('80 kg × 12');
+});
 
 test.each(['en', 'zh'] as const)('history renders student-added and extra records with localized markers in %s', async locale => {
   setLocaleOverride(locale);

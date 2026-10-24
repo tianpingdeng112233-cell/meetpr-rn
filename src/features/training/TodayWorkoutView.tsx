@@ -684,6 +684,7 @@ export function TodayWorkoutView() {
       if (
         weight === null ||
         weight < 0 ||
+        !input.repsText.trim() ||
         !Number.isInteger(reps) ||
         reps < 0 ||
         reps > 99 ||

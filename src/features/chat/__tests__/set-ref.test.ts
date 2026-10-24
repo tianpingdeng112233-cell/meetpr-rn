@@ -63,6 +63,17 @@ test('candidates order recent logs before unrecorded prescriptions and preserve 
 
 const id2 = '20000000-0000-4000-8000-000000000000';
 const id3 = '30000000-0000-4000-8000-000000000000';
+test('picker displays failed and working targets in the same exercise without changing the snapshot protocol', () => {
+  setLocaleOverride('zh');
+  const exercise = { id: 'exercise', exercise_id: 'squat', plan_day_id: 'day', sort_order: 0, is_main_lift: true, notes: null,
+    sets: [set({ id, set_number: 1, set_type: 'failed', target_reps: 1, target_value: '100' }), set({ id: id2, set_number: 2, target_reps: 8, target_value: '100' })] };
+  const picker = new SetRefPickerPresentation();
+  picker.load(buildCandidates({ planDay: day('day', { exercises: [exercise] }), drafts: [], dayDate: '2026-09-05', exerciseNames: new Map(), videos: {} }), id);
+  expect(picker.groups[0].cells.map(cell => cell.metrics)).toEqual(['100kg × 力竭', '100kg × 8']);
+  expect(picker.selectedReference).toMatchObject({ reps: 1, planSetId: id });
+  expect(picker.selectedReference).not.toHaveProperty('setType');
+  expect(displayFirstLine(picker.selectedReference!, 'Squat', picker.selectedCandidate?.setType)).toContain('100kg×力竭');
+});
 test('picker preselects only the requested set, groups exercises and allows one selection', () => {
   setLocaleOverride('en');
   const picker = new SetRefPickerPresentation();

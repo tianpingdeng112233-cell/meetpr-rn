@@ -11,6 +11,7 @@ import { WorkoutBody } from '../WorkoutBody';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
 import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
 import { SetEntrySheet } from '../SetEntrySheet';
+import { NumberPad } from '@/design/NumberPad';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Toast } from '@/design/Toast';
 import { RestTimer } from '../RestTimer';
@@ -124,6 +125,22 @@ const openSet = async () => {
 };
 const saveButton = (failed = false) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t(failed ? 'student.setEntrySheet.copy009' : 'student.setEntrySheet.copy012')))[0];
 const loadFailedTitle = () => renderer.root.findAll(node => node.type === Text && node.props.children === t('student.todayWorkoutScreen.copy001'));
+test('failed prescription entry shows to failure and saves only the student-entered actual reps', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise,
+    sets: exercise.sets.map(set => ({ ...set, set_type: 'failed', target_reps: 1 })),
+  })) })) };
+  await openSet();
+  const reps = () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.setEntrySheet.copy003'))[0];
+  expect(reps().props.accessibilityValue.text.trim()).toBe('to failure');
+  expect(saveButton().props.disabled).toBe(true);
+  await act(async () => { saveButton().props.onPress(); });
+  expect(writes).toBe(0);
+  await act(async () => { reps().props.onPress(); });
+  await act(async () => { renderer.root.findByType(NumberPad).props.onCommit(12); });
+  expect(saveButton().props.disabled).toBe(false);
+  await act(async () => { saveButton().props.onPress(); });
+  expect(authenticatedRequest).toHaveBeenCalledWith('/sets/log', expect.objectContaining({ body: expect.objectContaining({ reps: 12, failed: false }) }));
+});
 test('a rate-limited background refetch keeps the loaded workout instead of replacing it with the load error', async () => {
   await mount();
   expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);

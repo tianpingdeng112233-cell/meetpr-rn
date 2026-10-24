@@ -14,6 +14,7 @@ export type Prescription = {
   loadMode?: NonNullable<PlanSet['load_mode']>;
   reps: number;
   repsMax?: number;
+  setType?: PlanSet['set_type'];
 };
 const numeric = (
   value: string | number | null | undefined,
@@ -25,6 +26,7 @@ export function decodePrescription(set: PlanSet): Prescription {
   const result: Prescription = {
     reps: set.target_reps,
     repsMax: set.target_reps_max ?? undefined,
+    setType: set.set_type,
   };
   if (set.load_mode == null) {
     const value = numeric(set.target_value);
@@ -104,14 +106,20 @@ export function percentageAnchorText(
     [p.intensity.value],
   );
 }
+export function prescribedReps(
+  p: Prescription,
+  rangeSeparator = p.loadMode ? '–' : '-',
+): string {
+  if (p.setType === 'failed') return t('plan.reps.toFailure');
+  return p.repsMax == null
+    ? `${p.reps}`
+    : `${p.reps}${rangeSeparator}${p.repsMax}`;
+}
 export function prescribed(
   p: Prescription,
   resolution?: PctAnchorResolution,
 ): string {
-  const reps =
-    p.repsMax == null
-      ? `${p.reps}`
-      : `${p.reps}${p.loadMode ? '–' : '-'}${p.repsMax}`;
+  const reps = prescribedReps(p);
   if (!p.loadMode && p.weightKg !== undefined)
     return `${p.weightKg}kg x ${reps}`;
   if (p.intensity?.kind === 'weightRange')

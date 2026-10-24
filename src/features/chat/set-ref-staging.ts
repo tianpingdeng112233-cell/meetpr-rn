@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { ChatSetRef } from '@/api/domains/chat';
-import type { SetRefVideo } from './set-ref';
+import type { SetRefCandidate, SetRefVideo } from './set-ref';
 import { useVideoUploadStore } from '@/features/training/video-upload/store';
 
 export type SetRefSendIntent = {
@@ -10,6 +10,7 @@ export type SetRefSendIntent = {
   setRef: ChatSetRef;
   body: string;
   displayExerciseName?: string;
+  setType?: SetRefCandidate['setType'];
   video: Exclude<SetRefVideo, { state: 'failed' }> | null;
 };
 export const useSetRefStagingStore = create<{

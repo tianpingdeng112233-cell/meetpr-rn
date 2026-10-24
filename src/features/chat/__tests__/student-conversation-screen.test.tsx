@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Alert, AppState, Pressable, Text, TextInput, ScrollView, type AppStateStatus } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
-import { chatRepository, ChatMessageSchema, type ChatMessage } from '@/api/domains/chat';
+import { chatRepository, ChatMessageSchema, type ChatMessage, type ChatSetRef } from '@/api/domains/chat';
 import { setLocaleOverride, t } from '@/i18n';
 import { ApiError } from '@/api/client';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
@@ -302,6 +302,17 @@ test.each([null, { id: coachId, exercise_name: 'Other clip', set_index: 0 }])('e
 });
 
 const staged: SetRefSendIntent = { conversationId, clientId: 'staged-id', setRef: { v: 1, source: 'logged', exerciseName: 'Squat', setNumber: 1, weightKg: '80', reps: 5, rpe: '8', dayDate: '2026-09-05', setLogId: studentId }, body: '', video: null };
+test.each(['zh', 'en', 'zh-Hant'] as const)('pending failed plan shares keep their target label in %s without changing the wire', async locale => {
+  setLocaleOverride(locale);
+  const setRef: ChatSetRef = { ...staged.setRef, source: 'planned', reps: 1, setLogId: null, planSetId: studentId };
+  const body = canonicalBody(setRef, 'Why?');
+  useSetRefStagingStore.getState().stage({ ...staged, autoSend: true, setType: 'failed', setRef, body });
+  jest.mocked(chatRepository.sendSetRef).mockRejectedValue(new Error('Offline'));
+  await renderScreen();
+  expect(copy()).toContain(displayFirstLine(setRef, 'Squat', 'failed') + '\nWhy?');
+  expect(copy()).not.toContain(body);
+  expect(chatRepository.sendSetRef).toHaveBeenCalledWith(conversationId, { body, clientID: 'staged-id', setRef });
+});
 test('staged composer accepts an optional note, sends the canonical body and clears on success', async () => {
   useSetRefStagingStore.getState().stage(staged);
   jest.mocked(chatRepository.sendSetRef).mockResolvedValue({ message: { ...message('sent-set', 3, studentId, canonicalBody(staged.setRef, 'Why?')), set_ref: staged.setRef } });

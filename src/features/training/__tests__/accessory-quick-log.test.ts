@@ -1,6 +1,7 @@
 import { expect, test } from '@jest/globals';
 import type { PlanSet } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
+import { setLocaleOverride } from '@/i18n';
 import { day, set } from '@/domain/plan/test-fixtures';
 import { synthesizeDrafts } from '../drafts';
 import { accessoryRows, accessoryRowWritable, accessoryLogRequest, rowsToCompleteAll, isAccessoryExercise } from '../accessory-quick-log';
@@ -71,6 +72,22 @@ test('lb rows convert prescriptions, saved weights and previous weights with exi
 });
 
 const validEdit = { weightText: '25', repsText: '12', rpeText: '' };
+test('failed targets prompt for actual reps while mixed working rows and saved reps stay numeric', () => {
+  setLocaleOverride('zh');
+  try {
+    const prescriptions: Partial<PlanSet>[] = [{ set_type: 'failed', target_reps: 1 }, { set_type: 'working', target_reps: 8 }];
+    const input = drafts(prescriptions);
+    expect(input.map(row => row.repsText)).toEqual(['', '8']);
+    const rows = accessoryRows({ drafts: input, previousLogs: [], unit: 'kg' });
+    expect(rows[0]).toMatchObject({ repsText: '', repsPlaceholder: '力竭' });
+    expect(rows[1].repsText).toBe('8');
+    expect(accessoryRowWritable(rows[0], rows[0]).writable).toBe(false);
+    expect(accessoryLogRequest(rows[0], validEdit, { planExerciseId: 'exercise' })).toMatchObject({ reps: 12, failed: false });
+    const saved = drafts(prescriptions, [log({ reps: 12 })]);
+    expect(saved[0].repsText).toBe('12');
+    expect(accessoryRows({ drafts: saved, previousLogs: [], unit: 'kg' })[0].repsText).toBe('12');
+  } finally { setLocaleOverride(null); }
+});
 test.each<[keyof typeof validEdit, string, boolean]>([
   ['weightText', '', false], ['weightText', '  ', false], ['weightText', '-0.1', false],
   ['weightText', 'Infinity', false], ['weightText', 'NaN', false], ['weightText', 'abc', false],

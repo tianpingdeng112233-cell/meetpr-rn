@@ -83,7 +83,7 @@ export function SetRefSharePicker({ conversationId, initialSetLogID, loadCandida
           video = { state: 'ready', videoId: current.attachmentId };
         }
       }
-      useSetRefStagingStore.getState().stage({ conversationId, clientId: createUUID(), setRef, displayExerciseName: selected.displayExerciseName, body: canonicalBody(setRef, question), video, autoSend: true });
+      useSetRefStagingStore.getState().stage({ conversationId, clientId: createUUID(), setRef, displayExerciseName: selected.displayExerciseName, setType: selected.setType, body: canonicalBody(setRef, question), video, autoSend: true });
       onClose(); onStaged?.();
     } catch { setError(t('chat.trainingShareFailed')); confirmLock.current = false; setConfirming(false); }
   }

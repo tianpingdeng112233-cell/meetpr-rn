@@ -40,7 +40,7 @@ export function synthesizeDrafts(
                 : prescription.weightKg === null
                   ? ''
                   : formatWeight(prescription.weightKg),
-            repsText: String(log?.reps ?? prescription.reps),
+            repsText: String(log?.reps ?? (planSet.set_type === 'failed' ? '' : prescription.reps)),
             rpeText:
               log?.rpe != null
                 ? formatWeight(Number(log.rpe))

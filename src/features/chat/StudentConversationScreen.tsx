@@ -300,8 +300,8 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       </View>)}
       {shareVideoError ? <PlaybackLinkError /> : null}
       {pending.map(item => <View key={item.clientId} style={{ maxWidth: '76%', alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4 }}>
-        <Text style={{ ...font.body(14, 'medium'), color: colors.bgBase, backgroundColor: `${colors.textPrimary}B8`, paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: 5 }}>{getLocale() === 'zh-Hant' && item.setIntent?.displayExerciseName
-          ? displayFirstLine(item.setIntent.setRef, item.setIntent.displayExerciseName) + item.text.slice(canonicalBody(item.setIntent.setRef).length)
+        <Text style={{ ...font.body(14, 'medium'), color: colors.bgBase, backgroundColor: `${colors.textPrimary}B8`, paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: 5 }}>{item.setIntent && (item.setIntent.setType === 'failed' || (getLocale() === 'zh-Hant' && item.setIntent.displayExerciseName))
+          ? displayFirstLine(item.setIntent.setRef, item.setIntent.displayExerciseName, item.setIntent.setType) + item.text.slice(canonicalBody(item.setIntent.setRef).length)
           : item.text}</Text>
         <Pressable accessibilityRole="button" disabled={!item.failed} onPress={() => send(item)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <MaterialCommunityIcons name={item.failed ? 'refresh' : 'clock-outline'} size={10} color={item.failed ? colors.danger : colors.textDim} />
@@ -313,7 +313,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       {staged ? <View style={{ gap: 6, paddingBottom: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <MaterialCommunityIcons name="dumbbell" size={16} color={colors.gold500} />
-          <Text numberOfLines={2} style={{ ...font.body(12, 'medium'), color: colors.textSecondary, flex: 1 }}>{displayFirstLine(staged.setRef, staged.displayExerciseName)}</Text>
+          <Text numberOfLines={2} style={{ ...font.body(12, 'medium'), color: colors.textSecondary, flex: 1 }}>{displayFirstLine(staged.setRef, staged.displayExerciseName, staged.setType)}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy004')} onPress={discardStaged} hitSlop={12}><MaterialCommunityIcons name="close-circle" size={18} color={colors.textDim} /></Pressable>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}><Text style={{ ...font.mono(10), color: setRefBodyAllowed(stagedBody) ? colors.textDim : colors.danger, flex: 1 }}>{!setRefBodyAllowed(stagedBody) ? t('student.studentBlackGoldChatView.copy005') : sendError}</Text><Text style={{ ...font.mono(10), color: colors.textDim }}>{stagedBody.length}/4000</Text></View>
