@@ -1,0 +1,7 @@
+Baseline HEAD: 6969dd987d4fa5c38c29d0faa729ee8400dc053b
+TodayWorkoutView HEAD SHA256: 29609783e7738320669c3bd884f3636332d1f2eca4411e1d2761b7bdd39d4311
+TodayWorkoutView worktree SHA256: 29609783e7738320669c3bd884f3636332d1f2eca4411e1d2761b7bdd39d4311
+WorkoutBody HEAD SHA256: 56a2d5f528a3ea2dc626353b8bf65b723c64d0e4f090d15705e6af2267a4ec7e
+Baseline probe uses git show HEAD copies of TodayWorkoutView and WorkoutBody; rewrites only the local WorkoutBody import to its baseline copy.
+{"preset": "jest-expo", "rootDir": "/Users/david/Projects/apps/meetpr-rn-wt-096", "moduleNameMapper": {"^@/features/training/TodayWorkoutView$": "<rootDir>/src/features/training/TodayWorkoutView.baseline.tsx", "^@/(.*)$": "<rootDir>/src/$1"}}
+No navigation/selection production code changed this round.

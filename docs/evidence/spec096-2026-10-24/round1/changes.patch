@@ -1,0 +1,412 @@
+--- a/src/features/training/WorkoutBody.tsx
++++ b/src/features/training/WorkoutBody.tsx
+@@ -4,7 +4,7 @@
+ import { accessoryRows, isAccessoryExercise } from './accessory-quick-log';
+ import { useCameraAvailability } from './video-upload/use-camera-availability';
+ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+-import { CompletedSetVideo, CompletedVideoReplayProvider } from './video-upload/CompletedVideoReplay';
++import { CompletedSetVideo, CompletedVideoGroup, CompletedVideoReplayProvider } from './video-upload/CompletedVideoReplay';
+ import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
+ import { useLayoutEffect, useRef, useState } from 'react';
+ import { ActivityIndicator, LayoutAnimation, Text, View, type LayoutRectangle } from 'react-native';
+@@ -410,7 +410,7 @@
+           const open = Boolean(expandedSummary[exercise.id]);
+           const recorded = rows.filter(draft => added || !draft.kind || isDraftTerminal(draft));
+           const title = exerciseTitle(resolveExerciseMetadata(exercise.exercise_id));
+-          return <View key={exercise.id} style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
++          return <CompletedVideoGroup key={exercise.id} sets={recorded.map(draft => ({ setLogId: draft.sourceLog?.id ?? null, stableSetId: draft.stableSetId }))}>{() => <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+             <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: open }} onPress={() => setExpandedSummary(current => ({ ...current, [exercise.id]: !open }))}
+               style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11, minHeight: spacing.minimumHitTarget }}>
+               {done ? <View style={{ width: 22, height: 22, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.successTint }}>
+@@ -433,7 +433,7 @@
+                 </View>;
+               })}
+             </View> : null}
+-          </View>;
++          </View>}</CompletedVideoGroup>;
+         })}
+         {completedDay.canUndo ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.todayWorkoutScreen.copy023')} accessibilityState={{ disabled: completedDay.undoing }} disabled={completedDay.undoing} onPress={completedDay.onUndo}
+           style={{ alignSelf: 'flex-end', justifyContent: 'center', minHeight: spacing.minimumHitTarget }}>
+--- a/src/features/history/HistoryEntriesView.tsx
++++ b/src/features/history/HistoryEntriesView.tsx
+@@ -6,7 +6,7 @@
+ import { getLocale, matchesExerciseSearch, t } from '@/i18n';
+ import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
+ import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
+-import { CompletedSetVideo, CompletedVideoReplayProvider } from '@/features/training/video-upload/CompletedVideoReplay';
++import { CompletedSetVideo, CompletedVideoGroup, CompletedVideoReplayProvider } from '@/features/training/video-upload/CompletedVideoReplay';
+ import type { SetLog } from '@/api/domains';
+ 
+ import { ProgressPageHeader } from './ProgressPageHeader';
+@@ -171,7 +171,7 @@
+ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
+   const { colors, styles } = useStyles();
+   return (
+-    <View style={styles.exerciseBlock}>
++    <CompletedVideoGroup sets={exercise.logs.map(row => ({ setLogId: row.id, stableSetId: historyStableSetId(row, exercise) }))}>{hasVideo => <View style={styles.exerciseBlock}>
+       <Text style={styles.exerciseName}>{exercise.name}</Text>
+       {exercise.studentAdded ? <Text style={styles.noteText}>{t('student.added.added')}</Text> : null}
+       {exercise.notes.map((note) => (
+@@ -186,12 +186,12 @@
+         return (
+           <View key={index} style={styles.setRow}>
+             <Text style={styles.setLabel}>{t('student.historyEntriesView.copy001', [index + 1])}</Text>
+-            <Text style={[styles.setValue, { color: row?.completed ? colors.success : row ? colors.textSecondary : colors.textMuted }]}>
++            <Text style={[styles.setValue, hasVideo && styles.videoSetValue, { color: row?.completed ? colors.success : row ? colors.textSecondary : colors.textMuted }]}>
+               {row
+                 ? recordedSetText(row)
+                 : `${set.intensity_mode === 'weight' ? `${formatKg(Number(set.target_value))} kg × ` : ''}${set.target_reps}${set.target_reps_max === null ? '' : `–${set.target_reps_max}`}${set.intensity_mode === 'rpe' ? ` @ RPE ${set.target_value}` : ''}`}
+             </Text>
+-            {row ? <HistorySetVideo row={row} exercise={exercise} /> : null}
++            {row ? <HistorySetVideo row={row} exercise={exercise} /> : hasVideo ? <CompletedSetVideo setLogId={null} badge={{ exerciseName: exercise.name, setOrdinal: index + 1 }} /> : null}
+           </View>
+         );
+       })}
+@@ -200,19 +200,23 @@
+           <Text style={styles.setLabel}>{exercise.studentAdded
+             ? t('student.historyEntriesView.copy001', [log.set_index + 1])
+             : t('student.added.extra')}</Text>
+-          <Text style={[styles.setValue, { color: log.completed ? colors.success : colors.textSecondary }]}>{recordedSetText(log)}</Text>
++          <Text style={[styles.setValue, hasVideo && styles.videoSetValue, { color: log.completed ? colors.success : colors.textSecondary }]}>{recordedSetText(log)}</Text>
+           <HistorySetVideo row={log} exercise={exercise} />
+         </View>
+       ))}
+-    </View>
++    </View>}</CompletedVideoGroup>
+   );
+ }
+ 
+ function HistorySetVideo({ row, exercise }: { row: SetLog; exercise: HistoryExercise }) {
+-  const stableSetId = exercise.studentAdded ? `added:${exercise.planExercise.id}:${row.set_index}`
+-    : exercise.plannedSets.find(set => set.set_number === row.set_index + 1)?.id ?? `extra:${exercise.planExercise.id}:${row.set_index}`;
++  const stableSetId = historyStableSetId(row, exercise);
+   return <CompletedSetVideo setLogId={row.id} stableSetId={stableSetId} badge={{ exerciseName: exercise.name, setOrdinal: row.set_index + 1,
+     weightKg: Number(row.weight_kg), reps: row.reps, rpe: row.rpe === null ? null : Number(row.rpe) }} />;
++}
++
++function historyStableSetId(row: SetLog, exercise: HistoryExercise) {
++  return exercise.studentAdded ? `added:${exercise.planExercise.id}:${row.set_index}`
++    : exercise.plannedSets.find(set => set.set_number === row.set_index + 1)?.id ?? `extra:${exercise.planExercise.id}:${row.set_index}`;
+ }
+ 
+ function useStyles() {
+@@ -271,7 +275,8 @@
+   noteText: { color: colors.textSecondary, flexShrink: 1, ...typography.caption },
+   setRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 },
+   setLabel: { color: colors.textSecondary, ...typography.footnote },
+-  setValue: { flex: 1, textAlign: 'right', color: colors.textPrimary, fontVariant: ['tabular-nums'], ...typography.footnote },
++  setValue: { color: colors.textPrimary, fontVariant: ['tabular-nums'], ...typography.footnote },
++  videoSetValue: { flex: 1, textAlign: 'right' },
+   scrim: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'flex-end' },
+   choiceSheet: {
+     backgroundColor: colors.surfaceCard,
+--- a/src/features/history/__tests__/student-added-history.test.tsx
++++ b/src/features/history/__tests__/student-added-history.test.tsx
+@@ -1,4 +1,5 @@
+-import { expect, jest, test } from '@jest/globals';
++import { afterEach, expect, jest, test } from '@jest/globals';
++import { StyleSheet, Text, View } from 'react-native';
+ import { act } from 'react-test-renderer';
+ import { render, renderer, button, texts } from '../test-support/progress-screen';
+ import { setsRepository, plansRepository, type SetLog } from '@/api/domains';
+@@ -11,6 +12,11 @@
+ import { videosRepository } from '@/api/domains/videos';
+ import { FeedbackPressable } from '@/design/FeedbackPressable';
+ import { VideoPlayback } from '@/features/training/video-upload/VideoPlayback';
++
++import { EMPTY_VIDEO_UPLOAD } from '@/features/training/video-upload/model';
++import { resetVideoUploadStoreForTests, useVideoUploadStore } from '@/features/training/video-upload/store';
++
++afterEach(() => resetVideoUploadStoreForTests());
+ 
+ jest.mock('react-native-video', () => 'Video');
+ 
+@@ -72,6 +78,53 @@
+   await render(<TrainingHistoryScreen />);
+   const playButtons = renderer.root.findAllByType(FeedbackPressable).filter(node => node.props.accessibilityLabel === t('chat.playVideo'));
+   expect(playButtons).toHaveLength(3);
++  for (const button of playButtons) {
++    expect(StyleSheet.flatten(button.props.style)).toMatchObject({ width: 22, height: 22 });
++    expect(button.props.hitSlop).toBe(11);
++    let slot = button.parent!;
++    while (slot.type !== View) slot = slot.parent!;
++    expect(StyleSheet.flatten(slot.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
++    const column = slot.parent!;
++    expect(StyleSheet.flatten(column.props.style)).toEqual({ width: 22, alignSelf: 'stretch' });
++  }
+   await act(async () => playButtons[2].props.onPress());
+   expect(renderer.root.findByType(VideoPlayback).props.readOnly).toBe(true);
+ });
++
++
++test.each([
++  { videoLogId: 'bench-log', pending: null }, { videoLogId: 'extra-bench', pending: null },
++  { videoLogId: 'added-squat', pending: null }, { videoLogId: null, pending: null },
++  { videoLogId: 'bench-log', pending: 'uploading' }, { videoLogId: 'bench-log', pending: 'failed' },
++] as const)('history reserves a video column only within the exercise with playable video: $videoLogId / $pending', async ({ videoLogId, pending }) => {
++  if (pending) useVideoUploadStore.setState({ hydrated: true, records: { 'student:extra:bench-plan:2': {
++    ...EMPTY_VIDEO_UPLOAD, status: pending, setLogId: 'extra-bench',
++  } } });
++  const logs = [prescribedLog, { ...prescribedLog, id: 'extra-bench', set_index: 2, weight_kg: '90' }, addedLog,
++    { ...addedLog, id: 'second-added', set_index: 1, weight_kg: '110' }];
++  jest.mocked(plansRepository.list).mockResolvedValue({ plans: [cycle] });
++  jest.spyOn(plansRepository, 'detail').mockResolvedValue(cycle);
++  jest.mocked(setsRepository.range).mockResolvedValue({ logs });
++  jest.spyOn(videosRepository, 'list').mockResolvedValue({ videos: videoLogId ? [{ id: 'video', set_log_id: videoLogId,
++    plan_exercise_id: null, created_at: addedLog.logged_at, logged_at: addedLog.logged_at, exercise_name: null,
++    set_index: 0, weight_kg: '80', reps: 5, content_type: 'video/mp4', size_bytes: 100, filename: null }] : [] });
++  await render(<TrainingHistoryScreen />);
++  const rows = ['90 kg × 5', '100 kg × 1 @ RPE 10.0'].flatMap(label => {
++    let row = renderer.root.findAllByType(Text).find(node => node.props.children === label)!.parent!;
++    while (row.type !== View) row = row.parent!;
++    let block = row.parent!;
++    while (block.type !== View) block = block.parent!;
++    return block.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.minHeight === 32);
++  });
++  expect(rows).toHaveLength(5);
++  rows.forEach((row, index) => {
++    const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
++    const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
++    expect(slots).toHaveLength(reserved ? 1 : 0);
++    const value = row.findAllByType(Text)[1];
++    const valueStyle = StyleSheet.flatten(value.props.style);
++    expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
++    expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
++    expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
++  });
++});
+--- a/src/features/training/__tests__/set-save.test.tsx
++++ b/src/features/training/__tests__/set-save.test.tsx
+@@ -14,13 +14,16 @@
+ import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
+ import { SetEntrySheet } from '../SetEntrySheet';
+ import { SafeAreaProvider } from 'react-native-safe-area-context';
++import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import { resolveColors } from '@/design';
++import { FeedbackPressable } from '@/design/FeedbackPressable';
+ import { Toast } from '@/design/Toast';
+ import { RestTimer } from '../RestTimer';
+ import { writeRestPreference } from '@/features/settings/storage';
+ import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+-import { Alert, ActivityIndicator, AppState, Text, TextInput, type AppStateStatus } from 'react-native';
++import { Alert, ActivityIndicator, AppState, StyleSheet, Text, TextInput, View, type AppStateStatus } from 'react-native';
+ import { authenticatedRequest, useSessionStore } from '@/api/session';
+ import type { PlanDetail } from '@/api/domains/plans';
+ import { setLocaleOverride, t } from '@/i18n';
+@@ -696,7 +699,7 @@
+ });
+ 
+ test.each(['uploaded', 'none', 'uploading', 'failed'] as const)('completed summary replay and upload status: %s', async status => {
+-  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' }] };
++  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z', exercises: [{ ...plan.days[0].exercises[0], sets: [...plan.days[0].exercises[0].sets, { ...plan.days[0].exercises[0].sets[0], id: 'second-set', set_number: 2 }] }] }] };
+   storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' }];
+   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+@@ -715,16 +718,46 @@
+   await act(async () => summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false)[0].props.onPress());
+   if (status !== 'uploaded') {
+     expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo'))).toHaveLength(0);
+-    if (status === 'none') return;
++    if (status === 'none') {
++      expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(0);
++      return;
++    }
+     expect(summary.findAllByType(SetVideoUploadIndicator)).toHaveLength(1);
+     // Completing the pending upload updates the mounted summary without navigation.
+     await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
+   }
+   expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+-  await act(async () => summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo'))[0].props.onPress());
++  expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(2);
++  const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
++  expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22 });
++  expect(playButton.props.hitSlop).toBe(11);
++  let hitContainer = playButton.parent!;
++  while (hitContainer.type !== View) hitContainer = hitContainer.parent!;
++  expect(StyleSheet.flatten(hitContainer.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
++  expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
++  await act(async () => playButton.props.onPress());
+   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+   await act(async () => renderer.root.findByType(VideoPlayback).props.onReview());
+   expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(student)/feedback/[feedbackId]', params: { feedbackId: 'latest-feedback' } });
+   expect(renderer.root.findAllByType(VideoPlayback)).toHaveLength(0);
+   expect(writes).toBe(0);
+ });
++
++
++test('Training focus cycle preserves the pre-096 behavior of returning to the cursor', async () => {
++  mockFocused = true;
++  const past = { ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' };
++  const cursor = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 2,
++    exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000002', plan_day_id: '40000000-0000-4000-8000-000000000002' }] };
++  servedPlan = { ...plan, days: [past, cursor] };
++  await mount();
++  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(past.id));
++  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(past.id);
++  // Expo Router blurs Training while feedback is open, then focuses it on back.
++  mockFocused = false;
++  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
++  mockFocused = true;
++  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
++  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(cursor.id);
++});
+--- a/src/features/training/video-upload/SetVideoPlayer.tsx
++++ b/src/features/training/video-upload/SetVideoPlayer.tsx
+@@ -121,9 +121,9 @@
+           <PlayerIconButton name="close" label={t('chat.closePlayback')} onPress={() => onClose?.()} />
+           {onReview ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.coachReviewed')} onPress={onReview}
+             style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
+-            <View style={{ height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: 'rgba(17,24,39,.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,.18)', flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+-              <Text style={{ ...font.body(12, 'semibold'), color: '#FFFFFF' }}>{t('training.coachReviewed')}</Text>
+-              <MaterialCommunityIcons name="chevron-right" size={14} color="#FFFFFF" />
++            <View style={{ height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.videoReviewedFill, borderWidth: 1, borderColor: colors.videoReviewedBorder, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
++              <Text style={{ ...font.body(12, 'semibold'), color: colors.videoReviewedText }}>{t('training.coachReviewed')}</Text>
++              <MaterialCommunityIcons name="chevron-right" size={14} color={colors.videoReviewedText} />
+             </View>
+           </Pressable> : null}
+         </View>
+--- a/src/features/training/video-upload/CompletedVideoReplay.tsx
++++ b/src/features/training/video-upload/CompletedVideoReplay.tsx
+@@ -1,17 +1,17 @@
+ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+ import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+-import { Modal } from 'react-native';
++import { Modal, View } from 'react-native';
+ import { useRouter } from 'expo-router';
+ import { feedbackRepository, type FeedbackItem } from '@/api/domains/feedback';
+ import { VideoPlayback } from './VideoPlayback';
+ import { File } from 'expo-file-system';
+ import { videosRepository, type StudentVideo } from '@/api/domains/videos';
+-import { spacing, useTheme } from '@/design';
++import { spacing, useColors } from '@/design';
+ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+ import { t } from '@/i18n';
+ import type { VideoBadgeInfo } from '@/features/video-player/types';
+ import { hydrateVideoUploads, useVideoUploadStore } from './store';
+-import { EMPTY_VIDEO_UPLOAD } from './model';
++import { EMPTY_VIDEO_UPLOAD, type VideoUploadRecord } from './model';
+ import { latestVideoFeedbackId, playableSetVideo, type ReplayVideo } from './completed-replay';
+ import { SetVideoUploadIndicator } from './VideoStatusIcon';
+ 
+@@ -54,25 +54,55 @@
+   </ReplayContext.Provider>;
+ }
+ 
+-export function CompletedSetVideo({ setLogId, stableSetId, badge }: { setLogId: string | null; stableSetId?: string; badge: VideoBadgeInfo }) {
+-  const { studentId, videos, play } = useContext(ReplayContext);
+-  const { scheme } = useTheme();
+-  const entry = useVideoUploadStore(state => {
+-    const direct = stableSetId ? state.records[`${studentId}:${stableSetId}`] : undefined;
+-    return direct && (!direct.setLogId || direct.setLogId === setLogId)
+-      ? direct : Object.entries(state.records).find(([key, record]) => key.startsWith(`${studentId}:`) && setLogId && record.setLogId === setLogId)?.[1] ?? EMPTY_VIDEO_UPLOAD;
+-  });
+-  const records = useVideoUploadStore(state => state.records);
++type ReplaySet = { setLogId: string | null; stableSetId?: string };
++const VideoColumnContext = createContext(false);
++
++function resolveSetVideo(studentId: string, videos: readonly StudentVideo[], records: Record<string, VideoUploadRecord>, { setLogId, stableSetId }: ReplaySet) {
++  const direct = stableSetId ? records[`${studentId}:${stableSetId}`] : undefined;
++  const entry = direct && (!direct.setLogId || direct.setLogId === setLogId)
++    ? direct : Object.entries(records).find(([key, record]) => key.startsWith(`${studentId}:`) && setLogId && record.setLogId === setLogId)?.[1] ?? EMPTY_VIDEO_UPLOAD;
+   const indicatorSetId = stableSetId ?? Object.keys(records).find(key => records[key] === entry)?.slice(studentId.length + 1);
+   const localUri = entry.localUri ?? entry.source?.uri;
+   let exists = false;
+   try { exists = Boolean(localUri && new File(localUri).exists); } catch { /* Missing retained file falls back to remote. */ }
+-  const video = playableSetVideo(setLogId, videos, entry, exists);
+-  if (entry.status !== 'none' && entry.status !== 'uploaded' && indicatorSetId) return <SetVideoUploadIndicator studentId={studentId} stableSetId={indicatorSetId} />;
+-  if (!video) return null;
+-  return <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')}
+-    onPress={() => play({ ...video, badge })}
+-    style={{ minWidth: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}>
+-    <MaterialCommunityIcons name="play-circle-outline" size={22} color={scheme === 'dark' ? '#6B6B72' : '#9CA3AF'} />
+-  </Pressable>;
++  return { entry, indicatorSetId, video: playableSetVideo(setLogId, videos, entry, exists) };
+ }
++
++/** Reserve the same trailing width across one exercise, only while it has a playable video. */
++export function CompletedVideoGroup({ sets, children }: { sets: readonly ReplaySet[]; children: (hasVideo: boolean) => ReactNode }) {
++  const { studentId, videos } = useContext(ReplayContext);
++  const records = useVideoUploadStore(state => state.records);
++  const hasVideo = sets.some(set => resolveSetVideo(studentId, videos, records, set).video !== null);
++  return <VideoColumnContext.Provider value={hasVideo}>{children(hasVideo)}</VideoColumnContext.Provider>;
++}
++
++export function CompletedSetVideo({ setLogId, stableSetId, badge }: ReplaySet & { badge: VideoBadgeInfo }) {
++  const { studentId, videos, play } = useContext(ReplayContext);
++  const reserveColumn = useContext(VideoColumnContext);
++  const colors = useColors();
++  const records = useVideoUploadStore(state => state.records);
++  const { entry, indicatorSetId, video } = resolveSetVideo(studentId, videos, records, { setLogId, stableSetId });
++  if (entry.status !== 'none' && entry.status !== 'uploaded' && indicatorSetId) {
++    const indicator = <SetVideoUploadIndicator studentId={studentId} stableSetId={indicatorSetId} />;
++    return reserveColumn ? <CompletedVideoSlot>{indicator}</CompletedVideoSlot> : indicator;
++  }
++  if (!video) return reserveColumn ? <CompletedVideoSlot /> : null;
++  return <CompletedVideoSlot>
++    <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} hitSlop={(spacing.minimumHitTarget - 22) / 2}
++      onPress={() => play({ ...video, badge })}
++      style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}>
++      <MaterialCommunityIcons name="play-circle-outline" size={22} color={colors.completedVideoIcon} />
++    </Pressable>
++  </CompletedVideoSlot>;
++}
++
++/** The 44pt native parent contains hitSlop without contributing to row height. */
++function CompletedVideoSlot({ children }: { children?: ReactNode }) {
++  return <View style={{ width: 22, alignSelf: 'stretch' }}>
++    {children ? <View collapsable={false} pointerEvents="box-none" style={{ position: 'absolute', top: '50%',
++      left: (22 - spacing.minimumHitTarget) / 2, marginTop: -spacing.minimumHitTarget / 2,
++      width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}>
++      {children}
++    </View> : null}
++  </View>;
++}
+--- a/src/features/training/video-upload/__tests__/set-video-player.test.tsx
++++ b/src/features/training/video-upload/__tests__/set-video-player.test.tsx
+@@ -10,7 +10,9 @@
+ import { day, set } from '@/domain/plan/test-fixtures';
+ import { synthesizeDrafts } from '../../drafts';
+ import { useVideoUploadStore } from '../store';
+-import { spacing } from '@/design';
++import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import { resolveColors, spacing } from '@/design';
++import { ColorSchemeProvider } from '@/design/theme';
+ import { VideoAttachmentControls } from '../VideoAttachmentControls';
+ import { EMPTY_VIDEO_UPLOAD } from '../model';
+ import { SetVideoPlayer } from '../SetVideoPlayer';
+@@ -292,3 +294,19 @@
+   expect(renderer.root.findByType(Video).props.paused).toBe(false);
+   expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.videoAttachmentSection.copy004'))).toBe(false);
+ });
++
++
++test.each(['light', 'dark'] as const)('replay colors use semantic tokens in %s', async scheme => {
++  const colors = resolveColors(scheme);
++  expect(colors).toMatchObject({ completedVideoIcon: scheme === 'light' ? '#9CA3AF' : '#6B6B72',
++    videoReviewedFill: 'rgba(17,24,39,.72)', videoReviewedBorder: 'rgba(255,255,255,.18)', videoReviewedText: '#FFFFFF' });
++  setLocaleOverride('en');
++  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}><ColorSchemeProvider scheme={scheme}>
++    <SetVideoPlayer uri="file:///sample.mp4" refreshURL={async () => 'file:///sample.mp4'} readOnly onReview={() => {}} />
++  </ColorSchemeProvider></SafeAreaInsetsContext.Provider>); });
++  const review = renderer.root.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('training.coachReviewed'))!;
++  const pill = review.findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.height === 30)!;
++  expect(StyleSheet.flatten(pill.props.style)).toMatchObject({ backgroundColor: colors.videoReviewedFill, borderColor: colors.videoReviewedBorder });
++  expect(StyleSheet.flatten(pill.findAllByType(Text).find(node => node.props.children === t('training.coachReviewed'))!.props.style).color).toBe(colors.videoReviewedText);
++  expect(pill.findByType(MaterialCommunityIcons).props.color).toBe(colors.videoReviewedText);
++});
+--- a/src/design/tokens.ts
++++ b/src/design/tokens.ts
+@@ -14,6 +14,10 @@
+   coachNoPlanBorder: { light: 'rgba(217,119,6,0.4)', dark: 'rgba(245,166,35,0.4)' },
+   coachAcceptedBorder: { light: 'rgba(21,128,61,0.3)', dark: 'rgba(94,158,120,0.3)' },
+   coachMissedFill: { light: 'rgba(229,72,77,0.16)', dark: 'rgba(229,72,77,0.16)' },
++  completedVideoIcon: { light: '#9CA3AF', dark: '#6B6B72' },
++  videoReviewedFill: { light: 'rgba(17,24,39,.72)', dark: 'rgba(17,24,39,.72)' },
++  videoReviewedBorder: { light: 'rgba(255,255,255,.18)', dark: 'rgba(255,255,255,.18)' },
++  videoReviewedText: { light: '#FFFFFF', dark: '#FFFFFF' },
+   videoStageFill: { light: '#1B2534', dark: '#1B2534' },
+   videoStageBorder: { light: '#2A3646', dark: '#2A3646' },
+   // Workbench chrome retains its original dark fill behind fixed white controls.

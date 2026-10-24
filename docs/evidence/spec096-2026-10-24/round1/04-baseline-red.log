@@ -1,0 +1,27 @@
+
+> meetpr-rn@1.0.0 test
+> jest --config /tmp/096-baseline-jest.json --runInBand --silent src/features/training/__tests__/set-save.test.tsx -t Training focus cycle
+
+FAIL src/features/training/__tests__/set-save.test.tsx (10.102 s)
+  ● Training focus cycle after feedback returns from a past completed day
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "40000000-0000-4000-8000-000000000000"
+    Received: "40000000-0000-4000-8000-000000000002"
+
+      757 |   await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+      758 |   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+    > 759 |   expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(past.id);
+          |                                                                                  ^
+      760 | });
+      761 |
+
+      at Object.toBe (src/features/training/__tests__/set-save.test.tsx:759:82)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 38 skipped, 39 total
+Snapshots:   0 total
+Time:        10.5 s

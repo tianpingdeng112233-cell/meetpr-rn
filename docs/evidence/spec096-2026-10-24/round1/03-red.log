@@ -1,0 +1,259 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/training/video-upload/__tests__/set-video-player.test.tsx -t replay colors
+
+FAIL src/features/training/video-upload/__tests__/set-video-player.test.tsx
+  ● replay colors use semantic tokens in light
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  -  4
+    + Received  + 96
+
+      Object {
+    -   "completedVideoIcon": "#9CA3AF",
+    -   "videoReviewedBorder": "rgba(255,255,255,.18)",
+    -   "videoReviewedFill": "rgba(17,24,39,.72)",
+    -   "videoReviewedText": "#FFFFFF",
+    +   "accent": "#D97706",
+    +   "amber": "#E0A810",
+    +   "amberSoft": "rgba(224,168,16,0.14)",
+    +   "bezel": "#1C1C1E",
+    +   "bezelEdge": "#2A2A2D",
+    +   "bg": "#FAFAFA",
+    +   "bgBase": "#F5F6F8",
+    +   "bgDeep": "#EDEEF1",
+    +   "bgInset": "#FAFAFB",
+    +   "bgStack": "#EEF0F3",
+    +   "border": "#E5E5E5",
+    +   "borderDefault": "#E5E7EB",
+    +   "borderHairline": "#E9EBEE",
+    +   "borderStrong": "#D1D5DB",
+    +   "borderSubtle": "#E5E7EB",
+    +   "brandRed": "#E5221E",
+    +   "brandRedPress": "#B81A17",
+    +   "brandRedSoft": "rgba(229,34,30,0.08)",
+    +   "cardShadow": "rgba(17,24,39,0.06)",
+    +   "chartLine": "#9AA4B0",
+    +   "chatImageBackground": "#000000",
+    +   "chatPlanBadgeFill": "rgba(230,190,85,0.14)",
+    +   "coachAcceptedBorder": "rgba(21,128,61,0.3)",
+    +   "coachMissedFill": "rgba(229,72,77,0.16)",
+    +   "coachNoPlanBorder": "rgba(217,119,6,0.4)",
+    +   "coachNoteText": "#4B5563",
+    +   "coachRequestBorder": "rgba(217,119,6,0.35)",
+    +   "ctaBackground": "#111827",
+    +   "ctaBottomShade": "#000000",
+    +   "ctaFill": "#111827",
+    +   "ctaText": "#FFFFFF",
+    +   "ctaTopHighlight": "#FFFFFF",
+    +   "danger": "#E5484D",
+    +   "dangerFill": "#C0343A",
+    +   "dangerMuted": "#A33B40",
+    +   "dangerRGB": "#E5484D",
+    +   "dangerSoft": "rgba(229,72,77,0.14)",
+    +   "desk1": "#E9E9EE",
+    +   "desk2": "#D2D2D9",
+    +   "fgDisabled": "rgba(10,10,10,0.35)",
+    +   "fgPrimary": "#0A0A0A",
+    +   "fgSecondary": "#525252",
+    +   "fgTertiary": "#A3A3A3",
+    +   "gold200": "#FEF3C7",
+    +   "gold300": "#FFD470",
+    +   "gold400": "#F59E0B",
+    +   "gold500": "#D97706",
+    +   "gold700": "#B8791A",
+    +   "gold800": "#9A6413",
+    +   "gold900": "#7A4E0E",
+    +   "goldBarDeep": "#A9731C",
+    +   "goldCTA": "#B45309",
+    +   "goldGradientEnd": "#F5B93C",
+    +   "goldGradientStart": "#D97706",
+    +   "goldMuted": "#B8935A",
+    +   "goldRGB": "#D97706",
+    +   "goldSoft": "rgba(217,119,6,0.14)",
+    +   "goldText": "#9A4A06",
+    +   "green": "#1FB358",
+    +   "greenSoft": "rgba(31,179,88,0.14)",
+    +   "holdTrack": "#17120A",
+    +   "inkOnCTAFill": "#FFFFFF",
+    +   "inkOnGold": "#FFFFFF",
+    +   "medalStatTile": "rgba(255,255,255,0.55)",
+    +   "modalShadow": "rgba(0,0,0,0.5)",
+    +   "numberPadScrim": "rgba(0,0,0,0.55)",
+    +   "reviewHeroTop": "#F7F0E4",
+    +   "rpeLit": "rgb(58,58,64)",
+    +   "rpeTickLabel": "rgb(82,82,82)",
+    +   "rpeUnlit": "rgb(209,211,214)",
+    +   "success": "#15803D",
+    +   "successRGB": "#15803D",
+    +   "successSoft": "#15803D",
+    +   "successTint": "rgba(21,128,61,0.14)",
+    +   "surface1": "#FFFFFF",
+    +   "surface2": "#F4F4F5",
+    +   "surface3": "#E9E9EB",
+    +   "surfaceCard": "#FFFFFF",
+    +   "surfaceElevated": "#FFFFFF",
+    +   "surfaceFocus": "#0F0F12",
+    +   "surfaceKey": "#F3F4F6",
+    +   "surfaceRaised": "#EEF0F3",
+    +   "textBody": "#4B5563",
+    +   "textDim": "#5C6371",
+    +   "textDisabled": "#9CA3AF",
+    +   "textFaint": "#5C6371",
+    +   "textGhost": "#D1D5DB",
+    +   "textHeading": "#111827",
+    +   "textMuted": "#5C6371",
+    +   "textPrimary": "#111827",
+    +   "textSecondary": "#4B5563",
+    +   "textTertiary": "#5C6371",
+    +   "unread": "#C0343A",
+    +   "videoStageBorder": "#2A3646",
+    +   "videoStageFill": "#1B2534",
+    +   "videoWorkbenchFill": "#111827",
+      }
+
+      298 | test.each(['light', 'dark'] as const)('replay colors use semantic tokens in %s', async scheme => {
+      299 |   const colors = resolveColors(scheme);
+    > 300 |   expect(colors).toMatchObject({ completedVideoIcon: scheme === 'light' ? '#9CA3AF' : '#6B6B72',
+          |                  ^
+      301 |     videoReviewedFill: 'rgba(17,24,39,.72)', videoReviewedBorder: 'rgba(255,255,255,.18)', videoReviewedText: '#FFFFFF' });
+      302 |   setLocaleOverride('en');
+      303 |   await act(async () => { renderer = create(<ColorSchemeProvider scheme={scheme}>
+
+      at toMatchObject (src/features/training/video-upload/__tests__/set-video-player.test.tsx:300:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/training/video-upload/__tests__/set-video-player.test.tsx:311:2)
+
+  ● replay colors use semantic tokens in dark
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  -  4
+    + Received  + 96
+
+      Object {
+    -   "completedVideoIcon": "#6B6B72",
+    -   "videoReviewedBorder": "rgba(255,255,255,.18)",
+    -   "videoReviewedFill": "rgba(17,24,39,.72)",
+    -   "videoReviewedText": "#FFFFFF",
+    +   "accent": "#F5A623",
+    +   "amber": "#E0A810",
+    +   "amberSoft": "rgba(224,168,16,0.14)",
+    +   "bezel": "#1C1C1E",
+    +   "bezelEdge": "#2A2A2D",
+    +   "bg": "#000000",
+    +   "bgBase": "#0A0A0C",
+    +   "bgDeep": "#050506",
+    +   "bgInset": "#101014",
+    +   "bgStack": "#121217",
+    +   "border": "#262626",
+    +   "borderDefault": "#262629",
+    +   "borderHairline": "#17171A",
+    +   "borderStrong": "#2E2E32",
+    +   "borderSubtle": "#1E1E22",
+    +   "brandRed": "#E5221E",
+    +   "brandRedPress": "#B81A17",
+    +   "brandRedSoft": "rgba(229,34,30,0.12)",
+    +   "cardShadow": "rgba(17,24,39,0)",
+    +   "chartLine": "#DCE3EA",
+    +   "chatImageBackground": "#000000",
+    +   "chatPlanBadgeFill": "rgba(230,190,85,0.14)",
+    +   "coachAcceptedBorder": "rgba(94,158,120,0.3)",
+    +   "coachMissedFill": "rgba(229,72,77,0.16)",
+    +   "coachNoPlanBorder": "rgba(245,166,35,0.4)",
+    +   "coachNoteText": "#C4C4C8",
+    +   "coachRequestBorder": "rgba(245,166,35,0.35)",
+    +   "ctaBackground": "#FFB800",
+    +   "ctaBottomShade": "#783C00",
+    +   "ctaFill": "#111827",
+    +   "ctaText": "#141414",
+    +   "ctaTopHighlight": "#FFFFFF",
+    +   "danger": "#E5484D",
+    +   "dangerFill": "#C0343A",
+    +   "dangerMuted": "#C88888",
+    +   "dangerRGB": "#E5484D",
+    +   "dangerSoft": "rgba(229,72,77,0.14)",
+    +   "desk1": "#1A1A1E",
+    +   "desk2": "#050506",
+    +   "fgDisabled": "rgba(255,255,255,0.35)",
+    +   "fgPrimary": "#FFFFFF",
+    +   "fgSecondary": "#B5B5B5",
+    +   "fgTertiary": "#737373",
+    +   "gold200": "#FFE28E",
+    +   "gold300": "#FFD470",
+    +   "gold400": "#FBBF3E",
+    +   "gold500": "#F5A623",
+    +   "gold700": "#B8791A",
+    +   "gold800": "#9A6413",
+    +   "gold900": "#7A4E0E",
+    +   "goldBarDeep": "#A9731C",
+    +   "goldCTA": "#FFB800",
+    +   "goldGradientEnd": "#FFC93C",
+    +   "goldGradientStart": "#E08F0F",
+    +   "goldMuted": "#B8935A",
+    +   "goldRGB": "#F5A623",
+    +   "goldSoft": "rgba(245,166,35,0.14)",
+    +   "goldText": "#F5A623",
+    +   "green": "#1FB358",
+    +   "greenSoft": "rgba(31,179,88,0.14)",
+    +   "holdTrack": "#17120A",
+    +   "inkOnCTAFill": "#FFFFFF",
+    +   "inkOnGold": "#141414",
+    +   "medalStatTile": "rgba(0,0,0,0.35)",
+    +   "modalShadow": "rgba(0,0,0,0.5)",
+    +   "numberPadScrim": "rgba(0,0,0,0.55)",
+    +   "reviewHeroTop": "#17120A",
+    +   "rpeLit": "rgb(138,138,142)",
+    +   "rpeTickLabel": "rgb(82,82,82)",
+    +   "rpeUnlit": "rgb(44,44,46)",
+    +   "success": "#5E9E78",
+    +   "successRGB": "#5E9E78",
+    +   "successSoft": "#9FC7AE",
+    +   "successTint": "rgba(94,158,120,0.14)",
+    +   "surface1": "#0E0E0E",
+    +   "surface2": "#161616",
+    +   "surface3": "#1F1F1F",
+    +   "surfaceCard": "#141416",
+    +   "surfaceElevated": "#161618",
+    +   "surfaceFocus": "#0F0F12",
+    +   "surfaceKey": "#1C1C20",
+    +   "surfaceRaised": "#232327",
+    +   "textBody": "#C8C8CC",
+    +   "textDim": "#8A8A90",
+    +   "textDisabled": "#55555C",
+    +   "textFaint": "#8A8A90",
+    +   "textGhost": "#3E3E44",
+    +   "textHeading": "#EDEDED",
+    +   "textMuted": "#8A8A90",
+    +   "textPrimary": "#EDEDED",
+    +   "textSecondary": "#C8C8CC",
+    +   "textTertiary": "#A1A1A6",
+    +   "unread": "#C0343A",
+    +   "videoStageBorder": "#2A3646",
+    +   "videoStageFill": "#1B2534",
+    +   "videoWorkbenchFill": "#111827",
+      }
+
+      298 | test.each(['light', 'dark'] as const)('replay colors use semantic tokens in %s', async scheme => {
+      299 |   const colors = resolveColors(scheme);
+    > 300 |   expect(colors).toMatchObject({ completedVideoIcon: scheme === 'light' ? '#9CA3AF' : '#6B6B72',
+          |                  ^
+      301 |     videoReviewedFill: 'rgba(17,24,39,.72)', videoReviewedBorder: 'rgba(255,255,255,.18)', videoReviewedText: '#FFFFFF' });
+      302 |   setLocaleOverride('en');
+      303 |   await act(async () => { renderer = create(<ColorSchemeProvider scheme={scheme}>
+
+      at toMatchObject (src/features/training/video-upload/__tests__/set-video-player.test.tsx:300:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/training/video-upload/__tests__/set-video-player.test.tsx:311:2)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 16 skipped, 18 total
+Snapshots:   0 total
+Time:        1.012 s, estimated 5 s

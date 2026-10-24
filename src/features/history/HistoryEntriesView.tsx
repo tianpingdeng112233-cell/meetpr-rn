@@ -6,6 +6,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { getLocale, matchesExerciseSearch, t } from '@/i18n';
 import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
 import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
+import { CompletedSetVideo, CompletedVideoGroup, CompletedVideoReplayProvider } from '@/features/training/video-upload/CompletedVideoReplay';
 import type { SetLog } from '@/api/domains';
 
 import { ProgressPageHeader } from './ProgressPageHeader';
@@ -50,7 +51,8 @@ export function HistoryEntriesView({
   const filteredChoices = choices.filter(choice => !query.trim() || (choice.id !== null && matchesExerciseSearch(choice.name, query)));
   const selection = choices.find((choice) => choice.id === exerciseId) ?? choices[0];
 
-  const content = <Screen edges={['top', 'left', 'right']}>
+  const studentId = weeks.flatMap(week => week.days.flatMap(day => day.exercises.flatMap(exercise => exercise.logs)))[0]?.student_id ?? '';
+  const content = <CompletedVideoReplayProvider studentId={studentId} onNavigate={presentation === 'modal' ? onClose : undefined}><Screen edges={['top', 'left', 'right']}>
         {presentation === 'stack' ? <ProgressPageHeader title={t('student.e1rmSourceHistory')} onBack={onClose} /> : <>
         <View style={styles.header}>
           <Pressable
@@ -132,7 +134,7 @@ export function HistoryEntriesView({
             </Pressable>
           </Pressable>
         </Modal>
-      </Screen>;
+      </Screen></CompletedVideoReplayProvider>;
   return presentation === 'stack' ? content : <Modal animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen" visible={visible}>{content}</Modal>;
 }
 
@@ -169,7 +171,7 @@ function recordedSetText(row: SetLog): string {
 function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
   const { colors, styles } = useStyles();
   return (
-    <View style={styles.exerciseBlock}>
+    <CompletedVideoGroup sets={exercise.logs.map(row => ({ setLogId: row.id, stableSetId: historyStableSetId(row, exercise) }))}>{hasVideo => <View style={styles.exerciseBlock}>
       <Text style={styles.exerciseName}>{exercise.name}</Text>
       {exercise.studentAdded ? <Text style={styles.noteText}>{t('student.added.added')}</Text> : null}
       {exercise.notes.map((note) => (
@@ -184,11 +186,12 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
         return (
           <View key={index} style={styles.setRow}>
             <Text style={styles.setLabel}>{t('student.historyEntriesView.copy001', [index + 1])}</Text>
-            <Text style={[styles.setValue, { color: row?.completed ? colors.success : row ? colors.textSecondary : colors.textMuted }]}>
+            <Text style={[styles.setValue, hasVideo && styles.videoSetValue, { color: row?.completed ? colors.success : row ? colors.textSecondary : colors.textMuted }]}>
               {row
                 ? recordedSetText(row)
                 : `${set.intensity_mode === 'weight' ? `${formatKg(Number(set.target_value))} kg × ` : ''}${set.target_reps}${set.target_reps_max === null ? '' : `–${set.target_reps_max}`}${set.intensity_mode === 'rpe' ? ` @ RPE ${set.target_value}` : ''}`}
             </Text>
+            {row ? <HistorySetVideo row={row} exercise={exercise} /> : hasVideo ? <CompletedSetVideo setLogId={null} badge={{ exerciseName: exercise.name, setOrdinal: index + 1 }} /> : null}
           </View>
         );
       })}
@@ -197,11 +200,23 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
           <Text style={styles.setLabel}>{exercise.studentAdded
             ? t('student.historyEntriesView.copy001', [log.set_index + 1])
             : t('student.added.extra')}</Text>
-          <Text style={[styles.setValue, { color: log.completed ? colors.success : colors.textSecondary }]}>{recordedSetText(log)}</Text>
+          <Text style={[styles.setValue, hasVideo && styles.videoSetValue, { color: log.completed ? colors.success : colors.textSecondary }]}>{recordedSetText(log)}</Text>
+          <HistorySetVideo row={log} exercise={exercise} />
         </View>
       ))}
-    </View>
+    </View>}</CompletedVideoGroup>
   );
+}
+
+function HistorySetVideo({ row, exercise }: { row: SetLog; exercise: HistoryExercise }) {
+  const stableSetId = historyStableSetId(row, exercise);
+  return <CompletedSetVideo setLogId={row.id} stableSetId={stableSetId} badge={{ exerciseName: exercise.name, setOrdinal: row.set_index + 1,
+    weightKg: Number(row.weight_kg), reps: row.reps, rpe: row.rpe === null ? null : Number(row.rpe) }} />;
+}
+
+function historyStableSetId(row: SetLog, exercise: HistoryExercise) {
+  return exercise.studentAdded ? `added:${exercise.planExercise.id}:${row.set_index}`
+    : exercise.plannedSets.find(set => set.set_number === row.set_index + 1)?.id ?? `extra:${exercise.planExercise.id}:${row.set_index}`;
 }
 
 function useStyles() {
@@ -261,6 +276,7 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
   setRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 },
   setLabel: { color: colors.textSecondary, ...typography.footnote },
   setValue: { color: colors.textPrimary, fontVariant: ['tabular-nums'], ...typography.footnote },
+  videoSetValue: { flex: 1, textAlign: 'right', marginRight: spacing.sm },
   scrim: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'flex-end' },
   choiceSheet: {
     backgroundColor: colors.surfaceCard,

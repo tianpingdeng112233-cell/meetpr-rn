@@ -1,0 +1,66 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/training/__tests__/set-save.test.tsx -t completed summary replay
+
+FAIL src/features/training/__tests__/set-save.test.tsx
+  ● completed summary replay and upload status: uploaded
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: undefined
+    Received: "#9CA3AF"
+
+      732 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+      733 |   expect(playButton.props.hitSlop).toBe(11);
+    > 734 |   expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
+          |                                                                     ^
+      735 |   await act(async () => playButton.props.onPress());
+      736 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+      737 |   await act(async () => renderer.root.findByType(VideoPlayback).props.onReview());
+
+      at toBe (src/features/training/__tests__/set-save.test.tsx:734:69)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: uploading
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: undefined
+    Received: "#9CA3AF"
+
+      732 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+      733 |   expect(playButton.props.hitSlop).toBe(11);
+    > 734 |   expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
+          |                                                                     ^
+      735 |   await act(async () => playButton.props.onPress());
+      736 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+      737 |   await act(async () => renderer.root.findByType(VideoPlayback).props.onReview());
+
+      at toBe (src/features/training/__tests__/set-save.test.tsx:734:69)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: failed
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: undefined
+    Received: "#9CA3AF"
+
+      732 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+      733 |   expect(playButton.props.hitSlop).toBe(11);
+    > 734 |   expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
+          |                                                                     ^
+      735 |   await act(async () => playButton.props.onPress());
+      736 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+      737 |   await act(async () => renderer.root.findByType(VideoPlayback).props.onReview());
+
+      at toBe (src/features/training/__tests__/set-save.test.tsx:734:69)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 34 skipped, 1 passed, 38 total
+Snapshots:   0 total
+Time:        3.223 s, estimated 6 s
