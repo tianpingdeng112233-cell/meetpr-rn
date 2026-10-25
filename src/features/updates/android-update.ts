@@ -31,34 +31,35 @@ export type InstalledAndroidApp = {
   buildVersion: string | null;
 };
 
+/** null means a successful check with no newer build; undefined means no successful check. */
 export async function checkForAndroidUpdate(
   installed: InstalledAndroidApp,
   signal?: AbortSignal,
-): Promise<AndroidRelease | null> {
+): Promise<AndroidRelease | null | undefined> {
   const build = Number(installed.buildVersion);
   if (installed.platform !== 'android' || installed.track !== 'china' ||
       installed.applicationId !== 'com.meetpr.app' || !Number.isSafeInteger(build) || build < 1 || signal?.aborted) {
-    return null;
+    return undefined;
   }
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort);
   const timeout = setTimeout(abort, 8000);
   try {
-    const cancelled = new Promise<null>(resolve => {
-      controller.signal.addEventListener('abort', () => resolve(null), { once: true });
+    const cancelled = new Promise<undefined>(resolve => {
+      controller.signal.addEventListener('abort', () => resolve(undefined), { once: true });
     });
     const request = async () => {
       const response = await fetch(ANDROID_RELEASE_URL, { cache: 'no-store', signal: controller.signal, headers: { 'X-MeetPR-Locale': getLocaleHeader() } });
-      if (!response.ok) return null;
+      if (!response.ok) return undefined;
       const release = releaseSchema.safeParse(await response.json());
-      return !controller.signal.aborted && release.success && release.data.versionCode > build
-        ? release.data : null;
+      if (controller.signal.aborted || !release.success) return undefined;
+      return release.data.versionCode > build ? release.data : null;
     };
     return await Promise.race([request(), cancelled]);
   } catch {
     // Checking for an optional update must never prevent use of the app.
-    return null;
+    return undefined;
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abort);

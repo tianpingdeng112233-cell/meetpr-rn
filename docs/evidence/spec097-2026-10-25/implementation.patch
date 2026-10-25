@@ -1,0 +1,445 @@
+diff --git a/src/features/settings/SettingsPage.tsx b/src/features/settings/SettingsPage.tsx
+index 75519c0..e4942fa 100644
+--- a/src/features/settings/SettingsPage.tsx
++++ b/src/features/settings/SettingsPage.tsx
+@@ -1,5 +1,6 @@
+ import type { PropsWithChildren } from 'react';
+-import { Modal, ScrollView, Text, View } from 'react-native';
++import { Modal, Platform, ScrollView, Text, View } from 'react-native';
++import * as Application from 'expo-application';
+ import { MaterialCommunityIcons } from '@expo/vector-icons';
+ import { Screen, font, spacing, useColors } from '@/design';
+ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+@@ -7,6 +8,8 @@ import { t } from '@/i18n';
+ 
+ export function SettingsPage({ title, busy, onClose, children }: PropsWithChildren<{ title: string; busy: boolean; onClose: () => void }>) {
+   const colors = useColors();
++  const version = Platform.OS === 'android' && Application.nativeApplicationVersion && Application.nativeBuildVersion
++    ? t('settings.version', [Application.nativeApplicationVersion, Application.nativeBuildVersion]) : null;
+   return <Modal visible animationType="slide" onRequestClose={busy ? () => undefined : onClose}>
+     <Screen>
+       <View style={{ minHeight: 56, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center' }}>
+@@ -16,7 +19,10 @@ export function SettingsPage({ title, busy, onClose, children }: PropsWithChildr
+         <Text accessibilityRole="header" style={{ flex: 1, textAlign: 'center', ...font.body(16, 'bold'), color: colors.textPrimary }}>{title}</Text>
+         <View style={{ width: 44 }} />
+       </View>
+-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.base, paddingBottom: 32, gap: 20 }}>{children}</ScrollView>
++      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.base, paddingBottom: 32, gap: 20 }}>
++        {children}
++        {version ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{version}</Text> : null}
++      </ScrollView>
+     </Screen>
+   </Modal>;
+ }
+diff --git a/src/features/updates/AndroidUpdateSession.tsx b/src/features/updates/AndroidUpdateSession.tsx
+index fbf14ed..5dd8044 100644
+--- a/src/features/updates/AndroidUpdateSession.tsx
++++ b/src/features/updates/AndroidUpdateSession.tsx
+@@ -23,34 +23,51 @@ function offerUpdate(release: AndroidRelease) {
+ 
+ /** Mounted once in the app shell, after privacy confirmation and bootstrap. */
+ export function AndroidUpdateSession({ enabled }: { enabled: boolean }) {
+-  const completed = useRef(false);
++  const lastCheckedAt = useRef<number | null>(null);
++  const highestOfferedBuild = useRef(0);
+   useEffect(() => {
+-    if (!enabled || completed.current) return;
++    if (!enabled || Platform.OS !== 'android') return;
+     const controller = new AbortController();
+     let currentState = AppState.currentState;
+     let pending: AndroidRelease | null = null;
++    let checking = false;
+     const offerWhenActive = () => {
+       if (controller.signal.aborted || !pending || currentState !== 'active') return;
+       const release = pending;
+       pending = null;
+-      completed.current = true;
++      if (release.versionCode <= highestOfferedBuild.current) return;
++      highestOfferedBuild.current = release.versionCode;
+       offerUpdate(release);
+     };
++    const check = async () => {
++      const startedAt = Date.now();
++      if (checking || controller.signal.aborted ||
++          (lastCheckedAt.current !== null && startedAt - lastCheckedAt.current <= 6 * 60 * 60 * 1000)) return;
++      checking = true;
++      try {
++        const release = await checkForAndroidUpdate({
++          platform: Platform.OS,
++          track: BUILD_TRACK,
++          applicationId: Application.applicationId,
++          buildVersion: Application.nativeBuildVersion,
++        }, controller.signal);
++        if (controller.signal.aborted || release === undefined) return;
++        lastCheckedAt.current = startedAt;
++        pending = release;
++        offerWhenActive();
++      } catch {
++        // A failed check stays eligible for retry on the next foreground.
++      } finally {
++        checking = false;
++      }
++    };
+     const subscription = AppState.addEventListener('change', state => {
++      const resumed = currentState !== 'active' && state === 'active';
+       currentState = state;
+       offerWhenActive();
++      if (resumed) void check();
+     });
+-    void checkForAndroidUpdate({
+-      platform: Platform.OS,
+-      track: BUILD_TRACK,
+-      applicationId: Application.applicationId,
+-      buildVersion: Application.nativeBuildVersion,
+-    }, controller.signal).then(release => {
+-      if (controller.signal.aborted) return;
+-      if (!release) completed.current = true;
+-      pending = release;
+-      offerWhenActive();
+-    });
++    void check();
+     return () => {
+       controller.abort();
+       subscription.remove();
+diff --git a/src/features/updates/__tests__/android-update-session.test.tsx b/src/features/updates/__tests__/android-update-session.test.tsx
+index e123809..e79d8e2 100644
+--- a/src/features/updates/__tests__/android-update-session.test.tsx
++++ b/src/features/updates/__tests__/android-update-session.test.tsx
+@@ -21,7 +21,7 @@ beforeEach(() => {
+   jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
+ });
+-afterEach(() => { if (tree) act(() => tree.unmount()); jest.restoreAllMocks(); setLocaleOverride(null); global.fetch = originalFetch; AppState.currentState = originalAppState; });
++afterEach(() => { if (tree) act(() => tree.unmount()); jest.restoreAllMocks(); jest.useRealTimers(); setLocaleOverride(null); global.fetch = originalFetch; AppState.currentState = originalAppState; });
+ 
+ test('startup shows release notes and only opens the download after the user chooses it', async () => {
+   await act(async () => { tree = create(<AndroidUpdateSession enabled />); });
+@@ -82,3 +82,21 @@ test('Traditional update prompts use generated release notes and Taiwan UI copy'
+   expect(alert.mock.calls[0][1]).not.toContain('改进教练邀请流程');
+   expect(alert.mock.calls[0][2]).toContainEqual(expect.objectContaining({ text: '下載更新' }));
+ });
++
++test.each(['network', 'http', 'json', 'invalid metadata', 'timeout'])('a %s failure retries on the next foreground without waiting six hours', async failure => {
++  jest.useFakeTimers();
++  jest.setSystemTime(new Date('2026-10-25T00:00:00Z'));
++  const listener = jest.spyOn(AppState, 'addEventListener');
++  jest.mocked(global.fetch).mockImplementationOnce(async () => {
++    if (failure === 'network') throw new Error('offline');
++    if (failure === 'timeout') return new Promise(() => {});
++    if (failure === 'json') return { ...response(release), json: async () => { throw new Error('bad JSON'); } };
++    return response(failure === 'invalid metadata' ? {} : release, failure !== 'http');
++  });
++  await act(async () => { tree = create(<AndroidUpdateSession enabled />); });
++  await act(async () => { await jest.advanceTimersByTimeAsync(8000); });
++  expect(alert).not.toHaveBeenCalled();
++  await act(async () => { listener.mock.calls[0][1]('background'); listener.mock.calls[0][1]('active'); });
++  expect(global.fetch).toHaveBeenCalledTimes(2);
++  expect(alert).toHaveBeenCalledTimes(1);
++});
+diff --git a/src/features/updates/__tests__/android-update.test.ts b/src/features/updates/__tests__/android-update.test.ts
+index 86a0b42..78a57d3 100644
+--- a/src/features/updates/__tests__/android-update.test.ts
++++ b/src/features/updates/__tests__/android-update.test.ts
+@@ -26,7 +26,7 @@ test.each([
+   { ...installed, buildVersion: 'not-a-build' },
+ ])('unsupported installed app does not contact the release host: %j', async (app) => {
+   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
+-  await expect(checkForAndroidUpdate(app)).resolves.toBeNull();
++  await expect(checkForAndroidUpdate(app)).resolves.toBeUndefined();
+   expect(global.fetch).not.toHaveBeenCalled();
+ });
+ 
+@@ -42,7 +42,7 @@ test.each([
+   { ...release, downloadUrl: 'https://dl.meetpr.cn/android/releases/9/meetpr-cn.apk' },
+ ])('invalid or incompatible release metadata is ignored: %j', async (metadata) => {
+   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(metadata));
+-  await expect(checkForAndroidUpdate(installed)).resolves.toBeNull();
++  await expect(checkForAndroidUpdate(installed)).resolves.toBeUndefined();
+ });
+ 
+ test.each(['network', 'http', 'json'])('%s failure leaves startup usable without an update prompt', async (failure) => {
+@@ -50,7 +50,7 @@ test.each(['network', 'http', 'json'])('%s failure leaves startup usable without
+     if (failure === 'network') throw new Error('offline');
+     return { ok: failure !== 'http', json: async () => { if (failure === 'json') throw new Error('bad JSON'); return release; } } as Response;
+   });
+-  await expect(checkForAndroidUpdate(installed)).resolves.toBeNull();
++  await expect(checkForAndroidUpdate(installed)).resolves.toBeUndefined();
+ });
+ 
+ test('a stalled request times out and cannot offer an update after the deadline', async () => {
+@@ -59,14 +59,14 @@ test('a stalled request times out and cannot offer an update after the deadline'
+   global.fetch = jest.fn<typeof fetch>().mockImplementation(() => new Promise(resolve => { respond = resolve; }));
+   const result = checkForAndroidUpdate(installed);
+   await jest.advanceTimersByTimeAsync(8000);
+-  await expect(result).resolves.toBeNull();
++  await expect(result).resolves.toBeUndefined();
+   respond(response(release));
+ });
+ 
+ test('an aborted startup does not offer an update even if the response arrives later', async () => {
+   const controller = new AbortController();
+   global.fetch = jest.fn<typeof fetch>().mockResolvedValue({ ok: true, json: async () => { controller.abort(); return release; } } as Response);
+-  await expect(checkForAndroidUpdate(installed, controller.signal)).resolves.toBeNull();
++  await expect(checkForAndroidUpdate(installed, controller.signal)).resolves.toBeUndefined();
+ });
+ 
+ test('legacy published release notes have a generated Traditional fallback; new manifests supply translated notes', () => {
+diff --git a/src/features/updates/android-update.ts b/src/features/updates/android-update.ts
+index 8c303ea..0b32de8 100644
+--- a/src/features/updates/android-update.ts
++++ b/src/features/updates/android-update.ts
+@@ -31,34 +31,35 @@ export type InstalledAndroidApp = {
+   buildVersion: string | null;
+ };
+ 
++/** null means a successful check with no newer build; undefined means no successful check. */
+ export async function checkForAndroidUpdate(
+   installed: InstalledAndroidApp,
+   signal?: AbortSignal,
+-): Promise<AndroidRelease | null> {
++): Promise<AndroidRelease | null | undefined> {
+   const build = Number(installed.buildVersion);
+   if (installed.platform !== 'android' || installed.track !== 'china' ||
+       installed.applicationId !== 'com.meetpr.app' || !Number.isSafeInteger(build) || build < 1 || signal?.aborted) {
+-    return null;
++    return undefined;
+   }
+   const controller = new AbortController();
+   const abort = () => controller.abort();
+   signal?.addEventListener('abort', abort);
+   const timeout = setTimeout(abort, 8000);
+   try {
+-    const cancelled = new Promise<null>(resolve => {
+-      controller.signal.addEventListener('abort', () => resolve(null), { once: true });
++    const cancelled = new Promise<undefined>(resolve => {
++      controller.signal.addEventListener('abort', () => resolve(undefined), { once: true });
+     });
+     const request = async () => {
+       const response = await fetch(ANDROID_RELEASE_URL, { cache: 'no-store', signal: controller.signal, headers: { 'X-MeetPR-Locale': getLocaleHeader() } });
+-      if (!response.ok) return null;
++      if (!response.ok) return undefined;
+       const release = releaseSchema.safeParse(await response.json());
+-      return !controller.signal.aborted && release.success && release.data.versionCode > build
+-        ? release.data : null;
++      if (controller.signal.aborted || !release.success) return undefined;
++      return release.data.versionCode > build ? release.data : null;
+     };
+     return await Promise.race([request(), cancelled]);
+   } catch {
+     // Checking for an optional update must never prevent use of the app.
+-    return null;
++    return undefined;
+   } finally {
+     clearTimeout(timeout);
+     signal?.removeEventListener('abort', abort);
+diff --git a/src/i18n/catalog/RnExtras.json b/src/i18n/catalog/RnExtras.json
+index 5d30d15..04a591d 100644
+--- a/src/i18n/catalog/RnExtras.json
++++ b/src/i18n/catalog/RnExtras.json
+@@ -1,4 +1,5 @@
+ {
++"settings.version": {"en": "Version %@ (%@)", "zh": "版本 %@ (%@)"},
+ "training.coachReviewed": {"en": "Coach reviewed", "zh": "教练已点评"},
+ "androidUpdate.title": {"en": "New version %@ available", "zh": "发现新版本 %@"},
+ "androidUpdate.installHint": {"en": "After downloading, follow your phone’s instructions to install. Keep the current app installed.", "zh": "下载后按手机提示安装即可，无需卸载当前 App。"},
+diff --git a/src/i18n/generated/zh-Hant.json b/src/i18n/generated/zh-Hant.json
+index 2835d8e..693535a 100644
+--- a/src/i18n/generated/zh-Hant.json
++++ b/src/i18n/generated/zh-Hant.json
+@@ -2118,6 +2118,7 @@
+   "student.e1rmSourceStudentRPE": "學員 RPE",
+   "student.e1rmSourceTitle": "e1RM 來源",
+   "student.e1rmSourceUnavailable": "原始計算明細不可完整還原，展示已儲存的估算值。",
++  "settings.version": "版本 %@ (%@)",
+   "training.coachReviewed": "教練已點評",
+   "androidUpdate.title": "發現新版本 %@",
+   "androidUpdate.installHint": "下載後按手機提示安裝即可，無需解除安裝當前 App。",
+diff --git a/src/features/settings/__tests__/settings-page.test.tsx b/src/features/settings/__tests__/settings-page.test.tsx
+new file mode 100644
+index 0000000..3147438
+--- /dev/null
++++ b/src/features/settings/__tests__/settings-page.test.tsx
+@@ -0,0 +1,50 @@
++import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
++import { act, create, type ReactTestRenderer } from 'react-test-renderer';
++import { Platform, ScrollView, Text } from 'react-native';
++import * as Application from 'expo-application';
++import { setLocaleOverride, type Locale } from '@/i18n';
++import { SettingsPage } from '../SettingsPage';
++
++jest.mock('expo-application', () => ({ nativeApplicationVersion: '0.1.0', nativeBuildVersion: '4' }));
++jest.mock('@react-native-async-storage/async-storage', () =>
++  // eslint-disable-next-line @typescript-eslint/no-require-imports
++  require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
++
++let tree: ReactTestRenderer;
++beforeEach(() => {
++  jest.replaceProperty(Platform, 'OS', 'android');
++  setLocaleOverride('zh');
++});
++afterEach(() => {
++  act(() => tree?.unmount());
++  jest.restoreAllMocks();
++  setLocaleOverride(null);
++});
++async function renderPage() {
++  await act(async () => {
++    tree = create(<SettingsPage title="Settings" busy={false} onClose={() => {}}><Text>Preference</Text></SettingsPage>);
++  });
++}
++
++test.each<[Locale, string]>([
++  ['zh', '版本 0.1.0 (4)'], ['en', 'Version 0.1.0 (4)'], ['zh-Hant', '版本 0.1.0 (4)'],
++])('Android settings end with the localized native version (%s)', async (locale, expected) => {
++  setLocaleOverride(locale);
++  await renderPage();
++  const rows = tree.root.findByType(ScrollView).findAllByType(Text);
++  expect(rows.map(row => row.props.children)).toEqual(['Preference', expected]);
++  expect(rows[1].props.onPress).toBeUndefined();
++  expect(rows[1].props.style).toEqual(expect.objectContaining({ textAlign: 'center', fontSize: 12 }));
++});
++
++test.each(['nativeBuildVersion', 'nativeApplicationVersion'] as const)('missing %s hides the version row', async field => {
++  jest.replaceProperty(Application, field, null);
++  await renderPage();
++  expect(tree.root.findByType(ScrollView).findAllByType(Text).map(row => row.props.children)).toEqual(['Preference']);
++});
++
++test('iOS settings do not show an Android version row', async () => {
++  jest.replaceProperty(Platform, 'OS', 'ios');
++  await renderPage();
++  expect(tree.root.findByType(ScrollView).findAllByType(Text).map(row => row.props.children)).toEqual(['Preference']);
++});
+diff --git a/src/features/updates/__tests__/android-update-recheck.test.tsx b/src/features/updates/__tests__/android-update-recheck.test.tsx
+new file mode 100644
+index 0000000..3b02afa
+--- /dev/null
++++ b/src/features/updates/__tests__/android-update-recheck.test.tsx
+@@ -0,0 +1,127 @@
++import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
++import { act, create, type ReactTestRenderer } from 'react-test-renderer';
++import { Alert, AppState, Linking, Platform, type AppStateStatus } from 'react-native';
++import { AndroidUpdateSession } from '../AndroidUpdateSession';
++import { checkForAndroidUpdate } from '../android-update';
++import { setLocaleOverride } from '@/i18n';
++
++jest.mock('expo-application', () => ({ applicationId: 'com.meetpr.app', nativeBuildVersion: '4' }));
++jest.mock('@/config/build-track', () => ({ BUILD_TRACK: 'china' }));
++jest.mock('../android-update', () => ({
++  ...jest.requireActual<typeof import('../android-update')>('../android-update'),
++  checkForAndroidUpdate: jest.fn(),
++}));
++
++const check = jest.mocked(checkForAndroidUpdate);
++const release = { schemaVersion: 1, packageName: 'com.meetpr.app', versionCode: 10, versionName: '0.1.1', releaseNotes: 'Update', downloadUrl: 'https://dl.meetpr.cn/android/releases/10/meetpr-cn.apk' } as const;
++const originalState = AppState.currentState;
++const removeListener = jest.fn();
++let tree: ReactTestRenderer;
++let changeState: (state: AppStateStatus) => void;
++beforeEach(() => {
++  jest.useFakeTimers();
++  jest.setSystemTime(new Date('2026-10-25T00:00:00Z'));
++  check.mockReset().mockResolvedValue(null);
++  removeListener.mockClear();
++  setLocaleOverride('en');
++  jest.replaceProperty(Platform, 'OS', 'android');
++  AppState.currentState = 'active';
++  jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
++    changeState = listener;
++    return { remove: removeListener };
++  });
++  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
++  jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
++});
++afterEach(() => {
++  act(() => tree?.unmount());
++  jest.restoreAllMocks();
++  jest.useRealTimers();
++  setLocaleOverride(null);
++  AppState.currentState = originalState;
++});
++
++test.each(['Not now', 'Download update'])('after choosing %s only a higher versionCode is offered again', async choice => {
++  check.mockResolvedValue(release);
++  await mount();
++  expect(Alert.alert).toHaveBeenCalledTimes(1);
++  await act(async () => {
++    jest.mocked(Alert.alert).mock.calls[0][2]!.find(button => button.text === choice)!.onPress?.();
++  });
++  await jest.advanceTimersByTimeAsync(7 * 60 * 60 * 1000);
++  await resume();
++  expect(check).toHaveBeenCalledTimes(2);
++  expect(Alert.alert).toHaveBeenCalledTimes(1);
++  check.mockResolvedValue({ ...release, versionCode: 11, versionName: '0.1.2', downloadUrl: 'https://dl.meetpr.cn/android/releases/11/meetpr-cn.apk' });
++  await jest.advanceTimersByTimeAsync(7 * 60 * 60 * 1000);
++  await resume();
++  expect(Alert.alert).toHaveBeenCalledTimes(2);
++  expect(jest.mocked(Alert.alert).mock.calls[1][0]).toBe('New version 0.1.2 available');
++  check.mockResolvedValue({ ...release, versionCode: 9 });
++  await jest.advanceTimersByTimeAsync(7 * 60 * 60 * 1000);
++  await resume();
++  expect(Alert.alert).toHaveBeenCalledTimes(2);
++});
++async function mount() {
++  await act(async () => { tree = create(<AndroidUpdateSession enabled />); });
++}
++async function resume() {
++  await act(async () => { changeState('background'); changeState('active'); });
++}
++
++test('cold startup checks once and foreground checks resume only after more than six hours', async () => {
++  await mount();
++  expect(check).toHaveBeenCalledTimes(1);
++  await act(async () => { tree.update(<AndroidUpdateSession enabled />); });
++  await resume();
++  expect(check).toHaveBeenCalledTimes(1);
++  await jest.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
++  await resume();
++  expect(check).toHaveBeenCalledTimes(1);
++  await jest.advanceTimersByTimeAsync(1);
++  await act(async () => { changeState('active'); });
++  expect(check).toHaveBeenCalledTimes(1);
++  await resume();
++  expect(check).toHaveBeenCalledTimes(2);
++  await resume();
++  expect(check).toHaveBeenCalledTimes(2);
++});
++
++test.each(['failed result', 'rejection'])('a later %s does not postpone retry on the next foreground', async failure => {
++  await mount();
++  if (failure === 'rejection') check.mockRejectedValueOnce(new Error('offline'));
++  else check.mockResolvedValueOnce(undefined);
++  await jest.advanceTimersByTimeAsync(7 * 60 * 60 * 1000);
++  await resume();
++  expect(check).toHaveBeenCalledTimes(2);
++  check.mockResolvedValue(release);
++  await resume();
++  expect(check).toHaveBeenCalledTimes(3);
++  expect(Alert.alert).toHaveBeenCalledTimes(1);
++});
++
++test('foreground transitions do not overlap a pending check and a late result waits until active', async () => {
++  let finish!: (value: typeof release) => void;
++  check.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
++  await mount();
++  await resume();
++  expect(check).toHaveBeenCalledTimes(1);
++  await act(async () => { changeState('background'); finish(release); });
++  expect(Alert.alert).not.toHaveBeenCalled();
++  await act(async () => { changeState('active'); });
++  expect(Alert.alert).toHaveBeenCalledTimes(1);
++  expect(check).toHaveBeenCalledTimes(1);
++});
++
++test('disabled readiness gates foreground checks and iOS never checks', async () => {
++  await mount();
++  const listener = changeState;
++  await act(async () => { tree.update(<AndroidUpdateSession enabled={false} />); });
++  expect(removeListener).toHaveBeenCalledTimes(1);
++  await jest.advanceTimersByTimeAsync(7 * 60 * 60 * 1000);
++  await act(async () => { listener('background'); listener('active'); });
++  expect(check).toHaveBeenCalledTimes(1);
++  jest.replaceProperty(Platform, 'OS', 'ios');
++  await act(async () => { tree.update(<AndroidUpdateSession enabled />); });
++  expect(check).toHaveBeenCalledTimes(1);
++});

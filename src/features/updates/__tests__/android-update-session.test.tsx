@@ -21,7 +21,7 @@ beforeEach(() => {
   jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
 });
-afterEach(() => { if (tree) act(() => tree.unmount()); jest.restoreAllMocks(); setLocaleOverride(null); global.fetch = originalFetch; AppState.currentState = originalAppState; });
+afterEach(() => { if (tree) act(() => tree.unmount()); jest.restoreAllMocks(); jest.useRealTimers(); setLocaleOverride(null); global.fetch = originalFetch; AppState.currentState = originalAppState; });
 
 test('startup shows release notes and only opens the download after the user chooses it', async () => {
   await act(async () => { tree = create(<AndroidUpdateSession enabled />); });
@@ -81,4 +81,22 @@ test('Traditional update prompts use generated release notes and Taiwan UI copy'
   expect(alert.mock.calls[0][1]).toContain('改善教練邀請流程');
   expect(alert.mock.calls[0][1]).not.toContain('改进教练邀请流程');
   expect(alert.mock.calls[0][2]).toContainEqual(expect.objectContaining({ text: '下載更新' }));
+});
+
+test.each(['network', 'http', 'json', 'invalid metadata', 'timeout'])('a %s failure retries on the next foreground without waiting six hours', async failure => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2026-10-25T00:00:00Z'));
+  const listener = jest.spyOn(AppState, 'addEventListener');
+  jest.mocked(global.fetch).mockImplementationOnce(async () => {
+    if (failure === 'network') throw new Error('offline');
+    if (failure === 'timeout') return new Promise(() => {});
+    if (failure === 'json') return { ...response(release), json: async () => { throw new Error('bad JSON'); } };
+    return response(failure === 'invalid metadata' ? {} : release, failure !== 'http');
+  });
+  await act(async () => { tree = create(<AndroidUpdateSession enabled />); });
+  await act(async () => { await jest.advanceTimersByTimeAsync(8000); });
+  expect(alert).not.toHaveBeenCalled();
+  await act(async () => { listener.mock.calls[0][1]('background'); listener.mock.calls[0][1]('active'); });
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  expect(alert).toHaveBeenCalledTimes(1);
 });

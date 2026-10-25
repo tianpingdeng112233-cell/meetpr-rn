@@ -2118,6 +2118,7 @@
   "student.e1rmSourceStudentRPE": "學員 RPE",
   "student.e1rmSourceTitle": "e1RM 來源",
   "student.e1rmSourceUnavailable": "原始計算明細不可完整還原，展示已儲存的估算值。",
+  "settings.version": "版本 %@ (%@)",
   "training.coachReviewed": "教練已點評",
   "androidUpdate.title": "發現新版本 %@",
   "androidUpdate.installHint": "下載後按手機提示安裝即可，無需解除安裝當前 App。",

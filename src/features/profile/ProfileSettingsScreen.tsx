@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
+import * as Application from 'expo-application';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOnboardingProfile } from '@/api/domains/onboarding';
 import { useSessionStore } from '@/api/session';
@@ -37,6 +38,8 @@ export function ProfileSettingsScreen() {
   const studentId = useSessionStore(state => state.user?.id ?? '');
   const profile = useOnboardingProfile(studentId);
   const colors = useColors();
+  const version = Platform.OS === 'android' && Application.nativeApplicationVersion && Application.nativeBuildVersion
+    ? t('settings.version', [Application.nativeApplicationVersion, Application.nativeBuildVersion]) : null;
   const labelStyle = { ...font.body(13), color: colors.textMuted, marginLeft: spacing.xs, marginBottom: -spacing.sm };
   return <ProfilePage title={t('student.rn.profile.settings')}>
     <Text style={labelStyle}>{t('student.rn.profile.preferences')}</Text>
@@ -45,5 +48,6 @@ export function ProfileSettingsScreen() {
     <AccountSecuritySection studentId={studentId} />
     {profile.isError ? <ProfilePageStatus pending={false} failed retry={() => void profile.refetch()} /> : null}
     <SignOut />
+    {version ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{version}</Text> : null}
   </ProfilePage>;
 }
