@@ -26,7 +26,7 @@ test.each([
   { ...installed, buildVersion: 'not-a-build' },
 ])('unsupported installed app does not contact the release host: %j', async (app) => {
   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(release));
-  await expect(checkForAndroidUpdate(app)).resolves.toBeNull();
+  await expect(checkForAndroidUpdate(app)).resolves.toBeUndefined();
   expect(global.fetch).not.toHaveBeenCalled();
 });
 
@@ -42,7 +42,7 @@ test.each([
   { ...release, downloadUrl: 'https://dl.meetpr.cn/android/releases/9/meetpr-cn.apk' },
 ])('invalid or incompatible release metadata is ignored: %j', async (metadata) => {
   global.fetch = jest.fn<typeof fetch>().mockResolvedValue(response(metadata));
-  await expect(checkForAndroidUpdate(installed)).resolves.toBeNull();
+  await expect(checkForAndroidUpdate(installed)).resolves.toBeUndefined();
 });
 
 test.each(['network', 'http', 'json'])('%s failure leaves startup usable without an update prompt', async (failure) => {
@@ -50,7 +50,7 @@ test.each(['network', 'http', 'json'])('%s failure leaves startup usable without
     if (failure === 'network') throw new Error('offline');
     return { ok: failure !== 'http', json: async () => { if (failure === 'json') throw new Error('bad JSON'); return release; } } as Response;
   });
-  await expect(checkForAndroidUpdate(installed)).resolves.toBeNull();
+  await expect(checkForAndroidUpdate(installed)).resolves.toBeUndefined();
 });
 
 test('a stalled request times out and cannot offer an update after the deadline', async () => {
@@ -59,14 +59,14 @@ test('a stalled request times out and cannot offer an update after the deadline'
   global.fetch = jest.fn<typeof fetch>().mockImplementation(() => new Promise(resolve => { respond = resolve; }));
   const result = checkForAndroidUpdate(installed);
   await jest.advanceTimersByTimeAsync(8000);
-  await expect(result).resolves.toBeNull();
+  await expect(result).resolves.toBeUndefined();
   respond(response(release));
 });
 
 test('an aborted startup does not offer an update even if the response arrives later', async () => {
   const controller = new AbortController();
   global.fetch = jest.fn<typeof fetch>().mockResolvedValue({ ok: true, json: async () => { controller.abort(); return release; } } as Response);
-  await expect(checkForAndroidUpdate(installed, controller.signal)).resolves.toBeNull();
+  await expect(checkForAndroidUpdate(installed, controller.signal)).resolves.toBeUndefined();
 });
 
 test('legacy published release notes have a generated Traditional fallback; new manifests supply translated notes', () => {

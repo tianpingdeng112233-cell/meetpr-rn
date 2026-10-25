@@ -1,0 +1,78 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/profile/__tests__/profile-pages.test.tsx -t rest timer subpage
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      3 | import { BrandSwitch } from '@/design/BrandSwitch';
+      4 | import { useQueryClient } from '@tanstack/react-query';
+    > 5 | import * as Notifications from 'expo-notifications';
+        | ^
+      6 | import { AppButton, font, useColors } from '@/design';
+      7 | import { t } from '@/i18n';
+      8 | import { NumberWheel } from '@/features/onboarding/controls';
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/settings/TrainingReminderSettingsScreen.tsx:5:1)
+      at Object.require (src/features/profile/ProfileSettingsScreen.tsx:11:1)
+      at Object.require (src/features/profile/__tests__/profile-pages.test.tsx:12:1)
+
+FAIL src/features/profile/__tests__/profile-pages.test.tsx
+  ✕ rest timer subpage does not show the app version (150 ms)
+  ○ skipped About me preserves four ordered rows and opens each existing editor
+  ○ skipped saving basics updates About me and the mounted home through the shared cache
+  ○ skipped Health uses today recovery and opens the existing sheets
+  ○ skipped Health uses onboarding recovery and opens the existing sheets
+  ○ skipped Health uses empty recovery and opens the existing sheets
+  ○ skipped Settings switches appearance persistently and opens both existing preference screens
+  ○ skipped Android main settings end with the localized native version (zh)
+  ○ skipped Android main settings end with the localized native version (en)
+  ○ skipped Android main settings end with the localized native version (zh-Hant)
+  ○ skipped main settings hide the version when nativeBuildVersion is missing
+  ○ skipped main settings hide the version when nativeApplicationVersion is missing
+  ○ skipped iOS main settings do not show an Android version row
+  ○ skipped Settings opens the unchanged Change password modal
+  ○ skipped Settings opens the unchanged Export training data modal
+  ○ skipped Settings opens the unchanged Delete account modal
+  ○ skipped Settings can sign out and clear cached data even when the profile request fails
+  ○ skipped Rest between sets storage failure retains the existing retry behavior
+  ○ skipped Training reminders storage failure retains the existing retry behavior
+  ○ skipped secondary profile page renders load failure and retries before revealing editors
+  ○ skipped secondary profile page renders load failure and retries before revealing editors
+  ○ skipped identity keeps full decimal values, truncation and theme tokens in en/light
+  ○ skipped identity keeps full decimal values, truncation and theme tokens in en/dark
+  ○ skipped identity keeps full decimal values, truncation and theme tokens in zh/light
+  ○ skipped identity keeps full decimal values, truncation and theme tokens in zh/dark
+  ○ skipped secondary ProfileAboutScreen retains cached content and exposes retry after refresh failure
+  ○ skipped secondary ProfileHealthScreen retains cached content and exposes retry after refresh failure
+  ○ skipped secondary ProfileSettingsScreen retains cached content and exposes retry after refresh failure
+
+  ● rest timer subpage does not show the app version
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected value: not "Version 0.1.0 (4)"
+    Received array:     [["󰁍", undefined], "Rest between sets", "Main lifts and variations", "Default behavior", "Automatic (by RPE)", "Set manually", "Automatic rules", "RPE below 7", "2 minutes", "RPE 7 to below 9", "3 minutes", "RPE 9 or above", "4 minutes", "Accessory exercises", "Rest after each set", "30 sec to 5 min", ["󰍴", undefined], "1:00", ["󰐕", undefined], "Rest times set by your coach always take priority. These settings only change the default when your coach has not set one.", "Version 0.1.0 (4)"]
+
+      134 |   const subpage = renderer.root.findByType(Modal);
+      135 |   expect(subpage.findAllByType(Text).map(node => node.props.children)).toContain('Rest between sets');
+    > 136 |   expect(subpage.findAllByType(Text).map(node => node.props.children)).not.toContain('Version 0.1.0 (4)');
+          |                                                                            ^
+      137 | });
+      138 | test.each(['Change password', 'Export training data', 'Delete account'])('Settings opens the unchanged %s modal', async label => {
+      139 |   await mount(<ProfileSettingsScreen />); await press(label);
+
+      at Object.toContain (src/features/profile/__tests__/profile-pages.test.tsx:136:76)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 27 skipped, 28 total
+Snapshots:   0 total
+Time:        0.741 s, estimated 1 s
+Ran all test suites matching /src\/features\/profile\/__tests__\/profile-pages.test.tsx/i with tests matching "rest timer subpage".

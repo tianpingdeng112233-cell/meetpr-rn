@@ -1,4 +1,5 @@
 {
+"settings.version": {"en": "Version %@ (%@)", "zh": "版本 %@ (%@)"},
 "training.coachReviewed": {"en": "Coach reviewed", "zh": "教练已点评"},
 "androidUpdate.title": {"en": "New version %@ available", "zh": "发现新版本 %@"},
 "androidUpdate.installHint": {"en": "After downloading, follow your phone’s instructions to install. Keep the current app installed.", "zh": "下载后按手机提示安装即可，无需卸载当前 App。"},

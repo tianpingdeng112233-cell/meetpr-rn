@@ -1,0 +1,31 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/updates/__tests__/android-update-recheck.test.tsx
+
+FAIL src/features/updates/__tests__/android-update-recheck.test.tsx
+  ✕ cold startup checks once and foreground checks resume only after more than six hours (23 ms)
+
+  ● cold startup checks once and foreground checks resume only after more than six hours
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 2
+    Received number of calls: 1
+
+      54 |   expect(check).toHaveBeenCalledTimes(1);
+      55 |   await resume();
+    > 56 |   expect(check).toHaveBeenCalledTimes(2);
+         |                 ^
+      57 |   await resume();
+      58 |   expect(check).toHaveBeenCalledTimes(2);
+      59 | });
+
+      at Object.toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-recheck.test.tsx:56:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.918 s
+Ran all test suites matching /src\/features\/updates\/__tests__\/android-update-recheck.test.tsx/i.

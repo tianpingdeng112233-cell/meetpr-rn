@@ -23,34 +23,51 @@ function offerUpdate(release: AndroidRelease) {
 
 /** Mounted once in the app shell, after privacy confirmation and bootstrap. */
 export function AndroidUpdateSession({ enabled }: { enabled: boolean }) {
-  const completed = useRef(false);
+  const lastCheckedAt = useRef<number | null>(null);
+  const highestOfferedBuild = useRef(0);
   useEffect(() => {
-    if (!enabled || completed.current) return;
+    if (!enabled || Platform.OS !== 'android') return;
     const controller = new AbortController();
     let currentState = AppState.currentState;
     let pending: AndroidRelease | null = null;
+    let checking = false;
     const offerWhenActive = () => {
       if (controller.signal.aborted || !pending || currentState !== 'active') return;
       const release = pending;
       pending = null;
-      completed.current = true;
+      if (release.versionCode <= highestOfferedBuild.current) return;
+      highestOfferedBuild.current = release.versionCode;
       offerUpdate(release);
     };
+    const check = async () => {
+      const startedAt = Date.now();
+      if (checking || controller.signal.aborted ||
+          (lastCheckedAt.current !== null && startedAt - lastCheckedAt.current <= 6 * 60 * 60 * 1000)) return;
+      checking = true;
+      try {
+        const release = await checkForAndroidUpdate({
+          platform: Platform.OS,
+          track: BUILD_TRACK,
+          applicationId: Application.applicationId,
+          buildVersion: Application.nativeBuildVersion,
+        }, controller.signal);
+        if (controller.signal.aborted || release === undefined) return;
+        lastCheckedAt.current = startedAt;
+        pending = release;
+        offerWhenActive();
+      } catch {
+        // A failed check stays eligible for retry on the next foreground.
+      } finally {
+        checking = false;
+      }
+    };
     const subscription = AppState.addEventListener('change', state => {
+      const resumed = currentState !== 'active' && state === 'active';
       currentState = state;
       offerWhenActive();
+      if (resumed) void check();
     });
-    void checkForAndroidUpdate({
-      platform: Platform.OS,
-      track: BUILD_TRACK,
-      applicationId: Application.applicationId,
-      buildVersion: Application.nativeBuildVersion,
-    }, controller.signal).then(release => {
-      if (controller.signal.aborted) return;
-      if (!release) completed.current = true;
-      pending = release;
-      offerWhenActive();
-    });
+    void check();
     return () => {
       controller.abort();
       subscription.remove();
