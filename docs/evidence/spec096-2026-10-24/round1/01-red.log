@@ -1,0 +1,126 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/history/__tests__/student-added-history.test.tsx src/features/training/__tests__/set-save.test.tsx
+
+FAIL src/features/training/__tests__/set-save.test.tsx (7.55 s)
+  ● completed summary replay and upload status: uploaded
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 4
+
+      Object {
+    -   "height": 22,
+    -   "position": "absolute",
+    -   "width": 22,
+    +   "alignItems": "center",
+    +   "justifyContent": "center",
+    +   "minHeight": 44,
+    +   "minWidth": 44,
+      }
+
+      724 |   expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+      725 |   const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
+    > 726 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+          |                                                      ^
+      727 |   expect(playButton.props.hitSlop).toBe(11);
+      728 |   await act(async () => playButton.props.onPress());
+      729 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+
+      at toMatchObject (src/features/training/__tests__/set-save.test.tsx:726:54)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: uploading
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 4
+
+      Object {
+    -   "height": 22,
+    -   "position": "absolute",
+    -   "width": 22,
+    +   "alignItems": "center",
+    +   "justifyContent": "center",
+    +   "minHeight": 44,
+    +   "minWidth": 44,
+      }
+
+      724 |   expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+      725 |   const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
+    > 726 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+          |                                                      ^
+      727 |   expect(playButton.props.hitSlop).toBe(11);
+      728 |   await act(async () => playButton.props.onPress());
+      729 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+
+      at toMatchObject (src/features/training/__tests__/set-save.test.tsx:726:54)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: failed
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 4
+
+      Object {
+    -   "height": 22,
+    -   "position": "absolute",
+    -   "width": 22,
+    +   "alignItems": "center",
+    +   "justifyContent": "center",
+    +   "minHeight": 44,
+    +   "minWidth": 44,
+      }
+
+      724 |   expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+      725 |   const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
+    > 726 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+          |                                                      ^
+      727 |   expect(playButton.props.hitSlop).toBe(11);
+      728 |   await act(async () => playButton.props.onPress());
+      729 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+
+      at toMatchObject (src/features/training/__tests__/set-save.test.tsx:726:54)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/history/__tests__/student-added-history.test.tsx
+  ● history replays videos for prescribed, extra and student-added rows
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 4
+
+      Object {
+    -   "height": 22,
+    -   "position": "absolute",
+    -   "width": 22,
+    +   "alignItems": "center",
+    +   "justifyContent": "center",
+    +   "minHeight": 44,
+    +   "minWidth": 44,
+      }
+
+      75 |   expect(playButtons).toHaveLength(3);
+      76 |   for (const button of playButtons) {
+    > 77 |     expect(StyleSheet.flatten(button.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+         |                                                    ^
+      78 |     expect(button.props.hitSlop).toBe(11);
+      79 |     const row = button.parent!.parent!;
+      80 |     expect(row.type).toBe(View);
+
+      at Object.toMatchObject (src/features/history/__tests__/student-added-history.test.tsx:77:52)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 2 failed, 2 total
+Tests:       4 failed, 39 passed, 43 total
+Snapshots:   0 total
+Time:        8.409 s, estimated 28 s

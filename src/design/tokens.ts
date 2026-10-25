@@ -14,6 +14,10 @@ export const palette = {
   coachNoPlanBorder: { light: 'rgba(217,119,6,0.4)', dark: 'rgba(245,166,35,0.4)' },
   coachAcceptedBorder: { light: 'rgba(21,128,61,0.3)', dark: 'rgba(94,158,120,0.3)' },
   coachMissedFill: { light: 'rgba(229,72,77,0.16)', dark: 'rgba(229,72,77,0.16)' },
+  completedVideoIcon: { light: '#9CA3AF', dark: '#6B6B72' },
+  videoReviewedFill: { light: 'rgba(17,24,39,.72)', dark: 'rgba(17,24,39,.72)' },
+  videoReviewedBorder: { light: 'rgba(255,255,255,.18)', dark: 'rgba(255,255,255,.18)' },
+  videoReviewedText: { light: '#FFFFFF', dark: '#FFFFFF' },
   videoStageFill: { light: '#1B2534', dark: '#1B2534' },
   videoStageBorder: { light: '#2A3646', dark: '#2A3646' },
   // Workbench chrome retains its original dark fill behind fixed white controls.

@@ -4,6 +4,7 @@ import { AccessoryLogCard } from './AccessoryLogCard';
 import { accessoryRows, isAccessoryExercise } from './accessory-quick-log';
 import { useCameraAvailability } from './video-upload/use-camera-availability';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { CompletedSetVideo, CompletedVideoGroup, CompletedVideoReplayProvider } from './video-upload/CompletedVideoReplay';
 import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, LayoutAnimation, Text, View, type LayoutRectangle } from 'react-native';
@@ -389,7 +390,7 @@ export function WorkoutBody({
           reportCompletedRow(group.exercise.id, layout);
         }}
       >{renderGroup(group, true)}</View>)}</View> : null}
-      {completedDay ? <Card testID="completed-day-card" style={{ backgroundColor: colors.bgInset, borderColor: colors.borderStrong, borderWidth: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 16, borderBottomRightRadius: 16, padding: 16, paddingLeft: 19, gap: 14, overflow: 'hidden' }}>
+      {completedDay ? <CompletedVideoReplayProvider studentId={studentId}><Card testID="completed-day-card" style={{ backgroundColor: colors.bgInset, borderColor: colors.borderStrong, borderWidth: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 16, borderBottomRightRadius: 16, padding: 16, paddingLeft: 19, gap: 14, overflow: 'hidden' }}>
         <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: spacing.point3, backgroundColor: colors.success }} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{t('student.todayWorkoutScreen.copy017')}</Text>
@@ -409,7 +410,7 @@ export function WorkoutBody({
           const open = Boolean(expandedSummary[exercise.id]);
           const recorded = rows.filter(draft => added || !draft.kind || isDraftTerminal(draft));
           const title = exerciseTitle(resolveExerciseMetadata(exercise.exercise_id));
-          return <View key={exercise.id} style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+          return <CompletedVideoGroup key={exercise.id} sets={recorded.map(draft => ({ setLogId: draft.sourceLog?.id ?? null, stableSetId: draft.stableSetId }))}>{() => <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
             <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: open }} onPress={() => setExpandedSummary(current => ({ ...current, [exercise.id]: !open }))}
               style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11, minHeight: spacing.minimumHitTarget }}>
               {done ? <View style={{ width: 22, height: 22, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.successTint }}>
@@ -428,16 +429,17 @@ export function WorkoutBody({
                   <Text style={{ flex: 1, color: !terminal ? colors.textMuted : draft.status === 'failed' ? colors.danger : colors.textPrimary, ...font.mono(13) }}>
                     {terminal ? `${weight} ${unit} × ${draft.repsText || '—'}${draft.rpeText ? ` · RPE ${draft.rpeText}` : ''}` : '—'}
                   </Text>
+                  <CompletedSetVideo setLogId={draft.sourceLog?.id ?? null} stableSetId={draft.stableSetId} badge={{ exerciseName: title, setOrdinal: draft.setIndex + 1, weightKg: draft.sourceLog ? Number(draft.sourceLog.weight_kg) : null, reps: draft.sourceLog?.reps ?? null, rpe: draft.sourceLog?.rpe != null ? Number(draft.sourceLog.rpe) : null }} />
                 </View>;
               })}
             </View> : null}
-          </View>;
+          </View>}</CompletedVideoGroup>;
         })}
         {completedDay.canUndo ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.todayWorkoutScreen.copy023')} accessibilityState={{ disabled: completedDay.undoing }} disabled={completedDay.undoing} onPress={completedDay.onUndo}
           style={{ alignSelf: 'flex-end', justifyContent: 'center', minHeight: spacing.minimumHitTarget }}>
           <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.todayWorkoutScreen.copy023')}</Text>
         </Pressable> : null}
-      </Card> : null}
+      </Card></CompletedVideoReplayProvider> : null}
       {!completedDay && (!progressFlow || active) ? <Card
         testID="workout-hero"
         style={{

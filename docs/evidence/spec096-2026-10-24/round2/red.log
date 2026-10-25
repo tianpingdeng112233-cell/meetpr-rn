@@ -1,0 +1,114 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/history/__tests__/student-added-history.test.tsx
+
+FAIL src/features/history/__tests__/student-added-history.test.tsx
+  ● history reserves a video column only within the exercise with playable video: bench-log / null
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 8
+    Received: undefined
+
+      126 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+      127 |     expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
+    > 128 |     expect(valueStyle.marginRight).toBe(reserved ? 8 : undefined);
+          |                                    ^
+      129 |     expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
+      130 |   });
+      131 | });
+
+      at toBe (src/features/history/__tests__/student-added-history.test.tsx:128:36)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:120:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: extra-bench / null
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 8
+    Received: undefined
+
+      126 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+      127 |     expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
+    > 128 |     expect(valueStyle.marginRight).toBe(reserved ? 8 : undefined);
+          |                                    ^
+      129 |     expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
+      130 |   });
+      131 | });
+
+      at toBe (src/features/history/__tests__/student-added-history.test.tsx:128:36)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:120:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: added-squat / null
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 8
+    Received: undefined
+
+      126 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+      127 |     expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
+    > 128 |     expect(valueStyle.marginRight).toBe(reserved ? 8 : undefined);
+          |                                    ^
+      129 |     expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
+      130 |   });
+      131 | });
+
+      at toBe (src/features/history/__tests__/student-added-history.test.tsx:128:36)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:120:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: bench-log / uploading
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 8
+    Received: undefined
+
+      126 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+      127 |     expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
+    > 128 |     expect(valueStyle.marginRight).toBe(reserved ? 8 : undefined);
+          |                                    ^
+      129 |     expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
+      130 |   });
+      131 | });
+
+      at toBe (src/features/history/__tests__/student-added-history.test.tsx:128:36)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:120:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: bench-log / failed
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 8
+    Received: undefined
+
+      126 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+      127 |     expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
+    > 128 |     expect(valueStyle.marginRight).toBe(reserved ? 8 : undefined);
+          |                                    ^
+      129 |     expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
+      130 |   });
+      131 | });
+
+      at toBe (src/features/history/__tests__/student-added-history.test.tsx:128:36)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:120:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 6 passed, 11 total
+Snapshots:   0 total
+Time:        1.308 s
