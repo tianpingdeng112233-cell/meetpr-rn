@@ -22,6 +22,7 @@ const overrides = copyGlossary.split('\n').filter(line => line.startsWith('| '))
 });
 // The glossary's compound example takes precedence over OpenCC's 釋出.
 overrides.push(['发布计划', '發布課表']);
+const phraseOverrides = require('./i18n/phrase-overrides-zh-Hant.json');
 const protectedWords = ['MeetPR', '微信', 'App Store', 'TestFlight'];
 const words = new Map([...overrides, ...protectedWords.map(word => [word, word])]);
 const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -30,8 +31,11 @@ const placeholders = text => text.match(/\{\{?[^{}]+\}?\}|%@|%lld/g) ?? [];
 function convert(text, key) {
   const saved = [];
   const source = repsKeys.has(key) ? text.replace(/次数/g, '下數').replace(/次/g, '下') : text;
-  const marked = source.replace(tokens, token => {
-    saved.push(token === '邮箱' && /^(邮箱|邮箱地址)$/.test(text) ? '電子郵件' : words.get(token) ?? token);
+  const scoped = phraseOverrides[key];
+  const copyWords = scoped ? new Map([...words, ...Object.entries(scoped)]) : words;
+  const pattern = scoped ? new RegExp(`${Object.keys(scoped).map(escape).join('|')}|${tokens.source}`, 'g') : tokens;
+  const marked = source.replace(pattern, token => {
+    saved.push(token === '邮箱' && /^(邮箱|邮箱地址)$/.test(text) ? '電子郵件' : copyWords.get(token) ?? token);
     return `\uE000${saved.length - 1}\uE001`;
   });
   const result = s2twp(marked).replace(/\uE000(\d+)\uE001/g, (_, index) => saved[Number(index)]);

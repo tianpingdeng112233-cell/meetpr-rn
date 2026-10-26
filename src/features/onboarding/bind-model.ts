@@ -11,6 +11,7 @@ export type BindGateViewState =
   | 'needsOnboarding'
   | 'pendingAcceptance'
   | 'bound'
+  | 'welcome'
   | 'handoffSubmitting'
   | 'handoffFailed'
   | 'failed';
@@ -31,8 +32,12 @@ export function resolveBindGateState(
   status: BindRequestStatus | 'none',
   hasStash: boolean,
   onboardingComplete: boolean,
+  firstRun?: { request: BindRequest; welcomeSeen: boolean },
 ): BindGateResolution {
-  if (status === 'accepted') return { notice: null, state: 'bound' };
+  if (status === 'accepted') return {
+    notice: null,
+    state: firstRun && !firstRun.welcomeSeen && firstRun.request.first_run?.has_settled_day === false ? 'welcome' : 'bound',
+  };
   if (status === 'pending') return { notice: null, state: 'pendingAcceptance' };
   const notice =
     status === 'rejected'
@@ -74,4 +79,3 @@ export async function resubmitInviteStash(
     return { kind: 'handoffFailed' };
   }
 }
-

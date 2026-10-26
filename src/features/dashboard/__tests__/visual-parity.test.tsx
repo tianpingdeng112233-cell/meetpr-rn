@@ -1,4 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import * as analytics from '@/analytics/client';
+import { AnalyticsEvent } from '@/analytics/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Modal, StyleSheet, Text, TextInput } from 'react-native';
@@ -30,7 +33,11 @@ const mockNavigate = jest.fn();
 const mockSetParams = jest.fn();
 let mockProfileParams: { edit?: string; returnTo?: string } = {};
 const mockNavigation = { setParams: mockSetParams };
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: mockNavigate }), useFocusEffect: () => {}, useLocalSearchParams: () => mockProfileParams, useNavigation: () => mockNavigation }));
+const mockFocusEffects = new Set<() => void>();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: mockNavigate }), useFocusEffect: (effect: () => void) => {
+  const { useEffect } = jest.requireActual<typeof import('react')>('react');
+  useEffect(() => { mockFocusEffects.add(effect); return () => { mockFocusEffects.delete(effect); }; }, [effect]);
+}, useLocalSearchParams: () => mockProfileParams, useNavigation: () => mockNavigation }));
 jest.mock('@/api/session', () => ({
   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
   authenticatedRequest: jest.fn(),
@@ -55,7 +62,9 @@ const plan: PlanDetail = {
 };
 let renderer: ReactTestRenderer;
 let client: QueryClient;
+let servedBinding: MineBindRequestResponse['bind_request'];
 let servedPlan: PlanDetail | null;
+let servedFirstPlan: PlanDetail | null;
 let servedProfile: OnboardingProfile | null;
 let servedExercises: import('@/api/domains').Exercise[];
 let feedbackItems: import('@/api/domains').FeedbackItem[];
@@ -66,12 +75,15 @@ const waitUntil = async (condition: () => boolean) => {
   }
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  await AsyncStorage.clear();
+  servedBinding = { id: '90000000-0000-4000-8000-000000000000', student_id: studentId, coach_id: '20000000-0000-4000-8000-000000000000', coach_display_name: 'Alex', status: 'accepted', responded_at: null, submitted_at: '2026-09-01T00:00:00Z', expired_at: '2026-09-08T00:00:00Z', invite_code_id: null, skip_evaluation: true, skip_reason: null };
   mockNavigate.mockClear();
   mockSetParams.mockClear();
   mockProfileParams = {};
   setLocaleOverride('en');
   servedPlan = plan;
+  servedFirstPlan = null;
   servedExercises = [];
   servedProfile = null;
   feedbackItems = [];
@@ -79,8 +91,10 @@ beforeEach(() => {
   mockNavigate.mockClear();
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
+  jest.mocked(authenticatedRequest).mockClear();
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
     if (path.endsWith('/plans')) return { plans: servedPlan ? [servedPlan] : [] } as never;
+    if (servedFirstPlan && path === `/plans/${servedFirstPlan.id}`) return servedFirstPlan as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: servedExercises } as never;
     if (path.endsWith('/onboarding')) {
@@ -90,7 +104,7 @@ beforeEach(() => {
     if (path.endsWith('/feedback')) return { items: feedbackItems } as never;
     if (path.endsWith('/videos')) return { videos: [{ id: 'video', exercise_name: 'Competition squat', set_index: 1 }] } as never;
     if (path.includes('/sets')) return { logs: [] } as never;
-    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: '20000000-0000-4000-8000-000000000000', coach_display_name: 'Alex' } } as never;
+    if (path === '/bind-requests/mine') return { bind_request: servedBinding } as never;
     if (path === '/conversations') return (options?.method === 'POST' ? { conversation: { id: '80000000-0000-4000-8000-000000000000', other_party: { id: '20000000-0000-4000-8000-000000000000', display_name: 'Alex' }, unread_count: 0 } } : { conversations: [] }) as never;
     if (path.includes('/readiness')) return { checkin: null } as never;
     throw new Error(`Unexpected request: ${path}`);
@@ -119,6 +133,7 @@ afterEach(() => {
   client.clear();
   useSessionStore.setState({ user: null });
   setLocaleOverride(null);
+  jest.restoreAllMocks();
   jest.useRealTimers();
 });
 
@@ -363,4 +378,163 @@ test('Today overview uses singular set for three exercises and one set', async (
   await loadDashboard();
   const overview = renderer.root.findAll(node => node.props.testID === 'today-day-overview' && typeof node.props.onPress === 'function')[0];
   expect(overview.findAllByType(Text).map(node => node.props.children)).toContain('3 exercises · 1 set');
+});
+
+const renderDashboard = async () => {
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
+};
+const pressFirstRun = async (label: string) => {
+  const button = renderer.root.findAll(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === label)[0];
+  expect(button).toBeDefined();
+  await act(async () => { await button.props.onPress(); });
+};
+test('a new binding waits without the old weekly promise and opens profile and meet editors', async () => {
+  servedPlan = null;
+  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('Alex is building your first plan'));
+  expect(textCopy()).toContain('Alex is building your first plan');
+  expect(textCopy()).not.toContain(t('student.dashboardPlanWaitingState.copy006', [1]));
+  expect(textCopy()).not.toContain(t('student.dashboardPlanWaitingState.copy004'));
+  await pressFirstRun('Complete your profile');
+  expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/profile');
+  await pressFirstRun('Add a meet date');
+  expect(mockNavigate).toHaveBeenLastCalledWith({ pathname: '/(student)/profile', params: { edit: 'competition', returnTo: 'today' } });
+});
+
+test.each(['Dismiss first plan', 'Start W1D1'])('first plan %s restores the bottom button and remains dismissed after remount', async label => {
+  const track = jest.spyOn(analytics, 'track');
+  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+  servedPlan = { ...plan, coach_id: servedBinding.coach_id, published_at: '2026-09-02T00:00:00Z', days: plan.days.map(day => ({ ...day, completed_at: null })) };
+  servedFirstPlan = { ...servedPlan, id: '30000000-0000-4000-8000-000000000099', days: [
+    { ...plan.days[0], id: '40000000-0000-4000-8000-000000000099', week_number: 2 },
+    { ...plan.days[0], week_number: 1 },
+  ] };
+  servedBinding.first_run = { binding_plan_count: 2, has_settled_day: false, first_plan: {
+    id: servedFirstPlan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 6, day_count: 18, has_settled_day: false,
+  } };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('Alex published your first plan'));
+  expect(textCopy()).toContain('Alex published your first plan');
+  expect(textCopy()).toContain('W1 – W6 · 18 sessions');
+  expect(jest.mocked(authenticatedRequest).mock.calls.map(([path]) => path)).not.toContain(`/plans/${servedFirstPlan.id}`);
+  expect(textCopy()).not.toContain(t('student.dashboardPrimaryAction.copy001'));
+  await pressFirstRun(label);
+  expect(track).toHaveBeenCalledWith(AnalyticsEvent.FirstPlanViewed, { plan_id: servedFirstPlan.id });
+  expect(track).toHaveBeenCalledWith(label === 'Start W1D1' ? AnalyticsEvent.FirstPlanStart : AnalyticsEvent.FirstPlanDismiss, { plan_id: servedFirstPlan.id });
+  expect(textCopy()).not.toContain('Alex published your first plan');
+  expect(textCopy()).toContain(t('student.dashboardPrimaryAction.copy001'));
+  if (label === 'Start W1D1') {
+    expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/training');
+    expect(useStudentTabsStore.getState().trainingHandoff).toMatchObject({ plan: { id: servedFirstPlan.id }, dayID: plan.days[0].id });
+  }
+  act(() => renderer.unmount());
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes(t('student.dashboardPrimaryAction.copy001')));
+  expect(textCopy()).not.toContain('Alex published your first plan');
+});
+
+test('a received zero-day plan keeps every original waiting-card string', async () => {
+  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+  servedPlan = { ...plan, coach_id: servedBinding.coach_id, published_at: '2026-09-02T00:00:00Z', days: [] };
+  servedBinding.first_run = { binding_plan_count: 1, has_settled_day: false, first_plan: {
+    id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 0, has_settled_day: false,
+  } };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('Alex is programming W1 for you'));
+  const copy = textCopy();
+  for (const text of ['Alex is programming W1 for you', "Based on this week's RPE and completion · Usually published Sun 21:00  before publishing", 'Message coach', 'Weekly summary · W1', 'Training completed', 'Weekly volume', 'New PR']) expect(copy).toContain(text);
+  expect(copy).not.toContain('While you wait');
+  const start = renderer.root.findAll(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === 'Start W1D1')[0];
+  expect(start.props.disabled).toBe(true);
+});
+test('new waiting guidance hides Add a meet date when the profile already has one', async () => {
+  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+  servedPlan = null;
+  servedProfile = { competition_date: '2027-01-01', is_competing: true } as OnboardingProfile;
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('While you wait'));
+  expect(textCopy()).toContain('Complete your profile');
+  expect(textCopy()).not.toContain('Add a meet date');
+});
+
+test('Traditional Chinese meet guidance keeps competition intentions distinct from a training plan', async () => {
+  setLocaleOverride('zh-Hant');
+  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+  servedPlan = null;
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('等課表的時候'));
+  expect(textCopy()).toContain('有比賽計畫？教練會按比賽日來排');
+});
+
+test.each([undefined, null, {
+  binding_plan_count: 1, has_settled_day: true,
+  first_plan: { id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: true },
+}])('unknown metadata or a hidden completed plan keeps the original waiting card: %j', async first_run => {
+  servedPlan = null;
+  servedBinding = { ...servedBinding!, first_run };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('Weekly summary · W1'));
+  expect(textCopy()).toContain('Alex is programming W1 for you');
+  expect(textCopy()).not.toContain('Alex published your first plan');
+  expect(textCopy()).not.toContain('While you wait');
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.startsWith('/plans/'))).toHaveLength(0);
+});
+
+test('a settled first plan hides the card even while the current plan is still unstarted', async () => {
+  servedBinding = { ...servedBinding!, first_run: {
+    binding_plan_count: 2, has_settled_day: true,
+    first_plan: { id: '30000000-0000-4000-8000-000000000099', published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: true },
+  } };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes(t('student.dashboardPrimaryAction.copy001')));
+  expect(textCopy()).not.toContain('Alex published your first plan');
+  expect(jest.mocked(authenticatedRequest).mock.calls.map(([path]) => path)).not.toContain('/plans/30000000-0000-4000-8000-000000000099');
+});
+
+test.each(['unavailable', 'empty'] as const)('first plan detail %s keeps the card open and allows retry', async failure => {
+  const firstId = '30000000-0000-4000-8000-000000000099';
+  servedFirstPlan = failure === 'empty' ? { ...plan, id: firstId, days: [] } : null;
+  servedBinding = { ...servedBinding!, first_run: { binding_plan_count: 2, has_settled_day: false, first_plan: {
+    id: firstId, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false,
+  } } };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('Alex published your first plan'));
+  await pressFirstRun('Start W1D1');
+  expect(textCopy()).toContain('Alex published your first plan');
+  expect(await AsyncStorage.getItem(`onboarding.firstPlanDismissed.${studentId}.${servedBinding.id}`)).toBeNull();
+  expect(mockNavigate).not.toHaveBeenCalled();
+  servedFirstPlan = { ...plan, id: firstId };
+  await pressFirstRun('Start W1D1');
+  expect(textCopy()).not.toContain('Alex published your first plan');
+  expect(useStudentTabsStore.getState().trainingHandoff).toMatchObject({ plan: { id: firstId }, dayID: plan.days[0].id });
+});
+
+
+test('returning from chat refreshes first_run and shows a newly published first plan', async () => {
+  servedPlan = null;
+  servedBinding = { ...servedBinding!, first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('While you wait'));
+  servedPlan = plan;
+  servedBinding = { ...servedBinding, first_run: { binding_plan_count: 1, has_settled_day: false, first_plan: {
+    id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false,
+  } } };
+  await act(async () => { for (const effect of [...mockFocusEffects]) effect(); });
+  await waitUntil(() => textCopy().includes('Alex published your first plan'));
+  expect(textCopy()).toContain('Alex published your first plan');
+});
+
+test('settling a first training day refreshes first_run through the existing plan revision', async () => {
+  servedBinding = { ...servedBinding!, first_run: { binding_plan_count: 1, has_settled_day: false, first_plan: {
+    id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false,
+  } } };
+  await renderDashboard();
+  await waitUntil(() => textCopy().includes('Alex published your first plan'));
+  servedBinding = { ...servedBinding, first_run: { ...servedBinding.first_run!, has_settled_day: true, first_plan: {
+    ...servedBinding.first_run!.first_plan!, has_settled_day: true,
+  } } };
+  await act(async () => { useStudentTabsStore.getState().bumpCompletionRevision(); });
+  await waitUntil(() => !textCopy().includes('Alex published your first plan'));
+  expect(textCopy()).not.toContain('Alex published your first plan');
 });

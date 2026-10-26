@@ -1,0 +1,37 @@
+diff --git a/src/features/dashboard/today-model.ts b/src/features/dashboard/today-model.ts
+index 78d509b..27f742f 100644
+--- a/src/features/dashboard/today-model.ts
++++ b/src/features/dashboard/today-model.ts
+@@ -1,3 +1,5 @@
++import type { BindRequest } from '@/api/domains/bind';
++import { bindingPlanDetails } from '@/features/onboarding/binding-plans';
+ import type { PlanDay, PlanDetail, PlanSummary } from '@/api/domains/plans';
+ import {
+   canUndoCompletion,
+@@ -22,6 +24,7 @@ export function todayModel(
+   plan: PlanDetail | null,
+   now = new Date(),
+   plans: readonly PlanSummary[] = [],
++  firstRun?: { request: BindRequest | null; plans: readonly PlanDetail[] | null; firstPlanDismissed: boolean | null },
+ ) {
+   const days = plan?.days ?? [];
+   const cursor = cursorDay(days);
+@@ -39,11 +42,17 @@ export function todayModel(
+           }
+         : { kind: 'current', day: cursor };
+   const latest = selectCurrentPlan(plans);
++  const bindingPlans = firstRun ? bindingPlanDetails(firstRun.request, firstRun.plans) : null;
++  const first = bindingPlans?.[0];
++  const firstPlan = first && firstRun?.firstPlanDismissed === false &&
++    !first.days.some(day => day.completed_at) ? first : null;
+   return {
++    firstPlan,
++    waitingForFirstPlan: action.kind === 'waiting' && bindingPlans?.length === 0,
+     cursor,
+     completedToday: completed,
+     action,
+-    stickyStartDay: action.kind === 'current' ? cursor : null,
++    stickyStartDay: !firstPlan && action.kind === 'current' ? cursor : null,
+     segments: progressSegments(currentWeekDays(days), cursor?.id),
+     isAwaitingNextPlan:
+       (days.length > 0 && !cursor) ||

@@ -1,0 +1,6 @@
+npx tsc --noEmit: PASS (exit 0; no diagnostics)
+npm run lint: PASS (exit 0; no errors or warnings)
+node scripts/generate-zh-hant.cjs --check: PASS
+git diff --check: PASS
+Post-review BindGate targeted run: 21 tests passed
+No AVD screenshots: fixture and ADB listeners denied by sandbox (see denial logs).

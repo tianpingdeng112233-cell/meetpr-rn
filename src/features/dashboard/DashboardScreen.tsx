@@ -9,7 +9,9 @@ import { useMineBindRequest } from '@/api/domains/bind';
 import { useStudentVideos } from '@/api/domains/videos';
 import {
   useDayCompletion,
+  plansRepository,
   type PlanDay,
+  type PlanDetail,
 } from '@/api/domains';
 import { AnalyticsScreen, screen } from '@/analytics';
 import {
@@ -23,7 +25,7 @@ import {
   font, spacing, radius, typography,
 } from '@/design';
 import { getLocale, t } from '@/i18n';
-import { dayCode } from '@/domain/plan/sequence';
+import { dayCode, sequenceDays } from '@/domain/plan/sequence';
 import { formatBodyWeightKg } from '@/domain/profile/body-weight';
 import {
   dayName,
@@ -41,6 +43,7 @@ import {
 import { WeekCalendar } from './WeekCalendar';
 import { FeedbackCard } from './FeedbackCard';
 import { useDashboardViewModel } from './use-dashboard';
+import { FirstPlanCard, NewStudentPlanWaitingState } from './FirstRunCards';
 import { NutritionPlaceholder } from './NutritionPlaceholder';
 
 export { WeekGrid } from './WeekCalendar';
@@ -104,12 +107,12 @@ export function DashboardScreen() {
       void screen(AnalyticsScreen.Dashboard);
     }, []),
   );
-  const openTraining = (day: PlanDay) => {
-    if (!vm.activePlan) return;
+  const openTraining = (day: PlanDay, plan: PlanDetail | null = vm.activePlan) => {
+    if (!plan) return;
     handoff({
-      plan: vm.activePlan,
+      plan,
       dayID: day.id,
-      existingLogs: vm.week.status === 'loaded' ? vm.week.logs : [],
+      existingLogs: plan.id === vm.activePlan?.id && vm.week.status === 'loaded' ? vm.week.logs : [],
     });
     router.navigate('/(student)/training');
   };
@@ -220,6 +223,20 @@ export function DashboardScreen() {
             )) : <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong }} />}
           </View>
         </View>
+        {vm.today.firstPlan ? <FirstPlanCard
+          coachName={coachName}
+          plan={vm.today.firstPlan}
+          onDismiss={vm.dismissFirstPlan}
+          onStart={async () => {
+            const first = vm.today.firstPlan;
+            if (!first) return;
+            const detail = await plansRepository.detail(first.id);
+            const day = sequenceDays(detail.days)[0];
+            if (!day) throw new Error('First plan has no training day');
+            await vm.dismissFirstPlan();
+            openTraining(day, detail);
+          }}
+        /> : null}
         <DashboardAsyncSection
           isError={vm.plans.isError}
           message={vm.plans.message}
@@ -228,7 +245,13 @@ export function DashboardScreen() {
           {vm.plans.isLoading ? (
             <DashboardSkeleton />
           ) : action.kind === 'waiting' ? (
-            <DashboardPlanWaitingState
+            vm.today.waitingForFirstPlan ? <NewStudentPlanWaitingState
+              coachName={coachName}
+              hasCompetitionDate={Boolean(vm.profile?.competition_date)}
+              onMessage={() => void chat.openCoachChat()}
+              onProfile={() => router.navigate('/(student)/profile')}
+              onCompetition={() => router.navigate({ pathname: '/(student)/profile', params: { edit: 'competition', returnTo: 'today' } })}
+            /> : <DashboardPlanWaitingState
               coachName={coachName}
               week={1}
               onMessage={() => void chat.openCoachChat()}

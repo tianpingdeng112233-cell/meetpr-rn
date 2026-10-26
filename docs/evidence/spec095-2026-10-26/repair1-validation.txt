@@ -1,0 +1,180 @@
+终态缓存回归：RED（修复前第二次挂载 list 仍调用一次）
+  ● settled students skip welcome; rebinding to the same coach gets its own local record
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: "10000000-0000-4000-8000-000000000000"
+
+      254 |   await renderGate();
+      255 |   expect(hasText('tabs')).toBe(true);
+    > 256 |   expect(list).not.toHaveBeenCalled();
+          |                    ^
+      257 |   expect(detail).not.toHaveBeenCalled();
+      258 |   act(() => renderer.unmount());
+      259 |   list.mockResolvedValue({ plans: [] });
+
+      at Object.toHaveBeenCalled (src/navigation/__tests__/BindGate.test.tsx:256:20)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 20 passed, 21 total
+Snapshots:   0 total
+Time:        0.976 s, estimated 2 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i.
+
+终态缓存回归：GREEN
+  ✓ submitting a code for an incomplete profile opens onboarding immediately (24 ms)
+  ✓ invalid stashed invite returns to an empty code field with the stashed name (3 ms)
+  ✓ invalid invite clears the submitted code while prefilling the submitted name (5 ms)
+  ✓ network failure clears the submitted code while prefilling the submitted name (4 ms)
+  ✓ pasting a whole invite message into the code field keeps the code (spec 093) (3 ms)
+  ✓ Global track has no paste button (1 ms)
+  ✓ China track paste button fills the code from a copied invite message (4 ms)
+  ✓ China track paste button explains when the clipboard has no code (7 ms)
+  ✓ entering a valid typed code clears the earlier empty-clipboard notice (5 ms)
+  ✓ entering a valid native pasted invite clears the earlier empty-clipboard notice (4 ms)
+  ✓ foreground pending page polls at 30 seconds, accepted opens welcome, Continue persists across remount (13 ms)
+  ✓ pending polling stops in background, refreshes on foreground, survives a transient failure and stops on unmount (8 ms)
+  ✓ already delivered first plan welcomes in zh with coach 王磊 (2 ms)
+  ✓ already delivered first plan welcomes in zh with coach 王教练 (1 ms)
+  ✓ already delivered first plan welcomes in zh with coach null (2 ms)
+  ✓ already delivered first plan welcomes in zh-Hant with coach 王教練 (1 ms)
+  ✓ already delivered first plan welcomes in en with coach null (1 ms)
+  ✓ settled students skip welcome; rebinding to the same coach gets its own local record (2 ms)
+  ✓ accepted students keep access to tabs when first-run list fails (1 ms)
+  ✓ accepted students keep access to tabs when first-run detail fails
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        0.951 s, estimated 1 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i.
+
+最少详情请求回归：RED（两例都多读了后续计划）
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+        "plan-0",
+        "plan-1",
+    +   "plan-2",
+      ]
+
+      289 |   await renderGate();
+      290 |   expect(hasText('tabs')).toBe(true);
+    > 291 |   expect(detail.mock.calls.map(([id]) => id)).toEqual(settledIndex === 0 ? ['plan-0'] : ['plan-0', 'plan-1']);
+          |                                               ^
+      292 | });
+      293 |
+
+      at toEqual (src/navigation/__tests__/BindGate.test.tsx:291:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 21 passed, 23 total
+Snapshots:   0 total
+Time:        0.958 s, estimated 1 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i.
+
+最少详情请求回归：GREEN
+  ✓ invalid invite clears the submitted code while prefilling the submitted name (19 ms)
+  ✓ network failure clears the submitted code while prefilling the submitted name (11 ms)
+  ✓ pasting a whole invite message into the code field keeps the code (spec 093) (8 ms)
+  ✓ Global track has no paste button (7 ms)
+  ✓ China track paste button fills the code from a copied invite message (22 ms)
+  ✓ China track paste button explains when the clipboard has no code (10 ms)
+  ✓ entering a valid typed code clears the earlier empty-clipboard notice (13 ms)
+  ✓ entering a valid native pasted invite clears the earlier empty-clipboard notice (14 ms)
+  ✓ foreground pending page polls at 30 seconds, accepted opens welcome, Continue persists across remount (36 ms)
+  ✓ pending polling stops in background, refreshes on foreground, survives a transient failure and stops on unmount (32 ms)
+  ✓ already delivered first plan welcomes in zh with coach 王磊 (5 ms)
+  ✓ already delivered first plan welcomes in zh with coach 王教练 (5 ms)
+  ✓ already delivered first plan welcomes in zh with coach null (5 ms)
+  ✓ already delivered first plan welcomes in zh-Hant with coach 王教練 (6 ms)
+  ✓ already delivered first plan welcomes in en with coach null (7 ms)
+  ✓ settled students skip welcome; rebinding to the same coach gets its own local record (25 ms)
+  ✓ accepted students keep access to tabs when first-run list fails (2 ms)
+  ✓ accepted students keep access to tabs when first-run detail fails (1 ms)
+  ✓ welcome eligibility stops fetching after settled plan at publication index 0 (2 ms)
+  ✓ welcome eligibility stops fetching after settled plan at publication index 1 (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       23 passed, 23 total
+Snapshots:   0 total
+Time:        2.23 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i.
+
+unknown 与列表过滤：保护原有语义，新增测试基线 GREEN
+  ✓ China track paste button fills the code from a copied invite message (6 ms)
+  ✓ China track paste button explains when the clipboard has no code (7 ms)
+  ✓ entering a valid typed code clears the earlier empty-clipboard notice (10 ms)
+  ✓ entering a valid native pasted invite clears the earlier empty-clipboard notice (9 ms)
+  ✓ foreground pending page polls at 30 seconds, accepted opens welcome, Continue persists across remount (17 ms)
+  ✓ pending polling stops in background, refreshes on foreground, survives a transient failure and stops on unmount (13 ms)
+  ✓ already delivered first plan welcomes in zh with coach 王磊 (3 ms)
+  ✓ already delivered first plan welcomes in zh with coach 王教练 (2 ms)
+  ✓ already delivered first plan welcomes in zh with coach null (2 ms)
+  ✓ already delivered first plan welcomes in zh-Hant with coach 王教練 (2 ms)
+  ✓ already delivered first plan welcomes in en with coach null (2 ms)
+  ✓ settled students skip welcome; rebinding to the same coach gets its own local record (2 ms)
+  ✓ accepted students keep access to tabs when first-run list fails (1 ms)
+  ✓ accepted students keep access to tabs when first-run detail fails (1 ms)
+  ✓ welcome eligibility stops fetching after settled plan at publication index 0
+  ✓ welcome eligibility stops fetching after settled plan at publication index 1 (1 ms)
+  ✓ unknown acceptance metadata stays unmarked and retries on remount (2 ms)
+  ✓ unknown publication metadata stays unmarked and retries on remount (6 ms)
+  ✓ unknown settlement metadata stays unmarked and retries on remount (2 ms)
+  ✓ list alone establishes no plans for this binding without fetching old, foreign or draft plans (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        1.044 s, estimated 3 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i.
+
+unknown 测试敏感性验证：临时注入错误终态写入，3 例 RED；错误代码随后已移除
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● unknown settlement metadata stays unmarked and retries on remount
+
+    expect(received).toBeNull()
+
+    Received: "true"
+
+      306 |   await renderGate();
+      307 |   expect(hasText('tabs')).toBe(true);
+    > 308 |   expect(await AsyncStorage.getItem(`onboarding.welcomeSeen.${STUDENT_ID}.${accepted.id}`)).toBeNull();
+          |                                                                                             ^
+      309 |   expect(detail).toHaveBeenCalledTimes(missing === 'settlement' ? 1 : 0);
+      310 |   act(() => renderer.unmount());
+      311 |   list.mockClear();
+
+      at toBeNull (src/navigation/__tests__/BindGate.test.tsx:308:93)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 24 skipped, 27 total
+Snapshots:   0 total
+Time:        1.315 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i with tests matching "unknown .* metadata".
+
+最终全量验证（移除 unknown 敏感性验证的临时错误后）：
+
+Test Suites: 184 passed, 184 total
+Tests:       1860 passed, 1860 total
+Snapshots:   0 total
+Time:        43.381 s, estimated 188 s
+Ran all test suites.
+npx tsc --noEmit: exit 0
+npm run lint: exit 0; 0 errors / 0 warnings
+git diff --check: exit 0
+Standards 独立自审：0 项实质问题
+Spec 独立自审：0 项实质问题

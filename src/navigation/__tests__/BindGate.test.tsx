@@ -1,13 +1,15 @@
-import { t } from '@/i18n';
+import { setLocaleOverride, t, type Locale } from '@/i18n';
 
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import * as analytics from '@/analytics/client';
+import { AnalyticsEvent } from '@/analytics/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
-import { Modal, Text, TextInput } from 'react-native';
+import { AppState, Modal, Text, TextInput } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { ApiError } from '@/api/client';
-import { bindRepository, onboardingRepository, type OnboardingProfile } from '@/api/domains';
+import { bindRepository, onboardingRepository, plansRepository, type BindRequest, type OnboardingProfile } from '@/api/domains';
 import * as buildTrack from '@/config/build-track';
 import { inviteStashStorage } from '@/features/onboarding/storage';
 
@@ -28,6 +30,9 @@ jest.mock('@/config/build-track', () => ({
   BUILD_TRACK: 'global',
 }));
 
+const mockReplace = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ replace: mockReplace }) }));
+
 const STUDENT_ID = '10000000-0000-4000-8000-000000000000';
 const completedProfile: OnboardingProfile = {
   user_id: STUDENT_ID, unit_preference: 'kg', gender: 'male', birth_date: '1990-01-02',
@@ -44,14 +49,20 @@ const stash = { code: 'XK7MPQ2RVT', displayName: '小明', savedAt: '2026-09-04T
 let renderer: ReactTestRenderer;
 
 beforeEach(async () => {
+  mockReplace.mockClear();
+  setLocaleOverride('en');
   await AsyncStorage.clear();
   jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: null });
   jest.spyOn(onboardingRepository, 'get').mockResolvedValue(null);
   jest.spyOn(onboardingRepository, 'upsert').mockResolvedValue(completedProfile);
+  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [] });
+  jest.spyOn(plansRepository, 'detail').mockRejectedValue(new Error('Plans unavailable'));
 });
 afterEach(() => {
   act(() => renderer?.unmount());
   jest.restoreAllMocks();
+  jest.useRealTimers();
+  setLocaleOverride(null);
 });
 
 function press(label: string) {
@@ -157,4 +168,123 @@ test.each([
   act(() => codeField().props.onChangeText(input));
   expect(codeField().props.value).toBe('XK7M PQ2 RVT');
   expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(false);
+});
+
+const newStudent = { binding_plan_count: 0, has_settled_day: false, first_plan: null };
+const pendingRequest: BindRequest = {
+  id: '10000000-0000-4000-8000-000000000001', student_id: STUDENT_ID,
+  coach_id: '10000000-0000-4000-8000-000000000002', coach_display_name: 'Alex',
+  status: 'pending', submitted_at: '2026-10-26T10:00:00Z', responded_at: null,
+  expired_at: '2026-11-02T10:00:00Z', invite_code_id: null, skip_evaluation: true, skip_reason: null,
+};
+test('foreground pending page polls at 30 seconds, accepted opens welcome, Continue persists across remount', async () => {
+  jest.useFakeTimers();
+  Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
+  const track = jest.spyOn(analytics, 'track');
+  const mine = jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: pendingRequest });
+  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [] });
+  await renderGate();
+  mine.mockResolvedValue({ bind_request: { ...pendingRequest, status: 'accepted', responded_at: '2026-10-26T10:01:00Z', first_run: newStudent } });
+  await act(async () => { await jest.advanceTimersByTimeAsync(29_999); });
+  expect(hasText("You're in")).toBe(false);
+  await act(async () => { await jest.advanceTimersByTimeAsync(1); });
+  expect(hasText("You're now training with Alex")).toBe(true);
+  expect(hasText('tabs')).toBe(false);
+  expect(hasText('Remind me when my plan is ready')).toBe(false);
+  await act(async () => press('Continue'));
+  expect(track).toHaveBeenCalledWith(AnalyticsEvent.BindWelcomeViewed);
+  expect(track).toHaveBeenCalledWith(AnalyticsEvent.BindWelcomeContinue);
+  expect(mockReplace).toHaveBeenCalledWith('/(student)/today');
+  expect(hasText('tabs')).toBe(true);
+  act(() => renderer.unmount());
+  await renderGate();
+  expect(hasText('tabs')).toBe(true);
+});
+
+test('pending polling stops in background, refreshes on foreground, survives a transient failure and stops on unmount', async () => {
+  jest.useFakeTimers();
+  Object.defineProperty(AppState, 'currentState', { configurable: true, value: 'active' });
+  let change: (state: 'active' | 'background') => void = () => {};
+  const remove = jest.fn();
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => { change = listener; return { remove }; });
+  const mine = jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: pendingRequest });
+  await renderGate();
+  act(() => change('background'));
+  await act(async () => { await jest.advanceTimersByTimeAsync(60_000); });
+  expect(mine).toHaveBeenCalledTimes(1);
+  await act(async () => change('active'));
+  expect(mine).toHaveBeenCalledTimes(2);
+  mine.mockRejectedValueOnce(new Error('offline'));
+  await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
+  expect(hasText(t('student.pendingBindView.copy001'))).toBe(true);
+  await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
+  expect(mine).toHaveBeenCalledTimes(4);
+  act(() => renderer.unmount());
+  await act(async () => { await jest.advanceTimersByTimeAsync(30_000); });
+  expect(mine).toHaveBeenCalledTimes(4);
+  expect(remove).toHaveBeenCalled();
+});
+
+test.each([
+  ['zh', '王磊', '你现在是王磊教练的学员了'],
+  ['zh', '王教练', '你现在是王教练的学员了'],
+  ['zh', null, '你现在是教练的学员了'],
+  ['zh-Hant', '王教練', '你現在是王教練的學員了'],
+  ['en', null, "You're now training with your coach"],
+] as [Locale, string | null, string][])('already delivered first plan welcomes in %s with coach %s', async (locale, name, title) => {
+  setLocaleOverride(locale);
+  const accepted = { ...pendingRequest, status: 'accepted' as const, responded_at: '2026-09-01T00:00:00Z', coach_display_name: name, first_run: { ...newStudent, binding_plan_count: 1, first_plan: { id: '30000000-0000-4000-8000-000000000000', published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false } } };
+  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+  await renderGate();
+  expect(hasText(title)).toBe(true);
+  expect(hasText('tabs')).toBe(false);
+});
+test('completed-plan students skip welcome without reading plans and persist a binding terminal marker', async () => {
+  const accepted = { ...pendingRequest, status: 'accepted' as const, first_run: {
+    binding_plan_count: 1, has_settled_day: true,
+    first_plan: { id: '30000000-0000-4000-8000-000000000000', published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: true },
+  } };
+  const mine = jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+  // The student list is empty because the coach marked the plan completed.
+  await renderGate();
+  expect(hasText('tabs')).toBe(true);
+  expect(await AsyncStorage.getItem(`onboarding.welcomeSeen.${STUDENT_ID}.${accepted.id}`)).toBe('true');
+  expect(plansRepository.list).not.toHaveBeenCalled();
+  expect(plansRepository.detail).not.toHaveBeenCalled();
+  act(() => renderer.unmount());
+  mine.mockResolvedValue({ bind_request: { ...accepted, first_run: newStudent } });
+  await renderGate();
+  expect(hasText('tabs')).toBe(true);
+  act(() => renderer.unmount());
+  mine.mockResolvedValue({ bind_request: { ...accepted, id: '10000000-0000-4000-8000-000000000099', first_run: newStudent } });
+  await renderGate();
+  expect(hasText("You're now training with Alex")).toBe(true);
+  expect(plansRepository.list).not.toHaveBeenCalled();
+  expect(plansRepository.detail).not.toHaveBeenCalled();
+});
+
+test.each([undefined, null])('first_run %s keeps existing access unmarked and can welcome after the backend supplies it', async first_run => {
+  const accepted = { ...pendingRequest, status: 'accepted' as const, first_run };
+  const mine = jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+  await renderGate();
+  expect(hasText('tabs')).toBe(true);
+  expect(hasText("You're in")).toBe(false);
+  expect(await AsyncStorage.getItem(`onboarding.welcomeSeen.${STUDENT_ID}.${accepted.id}`)).toBeNull();
+  expect(plansRepository.list).not.toHaveBeenCalled();
+  expect(plansRepository.detail).not.toHaveBeenCalled();
+  act(() => renderer.unmount());
+  mine.mockResolvedValue({ bind_request: { ...accepted, first_run: newStudent } });
+  await renderGate();
+  expect(hasText("You're now training with Alex")).toBe(true);
+  expect(plansRepository.list).not.toHaveBeenCalled();
+  expect(plansRepository.detail).not.toHaveBeenCalled();
+});
+
+test('failed terminal storage does not block an accepted settled student', async () => {
+  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: {
+    ...pendingRequest, status: 'accepted', first_run: { ...newStudent, binding_plan_count: 1, has_settled_day: true },
+  } });
+  jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('disk unavailable'));
+  await renderGate();
+  expect(hasText('tabs')).toBe(true);
 });

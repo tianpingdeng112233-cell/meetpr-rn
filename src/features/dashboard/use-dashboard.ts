@@ -15,6 +15,7 @@ import { t } from '@/i18n';
 import { cursorDay, currentWeekDays, dayCode, sequenceDays } from '@/domain/plan/sequence';
 import { localDateText } from '@/domain/plan/workout-date-policy';
 import { todayModel } from './today-model';
+import { useFirstRun } from './use-first-run';
 import {
   displayPoint,
   ninetyDayRecordTrajectory,
@@ -67,6 +68,7 @@ export type DashboardViewModel = {
   selectedDayID: string | null;
   selectDay: (dayId: string) => void;
   today: ReturnType<typeof todayModel>;
+  dismissFirstPlan: () => Promise<void>;
   cta: { interactive: boolean; label: string };
   plans: {
     isLoading: boolean;
@@ -121,7 +123,14 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
         : buildExerciseIndex(exerciseCatalogQuery.data?.exercises ?? []),
     [exerciseCatalogQuery.data?.exercises, liftMetadataUnavailable],
   );
-  const todayState = todayModel(activePlan, now, planSummaries);
+  const firstRun = useFirstRun(studentId);
+  const todayState = todayModel(activePlan, now, planSummaries, firstRun);
+  const refetchPlans = plansQuery.refetch;
+  const refetchFirstRun = firstRun.reload;
+  useFocusEffect(useCallback(() => {
+    void refetchPlans();
+    void refetchFirstRun();
+  }, [refetchPlans, refetchFirstRun]));
   const currentWeekIndex = currentWeekDays(activePlan?.days ?? [])[0]?.week_number ?? 1;
   const week = useWeekOverviewViewModel(
     studentId,
@@ -228,7 +237,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
   });
 
   const retryPlans = async () => {
-    const requests: Promise<unknown>[] = [plansQuery.refetch()];
+    const requests: Promise<unknown>[] = [plansQuery.refetch(), refetchFirstRun()];
     if (activeSummary) requests.push(detailQuery.refetch());
     if (activePlan) requests.push(week.reload());
     await Promise.all(requests);
@@ -247,6 +256,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
     try {
       const requests: Promise<unknown>[] = [
         plansQuery.refetch(),
+        firstRun.reload(),
         week.reload(),
         feedback.reload(),
         profileQuery.refetch(),
@@ -265,6 +275,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
   }, [
     activePlan,
     activeSummary,
+    firstRun,
     detailQuery,
     exerciseCatalogQuery,
     feedback,
@@ -286,11 +297,11 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
   useEffect(() => {
     if (previousPlanRevision.current !== planRevision) {
       previousPlanRevision.current = planRevision;
-      const requests: Promise<unknown>[] = [plansQuery.refetch()];
+      const requests: Promise<unknown>[] = [plansQuery.refetch(), refetchFirstRun()];
       if (activeSummary) requests.push(detailQuery.refetch());
       void Promise.all(requests);
     }
-  }, [activeSummary, detailQuery, planRevision, plansQuery]);
+  }, [activeSummary, detailQuery, planRevision, plansQuery, refetchFirstRun]);
 
   const viewedPlans = useRef(new Set<string>());
   useEffect(() => {
@@ -313,6 +324,7 @@ export function useDashboardViewModel(studentId: string): DashboardViewModel {
     selectedDayID,
     selectDay: setRequestedDayID,
     today: todayState,
+    dismissFirstPlan: firstRun.dismiss,
     cta: { interactive: todayState.stickyStartDay !== null, label: t('student.dashboardPrimaryAction.copy001') },
     plans: {
       isLoading:
