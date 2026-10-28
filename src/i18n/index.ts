@@ -1,5 +1,10 @@
 import { getLocales } from 'expo-localization';
 
+import exerciseAliases from './generated/exercise-aliases-zh.json';
+import exerciseNames from './generated/exercise-names-zh-Hant.json';
+import searchChinese from './generated/search-zh.json';
+import traditional from './generated/zh-Hant.json';
+
 import Analytics from './catalog/Analytics.json';
 import AppShell from './catalog/AppShell.json';
 import ChatUI from './catalog/ChatUI.json';
@@ -18,7 +23,7 @@ const catalog = {
 } as const;
 
 export type TranslationKey = keyof typeof catalog;
-export type Locale = 'en' | 'zh';
+export type Locale = 'en' | 'zh' | 'zh-Hant';
 type Translation = string | { one?: string; other: string };
 // Mirrors StudentStrings.Key.countIndex and CoachKit plural arguments; unlisted keys count their first parameter.
 const PLURAL_COUNT_INDEX: Record<string, number> = {
@@ -39,7 +44,18 @@ const PLURAL_COUNT_INDEX: Record<string, number> = {
 let localeOverride: Locale | null = null;
 
 export function getLocale(): Locale {
-  return localeOverride ?? (getLocales()[0]?.languageTag.toLowerCase().startsWith('zh') ? 'zh' : 'en');
+  if (localeOverride) return localeOverride;
+  const locale = getLocales()[0];
+  const parts = locale?.languageTag?.toLowerCase().split('-') ?? [];
+  if (parts[0] !== 'zh' && locale?.languageCode !== 'zh') return 'en';
+  return parts.includes('hant') || locale?.languageScriptCode === 'Hant' ||
+    parts.some(part => ['tw', 'hk', 'mo'].includes(part)) ||
+    ['TW', 'HK', 'MO'].includes(locale?.regionCode ?? '') ? 'zh-Hant' : 'zh';
+}
+
+export function getLocaleHeader(): 'zh-Hans' | 'zh-Hant' | 'en' {
+  const locale = getLocale();
+  return locale === 'zh' ? 'zh-Hans' : locale;
 }
 
 /** Test/debug only; null restores device-language selection. */
@@ -52,7 +68,8 @@ export function t(key: TranslationKey, params: readonly (string | number)[] = []
   const entries = catalog as Partial<Record<string, { en?: Translation; zh?: Translation }>>;
   const isOne = locale === 'en' && Number(params[PLURAL_COUNT_INDEX[key] ?? 0]) === 1;
   const entry = (isOne ? entries[`${key}.one`] : undefined) ?? entries[key];
-  let copy = entry?.[locale] ?? entry?.zh ?? key;
+  const hant = traditional as Partial<Record<string, Translation>>;
+  let copy = (locale === 'zh-Hant' ? hant[key] : entry?.[locale]) ?? entry?.zh ?? key;
   if (typeof copy !== 'string') {
     copy = isOne ? copy.one ?? copy.other : copy.other;
   }
@@ -65,7 +82,40 @@ export function t(key: TranslationKey, params: readonly (string | number)[] = []
   });
 }
 
-/** Catalog names are canonical data, not UI translations. */
-export function exerciseDisplayName(exercise: { name: string; name_en: string | null }): string {
-  return getLocale() === 'en' ? exercise.name_en ?? exercise.name : exercise.name;
+const searchWords: Readonly<Record<string, string>> = searchChinese;
+const searchPattern = new RegExp(Object.keys(searchWords).sort((a, b) => b.length - a.length)
+  .map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g');
+
+/** Search only: never use this normalization for display or persisted user content. */
+export function normalizeExerciseSearch(input: string): string {
+  return input.trim().toLocaleLowerCase().replace(searchPattern, word => searchWords[word])
+    // Ignore trailing numeric specifications, retaining named variants such as (PIN).
+    .replace(/\s*[（(]\s*\d[^()（）]*[）)]\s*$/u, '').trim();
+}
+
+/** Aliases add matches without removing partial matches against the original name. */
+export function matchesExerciseSearch(name: string, query: string): boolean {
+  const normalizedName = normalizeExerciseSearch(name);
+  const normalizedQuery = normalizeExerciseSearch(query);
+  if (normalizedName.includes(normalizedQuery)) return true;
+  const aliases: Readonly<Record<string, string>> = exerciseAliases;
+  const resolve = (value: string) => Object.hasOwn(aliases, value) ? aliases[value] : value;
+  return resolve(normalizedName).includes(resolve(normalizedQuery));
+}
+
+const canonicalNames = new Map(Object.entries(exerciseNames).map(([source, translated]) => [translated, source]));
+type ExerciseName = { name: string; name_en: string | null; created_by_coach_id?: string | null };
+
+/** Undo only generated system-name translations when creating a canonical sharing snapshot. */
+export function canonicalExerciseName(exercise: ExerciseName): string {
+  return exercise.created_by_coach_id === null ? canonicalNames.get(exercise.name) ?? exercise.name : exercise.name;
+}
+
+/** Only positively identified system catalog data is translated; custom/unknown names stay verbatim. */
+export function exerciseDisplayName(exercise: ExerciseName): string {
+  if (getLocale() === 'en') return exercise.name_en ?? exercise.name;
+  if (getLocale() === 'zh-Hant' && exercise.created_by_coach_id === null) {
+    return Object.hasOwn(exerciseNames, exercise.name) ? (exerciseNames as Record<string, string>)[exercise.name] : exercise.name;
+  }
+  return exercise.name;
 }

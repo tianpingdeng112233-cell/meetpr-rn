@@ -1,0 +1,34 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/zh-hant-catalog.test.js -t v2.1
+
+FAIL src/i18n/__tests__/zh-hant-catalog.test.js
+  ✕ v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿 (4 ms)
+  ○ skipped all Traditional copy has the same keys, plural structure and placeholders as Simplified
+  ○ skipped generated Traditional artifacts contain zero Simplified-only characters
+  ○ skipped every approved glossary override wins over OpenCC with longest phrases first
+  ○ skipped committed generation is deterministic and current
+  ○ skipped v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下
+
+  ● v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "選擇EZ槓，檢查槓桿式器械：{name}"
+    Received: "選擇EZ杆，檢查槓杆式器械：{name}"
+
+      55 | test('v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿', () => {
+      56 |   // Synthetic copy exercises the converter shared by UI copy and exercise names.
+    > 57 |   expect(convert('选择EZ杆，检查杠杆式器械：{name}')).toBe('選擇EZ槓，檢查槓桿式器械：{name}');
+         |                                           ^
+      58 |   expect(convert('EZ杆二头弯举')).toBe('EZ槓二頭彎舉');
+      59 |   expect(convert('坐姿杠杆臂屈伸')).toBe('坐姿槓桿臂屈伸');
+      60 |   expect(convert('T杆、六角杆、安全杆、地雷杆、专项杆、软杆/硬杆、低杆位、引体向上杆、过杆'))
+
+      at Object.toBe (src/i18n/__tests__/zh-hant-catalog.test.js:57:43)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 5 skipped, 6 total
+Snapshots:   0 total
+Time:        1.053 s, estimated 6 s
+Ran all test suites matching /src\/i18n\/__tests__\/zh-hant-catalog.test.js/i with tests matching "v2.1".

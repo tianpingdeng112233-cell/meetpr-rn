@@ -1,11 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
-import { getLocale, t } from '@/i18n';
+import { getLocale, matchesExerciseSearch, t } from '@/i18n';
 import { Card, font, useColors, radius, Screen, spacing, typography } from '@/design';
 import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
+import { CompletedSetVideo, CompletedVideoGroup, CompletedVideoReplayProvider } from '@/features/training/video-upload/CompletedVideoReplay';
 import type { SetLog } from '@/api/domains';
 import { decodePrescription, prescribed } from '@/domain/plan/prescription';
 
@@ -48,10 +49,11 @@ export function HistoryEntriesView({
       ),
     ];
   }, [weeks]);
-  const filteredChoices = choices.filter(choice => !query.trim() || (choice.id !== null && choice.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
+  const filteredChoices = choices.filter(choice => !query.trim() || (choice.id !== null && matchesExerciseSearch(choice.name, query)));
   const selection = choices.find((choice) => choice.id === exerciseId) ?? choices[0];
 
-  const content = <Screen edges={['top', 'left', 'right']}>
+  const studentId = weeks.flatMap(week => week.days.flatMap(day => day.exercises.flatMap(exercise => exercise.logs)))[0]?.student_id ?? '';
+  const content = <CompletedVideoReplayProvider studentId={studentId} onNavigate={presentation === 'modal' ? onClose : undefined}><Screen edges={['top', 'left', 'right']}>
         {presentation === 'stack' ? <ProgressPageHeader title={t('student.e1rmSourceHistory')} onBack={onClose} /> : <>
         <View style={styles.header}>
           <Pressable
@@ -133,7 +135,7 @@ export function HistoryEntriesView({
             </Pressable>
           </Pressable>
         </Modal>
-      </Screen>;
+      </Screen></CompletedVideoReplayProvider>;
   return presentation === 'stack' ? content : <Modal animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen" visible={visible}>{content}</Modal>;
 }
 
@@ -169,16 +171,23 @@ function recordedSetText(row: SetLog): string {
 }
 
 /** iOS `HistorySetRow`: one row shape for prescribed, extra and student-added sets. */
-function HistorySetRow({ label, result, completed }: { label: string; result: string; completed: boolean | null }) {
+function HistorySetRow({ label, result, completed, hasVideo, children }: {
+  label: string;
+  result: string;
+  completed: boolean | null;
+  hasVideo: boolean;
+  children: ReactNode;
+}) {
   const { colors, styles } = useStyles();
   return (
     <View style={styles.setRow}>
       <Text style={styles.setLabel}>{label}</Text>
-      <Text style={[styles.setValue, completed === null
+      <Text style={[styles.setValue, hasVideo && styles.videoSetValue, completed === null
         ? { color: colors.textMuted }
         : { ...font.mono(11, 'bold'), color: completed ? colors.success : colors.textSecondary }]}>
         {result}
       </Text>
+      {children}
     </View>
   );
 }
@@ -186,7 +195,7 @@ function HistorySetRow({ label, result, completed }: { label: string; result: st
 function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
   const { colors, styles } = useStyles();
   return (
-    <View style={styles.exerciseBlock}>
+    <CompletedVideoGroup sets={exercise.logs.map(row => ({ setLogId: row.id, stableSetId: historyStableSetId(row, exercise) }))}>{hasVideo => <View style={styles.exerciseBlock}>
       <View style={styles.exerciseNameRow}>
         <Text style={styles.exerciseName}>{exercise.name}</Text>
         {exercise.studentAdded ? <Text style={styles.addedTag}>{t('student.added.added')}</Text> : null}
@@ -203,24 +212,41 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
         return (
           <HistorySetRow
             completed={row ? row.completed : null}
+            hasVideo={hasVideo}
             key={index}
             label={t('student.historyEntriesView.copy001', [index + 1])}
             result={row ? recordedSetText(row) : prescribed(decodePrescription(set))}
-          />
+          >
+            {row ? <HistorySetVideo row={row} exercise={exercise} /> : hasVideo ? <CompletedSetVideo setLogId={null} badge={{ exerciseName: exercise.name, setOrdinal: index + 1 }} /> : null}
+          </HistorySetRow>
         );
       })}
       {exercise.logs.filter(log => exercise.studentAdded || log.set_index >= exercise.plannedSets.length).map(log => (
         <HistorySetRow
           completed={log.completed}
+          hasVideo={hasVideo}
           key={log.id}
           label={exercise.studentAdded
             ? t('student.historyEntriesView.copy001', [log.set_index + 1])
             : t('student.added.extra')}
           result={recordedSetText(log)}
-        />
+        >
+          <HistorySetVideo row={log} exercise={exercise} />
+        </HistorySetRow>
       ))}
-    </View>
+    </View>}</CompletedVideoGroup>
   );
+}
+
+function HistorySetVideo({ row, exercise }: { row: SetLog; exercise: HistoryExercise }) {
+  const stableSetId = historyStableSetId(row, exercise);
+  return <CompletedSetVideo setLogId={row.id} stableSetId={stableSetId} badge={{ exerciseName: exercise.name, setOrdinal: row.set_index + 1,
+    weightKg: Number(row.weight_kg), reps: row.reps, rpe: row.rpe === null ? null : Number(row.rpe) }} />;
+}
+
+function historyStableSetId(row: SetLog, exercise: HistoryExercise) {
+  return exercise.studentAdded ? `added:${exercise.planExercise.id}:${row.set_index}`
+    : exercise.plannedSets.find(set => set.set_number === row.set_index + 1)?.id ?? `extra:${exercise.planExercise.id}:${row.set_index}`;
 }
 
 function useStyles() {
@@ -282,6 +308,7 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
   setRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 },
   setLabel: { color: colors.textMuted, ...font.mono(11, 'medium') },
   setValue: { ...font.mono(11, 'medium') },
+  videoSetValue: { flex: 1, textAlign: 'right', marginRight: spacing.sm },
   scrim: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'flex-end' },
   choiceSheet: {
     backgroundColor: colors.surfaceCard,

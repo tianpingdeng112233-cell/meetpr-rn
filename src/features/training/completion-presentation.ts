@@ -80,7 +80,7 @@ export function workoutCompletionPresentation({ planDay, drafts, references, exe
     metaText: t('student.workoutCompletionPresentation.copy003', [totalReps, mainRPEText, planComparisonText]),
     exercises,
     hasPersonalRecord: recordNames.length > 0,
-    personalRecordText: recordNames.length ? t('student.workoutCompletionPresentation.copy004', [recordNames.join(getLocale() === 'zh' ? '、' : ', ')]) : '',
+    personalRecordText: recordNames.length ? t('student.workoutCompletionPresentation.copy004', [recordNames.join(getLocale() !== 'en' ? '、' : ', ')]) : '',
     completedSuccessfulSets: completed.filter(draft => !draft.kind && draft.status === 'complete').length,
     totalPlannedSets: drafts.filter(draft => !draft.kind).length,
     setCompletionLabel: failedCount ? t('student.workoutCompletionPresentation.copy005', [failedCount]) : t('student.workoutCompletionPresentation.copy006'),

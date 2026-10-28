@@ -1,0 +1,17 @@
+test('Training focus cycle after feedback returns from a past completed day', async () => {
+  mockFocused = true;
+  const past = { ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' };
+  const cursor = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 2,
+    exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000002', plan_day_id: '40000000-0000-4000-8000-000000000002' }] };
+  servedPlan = { ...plan, days: [past, cursor] };
+  await mount();
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(past.id));
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(past.id);
+  // Expo Router blurs Training while feedback is open, then focuses it on back.
+  mockFocused = false;
+  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  mockFocused = true;
+  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(past.id);
+});

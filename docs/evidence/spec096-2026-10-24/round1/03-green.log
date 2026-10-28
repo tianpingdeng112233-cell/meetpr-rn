@@ -1,0 +1,10 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/training/video-upload/__tests__/set-video-player.test.tsx -t replay colors
+
+PASS src/features/training/video-upload/__tests__/set-video-player.test.tsx
+
+Test Suites: 1 passed, 1 total
+Tests:       16 skipped, 2 passed, 18 total
+Snapshots:   0 total
+Time:        1.087 s

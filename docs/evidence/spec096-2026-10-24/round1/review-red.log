@@ -1,0 +1,158 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/history/__tests__/student-added-history.test.tsx src/features/training/__tests__/set-save.test.tsx
+
+FAIL src/features/training/__tests__/set-save.test.tsx (7.67 s)
+  ● completed summary replay and upload status: uploaded
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 1
+
+      Object {
+    -   "height": 44,
+    -   "position": "absolute",
+    -   "width": 44,
+    +   "width": 22,
+      }
+
+      734 |   let hitContainer = playButton.parent!;
+      735 |   while (hitContainer.type !== View) hitContainer = hitContainer.parent!;
+    > 736 |   expect(StyleSheet.flatten(hitContainer.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
+          |                                                        ^
+      737 |   expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
+      738 |   await act(async () => playButton.props.onPress());
+      739 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+
+      at toMatchObject (src/features/training/__tests__/set-save.test.tsx:736:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: uploading
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 1
+
+      Object {
+    -   "height": 44,
+    -   "position": "absolute",
+    -   "width": 44,
+    +   "width": 22,
+      }
+
+      734 |   let hitContainer = playButton.parent!;
+      735 |   while (hitContainer.type !== View) hitContainer = hitContainer.parent!;
+    > 736 |   expect(StyleSheet.flatten(hitContainer.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
+          |                                                        ^
+      737 |   expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
+      738 |   await act(async () => playButton.props.onPress());
+      739 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+
+      at toMatchObject (src/features/training/__tests__/set-save.test.tsx:736:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: failed
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 1
+
+      Object {
+    -   "height": 44,
+    -   "position": "absolute",
+    -   "width": 44,
+    +   "width": 22,
+      }
+
+      734 |   let hitContainer = playButton.parent!;
+      735 |   while (hitContainer.type !== View) hitContainer = hitContainer.parent!;
+    > 736 |   expect(StyleSheet.flatten(hitContainer.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
+          |                                                        ^
+      737 |   expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
+      738 |   await act(async () => playButton.props.onPress());
+      739 |   expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+
+      at toMatchObject (src/features/training/__tests__/set-save.test.tsx:736:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/history/__tests__/student-added-history.test.tsx
+  ● history replays videos for prescribed, extra and student-added rows
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 1
+
+      Object {
+    -   "height": 44,
+    -   "position": "absolute",
+    -   "width": 44,
+    +   "width": 22,
+      }
+
+      84 |     let slot = button.parent!;
+      85 |     while (slot.type !== View) slot = slot.parent!;
+    > 86 |     expect(StyleSheet.flatten(slot.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
+         |                                                  ^
+      87 |     const column = slot.parent!;
+      88 |     expect(StyleSheet.flatten(column.props.style)).toEqual({ width: 22, alignSelf: 'stretch' });
+      89 |   }
+
+      at Object.toMatchObject (src/features/history/__tests__/student-added-history.test.tsx:86:50)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: bench-log / uploading
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+      121 |     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+      122 |     const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
+    > 123 |     expect(slots).toHaveLength(reserved ? 1 : 0);
+          |                   ^
+      124 |     const value = row.findAllByType(Text)[1];
+      125 |     const valueStyle = StyleSheet.flatten(value.props.style);
+      126 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+
+      at toHaveLength (src/features/history/__tests__/student-added-history.test.tsx:123:19)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:120:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: bench-log / failed
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+      121 |     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+      122 |     const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
+    > 123 |     expect(slots).toHaveLength(reserved ? 1 : 0);
+          |                   ^
+      124 |     const value = row.findAllByType(Text)[1];
+      125 |     const valueStyle = StyleSheet.flatten(value.props.style);
+      126 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+
+      at toHaveLength (src/features/history/__tests__/student-added-history.test.tsx:123:19)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:120:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 2 failed, 2 total
+Tests:       6 failed, 44 passed, 50 total
+Snapshots:   0 total
+Time:        8.382 s

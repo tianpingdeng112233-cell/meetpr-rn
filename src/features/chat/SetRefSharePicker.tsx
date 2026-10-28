@@ -4,7 +4,7 @@ import { BrandSwitch } from '@/design/BrandSwitch';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { font, fontMetrics, radius, spacing, Screen, useColors } from '@/design';
-import { exerciseDisplayName, t } from '@/i18n';
+import { canonicalExerciseName, exerciseDisplayName, getLocale, t } from '@/i18n';
 import { createUUID } from '@/analytics/uuid';
 import { plansRepository } from '@/api/domains/plans';
 import { setsRepository } from '@/api/domains/sets';
@@ -34,7 +34,11 @@ export async function loadTodaySetRefCandidates(studentId: string): Promise<SetR
   });
   const videos = Object.fromEntries(Object.entries(useVideoUploadStore.getState().records).filter(([key]) => key.startsWith(`${studentId}:`)));
   return buildCandidates({ planDay, drafts: recordedDrafts, dayDate: recommendedDate(plan, planDay),
-    exerciseNames: new Map(exercises.map(exercise => [exercise.id, exerciseDisplayName(exercise)])), videos }).map(candidate => ({ ...candidate, dayLabel: dayCode(planDay, plan.days) }));
+    exerciseNames: new Map(exercises.map(exercise => [exercise.id, getLocale() === 'zh-Hant' ? canonicalExerciseName(exercise) : exerciseDisplayName(exercise)])), videos }).map(candidate => {
+      const planExercise = planDay.exercises.find(exercise => exercise.id === candidate.exerciseId);
+      const exercise = exercises.find(exercise => exercise.id === planExercise?.exercise_id);
+      return { ...candidate, dayLabel: dayCode(planDay, plan.days), displayExerciseName: exercise ? exerciseDisplayName(exercise) : candidate.source.exerciseName };
+    });
 }
 
 export function SetRefSharePicker({ conversationId, initialSetLogID, loadCandidates, onClose, onStaged }: {
@@ -79,7 +83,7 @@ export function SetRefSharePicker({ conversationId, initialSetLogID, loadCandida
           video = { state: 'ready', videoId: current.attachmentId };
         }
       }
-      useSetRefStagingStore.getState().stage({ conversationId, clientId: createUUID(), setRef, body: canonicalBody(setRef, question), video, autoSend: true });
+      useSetRefStagingStore.getState().stage({ conversationId, clientId: createUUID(), setRef, displayExerciseName: selected.displayExerciseName, body: canonicalBody(setRef, question), video, autoSend: true });
       onClose(); onStaged?.();
     } catch { setError(t('chat.trainingShareFailed')); confirmLock.current = false; setConfirming(false); }
   }

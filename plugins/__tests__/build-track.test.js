@@ -3,11 +3,11 @@ import { getAndroidBuildConfig } from '../build-track';
 
 describe('Android build track', () => {
   test.each([
-    ['china', 'com.meetpr.app'],
-    ['global', 'com.meetpr.global'],
-    [undefined, 'com.meetpr.global'],
-    ['unexpected', 'com.meetpr.global'],
-  ])('%s selects its package and the first distribution versionCode', (track, packageName) => {
-    expect(getAndroidBuildConfig(track)).toEqual({ package: packageName, versionCode: 1 });
+    ['china', 'com.meetpr.app', 5],
+    ['global', 'com.meetpr.global', 1],
+    [undefined, 'com.meetpr.global', 1],
+    ['unexpected', 'com.meetpr.global', 1],
+  ])('%s selects its own package and distribution versionCode', (track, packageName, versionCode) => {
+    expect(getAndroidBuildConfig(track)).toEqual({ package: packageName, versionCode });
   });
 });

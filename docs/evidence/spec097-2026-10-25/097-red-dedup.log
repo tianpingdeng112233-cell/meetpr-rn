@@ -1,0 +1,52 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/updates/__tests__/android-update-recheck.test.tsx
+
+FAIL src/features/updates/__tests__/android-update-recheck.test.tsx
+  ✕ after choosing Not now only a higher versionCode is offered again (54 ms)
+  ✕ after choosing Download update only a higher versionCode is offered again (2 ms)
+  ✓ cold startup checks once and foreground checks resume only after more than six hours (3 ms)
+
+  ● after choosing Not now only a higher versionCode is offered again
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 2
+
+      50 |   await resume();
+      51 |   expect(check).toHaveBeenCalledTimes(2);
+    > 52 |   expect(Alert.alert).toHaveBeenCalledTimes(1);
+         |                       ^
+      53 |   check.mockResolvedValue({ ...release, versionCode: 11, versionName: '0.1.2', downloadUrl: 'https://dl.meetpr.cn/android/releases/11/meetpr-cn.apk' });
+      54 |   await jest.advanceTimersByTimeAsync(7 * 60 * 60 * 1000);
+      55 |   await resume();
+
+      at toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-recheck.test.tsx:52:23)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● after choosing Download update only a higher versionCode is offered again
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 2
+
+      50 |   await resume();
+      51 |   expect(check).toHaveBeenCalledTimes(2);
+    > 52 |   expect(Alert.alert).toHaveBeenCalledTimes(1);
+         |                       ^
+      53 |   check.mockResolvedValue({ ...release, versionCode: 11, versionName: '0.1.2', downloadUrl: 'https://dl.meetpr.cn/android/releases/11/meetpr-cn.apk' });
+      54 |   await jest.advanceTimersByTimeAsync(7 * 60 * 60 * 1000);
+      55 |   await resume();
+
+      at toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-recheck.test.tsx:52:23)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        0.511 s, estimated 1 s
+Ran all test suites matching /src\/features\/updates\/__tests__\/android-update-recheck.test.tsx/i.

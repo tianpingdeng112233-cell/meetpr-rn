@@ -6,7 +6,7 @@ import { getLocale } from '@/i18n';
 type AuthText = 'body' | 'title' | 'label' | 'button' | 'code';
 
 export function authTypography(kind: AuthText = 'body'): TextStyle {
-  if (getLocale() !== 'zh') return {};
+  if (getLocale() === 'en') return {};
   const regular: TextStyle = { fontFamily: undefined, fontWeight: '400' };
   switch (kind) {
     case 'title': return { ...regular, fontWeight: '500', fontSize: 30, lineHeight: 40, letterSpacing: 1 };

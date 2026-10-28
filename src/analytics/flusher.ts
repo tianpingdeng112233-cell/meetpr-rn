@@ -1,3 +1,4 @@
+import { getLocaleHeader } from '@/i18n';
 import { z } from 'zod';
 
 import { isSampledIn } from './sampling';
@@ -90,7 +91,7 @@ export class EventFlusher {
     try {
       const response = await this.fetchImplementation(`${this.baseUrl}/events/config`, {
         method: 'GET',
-        headers: { accept: 'application/json' },
+        headers: { accept: 'application/json', 'X-MeetPR-Locale': getLocaleHeader() },
       });
       if (response.status === 200) {
         const parsed = AnalyticsConfigSchema.safeParse(await response.json());
@@ -195,6 +196,7 @@ export class EventFlusher {
         const token = await this.options.accessTokenProvider?.();
         const headers: Record<string, string> = {
           accept: 'application/json',
+          'X-MeetPR-Locale': getLocaleHeader(),
           'content-type': 'application/json',
         };
         if (token) {

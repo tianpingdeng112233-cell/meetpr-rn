@@ -16,9 +16,9 @@ export function canonicalFirstLine(ref: ChatSetRef): string {
 export function canonicalBody(ref: ChatSetRef, note?: string | null): string {
   return canonicalFirstLine(ref) + (note ? `\n${note}` : '');
 }
-export function displayFirstLine(ref: ChatSetRef): string {
+export function displayFirstLine(ref: ChatSetRef, exerciseName = ref.exerciseName): string {
   const position = ref.setTotal == null ? t('chat.setPosition %@', [ref.setNumber]) : t('chat.setPosition %@ of %@', [ref.setNumber, ref.setTotal]);
-  return `${t(ref.source === 'logged' ? 'chat.setReference.loggedTag' : 'chat.setReference.plannedTag')} ${ref.exerciseName} ${position}${ref.source === 'planned' ? t('chat.setReference.plannedMarker') : ''} ${metrics(ref)}`;
+  return `${t(ref.source === 'logged' ? 'chat.setReference.loggedTag' : 'chat.setReference.plannedTag')} ${exerciseName} ${position}${ref.source === 'planned' ? t('chat.setReference.plannedMarker') : ''} ${metrics(ref)}`;
 }
 export type SetRefSource = Omit<ChatSetRef, 'v'> & { v?: 1 };
 export function normalizeSetRef(source: SetRefSource): ChatSetRef {
@@ -46,7 +46,7 @@ export type SetRefVideo =
   | { state: 'ready'; videoId: string }
   | { state: 'uploading'; attachmentId: string | null; recordKey: string; createdAt: number }
   | { state: 'failed' };
-export type SetRefCandidate = { id: string; exerciseId?: string; dayLabel?: string; source: SetRefSource; video?: SetRefVideo };
+export type SetRefCandidate = { id: string; exerciseId?: string; dayLabel?: string; displayExerciseName?: string; source: SetRefSource; video?: SetRefVideo };
 export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, videos }: {
   planDay: import('@/api/domains/plans').PlanDay;
   drafts: readonly Pick<import('@/features/training/model').WorkoutSetDraft, 'exercise' | 'setIndex' | 'sourceLog'>[];
@@ -96,14 +96,14 @@ export class SetRefPickerPresentation {
   get canSend() { return this.selectedReference !== null; }
   get sendSummary() {
     const source = this.selectedCandidate?.source;
-    return source ? t('chat.sendsSetQuestion', [source.setNumber, source.exerciseName]) : '';
+    return source ? t('chat.sendsSetQuestion', [source.setNumber, this.selectedCandidate?.displayExerciseName ?? source.exerciseName]) : '';
   }
   get groups() {
     const groups = new Map<string, { id: string; exerciseName: string; dayLabel?: string; cells: { id: string; title: string; metrics: string; status: string }[] }>();
     for (const candidate of this.candidates) {
       const source = candidate.source;
       const id = candidate.exerciseId ?? source.exerciseName;
-      const group = groups.get(id) ?? { id, exerciseName: source.exerciseName, dayLabel: candidate.dayLabel, cells: [] };
+      const group = groups.get(id) ?? { id, exerciseName: candidate.displayExerciseName ?? source.exerciseName, dayLabel: candidate.dayLabel, cells: [] };
       group.cells.push({ id: candidate.id, title: t('chat.setPosition %@', [source.setNumber]),
         metrics: `${source.weightKg ?? '—'}kg × ${source.repsMax != null ? `${source.reps}–${source.repsMax}` : source.reps ?? '—'}`,
         status: source.source === 'planned' ? t('chat.pickerPlanned') : candidate.video && candidate.video.state !== 'failed'

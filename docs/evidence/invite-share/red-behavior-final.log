@@ -1,0 +1,196 @@
+FAIL src/features/coach/profile/__tests__/invite-card-state.test.ts
+  ● CN [Function CoachMyProfileScreen] shows share then copy, shares title/message and confirms copying
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 1
+
+    - Array [
+    -   "分享给学员",
+    -   "复制邀请语",
+    - ]
+    + Array []
+
+      62 |   try {
+      63 |     const buttons = screen.root.findAllByType(AppButton);
+    > 64 |     expect(buttons.slice(0, 2).map(button => button.props.label)).toEqual(['分享给学员', '复制邀请语']);
+         |                                                                   ^
+      65 |     expect(buttons[0].props.variant ?? 'primary').toBe('primary');
+      66 |     expect(buttons[1].props.variant).toBe('secondary');
+      67 |     expect(buttons.slice(0, 2).every(button => button.props.fullWidth !== false)).toBe(true);
+
+      at toEqual (src/features/coach/profile/__tests__/invite-card-state.test.ts:64:67)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● CN [Function InviteCodesScreen] shows share then copy, shares title/message and confirms copying
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 1
+
+    - Array [
+    -   "分享给学员",
+    -   "复制邀请语",
+    - ]
+    + Array []
+
+      62 |   try {
+      63 |     const buttons = screen.root.findAllByType(AppButton);
+    > 64 |     expect(buttons.slice(0, 2).map(button => button.props.label)).toEqual(['分享给学员', '复制邀请语']);
+         |                                                                   ^
+      65 |     expect(buttons[0].props.variant ?? 'primary').toBe('primary');
+      66 |     expect(buttons[1].props.variant).toBe('secondary');
+      67 |     expect(buttons.slice(0, 2).every(button => button.props.fullWidth !== false)).toBe(true);
+
+      at toEqual (src/features/coach/profile/__tests__/invite-card-state.test.ts:64:67)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● CN overflow opens regeneration confirmation; cancellation never mutates and confirmation does
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      115 |   try {
+      116 |     const openRegenerate = async () => {
+    > 117 |       expect(screen.root.findAllByType(FeedbackPressable).some(button => button.props.accessibilityLabel === t('coach.invites.regenerate'))).toBe(false);
+          |                                                                                                                                              ^
+      118 |       await act(async () => { screen.root.findByProps({ testID: 'coach.invites.more' }).props.onPress(); });
+      119 |       const regenerate = screen.root.findAllByType(FeedbackPressable).find(button => button.props.accessibilityLabel === t('coach.invites.regenerate'))!;
+      120 |       await act(async () => { regenerate.props.onPress(); });
+
+      at toBe (src/features/coach/profile/__tests__/invite-card-state.test.ts:117:142)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/coach/profile/__tests__/invite-card-state.test.ts:116:25)
+      at Object.openRegenerate (src/features/coach/profile/__tests__/invite-card-state.test.ts:124:11)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/coach/profile/__tests__/invite-message.test.ts
+  ● China track copies the full zh invite message
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "https://api.meetpr.app/i/XK7MPQ2RVT"
+    Received: "我这边确认后你就能看到训练计划了。—— 王教练"
+
+      33 |   expect(sharesInviteMessage()).toBe(true);
+      34 |   expect(message).toContain('/i/XK7MPQ2RVT');
+    > 35 |   expect(message.split('\n').at(-1)).toBe(inviteLink('XK7MPQ2RVT'));
+         |                                      ^
+      36 |   expect(message.split(inviteLink('XK7MPQ2RVT'))).toHaveLength(2);
+      37 |   expect(message).toContain('XK7M PQ2 RVT');
+      38 |   expect(message).toContain('王教练');
+
+      at toBe (src/features/coach/profile/__tests__/invite-message.test.ts:35:38)
+
+  ● China track copies the full en invite message
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "https://api.meetpr.app/i/XK7MPQ2RVT"
+    Received: "Once I accept, your plan will show up. — 王教练"
+
+      33 |   expect(sharesInviteMessage()).toBe(true);
+      34 |   expect(message).toContain('/i/XK7MPQ2RVT');
+    > 35 |   expect(message.split('\n').at(-1)).toBe(inviteLink('XK7MPQ2RVT'));
+         |                                      ^
+      36 |   expect(message.split(inviteLink('XK7MPQ2RVT'))).toHaveLength(2);
+      37 |   expect(message).toContain('XK7M PQ2 RVT');
+      38 |   expect(message).toContain('王教练');
+
+      at toBe (src/features/coach/profile/__tests__/invite-message.test.ts:35:38)
+
+  ● share title uses the trimmed coach name in zh
+
+    TypeError: (0 , _inviteMessage.inviteShareTitle) is not a function
+
+      53 | ] as const)('share title uses the trimmed coach name in %s', (locale, title) => {
+      54 |   setLocaleOverride(locale);
+    > 55 |   expect(inviteShareTitle(' 王教练 ')).toBe(title);
+         |                          ^
+      56 | });
+      57 |
+      58 | test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
+
+      at src/features/coach/profile/__tests__/invite-message.test.ts:55:26
+
+  ● share title uses the trimmed coach name in en
+
+    TypeError: (0 , _inviteMessage.inviteShareTitle) is not a function
+
+      53 | ] as const)('share title uses the trimmed coach name in %s', (locale, title) => {
+      54 |   setLocaleOverride(locale);
+    > 55 |   expect(inviteShareTitle(' 王教练 ')).toBe(title);
+         |                          ^
+      56 | });
+      57 |
+      58 | test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
+
+      at src/features/coach/profile/__tests__/invite-message.test.ts:55:26
+
+  ● share title falls back for missing name undefined
+
+    TypeError: (0 , _inviteMessage.inviteShareTitle) is not a function
+
+      58 | test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
+      59 |   setLocaleOverride('zh');
+    > 60 |   expect(inviteShareTitle(name)).toBe(`${t('coach.profile.fallbackName')}邀请你加入 MeetPR`);
+         |                          ^
+      61 | });
+      62 |
+
+      at src/features/coach/profile/__tests__/invite-message.test.ts:60:26
+
+  ● share title falls back for missing name null
+
+    TypeError: (0 , _inviteMessage.inviteShareTitle) is not a function
+
+      58 | test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
+      59 |   setLocaleOverride('zh');
+    > 60 |   expect(inviteShareTitle(name)).toBe(`${t('coach.profile.fallbackName')}邀请你加入 MeetPR`);
+         |                          ^
+      61 | });
+      62 |
+
+      at src/features/coach/profile/__tests__/invite-message.test.ts:60:26
+
+  ● share title falls back for missing name 
+
+    TypeError: (0 , _inviteMessage.inviteShareTitle) is not a function
+
+      58 | test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
+      59 |   setLocaleOverride('zh');
+    > 60 |   expect(inviteShareTitle(name)).toBe(`${t('coach.profile.fallbackName')}邀请你加入 MeetPR`);
+         |                          ^
+      61 | });
+      62 |
+
+      at src/features/coach/profile/__tests__/invite-message.test.ts:60:26
+
+  ● share title falls back for missing name   
+
+    TypeError: (0 , _inviteMessage.inviteShareTitle) is not a function
+
+      58 | test.each([undefined, null, '', '  '])('share title falls back for missing name %s', name => {
+      59 |   setLocaleOverride('zh');
+    > 60 |   expect(inviteShareTitle(name)).toBe(`${t('coach.profile.fallbackName')}邀请你加入 MeetPR`);
+         |                          ^
+      61 | });
+      62 |
+
+      at src/features/coach/profile/__tests__/invite-message.test.ts:60:26
+
+Test Suites: 2 failed, 2 total
+Tests:       11 failed, 23 passed, 34 total
+Snapshots:   0 total
+Time:        2.928 s, estimated 13 s
+Ran all test suites matching /src\/features\/coach\/profile\/__tests__\/invite-message.test.ts|src\/features\/coach\/profile\/__tests__\/invite-card-state.test.ts/i.

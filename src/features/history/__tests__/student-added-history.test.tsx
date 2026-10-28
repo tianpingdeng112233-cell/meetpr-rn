@@ -1,6 +1,6 @@
-import { expect, jest, test } from '@jest/globals';
+import { afterEach, expect, jest, test } from '@jest/globals';
+import { StyleSheet, Text, View } from 'react-native';
 import { act } from 'react-test-renderer';
-import { Text } from 'react-native';
 import { render, renderer, button, texts, textOf } from '../test-support/progress-screen';
 import { setsRepository, plansRepository, type SetLog } from '@/api/domains';
 import { E1RMScreen } from '../E1RMScreen';
@@ -9,6 +9,16 @@ import { day, plan, set } from '@/domain/plan/test-fixtures';
 import { TrainingHistoryScreen } from '../TrainingHistoryScreen';
 import { GrowthSourceSheet } from '../GrowthSourceSheet';
 import { GrowthE1RMCard } from '../GrowthE1RMCard';
+import { videosRepository } from '@/api/domains/videos';
+import { FeedbackPressable } from '@/design/FeedbackPressable';
+import { VideoPlayback } from '@/features/training/video-upload/VideoPlayback';
+
+import { EMPTY_VIDEO_UPLOAD } from '@/features/training/video-upload/model';
+import { resetVideoUploadStoreForTests, useVideoUploadStore } from '@/features/training/video-upload/store';
+
+afterEach(() => resetVideoUploadStoreForTests());
+
+jest.mock('react-native-video', () => 'Video');
 
 const addedLog: SetLog = {
   id: 'added-squat', student_id: 'student', plan_exercise_id: null, plan_day_id: 'day',
@@ -61,4 +71,65 @@ test('legacy history responses without plan_day_id keep prescribed records visib
   expect(texts()).toContain(t('student.historyEntriesView.copy004', [1, 2]));
   expect(texts()).not.toContain(t('student.added.added'));
   expect(texts()).not.toContain(t('student.added.extra'));
+});
+
+test('history replays videos for prescribed, extra and student-added rows', async () => {
+  const logs = [prescribedLog, { ...prescribedLog, id: 'extra-bench', set_index: 2, weight_kg: '90' }, addedLog];
+  jest.mocked(plansRepository.list).mockResolvedValue({ plans: [cycle] });
+  jest.spyOn(plansRepository, 'detail').mockResolvedValue(cycle);
+  jest.mocked(setsRepository.range).mockResolvedValue({ logs });
+  jest.spyOn(videosRepository, 'list').mockResolvedValue({ videos: logs.map((log, index) => ({ id: `video-${index}`, set_log_id: log.id, plan_exercise_id: log.plan_exercise_id, created_at: log.logged_at, logged_at: log.logged_at, exercise_name: null, set_index: log.set_index, weight_kg: log.weight_kg, reps: log.reps, content_type: 'video/mp4', size_bytes: 100, filename: null })) });
+  await render(<TrainingHistoryScreen />);
+  const playButtons = renderer.root.findAllByType(FeedbackPressable).filter(node => node.props.accessibilityLabel === t('chat.playVideo'));
+  expect(playButtons).toHaveLength(3);
+  for (const button of playButtons) {
+    expect(StyleSheet.flatten(button.props.style)).toMatchObject({ width: 22, height: 22 });
+    expect(button.props.hitSlop).toBe(11);
+    let slot = button.parent!;
+    while (slot.type !== View) slot = slot.parent!;
+    expect(StyleSheet.flatten(slot.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
+    const column = slot.parent!;
+    expect(StyleSheet.flatten(column.props.style)).toEqual({ width: 22, alignSelf: 'stretch' });
+  }
+  await act(async () => playButtons[2].props.onPress());
+  expect(renderer.root.findByType(VideoPlayback).props.readOnly).toBe(true);
+});
+
+
+test.each([
+  { videoLogId: 'bench-log', pending: null }, { videoLogId: 'extra-bench', pending: null },
+  { videoLogId: 'added-squat', pending: null }, { videoLogId: null, pending: null },
+  { videoLogId: 'bench-log', pending: 'uploading' }, { videoLogId: 'bench-log', pending: 'failed' },
+] as const)('history reserves a video column only within the exercise with playable video: $videoLogId / $pending', async ({ videoLogId, pending }) => {
+  if (pending) useVideoUploadStore.setState({ hydrated: true, records: { 'student:extra:bench-plan:2': {
+    ...EMPTY_VIDEO_UPLOAD, status: pending, setLogId: 'extra-bench',
+  } } });
+  const logs = [prescribedLog, { ...prescribedLog, id: 'extra-bench', set_index: 2, weight_kg: '90' }, addedLog,
+    { ...addedLog, id: 'second-added', set_index: 1, weight_kg: '110' }];
+  jest.mocked(plansRepository.list).mockResolvedValue({ plans: [cycle] });
+  jest.spyOn(plansRepository, 'detail').mockResolvedValue(cycle);
+  jest.mocked(setsRepository.range).mockResolvedValue({ logs });
+  jest.spyOn(videosRepository, 'list').mockResolvedValue({ videos: videoLogId ? [{ id: 'video', set_log_id: videoLogId,
+    plan_exercise_id: null, created_at: addedLog.logged_at, logged_at: addedLog.logged_at, exercise_name: null,
+    set_index: 0, weight_kg: '80', reps: 5, content_type: 'video/mp4', size_bytes: 100, filename: null }] : [] });
+  await render(<TrainingHistoryScreen />);
+  const rows = ['90kg × 5', '100kg × 1 @ RPE 10'].flatMap(label => {
+    let row = renderer.root.findAllByType(Text).find(node => node.props.children === label)!.parent!;
+    while (row.type !== View) row = row.parent!;
+    let block = row.parent!;
+    while (block.type !== View) block = block.parent!;
+    return block.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.minHeight === 32);
+  });
+  expect(rows).toHaveLength(5);
+  rows.forEach((row, index) => {
+    const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+    const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
+    expect(slots).toHaveLength(reserved ? 1 : 0);
+    const value = row.findAllByType(Text)[1];
+    const valueStyle = StyleSheet.flatten(value.props.style);
+    expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+    expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
+    expect(valueStyle.marginRight).toBe(reserved ? 8 : undefined);
+    expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
+  });
 });

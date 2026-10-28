@@ -217,6 +217,9 @@ test('formats calendar labels in the selected locale without moving the UTC date
   setLocaleOverride('zh');
   expect(chineseMonthDay('2026-07-19')).toBe('7月19日');
   expect(chineseWeekday('2026-07-19')).toBe('周日');
+  setLocaleOverride('zh-Hant');
+  expect(chineseMonthDay('2026-07-19')).toBe('7月19日');
+  expect(chineseWeekday('2026-07-19')).toBe('週日');
 });
 
 test('feedback without an associated video is labelled Training feedback', () => {

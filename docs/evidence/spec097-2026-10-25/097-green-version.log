@@ -1,0 +1,17 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/settings/__tests__/settings-page.test.tsx
+
+PASS src/features/settings/__tests__/settings-page.test.tsx
+  ✓ Android settings end with the localized native version (zh) (129 ms)
+  ✓ Android settings end with the localized native version (en) (3 ms)
+  ✓ Android settings end with the localized native version (zh-Hant) (1 ms)
+  ✓ missing nativeBuildVersion hides the version row (2 ms)
+  ✓ missing nativeApplicationVersion hides the version row (1 ms)
+  ✓ iOS settings do not show an Android version row (6 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.759 s, estimated 3 s
+Ran all test suites matching /src\/features\/settings\/__tests__\/settings-page.test.tsx/i.

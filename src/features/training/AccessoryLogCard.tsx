@@ -16,7 +16,7 @@ import { useVideoUploadStore } from './video-upload/store';
 
 // Keep the approved column proportions while allowing the six columns to fit small screens.
 const columns = [fontMetrics.size36, spacing.xxxl + spacing.sm, spacing.xxxl, spacing.xxl, spacing.xxl, spacing.minimumHitTarget];
-const column = (index: number): ViewStyle => ({ flex: columns[index], minWidth: 0 });
+const column = (index: number): Pick<ViewStyle, 'flex' | 'minWidth'> => ({ flex: columns[index], minWidth: 0 });
 const fields = [
   ['weightText', 'weight', 'student.accessory.weightLabel'],
   ['repsText', 'reps', 'student.accessory.repsLabel'],

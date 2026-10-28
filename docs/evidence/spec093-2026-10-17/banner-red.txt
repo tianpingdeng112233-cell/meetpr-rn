@@ -1,0 +1,54 @@
+FAIL src/navigation/__tests__/BindGate.test.tsx
+  ✓ needsOnboarding opens immediately and save-and-exit allows continuing from the interstitial (212 ms)
+  ✓ submitting a code for an incomplete profile opens onboarding immediately (25 ms)
+  ✓ invalid stashed invite returns to an empty code field with the stashed name (2 ms)
+  ✓ invalid invite clears the submitted code while prefilling the submitted name (5 ms)
+  ✓ network failure clears the submitted code while prefilling the submitted name (4 ms)
+  ✓ pasting a whole invite message into the code field keeps the code (spec 093) (2 ms)
+  ✓ Global track has no paste button (1 ms)
+  ✓ China track paste button fills the code from a copied invite message (4 ms)
+  ✓ China track paste button explains when the clipboard has no code (8 ms)
+  ✕ entering a valid typed code clears the earlier empty-clipboard notice (6 ms)
+  ✕ entering a valid native pasted invite clears the earlier empty-clipboard notice (5 ms)
+
+  ● entering a valid typed code clears the earlier empty-clipboard notice
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      157 |   act(() => codeField().props.onChangeText(input));
+      158 |   expect(codeField().props.value).toBe('XK7M PQ2 RVT');
+    > 159 |   expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(false);
+          |                                                       ^
+      160 | });
+      161 |
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:159:55)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● entering a valid native pasted invite clears the earlier empty-clipboard notice
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      157 |   act(() => codeField().props.onChangeText(input));
+      158 |   expect(codeField().props.value).toBe('XK7M PQ2 RVT');
+    > 159 |   expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(false);
+          |                                                       ^
+      160 | });
+      161 |
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:159:55)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 9 passed, 11 total
+Snapshots:   0 total
+Time:        1.024 s, estimated 2 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i.

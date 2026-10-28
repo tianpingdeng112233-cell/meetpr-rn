@@ -7,18 +7,23 @@ import { STORAGE_KEYS } from '../constants';
 import { StudentExercisePicker } from '../StudentExercisePicker';
 import { TrainingWeekStrip } from '../TrainingWeekStrip';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
+import { SetVideoUploadIndicator } from '../video-upload/VideoStatusIcon';
+import { VideoPlayback } from '../video-upload/VideoPlayback';
 import { WorkoutBody } from '../WorkoutBody';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
 import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
 import { SetEntrySheet } from '../SetEntrySheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { resolveColors } from '@/design';
+import { FeedbackPressable } from '@/design/FeedbackPressable';
 import { Toast } from '@/design/Toast';
 import { RestTimer } from '../RestTimer';
 import { writeRestPreference } from '@/features/settings/storage';
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, ActivityIndicator, AppState, Text, TextInput, type AppStateStatus } from 'react-native';
+import { Alert, ActivityIndicator, AppState, StyleSheet, Text, TextInput, View, type AppStateStatus } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
@@ -691,4 +696,68 @@ test('removing a student-added card stops on a feedback conflict without restori
   expect(deleted).toEqual(['/sets/80000000-0000-4000-8000-000000000000', '/sets/80000000-0000-4000-8000-000000000001']);
   expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added').map((draft: { setIndex: number }) => draft.setIndex)).toEqual([1, 2]);
   expect(jest.mocked(Alert.alert).mock.calls.at(-1)?.[1]).toBe(t('student.added.rated'));
+});
+
+test.each(['uploaded', 'none', 'uploading', 'failed'] as const)('completed summary replay and upload status: %s', async status => {
+  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z', exercises: [{ ...plan.days[0].exercises[0], sets: [...plan.days[0].exercises[0].sets, { ...plan.days[0].exercises[0].sets[0], id: 'second-set', set_number: 2 }] }] }] };
+  storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' }];
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/videos')) return { videos: status === 'none' ? [] : [{ id: 'video', set_log_id: storedLogs[0].id, created_at: '2026-10-14T11:00:00Z' }] } as never;
+    if (path.endsWith('/feedback')) return { items: [
+      { id: 'latest-feedback', video_id: 'video', posted_at: '2026-10-15T12:00:00Z' },
+      { id: 'old-feedback', video_id: 'video', posted_at: '2026-10-14T12:00:00Z' },
+    ] } as never;
+    return original(path, options);
+  });
+  if (status === 'uploading' || status === 'failed') useVideoUploadStore.setState({ hydrated: true, records: { [`${studentId}:${plan.days[0].exercises[0].sets[0].id}`]: { ...EMPTY_VIDEO_UPLOAD, status, setLogId: storedLogs[0].id, localUri: 'file:///still-uploading.mp4' } } });
+  await mount();
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  const summary = renderer.root.findAllByProps({ testID: 'completed-day-card' })[0];
+  await act(async () => summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false)[0].props.onPress());
+  if (status !== 'uploaded') {
+    expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo'))).toHaveLength(0);
+    if (status === 'none') {
+      expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(0);
+      return;
+    }
+    expect(summary.findAllByType(SetVideoUploadIndicator)).toHaveLength(1);
+    // Completing the pending upload updates the mounted summary without navigation.
+    await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
+  }
+  expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+  expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(2);
+  const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
+  expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22 });
+  expect(playButton.props.hitSlop).toBe(11);
+  let hitContainer = playButton.parent!;
+  while (hitContainer.type !== View) hitContainer = hitContainer.parent!;
+  expect(StyleSheet.flatten(hitContainer.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
+  expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
+  await act(async () => playButton.props.onPress());
+  expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
+  await act(async () => renderer.root.findByType(VideoPlayback).props.onReview());
+  expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(student)/feedback/[feedbackId]', params: { feedbackId: 'latest-feedback' } });
+  expect(renderer.root.findAllByType(VideoPlayback)).toHaveLength(0);
+  expect(writes).toBe(0);
+});
+
+
+test('Training focus cycle preserves the pre-096 behavior of returning to the cursor', async () => {
+  mockFocused = true;
+  const past = { ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' };
+  const cursor = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 2,
+    exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000002', plan_day_id: '40000000-0000-4000-8000-000000000002' }] };
+  servedPlan = { ...plan, days: [past, cursor] };
+  await mount();
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(past.id));
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(past.id);
+  // Expo Router blurs Training while feedback is open, then focuses it on back.
+  mockFocused = false;
+  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  mockFocused = true;
+  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(cursor.id);
 });

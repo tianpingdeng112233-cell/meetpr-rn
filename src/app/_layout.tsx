@@ -31,6 +31,7 @@ import {
 import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
 import { RestTimerNotificationSession } from '@/features/training/RestTimerNotificationSession';
 import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
+import { AndroidUpdateSession } from '@/features/updates/AndroidUpdateSession';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
 import { useChatRealtimeLifecycle } from '@/features/chat/realtime';
@@ -111,6 +112,8 @@ function ThemedRoot() {
   const bootstrap = useSessionStore((state) => state.bootstrap);
   const user = useSessionStore((state) => state.user);
   const [privacyNoticeVisible, setPrivacyNoticeVisible] = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const bootstrapped = useSessionStore((state) => state.bootstrapped);
 
   useEffect(() => {
     void bootstrap();
@@ -145,6 +148,7 @@ function ThemedRoot() {
           return;
         }
         setPrivacyNoticeVisible(!confirmed);
+        setPrivacyChecked(true);
       })
       .catch(() => undefined);
 
@@ -163,6 +167,7 @@ function ThemedRoot() {
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
         <RootNavigator />
+        <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} />
         <TrainingReminderSession />
         <PlanNotificationSession />
         <RestTimerNotificationSession />

@@ -1,0 +1,16 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/zh-hant-catalog.test.js
+
+PASS src/i18n/__tests__/zh-hant-catalog.test.js
+  ✓ all Traditional copy has the same keys, plural structure and placeholders as Simplified (567 ms)
+  ✓ generated Traditional artifacts contain zero Simplified-only characters (41 ms)
+  ✓ every approved glossary override wins over OpenCC with longest phrases first (4 ms)
+  ✓ committed generation is deterministic and current (392 ms)
+  ✓ v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下 (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        2.34 s, estimated 19 s
+Ran all test suites matching /src\/i18n\/__tests__\/zh-hant-catalog.test.js/i.
