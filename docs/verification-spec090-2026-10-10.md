@@ -48,4 +48,4 @@ David 在自己的手机上装离线演示包（`feat/demo-offline@137d816`，�
 
 ## 收货时发现的既有问题（不属于本卡，未修）
 
-结算当天训练后回到 Training 页，页头以下整片空白（周条与下一训练日的内容都不显示），手指拖一下才出现。复现：记一组 → 滑到页面底部 → 长按结算 → 离开庆祝页（返回键或 `Done` 都一样）→ 回 Training。在**不含 090 的包**（`feat/demo-offline@6fa2889`）上同样复现，所以不是本卡引入；关掉系统动画后仍复现。根因未查，另起排障。复现脚本：`~/Projects/scratch/rn-090-training-20261010/repro.sh`。
+结算当天训练后回到 Training 页，页头以下整片空白（周条与下一训练日的内容都不显示），手指拖一下才出现。复现：记一组 → 滑到页面底部 → 长按结算 → 离开庆祝页（返回键或 `Done` 都一样）→ 回 Training。在**不含 090 的包**（`feat/demo-offline@6fa2889`）上同样复现，所以不是本卡引入；关掉系统动画后仍复现。根因与修复见 `docs/diagnose-training-blank-2026-10-10.md`（分支 `fix/training-blank-after-hidden-day-switch`）。复现脚本：`~/Projects/scratch/rn-090-training-20261010/repro.sh`。
