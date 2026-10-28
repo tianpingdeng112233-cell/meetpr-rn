@@ -1,7 +1,7 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { StyleSheet, Text, View } from 'react-native';
 import { act } from 'react-test-renderer';
-import { render, renderer, button, texts } from '../test-support/progress-screen';
+import { render, renderer, button, texts, textOf } from '../test-support/progress-screen';
 import { setsRepository, plansRepository, type SetLog } from '@/api/domains';
 import { E1RMScreen } from '../E1RMScreen';
 import { setLocaleOverride, t } from '@/i18n';
@@ -53,8 +53,11 @@ test.each(['en', 'zh'] as const)('history renders student-added and extra record
   await render(<TrainingHistoryScreen />);
   expect(texts()).toContain(t('student.added.added'));
   expect(texts()).toContain(t('student.added.extra'));
-  expect(texts()).toContain('90 kg × 5');
-  expect(texts()).toContain('100 kg × 1 @ RPE 10.0');
+  expect(texts()).toContain('90kg × 5');
+  expect(texts()).toContain('100kg × 1 @ RPE 10');
+  // iOS HistorySetRow parity: the added tag sits beside the exercise name, not on its own line.
+  const tag = renderer.root.findAllByType(Text).find(node => textOf(node) === t('student.added.added'))!;
+  expect(tag.parent!.findAllByType(Text).map(textOf)).toEqual([expect.any(String), t('student.added.added')]);
   expect(texts()).toContain(t('student.historyEntriesView.copy004', [1, 2]));
 });
 
@@ -63,7 +66,8 @@ test('legacy history responses without plan_day_id keep prescribed records visib
   jest.spyOn(plansRepository, 'detail').mockResolvedValue(cycle);
   jest.mocked(setsRepository.range).mockResolvedValue({ logs: [prescribedLog] });
   await render(<TrainingHistoryScreen />);
-  expect(texts()).toContain('80 kg × 5');
+  expect(texts()).toContain('80kg × 5');
+  expect(texts()).toContain('80kg x 5');
   expect(texts()).toContain(t('student.historyEntriesView.copy004', [1, 2]));
   expect(texts()).not.toContain(t('student.added.added'));
   expect(texts()).not.toContain(t('student.added.extra'));
@@ -109,7 +113,7 @@ test.each([
     plan_exercise_id: null, created_at: addedLog.logged_at, logged_at: addedLog.logged_at, exercise_name: null,
     set_index: 0, weight_kg: '80', reps: 5, content_type: 'video/mp4', size_bytes: 100, filename: null }] : [] });
   await render(<TrainingHistoryScreen />);
-  const rows = ['90 kg × 5', '100 kg × 1 @ RPE 10.0'].flatMap(label => {
+  const rows = ['90kg × 5', '100kg × 1 @ RPE 10'].flatMap(label => {
     let row = renderer.root.findAllByType(Text).find(node => node.props.children === label)!.parent!;
     while (row.type !== View) row = row.parent!;
     let block = row.parent!;
