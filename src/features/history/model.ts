@@ -246,9 +246,11 @@ export function buildHistoryWeeks(
     const planExerciseIds = new Set(
       plan.days.flatMap((day) => day.exercises.map((exercise) => exercise.id)),
     );
+    const planDayIds = new Set(plan.days.map(day => day.id));
     const planLogs = logs.filter(
       (log) =>
-        log.plan_exercise_id !== null && planExerciseIds.has(log.plan_exercise_id),
+        (log.plan_exercise_id !== null && planExerciseIds.has(log.plan_exercise_id)) ||
+        (log.adhoc && log.plan_exercise_id === null && log.plan_day_id != null && planDayIds.has(log.plan_day_id)),
     );
     const firstDate = [plan.start_date, ...planLogs.map(log => log.logged_date)].sort()[0];
     if (firstDate > today) continue;
@@ -288,6 +290,20 @@ export function buildHistoryWeeks(
           }
         }
         for (const log of planLogs.filter((candidate) => candidate.logged_date === date)) {
+          if (log.plan_exercise_id === null && log.plan_day_id) {
+            const id = `added:${log.plan_day_id}:${log.exercise_id}`;
+            const existing = dayExerciseMap.get(id);
+            if (existing) existing.logs.push(log);
+            else dayExerciseMap.set(id, {
+              studentAdded: true,
+              // Read-only history adapter; never inserted into the plan tree.
+              planExercise: { id, plan_day_id: log.plan_day_id, exercise_id: log.exercise_id,
+                is_main_lift: false, sort_order: dayExerciseMap.size, notes: null, sets: [] },
+              name: exerciseName(log.exercise_id, exerciseIndex),
+              notes: [], plannedSets: [], logs: [log],
+            });
+            continue;
+          }
           if (log.plan_exercise_id === null) continue;
           const existing = dayExerciseMap.get(log.plan_exercise_id);
           if (existing) {
@@ -304,7 +320,9 @@ export function buildHistoryWeeks(
         );
         const done = exercises.reduce(
           (sum, exercise) =>
-            sum + completedHistoryLogs(exercise.logs).length,
+            sum + new Set(completedHistoryLogs(exercise.logs)
+              .filter(log => log.set_index >= 0 && log.set_index < exercise.plannedSets.length)
+              .map(log => log.set_index)).size,
           0,
         );
         return { date, done, total, exercises, isRest: exercises.length === 0 };

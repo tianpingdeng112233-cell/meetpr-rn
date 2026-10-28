@@ -1,0 +1,138 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/api/__tests__/api-auth-session.test.ts
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      66 | function notificationCenter(): typeof import('expo-notifications') {
+      67 |   // eslint-disable-next-line @typescript-eslint/no-require-imports
+    > 68 |   return require('expo-notifications');
+         |          ^
+      69 | }
+      70 | let revision = 0;
+      71 | export const reminderRevision = () => revision;
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at require (src/features/settings/training-reminder.ts:68:10)
+      at notificationCenter (src/features/settings/training-reminder.ts:79:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/settings/training-reminder.ts:83:2)
+      at apply (src/features/settings/training-reminder.ts:78:28)
+
+FAIL src/api/__tests__/api-auth-session.test.ts (34.201 s)
+  ✓ normalizes a phone number to the +86 wire format only when needed
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19T12:00:00.123Z
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19T12:00:00Z (1 ms)
+  ✓ UserSchema accepts the ISO8601 created_at variant 2026-07-19
+  ✓ refreshes JWT access tokens at the 60-second expiry boundary (6 ms)
+  ✓ getAccessToken pre-refreshes a JWT expiring within 60 seconds (2 ms)
+  ✓ getAccessToken returns a far-future JWT without refreshing (1 ms)
+  ✓ deduplicates concurrent refresh calls into one request (1 ms)
+  ✓ recovers one 401, retries once, and persists rotated tokens (2 ms)
+  ✓ concurrent 401 recovery reuses a token already rotated by the other request (2 ms)
+  ✓ logs out and clears credentials when the retried request is still 401 (23208 ms)
+  ✓ logs out and clears credentials when refresh receives backend 400 (2 ms)
+  ✓ logs out and clears credentials when refresh receives backend 401 (2 ms)
+  ✓ ApiError remains identifiable across callers (11 ms)
+  ✕ every API request reports a single interface language (zh) (5 ms)
+  ✕ every API request reports a single interface language (zh-Hant) (3 ms)
+  ✕ every API request reports a single interface language (en)
+  API error classification
+    ✓ preserves student-added HTTP 400 SETS_PLAN_DAY_NOT_PUBLISHED as a backend ApiError (25 ms)
+    ✓ preserves student-added HTTP 409 SETS_ADHOC_DAY_CONFLICT as a backend ApiError (2 ms)
+    ✓ preserves student-added HTTP 409 SET_NOT_STUDENT_ADDED as a backend ApiError (2 ms)
+    ✓ preserves student-added HTTP 409 SET_HAS_ATTACHMENT as a backend ApiError
+    ✓ preserves student-added HTTP 409 SET_HAS_COACH_FEEDBACK as a backend ApiError
+    ✓ preserves student-added HTTP 404 SET_NOT_FOUND as a backend ApiError (1 ms)
+    ✓ preserves CHAT_BIND_REQUIRED so student chat can show binding-invalidated copy (7 ms)
+    ✓ parses a known backend error envelope (6 ms)
+    ✓ classifies BIND_REQUEST_NOT_FOUND as a known backend error
+    ✓ classifies ATTACHMENT_NOT_FOUND as a known backend error
+    ✓ classifies an envelope-free 5xx response as server (3 ms)
+    ✓ classifies a fetch transport failure as network (1 ms)
+  auth wire format
+    ✓ login sends a normalized phone and JSON headers (5 ms)
+    ✓ register sends snake_case-compatible JSON and normalizes +86 (1 ms)
+    ✓ refresh pins the refresh_token snake_case key (1 ms)
+    ✓ token-bearing JSON requests use lowercase authorization and content headers (1 ms)
+  session bootstrap failure policy
+    ✓ retains the cached authenticated session after a transport failure (787 ms)
+    ✓ retains the cached authenticated session after a 5xx response (11 ms)
+    ✓ retains the cached authenticated session after a backend 429 response (2 ms)
+    ✓ retains the cached authenticated session after an envelope-free 403 network-kind response (98 ms)
+    ✓ clears credentials and becomes anonymous after backend 400 (74 ms)
+    ✓ clears credentials and becomes anonymous after backend 401 (42 ms)
+  credential mutation races
+    ✓ a refresh started immediately after logout cannot resurrect cleared credentials (23 ms)
+    ✓ an old-generation refresh finishing during login cannot overwrite the new account (6 ms)
+
+  ● every API request reports a single interface language (zh)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hans"
+    Received: undefined
+
+      637 |   await apiRequest('/me', { accessToken: 'test-token' });
+      638 |   for (const [, options] of jest.mocked(fetch).mock.calls) {
+    > 639 |     expect(requestHeaders(options)['Accept-Language']).toBe(expected);
+          |                                                        ^
+      640 |   }
+      641 | });
+      642 |
+
+      at toBe (src/api/__tests__/api-auth-session.test.ts:639:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● every API request reports a single interface language (zh-Hant)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: undefined
+
+      637 |   await apiRequest('/me', { accessToken: 'test-token' });
+      638 |   for (const [, options] of jest.mocked(fetch).mock.calls) {
+    > 639 |     expect(requestHeaders(options)['Accept-Language']).toBe(expected);
+          |                                                        ^
+      640 |   }
+      641 | });
+      642 |
+
+      at toBe (src/api/__tests__/api-auth-session.test.ts:639:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● every API request reports a single interface language (en)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "en"
+    Received: undefined
+
+      637 |   await apiRequest('/me', { accessToken: 'test-token' });
+      638 |   for (const [, options] of jest.mocked(fetch).mock.calls) {
+    > 639 |     expect(requestHeaders(options)['Accept-Language']).toBe(expected);
+          |                                                        ^
+      640 |   }
+      641 | });
+      642 |
+
+      at toBe (src/api/__tests__/api-auth-session.test.ts:639:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 38 passed, 41 total
+Snapshots:   0 total
+Time:        35.282 s
+Ran all test suites matching /src\/api\/__tests__\/api-auth-session.test.ts/i.

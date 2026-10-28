@@ -3,13 +3,13 @@ import { t } from '@/i18n';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { onboardingRepository } from '@/api/domains/onboarding';
 
 import { equipmentLabel, GYM_TIER_LABELS, prefillEquipment, UNIT_LABELS } from '../catalog';
-import { DateWheel } from '../controls';
+import { DateWheel, DiscreteSlider, sliderValueAt } from '../controls';
 import { createEmptyOnboardingForm, type OnboardingForm } from '../model';
 import { OnboardingStepContent } from '../OnboardingSteps';
 import { OnboardingWizard } from '../OnboardingWizard';
@@ -231,4 +231,49 @@ test('Wheel centers the initial value and selects options[k] at ROW_HEIGHT times
     act(() => days.props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { y: 42 * k } } }));
     expect(onChange).toHaveBeenLastCalledWith(date);
   }
+});
+
+test('the wizard moves its fields above the keyboard on Android as well as iOS', async () => {
+  await act(async () => {
+    renderer = create(<OnboardingWizard onCompleted={jest.fn()} onExit={jest.fn()} profile={null} studentId={STUDENT_ID} visible />);
+  });
+  expect(renderer.root.findByType(KeyboardAvoidingView).props.behavior).toBe('padding');
+});
+
+test('slider positions map to the nearest mark and clamp at both ends', () => {
+  // 11 marks (0–10) across 220px: centres at 10, 30, … 210.
+  expect(sliderValueAt(10, 220, 0, 10, 1)).toBe(0);
+  expect(sliderValueAt(30, 220, 0, 10, 1)).toBe(1);
+  expect(sliderValueAt(118, 220, 0, 10, 1)).toBe(5);
+  expect(sliderValueAt(-40, 220, 0, 10, 1)).toBe(0);
+  expect(sliderValueAt(400, 220, 0, 10, 1)).toBe(10);
+  // 9 RPE marks (6–10 by 0.5) across 180px: centres 20px apart from 10.
+  expect(sliderValueAt(90, 180, 6, 10, 0.5)).toBe(8);
+  expect(sliderValueAt(100, 180, 6, 10, 0.5)).toBe(8.5);
+});
+
+test('tapping or dragging across the slider updates the value as the finger moves', () => {
+  const onChange = jest.fn<(value: number) => void>();
+  const Harness = () => {
+    const [value, setValue] = useState(1);
+    return <DiscreteSlider max={10} min={0} onChange={(next) => { onChange(next); setValue(next); }} value={value} />;
+  };
+  act(() => { renderer = create(<Harness />); });
+  const track = () => renderer.root.findAll((node) => node.type === View && typeof node.props.onResponderMove === 'function')[0];
+  // 220px wide: mark centres at 10, 30, … 210.
+  act(() => track().props.onLayout({ nativeEvent: { layout: { width: 220 } } }));
+  let time = 0;
+  let previous = 0;
+  // PanResponder sums each move's delta from the previous position and ignores a timestamp it has already seen.
+  const touch = (locationX: number, dx: number) => ({
+    nativeEvent: { locationX, touches: [], changedTouches: [] },
+    touchHistory: { numberActiveTouches: 1, indexOfSingleActiveTouch: 0, mostRecentTimeStamp: ++time, touchBank: [{
+      touchActive: true, startPageX: 0, startPageY: 0, startTimeStamp: 0, currentPageX: dx, currentPageY: 0,
+      currentTimeStamp: time, previousPageX: [previous, previous = dx][0], previousPageY: 0, previousTimeStamp: time - 1,
+    }] },
+  });
+  act(() => track().props.onResponderGrant(touch(70, 0)));
+  act(() => track().props.onResponderMove(touch(70, 80)));
+  act(() => track().props.onResponderMove(touch(70, 140)));
+  expect(onChange.mock.calls.map(([value]) => value)).toEqual([3, 7, 10]);
 });

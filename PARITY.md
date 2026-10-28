@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-10-11 iOS 已跟进 spec 085–090**：下面六条「授权差异（仅安卓）」已不再是差异——原生 iOS 用 SwiftUI 跟进完毕，meetpr #355–#360 于 2026-10-11 落 iOS 发版线 `release/1.0@797dc578`，登记为 1.0(24) 候选（落线不等于进包）。范围与安卓一致：085 / 086 / 089 / 090 全做，087、088 只做第一步。iOS 保留平台做法的几处（系统导航栏与左滑返回、只读态备注取值、动作库查不到的计划动作不展示、Progress 对比格下保留逐项进度条）记在 iOS 仓各 spec 目录的 `ACCEPTANCE-ios.md`。此后安卓新 spec 定稿，iOS 用原生跟一份（David 2026-10-10 定走两套）。
 > **2026-10-09 spec 087 授权差异（仅安卓学员端，iOS 无对应）**：David 走查 Progress 后拍板把一整页长滚动改为列表入口——第一步四行（e1RM、Training history、Coach feedback、Intensity metrics），每行带当前值；e1RM 独立成页，顶部 `Total / Squat / Bench / Deadlift` 四段共用一个时间范围，新增 Total 曲线（三项各自最新值沿用求和），原对比两格并入 Total 段；训练次数 / 周数 / 总容量三格并入历史记录页；容量强度图独立成页；Progress 里只有文字的反馈弹层删除，改进现有反馈页。零后端改动，e1RM 算法与来源弹层不变。模拟器收货（[收货记录](docs/verification-spec087-2026-10-09.md)），未真机、未连 Global。第二步（体重曲线，依赖后端 spec 046）未开工。口径正典见 `specs/087-progress-menu/SPEC.md`。
 > **2026-10-10 spec 090 授权差异（仅安卓，iOS 待走查完一并跟）**：David 真机走查后提的 Training 三项——做完的动作收成一行排到 hero 卡上方并标已完成、下一个动作顶进 hero；主项 hero 卡加组进度分段条；当天全部记完后 hero 卡消失、「长按 · 完成今日训练」吸在 tab 栏上方；组录入页压矮重量与次数两行、「上赛扣」并到片数说明同一行，使拍摄行首屏可见。零后端改动。模拟器收货（[收货记录](docs/verification-spec090-2026-10-10.md)），未真机、未连 Global。口径正典见 `specs/090-training-flow/SPEC.md`。
 
@@ -73,6 +74,7 @@
 |---|---|---|
 | 设计 tokens 主题包 | 🔨 | G0-a:按 design-tokens-v3 / iOS 202e95db 重移植浅色默认、品牌金、三族十字面、主题/基础组件/自绘 tab;lint+tsc+177 Jest 通过,Android bundle 导出通过;ADB sandbox 权限阻断,待模拟器截图走查(旧 W0-A 走查不代表 v3 已对齐);2026-09-04 模拟器亲验 v3 登录页/BindGate 占位页(浅色底、白卡、金杠、Archivo 字标);逐屏视觉对齐随各功能卡走查 |
 | Global 登录 / 注册 / 找回密码 | 🔨 | G0-c:邮箱 + Google PKCE、Global/China 构建切轨、按用户时区上报已实装;W3-v 三屏视觉对齐 iOS GlobalAuth*;SiwA 省略。32 suites / 234 tests、lint、tsc 通过;本卡沙箱无 ADB,视觉走查/截图待补;Google client 配置与 backend 多 audience 仍需外部前置验收 |
+| CN 登录 / 注册 / 找回密码(spec 091,无 iOS 对照,David 批准的新口径) | ✅ | 邮箱登录、一页式注册(邮箱 + 验证码小按钮 + 密码 + 确认密码)、两步找回;无手机号、无 Google;登录页英文口号;三屏文案进 i18n,中文用轻字重排版。模拟器证据 `docs/evidence/spec091-20261010/`(连本机模拟后端)。真邮箱收码与注册成功待 backend #290 部署后验 |
 | i18n 字符串层 + 全仓英文化 | 🔨 | W3-i18n:剩余 15 missing/0 drift 清零；取消 login/onboarding 屏幕豁免并替换 login 10 处中文；新增全 src 标记守卫与 9 个带来源 RN key；补 CoachKit 3 个复数索引；lint/tsc/58 suites·379 Jest 通过。正典不改；已知 Sun 误译、历史 CoachKit runtime 差异和 Apple 格式限制见 JOURNAL。ADB socket 被 sandbox 拒绝，待模拟器截图验收 |
 | API client + auth 全链 | ✅ | W0-B;staging 真登录/登出冒烟通过;⚠️后端响应 camelCase 已勘误进参照包 |
 | 导航骨架 + BindGate(评估封存照抄) | ✅ | W0-C;当前教练/学员均 4 tab(教练后续按 W2-a 收口)/登出模拟器实测 |

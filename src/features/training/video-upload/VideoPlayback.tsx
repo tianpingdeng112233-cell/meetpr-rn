@@ -11,17 +11,19 @@ import { SetVideoPlayer } from './SetVideoPlayer';
 import { selectPlaybackSource } from './local-retention';
 
 /** Source resolution only; the OverlayHost owner supplies the full-screen layer. */
-export function VideoPlayback({ localUri, attachmentId, onClose, badge, inline = false }: {
+export function VideoPlayback({ localUri, attachmentId, onClose, badge, inline = false, readOnly = false, onReview }: {
   inline?: boolean;
+  readOnly?: boolean;
+  onReview?: () => void;
   badge?: VideoBadgeInfo | null;
   localUri: string | null;
   attachmentId: string | null;
   onClose: () => void;
 }) {
-  return <ResolvedVideoPlayback key={inline ? 'inline' : `${attachmentId}:${localUri}`} inline={inline} localUri={localUri} attachmentId={attachmentId} onClose={onClose} badge={badge} />;
+  return <ResolvedVideoPlayback key={inline ? 'inline' : `${attachmentId}:${localUri}`} inline={inline} readOnly={readOnly} onReview={onReview} localUri={localUri} attachmentId={attachmentId} onClose={onClose} badge={badge} />;
 }
 
-function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge, inline }: { inline: boolean; localUri: string | null; attachmentId: string | null; onClose: () => void; badge?: VideoBadgeInfo | null }) {
+function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge, inline, readOnly, onReview }: { inline: boolean; readOnly: boolean; onReview?: () => void; localUri: string | null; attachmentId: string | null; onClose: () => void; badge?: VideoBadgeInfo | null }) {
   const colors = useColors();
   const [uri, setUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -40,7 +42,7 @@ function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge, inline 
       .catch(() => { if (live) setFailed(true); });
     return () => { live = false; };
   }, [refreshURL, attempt]);
-  if (uri && inline) return <SetVideoPlayer uri={uri} refreshURL={refreshURL} badge={badge} />;
+  if (uri && (inline || readOnly)) return <SetVideoPlayer uri={uri} refreshURL={refreshURL} badge={badge} readOnly={readOnly} onClose={onClose} onReview={onReview} />;
   if (uri) return <FeedbackVideoPlayer videoId={attachmentId ?? localUri ?? ''} url={uri} markers={null} badge={badge} refreshURL={refreshURL} onClose={onClose} />;
   const Container = inline ? View : SafeAreaView;
   return <Container style={inline ? { backgroundColor: colors.videoWorkbenchFill } : { flex: 1, backgroundColor: colors.bgBase }}>

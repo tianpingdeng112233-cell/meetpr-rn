@@ -1,0 +1,48 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/training/video-upload/__tests__/set-video-player.test.tsx src/features/training/__tests__/set-save.test.tsx src/features/history/__tests__/student-added-history.test.tsx
+
+PASS src/features/training/__tests__/set-save.test.tsx (10.034 s)
+FAIL src/features/training/video-upload/__tests__/set-video-player.test.tsx
+  ● replay colors use semantic tokens in light
+
+    Expected 1 but found 2 instances with node type: "Text"
+
+      308 |   const pill = review.findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.height === 30)!;
+      309 |   expect(StyleSheet.flatten(pill.props.style)).toMatchObject({ backgroundColor: colors.videoReviewedFill, borderColor: colors.videoReviewedBorder });
+    > 310 |   expect(StyleSheet.flatten(pill.findByType(Text).props.style).color).toBe(colors.videoReviewedText);
+          |                                  ^
+      311 |   expect(pill.findByType(MaterialCommunityIcons).props.color).toBe(colors.videoReviewedText);
+      312 | });
+      313 |
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByType (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17211:18)
+      at findByType (src/features/training/video-upload/__tests__/set-video-player.test.tsx:310:34)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● replay colors use semantic tokens in dark
+
+    Expected 1 but found 2 instances with node type: "Text"
+
+      308 |   const pill = review.findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.height === 30)!;
+      309 |   expect(StyleSheet.flatten(pill.props.style)).toMatchObject({ backgroundColor: colors.videoReviewedFill, borderColor: colors.videoReviewedBorder });
+    > 310 |   expect(StyleSheet.flatten(pill.findByType(Text).props.style).color).toBe(colors.videoReviewedText);
+          |                                  ^
+      311 |   expect(pill.findByType(MaterialCommunityIcons).props.color).toBe(colors.videoReviewedText);
+      312 | });
+      313 |
+
+      at expectOne (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15161:13)
+      at ReactTestInstance.Object.<anonymous>.process.env.NODE_ENV._proto.findByType (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17211:18)
+      at findByType (src/features/training/video-upload/__tests__/set-video-player.test.tsx:310:34)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/features/history/__tests__/student-added-history.test.tsx
+
+Test Suites: 1 failed, 2 passed, 3 total
+Tests:       2 failed, 64 passed, 66 total
+Snapshots:   0 total
+Time:        11.098 s

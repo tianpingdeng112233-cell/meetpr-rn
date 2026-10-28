@@ -1,4 +1,5 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
+import { getAndroidBuildConfig } from './plugins/build-track';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const china = process.env.EXPO_PUBLIC_BUILD_TRACK === 'china';
@@ -9,10 +10,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: config.name ?? 'MeetPR',
     slug: config.slug ?? 'meetpr',
+    android: { ...config.android, ...getAndroidBuildConfig(process.env.EXPO_PUBLIC_BUILD_TRACK) },
     scheme: !china && prefix ? [...schemes, `com.googleusercontent.apps.${prefix}`] : schemes,
     plugins: [
       ...(config.plugins ?? []),
       ['expo-build-properties', { android: { usesCleartextTraffic: china } }],
+      './plugins/with-release-signing',
     ],
   };
 };

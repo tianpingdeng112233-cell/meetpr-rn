@@ -1,0 +1,94 @@
+Language header repair final validation (2026-10-22)
+All commands: export PATH=/opt/homebrew/bin:$PATH; EXPO_NO_DOTENV=1
+
+npm test -- --runInBand src/api/__tests__/api-auth-session.test.ts src/api/__tests__/realtime.test.ts src/analytics/__tests__/analytics.test.ts src/features/updates/__tests__/android-update.test.ts src/features/updates/__tests__/android-update-session.test.tsx src/i18n/__tests__/t.test.ts
+Exit: 0
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/api/__tests__/api-auth-session.test.ts src/api/__tests__/realtime.test.ts src/analytics/__tests__/analytics.test.ts src/features/updates/__tests__/android-update.test.ts src/features/updates/__tests__/android-update-session.test.tsx src/i18n/__tests__/t.test.ts
+
+PASS src/api/__tests__/api-auth-session.test.ts
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      66 | function notificationCenter(): typeof import('expo-notifications') {
+      67 |   // eslint-disable-next-line @typescript-eslint/no-require-imports
+    > 68 |   return require('expo-notifications');
+         |          ^
+      69 | }
+      70 | let revision = 0;
+      71 | export const reminderRevision = () => revision;
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at require (src/features/settings/training-reminder.ts:68:10)
+      at notificationCenter (src/features/settings/training-reminder.ts:79:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/settings/training-reminder.ts:83:2)
+      at apply (src/features/settings/training-reminder.ts:78:28)
+
+PASS src/api/__tests__/realtime.test.ts
+  ● Console
+
+    console.debug
+      [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+    console.debug
+      [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+
+    console.debug
+      [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+    console.debug
+      [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+          at _loop.next (<anonymous>)
+
+    console.debug
+      [realtime] disconnected -> connected
+
+      at debug (src/api/realtime.ts:64:26)
+
+    console.debug
+      [realtime] connected -> disconnected
+
+      at debug (src/api/realtime.ts:64:26)
+
+PASS src/analytics/__tests__/analytics.test.ts
+PASS src/features/updates/__tests__/android-update.test.ts
+PASS src/features/updates/__tests__/android-update-session.test.tsx
+PASS src/i18n/__tests__/t.test.ts
+
+Test Suites: 6 passed, 6 total
+Tests:       129 passed, 129 total
+Snapshots:   0 total
+Time:        1.293 s, estimated 2 s
+Ran all test suites matching /src\/api\/__tests__\/api-auth-session.test.ts|src\/api\/__tests__\/realtime.test.ts|src\/analytics\/__tests__\/analytics.test.ts|src\/features\/updates\/__tests__\/android-update.test.ts|src\/features\/updates\/__tests__\/android-update-session.test.tsx|src\/i18n\/__tests__\/t.test.ts/i.
+
+npx tsc --noEmit
+Exit: 0
+
+npm run lint
+Exit: 0
+
+> meetpr-rn@1.0.0 lint
+> expo lint
+
+
+Source/script scan: no explicit Accept-Language assignments or getAcceptLanguage references remain; only negative test assertions mention accept-language.
+Scoped git diff --check: passed.

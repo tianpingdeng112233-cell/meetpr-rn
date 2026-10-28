@@ -1,0 +1,13 @@
+语言头返修独立双轴审查（2026-10-22）
+
+范围：header-changes.patch，对照本轮改前快照 /tmp/094-header-before；仅 9 个代码/测试文件，不含此前 WIP。最终只清理新增测试间多余空行，无语义变更。
+方法：已读 code-review / review-loop；缺 docs/agents/issue-tracker.md，已告知 $setup-matt-pocock-skills；采用 review-loop 本地 spec 路径，未运行 tracker 流程。
+
+Standards：0 findings。
+独立只读 reviewer /root/header_standards 逐 hunk 核对 AGENTS.md、CLAUDE.md 及调用上下文；helper 改名一致，无额外抽象，测试通过请求边界断言且 afterEach 恢复 locale override；无仓规违反、实质坏味道或用户数据兼容问题。
+
+Spec：0 findings。
+独立只读 reviewer /root/header_spec 核对 SPEC.md 共享契约、AMEND-header.md 客户端范围；API（含未登录 auth）、WebSocket、更新检查、analytics config/events 五处覆盖完整；值保持 zh-Hans / zh-Hant / en，无显式 Accept-Language 或旧 helper 残留。四组证据先红后绿。
+
+主代理亲读精确增量，完成最终 6 suites / 129 tests、tsc、lint，均 exit 0；本轮代码与 JOURNAL 的 scoped git diff --check 通过。
+一轮审查，无待修 findings。此为开发自测/自审，不代替 Opus 跨端验收；未新增后端联调或原生 UI 证据。

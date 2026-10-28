@@ -1,5 +1,6 @@
 import { t } from '@/i18n';
 
+import * as Clipboard from 'expo-clipboard';
 import type { PropsWithChildren } from 'react';
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import {
@@ -22,6 +23,7 @@ import {
   type OnboardingProfile,
 } from '@/api/domains';
 import { useSessionStore } from '@/api/session';
+import * as buildTrack from '@/config/build-track';
 import {
   AppButton,
   Card,
@@ -34,6 +36,7 @@ import {
 } from '@/design';
 import {
   BIND_NOTICES,
+  extractInviteCode,
   groupedInviteCode,
   inviteStashStorage,
   isValidInviteCode,
@@ -253,6 +256,22 @@ function EnterCodeView({
   const [submitting, setSubmitting] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const valid = isValidInviteCode(code) && displayName.trim().length > 0;
+  // Spec 093: China-track students arrive from an invite link or message; Global keeps iOS parity.
+  const offersPaste = buildTrack.BUILD_TRACK === 'china';
+
+  const paste = async () => {
+    let text = '';
+    try {
+      text = await Clipboard.getStringAsync();
+    } catch {
+      text = '';
+    }
+    const found = extractInviteCode(text);
+    if (found) {
+      setCode(found);
+      setBanner(null);
+    } else setBanner(t('student.inviteCode.pasteEmpty'));
+  };
 
   useEffect(() => {
     void screen(AnalyticsScreen.BindEnterCode);
@@ -314,8 +333,13 @@ function EnterCodeView({
       <TextField
         autoCapitalize="characters"
         autoCorrect={false}
-        maxLength={12}
-        onChangeText={(value) => setCode(normalizeInviteCode(value))}
+        maxLength={500}
+        numberOfLines={1}
+        onChangeText={(value) => {
+          const nextCode = (value.length > 12 ? extractInviteCode(value) : null) ?? normalizeInviteCode(value);
+          setCode(nextCode);
+          if (isValidInviteCode(nextCode)) setBanner(null);
+        }}
         placeholder="XXXXXXXXXX"
         label={t('student.inviteCodeEntry.copy001')}
         helper={t('student.enterCodeViewModel.copy002')}
@@ -323,6 +347,9 @@ function EnterCodeView({
         style={styles.codeInput}
         value={isValidInviteCode(code) ? groupedInviteCode(code) : code}
       />
+      {offersPaste ? (
+        <AppButton label={t('student.inviteCode.paste')} onPress={() => void paste()} variant="link" />
+      ) : null}
       <TextField
         maxLength={100}
         onChangeText={setDisplayName}

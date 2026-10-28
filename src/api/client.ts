@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { isDemoMode } from '@/demo/mode';
 
+import { getLocaleHeader } from '@/i18n';
 import { DEFAULT_API_BASE_URL } from '@/config/build-track';
 
 export { DEFAULT_API_BASE_URL } from '@/config/build-track';
@@ -32,6 +33,7 @@ export const KNOWN_BACKEND_ERROR_CODES = [
   'AUTH_INVALID_IDENTITY_TOKEN',
   'AUTH_EMAIL_TAKEN',
   'AUTH_INVALID_RESET_CODE',
+  'AUTH_INVALID_SIGNUP_CODE',
   'AUTH_REGISTRATION_DISABLED',
   'AUTH_REGISTRATION_NOT_ALLOWED',
   'AUTH_PROVIDER_NOT_CONFIGURED',
@@ -50,6 +52,12 @@ export const KNOWN_BACKEND_ERROR_CODES = [
   'NOT_LATEST_COMPLETION',
   'NO_COMPLETION_TO_UNDO',
   'SETS_PLAN_EXERCISE_NOT_PUBLISHED',
+  'SETS_PLAN_DAY_NOT_PUBLISHED',
+  'SETS_ADHOC_DAY_CONFLICT',
+  'SET_NOT_STUDENT_ADDED',
+  'SET_HAS_ATTACHMENT',
+  'SET_HAS_COACH_FEEDBACK',
+  'SET_NOT_FOUND',
   'SETS_EXERCISE_NOT_FOUND',
   'FEEDBACK_NOT_FOUND',
   'UPLOADS_NOT_CONFIGURED',
@@ -134,6 +142,7 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   const headers: Record<string, string> = {
     accept: 'application/json',
+    'X-MeetPR-Locale': getLocaleHeader(),
   };
 
   if (options.body !== undefined) {

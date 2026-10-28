@@ -1,0 +1,117 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/updates/__tests__/android-update-session.test.tsx
+
+FAIL src/features/updates/__tests__/android-update-session.test.tsx
+  ✓ startup shows release notes and only opens the download after the user chooses it (11 ms)
+  ✓ privacy/bootstrap readiness gates the check and rerendering does not reoffer a dismissed alert (1 ms)
+  ✓ a response while backgrounded waits for foreground and is offered only once
+  ✓ unmount aborts the request and prevents late prompts (1 ms)
+  ✓ a download-open failure gives a retry without an unhandled rejection
+  ✓ Traditional update prompts use generated release notes and Taiwan UI copy (1 ms)
+  ✕ a network failure retries on the next foreground without waiting six hours (1 ms)
+  ✕ a http failure retries on the next foreground without waiting six hours (1 ms)
+  ✕ a json failure retries on the next foreground without waiting six hours
+  ✕ a invalid metadata failure retries on the next foreground without waiting six hours (1 ms)
+  ✕ a timeout failure retries on the next foreground without waiting six hours (1 ms)
+
+  ● a network failure retries on the next foreground without waiting six hours
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 2
+    Received number of calls: 1
+
+       98 |   expect(alert).not.toHaveBeenCalled();
+       99 |   await act(async () => { listener.mock.calls[0][1]('background'); listener.mock.calls[0][1]('active'); });
+    > 100 |   expect(global.fetch).toHaveBeenCalledTimes(2);
+          |                        ^
+      101 |   expect(alert).toHaveBeenCalledTimes(1);
+      102 | });
+      103 |
+
+      at toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-session.test.tsx:100:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a http failure retries on the next foreground without waiting six hours
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 2
+    Received number of calls: 1
+
+       98 |   expect(alert).not.toHaveBeenCalled();
+       99 |   await act(async () => { listener.mock.calls[0][1]('background'); listener.mock.calls[0][1]('active'); });
+    > 100 |   expect(global.fetch).toHaveBeenCalledTimes(2);
+          |                        ^
+      101 |   expect(alert).toHaveBeenCalledTimes(1);
+      102 | });
+      103 |
+
+      at toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-session.test.tsx:100:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a json failure retries on the next foreground without waiting six hours
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 2
+    Received number of calls: 1
+
+       98 |   expect(alert).not.toHaveBeenCalled();
+       99 |   await act(async () => { listener.mock.calls[0][1]('background'); listener.mock.calls[0][1]('active'); });
+    > 100 |   expect(global.fetch).toHaveBeenCalledTimes(2);
+          |                        ^
+      101 |   expect(alert).toHaveBeenCalledTimes(1);
+      102 | });
+      103 |
+
+      at toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-session.test.tsx:100:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a invalid metadata failure retries on the next foreground without waiting six hours
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 2
+    Received number of calls: 1
+
+       98 |   expect(alert).not.toHaveBeenCalled();
+       99 |   await act(async () => { listener.mock.calls[0][1]('background'); listener.mock.calls[0][1]('active'); });
+    > 100 |   expect(global.fetch).toHaveBeenCalledTimes(2);
+          |                        ^
+      101 |   expect(alert).toHaveBeenCalledTimes(1);
+      102 | });
+      103 |
+
+      at toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-session.test.tsx:100:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a timeout failure retries on the next foreground without waiting six hours
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 2
+    Received number of calls: 1
+
+       98 |   expect(alert).not.toHaveBeenCalled();
+       99 |   await act(async () => { listener.mock.calls[0][1]('background'); listener.mock.calls[0][1]('active'); });
+    > 100 |   expect(global.fetch).toHaveBeenCalledTimes(2);
+          |                        ^
+      101 |   expect(alert).toHaveBeenCalledTimes(1);
+      102 | });
+      103 |
+
+      at toHaveBeenCalledTimes (src/features/updates/__tests__/android-update-session.test.tsx:100:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 6 passed, 11 total
+Snapshots:   0 total
+Time:        0.637 s
+Ran all test suites matching /src\/features\/updates\/__tests__\/android-update-session.test.tsx/i.

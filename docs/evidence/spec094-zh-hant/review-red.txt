@@ -1,0 +1,102 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-picker.test.ts src/features/chat/__tests__/set-ref-picker.test.tsx
+
+FAIL src/features/chat/__tests__/set-ref-picker.test.tsx (6.105 s)
+  ● Traditional sharing displays 臥推 but stages canonical 卧推 from 卧推
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "body": StringContaining "卧推",
+    +   "body": "[训练分享] 臥推 第1组 100kg×5 (2026-09-07)",
+        "setRef": Object {
+    -     "exerciseName": "卧推",
+    +     "exerciseName": "臥推",
+        },
+      }
+
+      90 |   await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress());
+      91 |   await press('chat.sendToCoach');
+    > 92 |   expect(useSetRefStagingStore.getState().intents[id]).toMatchObject({ setRef: { exerciseName: '卧推' }, body: expect.stringContaining('卧推') });
+         |                                                        ^
+      93 | });
+      94 |
+
+      at toMatchObject (src/features/chat/__tests__/set-ref-picker.test.tsx:92:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Traditional sharing displays 臥推 but stages canonical 卧推 from 臥推
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "body": StringContaining "卧推",
+    +   "body": "[训练分享] 臥推 第1组 100kg×5 (2026-09-07)",
+        "setRef": Object {
+    -     "exerciseName": "卧推",
+    +     "exerciseName": "臥推",
+        },
+      }
+
+      90 |   await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress());
+      91 |   await press('chat.sendToCoach');
+    > 92 |   expect(useSetRefStagingStore.getState().intents[id]).toMatchObject({ setRef: { exerciseName: '卧推' }, body: expect.stringContaining('卧推') });
+         |                                                        ^
+      93 | });
+      94 |
+
+      at toMatchObject (src/features/chat/__tests__/set-ref-picker.test.tsx:92:56)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/training/__tests__/exercise-picker.test.ts
+  ● search 肩部觸控 finds canonical 熊爬肩部触摸 without changing stored data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "熊爬肩部触摸",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      25 | ])('search %s finds canonical %s without changing stored data', (query, name) => {
+      26 |   const item = exercise({ name });
+    > 27 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      28 |   expect(item.name).toBe(name);
+      29 | });
+      30 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:27:56)
+
+Test Suites: 2 failed, 2 total
+Tests:       3 failed, 39 passed, 42 total
+Snapshots:   0 total
+Time:        6.705 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-picker.test.ts|src\/features\/chat\/__tests__\/set-ref-picker.test.tsx/i.

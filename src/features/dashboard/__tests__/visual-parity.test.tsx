@@ -4,6 +4,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Modal, StyleSheet, Text, TextInput } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import { FeedbackResponseSchema } from '@/api/domains/feedback';
+import { bindKeys, type MineBindRequestResponse } from '@/api/domains/bind';
 import type { OnboardingProfile } from '@/api/domains/onboarding';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
@@ -59,6 +60,12 @@ let servedProfile: OnboardingProfile | null;
 let servedExercises: import('@/api/domains').Exercise[];
 let feedbackItems: import('@/api/domains').FeedbackItem[];
 
+const waitUntil = async (condition: () => boolean) => {
+  for (let attempt = 0; attempt < 100 && !condition(); attempt += 1) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  }
+};
+
 beforeEach(() => {
   mockNavigate.mockClear();
   mockSetParams.mockClear();
@@ -95,9 +102,15 @@ test.each(['list', 'recording'] as const)('the training tab in %s mode renders n
   await act(async () => {
     renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>);
   });
-  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+  const loaded = () => mode === 'list'
+    ? textCopy().includes("Today's workout")
+    : renderer.root.findAllByProps({ testID: 'training.completedDay' }).length > 0;
+  await waitUntil(loaded);
+  expect(loaded()).toBe(true);
+  // A completed day reuses the overview card layout, so it keeps the one title; no set hero either way.
   const heroTitles = renderer.root.findAllByType(Text).filter((node) => node.props.children === "Today's workout");
-  expect(heroTitles).toHaveLength(mode === 'list' ? 1 : 0);
+  expect(heroTitles).toHaveLength(1);
+  if (mode === 'recording') expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
   expect(queryAllByTestId('eyebrow')).toHaveLength(0);
 });
@@ -170,7 +183,8 @@ test('Dashboard joins the existing video read and opens the selected feedback de
   await act(async () => {
     renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>);
   });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  await waitUntil(() => renderer.root.findAll(node =>
+    node.props.accessibilityLabel === t('student.dashboardFeedbackCard.copy002', [1]) && typeof node.props.onPress === 'function').length > 0);
   const button = (label: string) => renderer.root.find(node =>
     node.props.accessibilityLabel === label && typeof node.props.onPress === 'function');
   await act(async () => button(t('student.dashboardFeedbackCard.copy002', [1])).props.onPress());
@@ -184,9 +198,11 @@ test('Dashboard joins the existing video read and opens the selected feedback de
 
 test.each([{ name: 'Dashboard', Component: DashboardScreen }, { name: 'Training', Component: TodayWorkoutView }])('$name header opens the bound coach chat', async ({ Component }) => {
   await act(async () => { renderer = create(<QueryClientProvider client={client}><Component /></QueryClientProvider>); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  await waitUntil(() => client.getQueryData<MineBindRequestResponse>(bindKeys.mine)?.bind_request?.status === 'accepted'
+    && renderer.root.findAll(node => node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy007')
+      && typeof node.props.onPress === 'function' && !node.props.disabled).length > 0);
   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy007') })[0].props.onPress(); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  await waitUntil(() => mockNavigate.mock.calls.length > 0);
   expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
 });
 
@@ -204,7 +220,7 @@ test('a bound student with no plan can message the coach from the Dashboard wait
   if (!button) throw new Error('Message coach must be actionable');
   const press = button.props.onPress;
   await act(async () => { await press(); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  await waitUntil(() => mockNavigate.mock.calls.length > 0);
   expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId: '80000000-0000-4000-8000-000000000000', coachName: 'Alex' } });
   expect(mockNavigate).not.toHaveBeenCalledWith('/(student)/feedback');
 });
@@ -222,9 +238,9 @@ test.each([false, true])('Today metric cards open the existing Profile editors (
     completed_at: null, created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z', upload_attachment_ids: [],
   };
   await act(async () => { renderer = create(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  if (hasValues) expect(renderer.root.findAllByType(Text).some(node => node.props.children === '83')).toBe(true);
   const weightLabel = hasValues ? t('student.dashboardProfileMetricsView.copy002', ['83.00 kg']) : t('student.dashboardProfileMetricsView.copy011');
+  await waitUntil(() => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === weightLabel).length > 0);
+  if (hasValues) expect(renderer.root.findAllByType(Text).some(node => node.props.children === '83')).toBe(true);
   const weight = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === weightLabel)[0];
   expect(weight).toBeDefined();
   await act(async () => weight.props.onPress());
@@ -249,7 +265,8 @@ test.each([false, true])('Today metric cards open the existing Profile editors (
   expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/today');
   expect(mockSetParams).toHaveBeenCalledWith({ edit: undefined, returnTo: undefined });
   await act(async () => { renderer.update(<QueryClientProvider client={client}><DashboardScreen /></QueryClientProvider>); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  await waitUntil(() => (!hasValues || renderer.root.findAll(node => node.props.accessibilityLabel === t('student.dashboardProfileMetricsView.copy002', ['84.00 kg'])).length > 0)
+    && textCopy().includes(t('student.dashboardProfileMetricsView.copy003')));
   if (hasValues) expect(renderer.root.findAll(node => node.props.accessibilityLabel === t('student.dashboardProfileMetricsView.copy002', ['84.00 kg'])).length).toBeGreaterThan(0);
   const meetText = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.dashboardProfileMetricsView.copy003'))!;
   let meetButton = meetText;

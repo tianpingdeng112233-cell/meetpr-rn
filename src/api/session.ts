@@ -8,6 +8,7 @@ import {
   emailRegister,
   googleSignIn,
   type EmailCredentials,
+  type EmailRegistration,
   type GoogleSignIn,
   loginRequest,
   refreshRequest,
@@ -39,7 +40,7 @@ type SessionStore = {
   login: (input: LoginRequest) => Promise<User>;
   register: (input: RegisterRequest) => Promise<User>;
   loginWithEmail: (input: EmailCredentials) => Promise<User>;
-  registerWithEmail: (input: EmailCredentials) => Promise<User>;
+  registerWithEmail: (input: Omit<EmailRegistration, 'timezone'>) => Promise<User>;
   loginWithGoogle: (input: Omit<GoogleSignIn, 'timezone'>) => Promise<User>;
   reportTimezone: () => Promise<void>;
   logout: () => Promise<void>;

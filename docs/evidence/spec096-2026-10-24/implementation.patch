@@ -1,0 +1,526 @@
+diff --git a/src/features/history/HistoryEntriesView.tsx b/src/features/history/HistoryEntriesView.tsx
+index e376934..792015c 100644
+--- a/src/features/history/HistoryEntriesView.tsx
++++ b/src/features/history/HistoryEntriesView.tsx
+@@ -6,6 +6,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+ import { getLocale, matchesExerciseSearch, t } from '@/i18n';
+ import { Card, useColors, radius, Screen, spacing, typography } from '@/design';
+ import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
++import { CompletedSetVideo, CompletedVideoReplayProvider } from '@/features/training/video-upload/CompletedVideoReplay';
+ import type { SetLog } from '@/api/domains';
+ 
+ import { ProgressPageHeader } from './ProgressPageHeader';
+@@ -50,7 +51,8 @@ export function HistoryEntriesView({
+   const filteredChoices = choices.filter(choice => !query.trim() || (choice.id !== null && matchesExerciseSearch(choice.name, query)));
+   const selection = choices.find((choice) => choice.id === exerciseId) ?? choices[0];
+ 
+-  const content = <Screen edges={['top', 'left', 'right']}>
++  const studentId = weeks.flatMap(week => week.days.flatMap(day => day.exercises.flatMap(exercise => exercise.logs)))[0]?.student_id ?? '';
++  const content = <CompletedVideoReplayProvider studentId={studentId} onNavigate={presentation === 'modal' ? onClose : undefined}><Screen edges={['top', 'left', 'right']}>
+         {presentation === 'stack' ? <ProgressPageHeader title={t('student.e1rmSourceHistory')} onBack={onClose} /> : <>
+         <View style={styles.header}>
+           <Pressable
+@@ -132,7 +134,7 @@ export function HistoryEntriesView({
+             </Pressable>
+           </Pressable>
+         </Modal>
+-      </Screen>;
++      </Screen></CompletedVideoReplayProvider>;
+   return presentation === 'stack' ? content : <Modal animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen" visible={visible}>{content}</Modal>;
+ }
+ 
+@@ -189,6 +191,7 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
+                 ? recordedSetText(row)
+                 : `${set.intensity_mode === 'weight' ? `${formatKg(Number(set.target_value))} kg × ` : ''}${set.target_reps}${set.target_reps_max === null ? '' : `–${set.target_reps_max}`}${set.intensity_mode === 'rpe' ? ` @ RPE ${set.target_value}` : ''}`}
+             </Text>
++            {row ? <HistorySetVideo row={row} exercise={exercise} /> : null}
+           </View>
+         );
+       })}
+@@ -198,12 +201,20 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
+             ? t('student.historyEntriesView.copy001', [log.set_index + 1])
+             : t('student.added.extra')}</Text>
+           <Text style={[styles.setValue, { color: log.completed ? colors.success : colors.textSecondary }]}>{recordedSetText(log)}</Text>
++          <HistorySetVideo row={log} exercise={exercise} />
+         </View>
+       ))}
+     </View>
+   );
+ }
+ 
++function HistorySetVideo({ row, exercise }: { row: SetLog; exercise: HistoryExercise }) {
++  const stableSetId = exercise.studentAdded ? `added:${exercise.planExercise.id}:${row.set_index}`
++    : exercise.plannedSets.find(set => set.set_number === row.set_index + 1)?.id ?? `extra:${exercise.planExercise.id}:${row.set_index}`;
++  return <CompletedSetVideo setLogId={row.id} stableSetId={stableSetId} badge={{ exerciseName: exercise.name, setOrdinal: row.set_index + 1,
++    weightKg: Number(row.weight_kg), reps: row.reps, rpe: row.rpe === null ? null : Number(row.rpe) }} />;
++}
++
+ function useStyles() {
+   const colors = useColors();
+   const styles = useMemo(() => createStyles(colors), [colors]);
+@@ -260,7 +271,7 @@ const createStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create
+   noteText: { color: colors.textSecondary, flexShrink: 1, ...typography.caption },
+   setRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 },
+   setLabel: { color: colors.textSecondary, ...typography.footnote },
+-  setValue: { color: colors.textPrimary, fontVariant: ['tabular-nums'], ...typography.footnote },
++  setValue: { flex: 1, textAlign: 'right', color: colors.textPrimary, fontVariant: ['tabular-nums'], ...typography.footnote },
+   scrim: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'flex-end' },
+   choiceSheet: {
+     backgroundColor: colors.surfaceCard,
+diff --git a/src/features/history/__tests__/student-added-history.test.tsx b/src/features/history/__tests__/student-added-history.test.tsx
+index 7309612..b91b546 100644
+--- a/src/features/history/__tests__/student-added-history.test.tsx
++++ b/src/features/history/__tests__/student-added-history.test.tsx
+@@ -8,6 +8,11 @@ import { day, plan, set } from '@/domain/plan/test-fixtures';
+ import { TrainingHistoryScreen } from '../TrainingHistoryScreen';
+ import { GrowthSourceSheet } from '../GrowthSourceSheet';
+ import { GrowthE1RMCard } from '../GrowthE1RMCard';
++import { videosRepository } from '@/api/domains/videos';
++import { FeedbackPressable } from '@/design/FeedbackPressable';
++import { VideoPlayback } from '@/features/training/video-upload/VideoPlayback';
++
++jest.mock('react-native-video', () => 'Video');
+ 
+ const addedLog: SetLog = {
+   id: 'added-squat', student_id: 'student', plan_exercise_id: null, plan_day_id: 'day',
+@@ -57,3 +62,16 @@ test('legacy history responses without plan_day_id keep prescribed records visib
+   expect(texts()).not.toContain(t('student.added.added'));
+   expect(texts()).not.toContain(t('student.added.extra'));
+ });
++
++test('history replays videos for prescribed, extra and student-added rows', async () => {
++  const logs = [prescribedLog, { ...prescribedLog, id: 'extra-bench', set_index: 2, weight_kg: '90' }, addedLog];
++  jest.mocked(plansRepository.list).mockResolvedValue({ plans: [cycle] });
++  jest.spyOn(plansRepository, 'detail').mockResolvedValue(cycle);
++  jest.mocked(setsRepository.range).mockResolvedValue({ logs });
++  jest.spyOn(videosRepository, 'list').mockResolvedValue({ videos: logs.map((log, index) => ({ id: `video-${index}`, set_log_id: log.id, plan_exercise_id: log.plan_exercise_id, created_at: log.logged_at, logged_at: log.logged_at, exercise_name: null, set_index: log.set_index, weight_kg: log.weight_kg, reps: log.reps, content_type: 'video/mp4', size_bytes: 100, filename: null })) });
++  await render(<TrainingHistoryScreen />);
++  const playButtons = renderer.root.findAllByType(FeedbackPressable).filter(node => node.props.accessibilityLabel === t('chat.playVideo'));
++  expect(playButtons).toHaveLength(3);
++  await act(async () => playButtons[2].props.onPress());
++  expect(renderer.root.findByType(VideoPlayback).props.readOnly).toBe(true);
++});
+diff --git a/src/features/training/WorkoutBody.tsx b/src/features/training/WorkoutBody.tsx
+index 640258d..82b3ad6 100644
+--- a/src/features/training/WorkoutBody.tsx
++++ b/src/features/training/WorkoutBody.tsx
+@@ -4,6 +4,7 @@ import { AccessoryLogCard } from './AccessoryLogCard';
+ import { accessoryRows, isAccessoryExercise } from './accessory-quick-log';
+ import { useCameraAvailability } from './video-upload/use-camera-availability';
+ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import { CompletedSetVideo, CompletedVideoReplayProvider } from './video-upload/CompletedVideoReplay';
+ import { SetVideoUploadIndicator } from './video-upload/VideoStatusIcon';
+ import { useLayoutEffect, useRef, useState } from 'react';
+ import { ActivityIndicator, LayoutAnimation, Text, View, type LayoutRectangle } from 'react-native';
+@@ -389,7 +390,7 @@ export function WorkoutBody({
+           reportCompletedRow(group.exercise.id, layout);
+         }}
+       >{renderGroup(group, true)}</View>)}</View> : null}
+-      {completedDay ? <Card testID="completed-day-card" style={{ backgroundColor: colors.bgInset, borderColor: colors.borderStrong, borderWidth: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 16, borderBottomRightRadius: 16, padding: 16, paddingLeft: 19, gap: 14, overflow: 'hidden' }}>
++      {completedDay ? <CompletedVideoReplayProvider studentId={studentId}><Card testID="completed-day-card" style={{ backgroundColor: colors.bgInset, borderColor: colors.borderStrong, borderWidth: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderTopRightRadius: 16, borderBottomRightRadius: 16, padding: 16, paddingLeft: 19, gap: 14, overflow: 'hidden' }}>
+         <View pointerEvents="none" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: spacing.point3, backgroundColor: colors.success }} />
+         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+           <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{t('student.todayWorkoutScreen.copy017')}</Text>
+@@ -428,6 +429,7 @@ export function WorkoutBody({
+                   <Text style={{ flex: 1, color: !terminal ? colors.textMuted : draft.status === 'failed' ? colors.danger : colors.textPrimary, ...font.mono(13) }}>
+                     {terminal ? `${weight} ${unit} × ${draft.repsText || '—'}${draft.rpeText ? ` · RPE ${draft.rpeText}` : ''}` : '—'}
+                   </Text>
++                  <CompletedSetVideo setLogId={draft.sourceLog?.id ?? null} stableSetId={draft.stableSetId} badge={{ exerciseName: title, setOrdinal: draft.setIndex + 1, weightKg: draft.sourceLog ? Number(draft.sourceLog.weight_kg) : null, reps: draft.sourceLog?.reps ?? null, rpe: draft.sourceLog?.rpe != null ? Number(draft.sourceLog.rpe) : null }} />
+                 </View>;
+               })}
+             </View> : null}
+@@ -437,7 +439,7 @@ export function WorkoutBody({
+           style={{ alignSelf: 'flex-end', justifyContent: 'center', minHeight: spacing.minimumHitTarget }}>
+           <Text style={{ color: colors.textMuted, ...font.body(12) }}>{t('student.todayWorkoutScreen.copy023')}</Text>
+         </Pressable> : null}
+-      </Card> : null}
++      </Card></CompletedVideoReplayProvider> : null}
+       {!completedDay && (!progressFlow || active) ? <Card
+         testID="workout-hero"
+         style={{
+diff --git a/src/features/training/__tests__/set-save.test.tsx b/src/features/training/__tests__/set-save.test.tsx
+index afbe173..ab2a1ab 100644
+--- a/src/features/training/__tests__/set-save.test.tsx
++++ b/src/features/training/__tests__/set-save.test.tsx
+@@ -7,6 +7,8 @@ import { STORAGE_KEYS } from '../constants';
+ import { StudentExercisePicker } from '../StudentExercisePicker';
+ import { TrainingWeekStrip } from '../TrainingWeekStrip';
+ import { HoldToCompleteButton } from '../HoldToCompleteButton';
++import { SetVideoUploadIndicator } from '../video-upload/VideoStatusIcon';
++import { VideoPlayback } from '../video-upload/VideoPlayback';
+ import { WorkoutBody } from '../WorkoutBody';
+ import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
+ import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
+@@ -692,3 +694,37 @@ test('removing a student-added card stops on a feedback conflict without restori
+   expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added').map((draft: { setIndex: number }) => draft.setIndex)).toEqual([1, 2]);
+   expect(jest.mocked(Alert.alert).mock.calls.at(-1)?.[1]).toBe(t('student.added.rated'));
+ });
++
++test.each(['uploaded', 'none', 'uploading', 'failed'] as const)('completed summary replay and upload status: %s', async status => {
++  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' }] };
++  storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' }];
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
++    if (path.endsWith('/videos')) return { videos: status === 'none' ? [] : [{ id: 'video', set_log_id: storedLogs[0].id, created_at: '2026-10-14T11:00:00Z' }] } as never;
++    if (path.endsWith('/feedback')) return { items: [
++      { id: 'latest-feedback', video_id: 'video', posted_at: '2026-10-15T12:00:00Z' },
++      { id: 'old-feedback', video_id: 'video', posted_at: '2026-10-14T12:00:00Z' },
++    ] } as never;
++    return original(path, options);
++  });
++  if (status === 'uploading' || status === 'failed') useVideoUploadStore.setState({ hydrated: true, records: { [`${studentId}:${plan.days[0].exercises[0].sets[0].id}`]: { ...EMPTY_VIDEO_UPLOAD, status, setLogId: storedLogs[0].id, localUri: 'file:///still-uploading.mp4' } } });
++  await mount();
++  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
++  const summary = renderer.root.findAllByProps({ testID: 'completed-day-card' })[0];
++  await act(async () => summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false)[0].props.onPress());
++  if (status !== 'uploaded') {
++    expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo'))).toHaveLength(0);
++    if (status === 'none') return;
++    expect(summary.findAllByType(SetVideoUploadIndicator)).toHaveLength(1);
++    // Completing the pending upload updates the mounted summary without navigation.
++    await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
++  }
++  expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
++  await act(async () => summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo'))[0].props.onPress());
++  expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
++  await act(async () => renderer.root.findByType(VideoPlayback).props.onReview());
++  expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(student)/feedback/[feedbackId]', params: { feedbackId: 'latest-feedback' } });
++  expect(renderer.root.findAllByType(VideoPlayback)).toHaveLength(0);
++  expect(writes).toBe(0);
++});
+diff --git a/src/features/training/video-upload/SetVideoPlayer.tsx b/src/features/training/video-upload/SetVideoPlayer.tsx
+index b110fe7..c5a5a98 100644
+--- a/src/features/training/video-upload/SetVideoPlayer.tsx
++++ b/src/features/training/video-upload/SetVideoPlayer.tsx
+@@ -13,13 +13,14 @@ import { useSetVideoPlayerHost } from './SetVideoPlayerHost';
+ import { initialSetPlayback, setPlaybackRates, setPlaybackReducer } from './set-playback';
+ 
+ /** The host keeps the native surface mounted across inline/full-screen layout changes. */
+-export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refreshURL: () => Promise<string>; badge?: VideoBadgeInfo | null }) {
+-  const host = useSetVideoPlayerHost();
++export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClose, onReview }: { uri: string; refreshURL: () => Promise<string>; badge?: VideoBadgeInfo | null; readOnly?: boolean; onClose?: () => void; onReview?: () => void }) {
++  const availableHost = useSetVideoPlayerHost();
++  const host = readOnly ? null : availableHost;
+   const anchor = useRef<View>(null);
+   const [inlineWidth, setInlineWidth] = useState(0);
+   const colors = useColors();
+   const insets = useSafeAreaInsets();
+-  const [state, dispatch] = useReducer(setPlaybackReducer, initialSetPlayback);
++  const [state, dispatch] = useReducer(setPlaybackReducer, { ...initialSetPlayback, expanded: readOnly, paused: !readOnly });
+   const player = useRef<VideoRef>(null);
+   const [loaded, setLoaded] = useState(false);
+   const [scrubbing, setScrubbing] = useState(false);
+@@ -92,7 +93,7 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
+         <Text style={{ ...font.body(fontMetrics.size13, 'semibold'), color: colors.inkOnCTAFill }}>{state.rate}×</Text>
+       </Pressable>
+     </View>
+-    <PlayerIconButton name={state.expanded ? 'fullscreen-exit' : 'fullscreen'} label={t(state.expanded ? 'training.previewCollapse' : 'training.previewExpand')} onPress={resize} />
++    {!readOnly ? <PlayerIconButton name={state.expanded ? 'fullscreen-exit' : 'fullscreen'} label={t(state.expanded ? 'training.previewCollapse' : 'training.previewExpand')} onPress={resize} /> : null}
+   </View>;
+   const inlineOverlay = Boolean(host) && !state.expanded;
+   const centralPlayStyle = { width: spacing.point56, height: spacing.point56, borderRadius: radius.pill, backgroundColor: colors.modalShadow, alignItems: 'center', justifyContent: 'center' } as const;
+@@ -110,12 +111,25 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
+         onError={() => { if (!renewed.current) { renewed.current = true; void retry(); } else setFailed(true); }} />
+       {!loaded && !failed ? <ActivityIndicator style={StyleSheet.absoluteFill} color={colors.inkOnCTAFill} /> : null}
+     </View>
+-    {failed ? <View pointerEvents={inlineOverlay ? 'box-none' : 'auto'} style={[StyleSheet.absoluteFill, { bottom: state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center', gap: spacing.sm }]}>
++    {failed ? <View pointerEvents={inlineOverlay ? 'box-none' : 'auto'} style={[StyleSheet.absoluteFill, { top: readOnly ? insets.top + spacing.minimumHitTarget + spacing.sm : 0, bottom: readOnly ? controlsHeight + spacing.point56 : state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center', gap: spacing.sm }]}>
+       <Text pointerEvents={inlineOverlay ? 'none' : 'auto'} style={{ ...font.body(fontMetrics.size13), color: colors.inkOnCTAFill }}>{t('student.videoAttachmentSection.copy004')}</Text>
+       <PlayerIconButton name="refresh" label={t('student.videoAttachmentSection.copy002')} onPress={() => void retry()} />
+     </View> : null}
+     {state.expanded ? <>
+-      <View style={{ padding: spacing.base, paddingTop: insets.top + spacing.sm, backgroundColor: colors.modalShadow }}>
++      {readOnly ? <>
++        <View style={{ paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
++          <PlayerIconButton name="close" label={t('chat.closePlayback')} onPress={() => onClose?.()} />
++          {onReview ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.coachReviewed')} onPress={onReview}
++            style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
++            <View style={{ height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: 'rgba(17,24,39,.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,.18)', flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
++              <Text style={{ ...font.body(12, 'semibold'), color: '#FFFFFF' }}>{t('training.coachReviewed')}</Text>
++              <MaterialCommunityIcons name="chevron-right" size={14} color="#FFFFFF" />
++            </View>
++          </Pressable> : null}
++        </View>
++        <View style={{ flex: 1 }} />
++      </> : null}
++      <View style={{ padding: spacing.base, paddingTop: readOnly ? spacing.sm : insets.top + spacing.sm, backgroundColor: colors.modalShadow }}>
+         <Text style={{ ...font.body(fontMetrics.size17, 'semibold'), color: colors.inkOnCTAFill }}>{badge?.exerciseName}</Text>
+         <Text style={{ ...font.body(fontMetrics.size13), color: colors.inkOnCTAFill }}>{[
+           badge?.setOrdinal != null ? t('chat.setPosition %@', [badge.setOrdinal]) : null,
+@@ -123,11 +137,11 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
+           badge?.rpe != null ? `${t('chat.rpeMetric')} ${badge.rpe}` : null,
+         ].filter(Boolean).join(' · ')}</Text>
+       </View>
+-      <View style={{ flex: 1 }} />
++      {!readOnly ? <View style={{ flex: 1 }} /> : null}
+     </> : null}
+     {controls}
+     {state.expanded ? <StatusBar style="light" /> : null}
+-    {state.paused && loaded && !failed ? <View pointerEvents={inlineOverlay ? 'none' : 'box-none'} importantForAccessibility={inlineOverlay ? 'no-hide-descendants' : 'auto'} style={[StyleSheet.absoluteFill, { bottom: state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center' }]}>
++    {state.paused && loaded && !failed ? <View pointerEvents={inlineOverlay ? 'none' : 'box-none'} importantForAccessibility={inlineOverlay ? 'no-hide-descendants' : 'auto'} style={[StyleSheet.absoluteFill, { top: readOnly ? insets.top + spacing.minimumHitTarget + spacing.sm : 0, bottom: readOnly ? controlsHeight + spacing.point56 : state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center' }]}>
+       {inlineOverlay ? <View testID="set-video-central-play" style={centralPlayStyle}>{centralPlayIcon}</View> : <Pressable testID="set-video-central-play" accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={togglePlayback}
+         style={centralPlayStyle}>
+         {centralPlayIcon}
+diff --git a/src/features/training/video-upload/VideoPlayback.tsx b/src/features/training/video-upload/VideoPlayback.tsx
+index 4feed12..a2175c2 100644
+--- a/src/features/training/video-upload/VideoPlayback.tsx
++++ b/src/features/training/video-upload/VideoPlayback.tsx
+@@ -11,17 +11,19 @@ import { SetVideoPlayer } from './SetVideoPlayer';
+ import { selectPlaybackSource } from './local-retention';
+ 
+ /** Source resolution only; the OverlayHost owner supplies the full-screen layer. */
+-export function VideoPlayback({ localUri, attachmentId, onClose, badge, inline = false }: {
++export function VideoPlayback({ localUri, attachmentId, onClose, badge, inline = false, readOnly = false, onReview }: {
+   inline?: boolean;
++  readOnly?: boolean;
++  onReview?: () => void;
+   badge?: VideoBadgeInfo | null;
+   localUri: string | null;
+   attachmentId: string | null;
+   onClose: () => void;
+ }) {
+-  return <ResolvedVideoPlayback key={inline ? 'inline' : `${attachmentId}:${localUri}`} inline={inline} localUri={localUri} attachmentId={attachmentId} onClose={onClose} badge={badge} />;
++  return <ResolvedVideoPlayback key={inline ? 'inline' : `${attachmentId}:${localUri}`} inline={inline} readOnly={readOnly} onReview={onReview} localUri={localUri} attachmentId={attachmentId} onClose={onClose} badge={badge} />;
+ }
+ 
+-function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge, inline }: { inline: boolean; localUri: string | null; attachmentId: string | null; onClose: () => void; badge?: VideoBadgeInfo | null }) {
++function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge, inline, readOnly, onReview }: { inline: boolean; readOnly: boolean; onReview?: () => void; localUri: string | null; attachmentId: string | null; onClose: () => void; badge?: VideoBadgeInfo | null }) {
+   const colors = useColors();
+   const [uri, setUri] = useState<string | null>(null);
+   const [failed, setFailed] = useState(false);
+@@ -40,7 +42,7 @@ function ResolvedVideoPlayback({ localUri, attachmentId, onClose, badge, inline
+       .catch(() => { if (live) setFailed(true); });
+     return () => { live = false; };
+   }, [refreshURL, attempt]);
+-  if (uri && inline) return <SetVideoPlayer uri={uri} refreshURL={refreshURL} badge={badge} />;
++  if (uri && (inline || readOnly)) return <SetVideoPlayer uri={uri} refreshURL={refreshURL} badge={badge} readOnly={readOnly} onClose={onClose} onReview={onReview} />;
+   if (uri) return <FeedbackVideoPlayer videoId={attachmentId ?? localUri ?? ''} url={uri} markers={null} badge={badge} refreshURL={refreshURL} onClose={onClose} />;
+   const Container = inline ? View : SafeAreaView;
+   return <Container style={inline ? { backgroundColor: colors.videoWorkbenchFill } : { flex: 1, backgroundColor: colors.bgBase }}>
+diff --git a/src/features/training/video-upload/__tests__/set-video-player.test.tsx b/src/features/training/video-upload/__tests__/set-video-player.test.tsx
+index 44af266..1a4cb49 100644
+--- a/src/features/training/video-upload/__tests__/set-video-player.test.tsx
++++ b/src/features/training/video-upload/__tests__/set-video-player.test.tsx
+@@ -257,3 +257,38 @@ test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video atta
+     expect(label.props.numberOfLines).toBe(1);
+   }
+ });
++
++test.each([{ locale: 'en', reviewedLabel: 'Coach reviewed' }, { locale: 'zh', reviewedLabel: '教练已点评' }, { locale: 'zh-Hant', reviewedLabel: '教練已點評' }] as const)('read-only replay in $locale opens full screen with close and coach feedback, without editing actions', async ({ locale, reviewedLabel }) => {
++  setLocaleOverride(locale);
++  const close = jest.fn();
++  const review = jest.fn();
++  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}>
++    <SetVideoPlayer uri="file:///sample.mp4" refreshURL={async () => 'file:///sample.mp4'} readOnly onClose={close} onReview={review}
++      badge={{ exerciseName: 'Squat', setOrdinal: 2, weightKg: 100, reps: 5, rpe: 8 }} />
++  </SafeAreaInsetsContext.Provider>); });
++  const labels = renderer.root.findAllByType(FeedbackPressable).map(node => node.props.accessibilityLabel);
++  expect(labels).toContain(t('chat.closePlayback'));
++  expect(labels).toContain(reviewedLabel);
++  expect(labels).not.toContain(t('training.previewExpand'));
++  expect(labels).not.toContain(t('training.previewCollapse'));
++  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(0);
++  press(reviewedLabel);
++  expect(review).toHaveBeenCalledTimes(1);
++  press(t('chat.closePlayback'));
++  expect(close).toHaveBeenCalledTimes(1);
++});
++
++
++test('unreviewed replay hides the badge and silently renews an expired playback URL', async () => {
++  setLocaleOverride('en');
++  const refreshURL = jest.fn<() => Promise<string>>().mockResolvedValue('https://video.test/renewed');
++  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}>
++    <SetVideoPlayer uri="https://video.test/expired" refreshURL={refreshURL} readOnly onClose={() => {}} />
++  </SafeAreaInsetsContext.Provider>); });
++  expect(renderer.root.findAllByType(FeedbackPressable).some(node => node.props.accessibilityLabel === t('training.coachReviewed'))).toBe(false);
++  await act(async () => renderer.root.findByType(Video).props.onError?.({} as never));
++  expect(renderer.root.findByType(Video).props.source).toEqual({ uri: 'https://video.test/renewed' });
++  act(() => renderer.root.findByType(Video).props.onLoad?.({ duration: 20 } as never));
++  expect(renderer.root.findByType(Video).props.paused).toBe(false);
++  expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.videoAttachmentSection.copy004'))).toBe(false);
++});
+diff --git a/src/i18n/catalog/RnExtras.json b/src/i18n/catalog/RnExtras.json
+index 1532f85..5d30d15 100644
+--- a/src/i18n/catalog/RnExtras.json
++++ b/src/i18n/catalog/RnExtras.json
+@@ -1,4 +1,5 @@
+ {
++"training.coachReviewed": {"en": "Coach reviewed", "zh": "教练已点评"},
+ "androidUpdate.title": {"en": "New version %@ available", "zh": "发现新版本 %@"},
+ "androidUpdate.installHint": {"en": "After downloading, follow your phone’s instructions to install. Keep the current app installed.", "zh": "下载后按手机提示安装即可，无需卸载当前 App。"},
+ "androidUpdate.later": {"en": "Not now", "zh": "稍后再说"},
+diff --git a/src/i18n/generated/zh-Hant.json b/src/i18n/generated/zh-Hant.json
+index 7f45741..2835d8e 100644
+--- a/src/i18n/generated/zh-Hant.json
++++ b/src/i18n/generated/zh-Hant.json
+@@ -2118,6 +2118,7 @@
+   "student.e1rmSourceStudentRPE": "學員 RPE",
+   "student.e1rmSourceTitle": "e1RM 來源",
+   "student.e1rmSourceUnavailable": "原始計算明細不可完整還原，展示已儲存的估算值。",
++  "training.coachReviewed": "教練已點評",
+   "androidUpdate.title": "發現新版本 %@",
+   "androidUpdate.installHint": "下載後按手機提示安裝即可，無需解除安裝當前 App。",
+   "androidUpdate.later": "稍後再說",
+diff --git a/src/features/training/video-upload/CompletedVideoReplay.tsx b/src/features/training/video-upload/CompletedVideoReplay.tsx
+new file mode 100644
+index 0000000..3021e25
+--- /dev/null
++++ b/src/features/training/video-upload/CompletedVideoReplay.tsx
+@@ -0,0 +1,78 @@
++import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
++import { Modal } from 'react-native';
++import { useRouter } from 'expo-router';
++import { feedbackRepository, type FeedbackItem } from '@/api/domains/feedback';
++import { VideoPlayback } from './VideoPlayback';
++import { File } from 'expo-file-system';
++import { videosRepository, type StudentVideo } from '@/api/domains/videos';
++import { spacing, useTheme } from '@/design';
++import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
++import { t } from '@/i18n';
++import type { VideoBadgeInfo } from '@/features/video-player/types';
++import { hydrateVideoUploads, useVideoUploadStore } from './store';
++import { EMPTY_VIDEO_UPLOAD } from './model';
++import { latestVideoFeedbackId, playableSetVideo, type ReplayVideo } from './completed-replay';
++import { SetVideoUploadIndicator } from './VideoStatusIcon';
++
++type ReplaySelection = ReplayVideo & { badge: VideoBadgeInfo };
++const ReplayContext = createContext<{ studentId: string; videos: readonly StudentVideo[]; play: (selection: ReplaySelection) => void }>({ studentId: '', videos: [], play: () => {} });
++
++/** One list request for all rows, kept separate from editable attachment hydration. */
++export function CompletedVideoReplayProvider({ studentId, children, onNavigate }: { studentId: string; children: ReactNode; onNavigate?: () => void }) {
++  const router = useRouter();
++  const [selection, setSelection] = useState<ReplaySelection | null>(null);
++  const [feedback, setFeedback] = useState<{ studentId: string; items: FeedbackItem[] } | null>(null);
++  const videoId = selection?.attachmentId ?? null;
++  useEffect(() => {
++    let live = true;
++    if (studentId && videoId) void feedbackRepository.list(studentId).then(({ items }) => { if (live) setFeedback({ studentId, items }); }).catch(() => {});
++    return () => { live = false; };
++  }, [studentId, videoId]);
++  const feedbackId = latestVideoFeedbackId(videoId, feedback?.studentId === studentId ? feedback.items : []);
++  const [result, setResult] = useState<{ studentId: string; videos: StudentVideo[] } | null>(null);
++  const uploads = useVideoUploadStore(state => Object.entries(state.records)
++    .filter(([key, record]) => key.startsWith(`${studentId}:`) && record.status === 'uploaded')
++    .map(([key, record]) => `${key}:${record.attachmentId}`).join('|'));
++  useEffect(() => {
++    let live = true;
++    void hydrateVideoUploads();
++    if (studentId) void videosRepository.list(studentId).then(({ videos }) => {
++      if (live) setResult({ studentId, videos });
++    }).catch(() => { /* Video availability must not block the existing day. */ });
++    return () => { live = false; };
++  }, [studentId, uploads]);
++  return <ReplayContext.Provider value={{ studentId, videos: result?.studentId === studentId ? result.videos : [], play: setSelection }}>
++    {children}
++    {selection ? <Modal visible animationType="fade" presentationStyle="fullScreen" onRequestClose={() => setSelection(null)}>
++      <VideoPlayback {...selection} readOnly onClose={() => setSelection(null)} onReview={feedbackId ? () => {
++        setSelection(null);
++        onNavigate?.();
++        router.push({ pathname: '/(student)/feedback/[feedbackId]', params: { feedbackId } });
++      } : undefined} />
++    </Modal> : null}
++  </ReplayContext.Provider>;
++}
++
++export function CompletedSetVideo({ setLogId, stableSetId, badge }: { setLogId: string | null; stableSetId?: string; badge: VideoBadgeInfo }) {
++  const { studentId, videos, play } = useContext(ReplayContext);
++  const { scheme } = useTheme();
++  const entry = useVideoUploadStore(state => {
++    const direct = stableSetId ? state.records[`${studentId}:${stableSetId}`] : undefined;
++    return direct && (!direct.setLogId || direct.setLogId === setLogId)
++      ? direct : Object.entries(state.records).find(([key, record]) => key.startsWith(`${studentId}:`) && setLogId && record.setLogId === setLogId)?.[1] ?? EMPTY_VIDEO_UPLOAD;
++  });
++  const records = useVideoUploadStore(state => state.records);
++  const indicatorSetId = stableSetId ?? Object.keys(records).find(key => records[key] === entry)?.slice(studentId.length + 1);
++  const localUri = entry.localUri ?? entry.source?.uri;
++  let exists = false;
++  try { exists = Boolean(localUri && new File(localUri).exists); } catch { /* Missing retained file falls back to remote. */ }
++  const video = playableSetVideo(setLogId, videos, entry, exists);
++  if (entry.status !== 'none' && entry.status !== 'uploaded' && indicatorSetId) return <SetVideoUploadIndicator studentId={studentId} stableSetId={indicatorSetId} />;
++  if (!video) return null;
++  return <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')}
++    onPress={() => play({ ...video, badge })}
++    style={{ minWidth: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}>
++    <MaterialCommunityIcons name="play-circle-outline" size={22} color={scheme === 'dark' ? '#6B6B72' : '#9CA3AF'} />
++  </Pressable>;
++}
+diff --git a/src/features/training/video-upload/__tests__/completed-replay.test.ts b/src/features/training/video-upload/__tests__/completed-replay.test.ts
+new file mode 100644
+index 0000000..000b106
+--- /dev/null
++++ b/src/features/training/video-upload/__tests__/completed-replay.test.ts
+@@ -0,0 +1,35 @@
++import { expect, test } from '@jest/globals';
++import { latestVideoFeedbackId, playableSetVideo } from '../completed-replay';
++import { EMPTY_VIDEO_UPLOAD } from '../model';
++import type { StudentVideo } from '@/api/domains/videos';
++
++test('reviewed means matching feedback, choosing the newest posted entry', () => {
++  const feedback = [
++    { id: 'new', video_id: 'video', posted_at: '2026-10-24T12:00:00Z' },
++    { id: 'other', video_id: 'other-video', posted_at: '2026-10-24T13:00:00Z' },
++    { id: 'old', video_id: 'video', posted_at: '2026-10-23T12:00:00Z' },
++  ];
++  expect(latestVideoFeedbackId('video', feedback)).toBe('new');
++  expect(latestVideoFeedbackId('unreviewed', feedback)).toBeNull();
++  expect(latestVideoFeedbackId(null, feedback)).toBeNull();
++});
++
++test('a set replays its newest uploaded video, with a retained local file preferred', () => {
++  const videos = [video('old', '2026-10-23T12:00:00Z'), video('new', '2026-10-24T12:00:00Z')];
++  expect(playableSetVideo('log', videos, EMPTY_VIDEO_UPLOAD, false)).toEqual({ attachmentId: 'new', localUri: null });
++  const local = { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded' as const, setLogId: 'log', attachmentId: 'new', localUri: 'file:///set.mp4', createdAt: Date.parse('2026-10-24T12:00:00Z') };
++  expect(playableSetVideo('log', videos, local, true)).toEqual({ attachmentId: 'new', localUri: 'file:///set.mp4' });
++  expect(playableSetVideo('log', [], { ...local, attachmentId: null }, true)).toEqual({ attachmentId: null, localUri: 'file:///set.mp4' });
++  expect(playableSetVideo('log', [], { ...local, attachmentId: null }, false)).toBeNull();
++  expect(playableSetVideo('different', videos, EMPTY_VIDEO_UPLOAD, false)).toBeNull();
++});
++
++function video(id: string, created_at: string): StudentVideo {
++  return { id, created_at, set_log_id: 'log', plan_exercise_id: null, exercise_name: null, set_index: 0, weight_kg: null, reps: null, content_type: 'video/mp4', size_bytes: 100, filename: null, logged_at: null };
++}
++
++test.each(['pending', 'preparing', 'uploading', 'waiting', 'failed'] as const)('%s hides replay even with an older remote or retained file', status => {
++  expect(playableSetVideo('log', [video('old', '2026-10-23T12:00:00Z')], {
++    ...EMPTY_VIDEO_UPLOAD, status, localUri: 'file:///set.mp4', attachmentId: 'upload',
++  }, true)).toBeNull();
++});
+diff --git a/src/features/training/video-upload/completed-replay.ts b/src/features/training/video-upload/completed-replay.ts
+new file mode 100644
+index 0000000..df95f6b
+--- /dev/null
++++ b/src/features/training/video-upload/completed-replay.ts
+@@ -0,0 +1,30 @@
++import type { FeedbackItem } from '@/api/domains/feedback';
++import type { StudentVideo } from '@/api/domains/videos';
++import type { VideoUploadRecord } from './model';
++
++export function latestVideoFeedbackId(
++  videoId: string | null,
++  feedback: readonly Pick<FeedbackItem, 'id' | 'video_id' | 'posted_at'>[],
++): string | null {
++  if (!videoId) return null;
++  return [...feedback].filter(item => item.video_id === videoId)
++    .sort((a, b) => Date.parse(b.posted_at) - Date.parse(a.posted_at))[0]?.id ?? null;
++}
++
++export type ReplayVideo = { attachmentId: string | null; localUri: string | null };
++
++export function playableSetVideo(
++  setLogId: string | null,
++  videos: readonly StudentVideo[],
++  upload: VideoUploadRecord,
++  localFileExists: boolean,
++): ReplayVideo | null {
++  if (upload.status !== 'none' && upload.status !== 'uploaded') return null;
++  const remote = setLogId ? [...videos].filter(video => video.set_log_id === setLogId)
++    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0] : undefined;
++  const localUri = localFileExists ? upload.localUri ?? upload.source?.uri ?? null : null;
++  if ((upload.attachmentId || localUri) && (!remote || upload.attachmentId === remote.id || upload.createdAt >= Date.parse(remote.created_at))) {
++    return { attachmentId: upload.attachmentId, localUri };
++  }
++  return remote ? { attachmentId: remote.id, localUri: null } : null;
++}

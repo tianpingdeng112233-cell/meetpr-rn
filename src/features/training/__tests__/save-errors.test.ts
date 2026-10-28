@@ -29,3 +29,14 @@ describe('set save error mapping', () => {
     );
   });
 });
+
+test.each([
+  ['SET_HAS_ATTACHMENT', 'This set has a video. Open it to remove the video first.'],
+  ['SET_HAS_COACH_FEEDBACK', "Your coach has already rated this set, so it can't be removed."],
+  ['SETS_ADHOC_DAY_CONFLICT', "You've already added this exercise to another training day today."],
+  ['SET_NOT_STUDENT_ADDED', 'Only student-added sets can be removed.'],
+])('student-added error %s gives its specific recovery message', (code, message) => {
+  setLocaleOverride('en');
+  expect(saveErrorCopy(Object.assign(new ApiError('backend', code, { status: 409 }), { code }))).toBe(message);
+  setLocaleOverride(null);
+});

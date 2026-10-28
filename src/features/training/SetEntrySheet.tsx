@@ -118,10 +118,10 @@ export function SetEntrySheet({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const prescription = decodePrescription(draft.planSet);
   const allowedSuggestion =
-    !prescription.loadMode || prescription.intensity?.kind === 'pct'
+    !draft.kind && (!prescription.loadMode || prescription.intensity?.kind === 'pct')
       ? suggestion
       : null;
-  const seed = entryPrefill(
+  const seed = draft.kind ? draft.weightText : entryPrefill(
     draft.planSet,
     draft.weightText || null,
     allowedSuggestion,
@@ -137,7 +137,7 @@ export function SetEntrySheet({
     initialWeight,
   );
   const [repsText, setRepsText] = useState(draft.repsText);
-  const [rpeText, setRpeText] = useState(draft.rpeText || '8');
+  const [rpeText, setRpeText] = useState(draft.rpeText || (draft.kind ? '' : '8'));
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [presented, setPresented] = useState(false);
@@ -163,7 +163,7 @@ export function SetEntrySheet({
   const rpe = parseFiniteDecimal(rpeText) ?? 8;
   const weightFloor = draft.exercise.is_main_lift ? 20 : 0;
   const isAutomatic = Boolean(activeSuggestion?.percentage) && !weightEntry.userEdited;
-  const caption = suggestion?.percentage ? suggestion.label : suggestionReason
+  const caption = draft.kind ? null : suggestion?.percentage ? suggestion.label : suggestionReason
     ? prescription.intensity?.kind === 'pct' ? suggestionReason : t('student.setEntrySheet.copy002', [suggestionReason])
     : null;
   const changeRPE = useCallback((value: number) => {

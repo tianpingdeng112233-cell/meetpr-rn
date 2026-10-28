@@ -1,0 +1,7 @@
+--- adb starting (pid 12777) ---
+10-24 14:38:11.173 12777 14479987 I adb     : main.cpp:66 Android Debug Bridge version 1.0.41
+10-24 14:38:11.173 12777 14479987 I adb     : main.cpp:66 Version 37.0.0-14910828
+10-24 14:38:11.173 12777 14479987 I adb     : main.cpp:66 Installed as /opt/homebrew/share/android-commandlinetools/platform-tools/adb
+10-24 14:38:11.173 12777 14479987 I adb     : main.cpp:66 Running on Darwin 25.4.0 (arm64)
+10-24 14:38:11.173 12777 14479987 I adb     : main.cpp:66 
+10-24 14:38:11.716 12777 14479987 F adb     : main.cpp:165 could not install *smartsocket* listener: Operation not permitted

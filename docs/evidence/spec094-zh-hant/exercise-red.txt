@@ -1,0 +1,318 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-picker.test.ts
+
+FAIL src/features/training/__tests__/exercise-picker.test.ts
+  ✓ picker family squat includes main lifts and variations (2 ms)
+  ✓ picker family bench includes main lifts and variations
+  ✓ picker family deadlift includes main lifts and variations (1 ms)
+  ✓ picker muscle core maps to core (1 ms)
+  ✓ picker muscle chest maps to chest (1 ms)
+  ✓ picker muscle back maps to back
+  ✓ picker muscle shoulder maps to shoulders (3 ms)
+  ✓ picker muscle biceps maps to biceps (1 ms)
+  ✓ picker muscle triceps maps to triceps
+  ✓ picker muscle trap maps to traps (1 ms)
+  ✓ picker muscle traps maps to traps
+  ✓ picker muscle forearm maps to forearms
+  ✓ picker muscle quad maps to quads
+  ✓ picker muscle glute maps to glutes
+  ✓ picker muscle hamstring maps to hamstrings (5 ms)
+  ✓ picker muscle calf maps to calves (4 ms)
+  ✓ picker muscle adductor maps to adductors
+  ✓ picker muscle hip maps to hips (1 ms)
+  ✓ picker muscle grip maps to forearms
+  ✓ picker muscle hip_flexor maps to hips (1 ms)
+  ✓ picker muscle tibialis maps to calves (1 ms)
+  ✓ picker muscle mobility maps to other
+  ✓ picker muscle cardio maps to other
+  ✓ picker combines bilingual search and one tag; multi-muscle and missing metadata remain predictable (1 ms)
+  ✕ search 臥推 finds canonical 卧推 without changing stored data (9 ms)
+  ✕ search 硬舉 finds canonical 相扑硬拉 without changing stored data (1 ms)
+  ✕ search 相撲硬舉 finds canonical 相扑硬拉 without changing stored data (2 ms)
+  ✕ search 二頭彎舉 finds canonical 二头弯举 without changing stored data (1 ms)
+  ✕ search 啞鈴 finds canonical 哑铃弯举 without changing stored data (1 ms)
+  ✕ search 槓鈴 finds canonical 杠铃划船 without changing stored data
+  ✕ Traditional catalog names display locally while custom names remain verbatim (3 ms)
+  ✕ search works with Traditional backend names and Simplified input too (1 ms)
+
+  ● search 臥推 finds canonical 卧推 without changing stored data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "卧推",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      24 | ])('search %s finds canonical %s without changing stored data', (query, name) => {
+      25 |   const item = exercise({ name });
+    > 26 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      27 |   expect(item.name).toBe(name);
+      28 | });
+      29 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:26:56)
+
+  ● search 硬舉 finds canonical 相扑硬拉 without changing stored data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "相扑硬拉",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      24 | ])('search %s finds canonical %s without changing stored data', (query, name) => {
+      25 |   const item = exercise({ name });
+    > 26 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      27 |   expect(item.name).toBe(name);
+      28 | });
+      29 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:26:56)
+
+  ● search 相撲硬舉 finds canonical 相扑硬拉 without changing stored data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "相扑硬拉",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      24 | ])('search %s finds canonical %s without changing stored data', (query, name) => {
+      25 |   const item = exercise({ name });
+    > 26 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      27 |   expect(item.name).toBe(name);
+      28 | });
+      29 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:26:56)
+
+  ● search 二頭彎舉 finds canonical 二头弯举 without changing stored data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "二头弯举",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      24 | ])('search %s finds canonical %s without changing stored data', (query, name) => {
+      25 |   const item = exercise({ name });
+    > 26 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      27 |   expect(item.name).toBe(name);
+      28 | });
+      29 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:26:56)
+
+  ● search 啞鈴 finds canonical 哑铃弯举 without changing stored data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "哑铃弯举",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      24 | ])('search %s finds canonical %s without changing stored data', (query, name) => {
+      25 |   const item = exercise({ name });
+    > 26 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      27 |   expect(item.name).toBe(name);
+      28 | });
+      29 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:26:56)
+
+  ● search 槓鈴 finds canonical 杠铃划船 without changing stored data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "杠铃划船",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      24 | ])('search %s finds canonical %s without changing stored data', (query, name) => {
+      25 |   const item = exercise({ name });
+    > 26 |   expect(filterStudentExercises([item], 'all', query)).toEqual([item]);
+         |                                                        ^
+      27 |   expect(item.name).toBe(name);
+      28 | });
+      29 |
+
+      at toEqual (src/features/training/__tests__/exercise-picker.test.ts:26:56)
+
+  ● Traditional catalog names display locally while custom names remain verbatim
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "相撲硬舉"
+    Received: "相扑硬拉"
+
+      30 | test('Traditional catalog names display locally while custom names remain verbatim', () => {
+      31 |   setLocaleOverride('zh-Hant');
+    > 32 |   expect(exerciseDisplayName(exercise({ name: '相扑硬拉' }))).toBe('相撲硬舉');
+         |                                                           ^
+      33 |   expect(exerciseDisplayName(exercise({ name: '卧推' }))).toBe('臥推');
+      34 |   expect(exerciseDisplayName(exercise({ name: '哑铃弯举', created_by_coach_id: 'coach' }))).toBe('哑铃弯举');
+      35 |   expect(exerciseDisplayName({ name: '我的卧推', name_en: null })).toBe('我的卧推');
+
+      at Object.toBe (src/features/training/__tests__/exercise-picker.test.ts:32:59)
+
+  ● search works with Traditional backend names and Simplified input too
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Object {
+    -     "competition_stance": null,
+    -     "created_at": "",
+    -     "created_by_coach_id": null,
+    -     "equipment": null,
+    -     "exercise_type": "accessory",
+    -     "id": "curl",
+    -     "is_competition_lift": false,
+    -     "main_lift_family": null,
+    -     "movement_pattern": null,
+    -     "muscle_groups": Array [
+    -       "biceps",
+    -     ],
+    -     "name": "相撲硬舉",
+    -     "name_en": "Dumbbell curl",
+    -   },
+    - ]
+    + Array []
+
+      38 | test('search works with Traditional backend names and Simplified input too', () => {
+      39 |   const item = exercise({ name: '相撲硬舉' });
+    > 40 |   expect(filterStudentExercises([item], 'all', '相扑硬拉')).toEqual([item]);
+         |                                                         ^
+      41 | });
+      42 |
+
+      at Object.toEqual (src/features/training/__tests__/exercise-picker.test.ts:40:57)
+
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 24 passed, 32 total
+Snapshots:   0 total
+Time:        2.638 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-picker.test.ts/i.

@@ -1,0 +1,1459 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/auth/__tests__/global-auth-screens.test.tsx src/features/updates/__tests__/android-update-session.test.tsx scripts/__tests__/android-update-release.test.js
+
+FAIL src/features/auth/__tests__/global-auth-screens.test.tsx (34.747 s)
+  ● Console
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+    console.error
+      An update to ForwardRef(FeedbackPressable) inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+       9 | function update(value: boolean) {
+      10 |   reduced = value;
+    > 11 |   listeners.forEach(listener => listener());
+         |                                 ^
+      12 | }
+      13 | function subscribe(listener: () => void) {
+      14 |   listeners.add(listener);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14402:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:2315:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14401:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12086:9)
+      at forceStoreRerender (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5432:24)
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:5417:11
+      at listener (src/design/useReducedMotion.ts:11:33)
+          at Set.forEach (<anonymous>)
+      at forEach (src/design/useReducedMotion.ts:11:13)
+      at update (src/design/useReducedMotion.ts:18:93)
+
+  ● CN zh-Hant screens use localized copy and light system typography while keeping the slogan
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 5
+    + Received  + 4
+
+      Object {
+    -   "fontFamily": undefined,
+    -   "fontSize": 30,
+    -   "fontWeight": "500",
+    -   "letterSpacing": 1,
+    -   "lineHeight": 40,
+    +   "fontFamily": "Archivo_800ExtraBold",
+    +   "fontSize": 44,
+    +   "letterSpacing": -1.1,
+    +   "lineHeight": 41.8,
+      }
+
+      317 |   act(() => renderer.update(<GlobalRegisterScreen />));
+      318 |   const heading = renderer.root.findAllByType(Text).find(node => node.props.children === t('auth.registerTitle'))!;
+    > 319 |   expect(StyleSheet.flatten(heading.props.style)).toMatchObject({ fontFamily: undefined, fontWeight: '500', fontSize: 30, lineHeight: 40, letterSpacing: 1 });
+          |                                                   ^
+      320 |   const label = renderer.root.findAllByType(Text).find(node => node.props.children === t('auth.email'))!;
+      321 |   expect(StyleSheet.flatten(label.props.style)).toMatchObject({ fontFamily: undefined, fontWeight: '400', fontSize: 12, letterSpacing: 0.5 });
+      322 |   expect(input(t('auth.signupCode')).props.placeholder).toBe(t('auth.codePlaceholder'));
+
+      at toMatchObject (src/features/auth/__tests__/global-auth-screens.test.tsx:319:51)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/auth/__tests__/global-auth-screens.test.tsx:330:2)
+
+FAIL src/features/updates/__tests__/android-update-session.test.tsx
+  ● Traditional update prompts use generated release notes and Taiwan UI copy
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "改善教練邀請流程"
+    Received string:    "改进教练邀请流程·
+    下載後按手機提示安裝即可，無需解除安裝當前 App。"
+
+      79 |   await act(async () => { tree = create(<AndroidUpdateSession enabled />); });
+      80 |   expect(alert.mock.calls[0][0]).toBe('發現新版本 0.1.1');
+    > 81 |   expect(alert.mock.calls[0][1]).toContain('改善教練邀請流程');
+         |                                  ^
+      82 |   expect(alert.mock.calls[0][1]).not.toContain('改进教练邀请流程');
+      83 |   expect(alert.mock.calls[0][2]).toContainEqual(expect.objectContaining({ text: '下載更新' }));
+      84 | });
+
+      at Object.toContain (src/features/updates/__tests__/android-update-session.test.tsx:81:34)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL scripts/__tests__/android-update-release.test.js
+  ● release preparation derives metadata from the APK and bundles the immutable APK before its manifest
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Object {
+        "downloadUrl": "https://dl.meetpr.cn/android/releases/2/meetpr-cn.apk",
+        "packageName": "com.meetpr.app",
+        "releaseNotes": "新增版本更新提醒",
+    -   "releaseNotesZhHant": "新增版本更新提醒",
+        "schemaVersion": 1,
+        "versionCode": 2,
+        "versionName": "0.1.0",
+      }
+
+      23 |   prepareAndroidUpdate(options, run, '/sdk/build-tools/36.0.0');
+      24 |   const manifest = JSON.parse(fs.readFileSync(path.join(options.output, 'android/latest.json'), 'utf8'));
+    > 25 |   expect(manifest).toEqual({ schemaVersion: 1, packageName: 'com.meetpr.app', versionCode: 2, versionName: '0.1.0', releaseNotes: '新增版本更新提醒', releaseNotesZhHant: '新增版本更新提醒', downloadUrl: 'https://dl.meetpr.cn/android/releases/2/meetpr-cn.apk' });
+         |                    ^
+      26 |   expect(fs.readFileSync(path.join(options.output, 'android/releases/2/meetpr-cn.apk'), 'utf8')).toBe('new-apk');
+      27 |   expect(fs.readFileSync(path.join(options.output, 'android/meetpr-cn.apk'), 'utf8')).toBe('new-apk');
+      28 | });
+
+      at Object.toEqual (scripts/__tests__/android-update-release.test.js:25:20)
+
+Test Suites: 3 failed, 3 total
+Tests:       3 failed, 44 passed, 47 total
+Snapshots:   0 total
+Time:        36.97 s
+Ran all test suites matching /src\/features\/auth\/__tests__\/global-auth-screens.test.tsx|src\/features\/updates\/__tests__\/android-update-session.test.tsx|scripts\/__tests__\/android-update-release.test.js/i.

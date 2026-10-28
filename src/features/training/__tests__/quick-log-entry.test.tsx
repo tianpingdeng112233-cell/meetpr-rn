@@ -193,5 +193,5 @@ test('Chinese training history text and accessibility label open the existing hi
   expect(copy()).not.toContain('Training history');
   await press('训练历史');
   expect(mockPush).toHaveBeenCalledWith('/training-history');
-  expect(training22.history).toBe('Training history');
+  expect(training22.history).toBe('训练历史');
 });

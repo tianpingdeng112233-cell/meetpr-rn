@@ -1,0 +1,55 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/zh-hant-catalog.test.js
+
+FAIL src/i18n/__tests__/zh-hant-catalog.test.js (7.276 s)
+  ✓ all Traditional copy has the same keys, plural structure and placeholders as Simplified (2121 ms)
+  ✓ generated Traditional artifacts contain zero Simplified-only characters (112 ms)
+  ✓ every approved glossary override wins over OpenCC with longest phrases first (25 ms)
+  ✕ committed generation is deterministic and current (1523 ms)
+  ✕ v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下 (5 ms)
+
+  ● committed generation is deterministic and current
+
+    expect(received).not.toThrow()
+
+    Error name:    "Error"
+    Error message: "Stale zh-Hant: run npm run i18n:zh-Hant"
+
+          78 |     const content = `${JSON.stringify(value, null, 2)}\n`;
+          79 |     if (check) {
+        > 80 |       if (fs.readFileSync(file, 'utf8') !== content) throw new Error(`Stale ${name}: run npm run i18n:zh-Hant`);
+             |                                                            ^
+          81 |     } else fs.writeFileSync(file, content);
+          82 |   }
+          83 | }
+
+      at generate (scripts/generate-zh-hant.cjs:80:60)
+      at generate (src/i18n/__tests__/zh-hant-catalog.test.js:52:16)
+      at Object.<anonymous> (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (src/i18n/__tests__/zh-hant-catalog.test.js:52:36)
+      at Object.toThrow (src/i18n/__tests__/zh-hant-catalog.test.js:52:36)
+
+  ● v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "發布課表，課表，課表編輯器，影片反饋，反饋備註"
+    Received: "釋出課表，課表，課表編輯器，影片反饋，反饋備註"
+
+      55 |
+      56 | test('v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下', () => {
+    > 57 |   expect(convert('发布计划，训练计划，计划编辑器，视频反馈，反馈备注')).toBe('發布課表，課表，課表編輯器，影片反饋，反饋備註');
+         |                                                ^
+      58 |   expect(generated['coach.planning.common.reps']).toBe('下數');
+      59 |   expect(generated['coach.planning.count.setsAndReps %lld %@ %lld']).toBe('%lld 組 %@ %lld 下');
+      60 |   expect(generated['student.feedbackVideoPresentation.copy002']).toBe('{0}kg×{1}下');
+
+      at Object.toBe (src/i18n/__tests__/zh-hant-catalog.test.js:57:48)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 3 passed, 5 total
+Snapshots:   0 total
+Time:        8.545 s
+Ran all test suites matching /src\/i18n\/__tests__\/zh-hant-catalog.test.js/i.

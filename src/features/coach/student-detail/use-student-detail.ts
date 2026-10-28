@@ -29,7 +29,7 @@ export function useStudentDetail(studentId: string, now: Date, growthSelected: b
       const plan = current ? await plansRepository.detail(current.id) : null;
       const start = weekStart(plan, now);
       const [logs, feedback, catalog] = await Promise.all([
-        setsRepository.range(studentId, { from: localDay(start), to: localDay(addDays(start, 7)), scope: 'plan' }),
+        setsRepository.range(studentId, { from: localDay(start), to: localDay(addDays(start, 7)), scope: 'all' }),
         feedbackRepository.list(studentId),
         client.fetchQuery({ queryKey: exerciseKeys.all, queryFn: exercisesRepository.list, staleTime: Infinity }),
       ]);
@@ -44,7 +44,7 @@ export function useStudentDetail(studentId: string, now: Date, growthSelected: b
   const days = makeExecutionDays(main.data?.plan ?? null, main.data?.logs ?? [], now);
   const state: DetailLoadState = main.isPending || student.isPending ? 'loading' : main.isError || student.isError || !student.data ? 'failed' : 'loaded';
   return {
-    student: student.data, main, state, days, overview: makeOverview(days, main.data?.feedback ?? []),
+    student: student.data, main, state, days, overview: makeOverview(days, main.data?.feedback ?? [], main.data?.logs ?? []),
     videos, readiness: readinessRowState(readiness), profile, growth,
     refresh: async () => {
       if (growthSelected) { await growth.refetch(); return; }

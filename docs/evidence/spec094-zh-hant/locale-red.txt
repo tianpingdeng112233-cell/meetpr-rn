@@ -1,0 +1,180 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/t.test.ts
+
+FAIL src/i18n/__tests__/t.test.ts
+  ✓ uses the device language, with English for non-Chinese locales (5 ms)
+  ✓ supports debug overrides and returning to the device language
+  ✓ formats positional placeholders using the canonical pending-bind copy (1 ms)
+  ✓ Today header joins the localized date and weekday without duplicating the Chinese prefix
+  ✓ substitutes object and positional placeholders without reprocessing parameter text (1 ms)
+  ✓ selects English one/other and the Chinese plural copy
+  ✓ pluralizes prescription summaries by the third parameter (1 ms)
+  ✓ defaults standalone plural keys to the first parameter
+  ✓ pluralizes coach workspace summaries by weeks after the descriptive parameters
+  ✓ returns an unknown runtime key without throwing, while rejecting it at compile time
+  ✓ plural sibling keys (<key>.one) are used for a count of exactly one in English
+  ✕ selects Taiwan Traditional copy for zh-Hant-TW (3 ms)
+  ✕ selects Taiwan Traditional copy for zh-HK
+  ✕ selects Taiwan Traditional copy for zh-MO
+  ✕ selects Taiwan Traditional copy for zh-TW (1 ms)
+  ✕ selects Taiwan Traditional copy for zh-Hant
+  ✕ recognizes native script/region metadata: {"languageTag":"zh","languageScriptCode":"Hant"} (1 ms)
+  ✕ recognizes native script/region metadata: {"languageTag":"zh","regionCode":"TW"}
+  ✕ recognizes native script/region metadata: {"languageTag":"zh","regionCode":"HK"} (1 ms)
+  ✕ recognizes native script/region metadata: {"languageTag":"zh","regionCode":"MO"}
+
+  ● selects Taiwan Traditional copy for zh-Hant-TW
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+       98 |  test.each(['zh-Hant-TW', 'zh-HK', 'zh-MO', 'zh-TW', 'zh-Hant'])('selects Taiwan Traditional copy for %s', languageTag => {
+       99 |   jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
+    > 100 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      101 |   expect(t('student.bindGateView.copy001')).toBe('正在檢查綁定狀態');
+      102 | });
+      103 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:100:23)
+
+  ● selects Taiwan Traditional copy for zh-HK
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+       98 |  test.each(['zh-Hant-TW', 'zh-HK', 'zh-MO', 'zh-TW', 'zh-Hant'])('selects Taiwan Traditional copy for %s', languageTag => {
+       99 |   jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
+    > 100 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      101 |   expect(t('student.bindGateView.copy001')).toBe('正在檢查綁定狀態');
+      102 | });
+      103 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:100:23)
+
+  ● selects Taiwan Traditional copy for zh-MO
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+       98 |  test.each(['zh-Hant-TW', 'zh-HK', 'zh-MO', 'zh-TW', 'zh-Hant'])('selects Taiwan Traditional copy for %s', languageTag => {
+       99 |   jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
+    > 100 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      101 |   expect(t('student.bindGateView.copy001')).toBe('正在檢查綁定狀態');
+      102 | });
+      103 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:100:23)
+
+  ● selects Taiwan Traditional copy for zh-TW
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+       98 |  test.each(['zh-Hant-TW', 'zh-HK', 'zh-MO', 'zh-TW', 'zh-Hant'])('selects Taiwan Traditional copy for %s', languageTag => {
+       99 |   jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
+    > 100 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      101 |   expect(t('student.bindGateView.copy001')).toBe('正在檢查綁定狀態');
+      102 | });
+      103 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:100:23)
+
+  ● selects Taiwan Traditional copy for zh-Hant
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+       98 |  test.each(['zh-Hant-TW', 'zh-HK', 'zh-MO', 'zh-TW', 'zh-Hant'])('selects Taiwan Traditional copy for %s', languageTag => {
+       99 |   jest.mocked(getLocales).mockReturnValue([{ languageTag }] as unknown as ReturnType<typeof getLocales>);
+    > 100 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      101 |   expect(t('student.bindGateView.copy001')).toBe('正在檢查綁定狀態');
+      102 | });
+      103 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:100:23)
+
+  ● recognizes native script/region metadata: {"languageTag":"zh","languageScriptCode":"Hant"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+      104 | test.each([{ languageTag: 'zh', languageScriptCode: 'Hant' }, { languageTag: 'zh', regionCode: 'TW' }, { languageTag: 'zh', regionCode: 'HK' }, { languageTag: 'zh', regionCode: 'MO' }])('recognizes native script/region metadata: %j', locale => {
+      105 |   jest.mocked(getLocales).mockReturnValue([locale] as unknown as ReturnType<typeof getLocales>);
+    > 106 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      107 | });
+      108 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:106:23)
+
+  ● recognizes native script/region metadata: {"languageTag":"zh","regionCode":"TW"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+      104 | test.each([{ languageTag: 'zh', languageScriptCode: 'Hant' }, { languageTag: 'zh', regionCode: 'TW' }, { languageTag: 'zh', regionCode: 'HK' }, { languageTag: 'zh', regionCode: 'MO' }])('recognizes native script/region metadata: %j', locale => {
+      105 |   jest.mocked(getLocales).mockReturnValue([locale] as unknown as ReturnType<typeof getLocales>);
+    > 106 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      107 | });
+      108 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:106:23)
+
+  ● recognizes native script/region metadata: {"languageTag":"zh","regionCode":"HK"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+      104 | test.each([{ languageTag: 'zh', languageScriptCode: 'Hant' }, { languageTag: 'zh', regionCode: 'TW' }, { languageTag: 'zh', regionCode: 'HK' }, { languageTag: 'zh', regionCode: 'MO' }])('recognizes native script/region metadata: %j', locale => {
+      105 |   jest.mocked(getLocales).mockReturnValue([locale] as unknown as ReturnType<typeof getLocales>);
+    > 106 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      107 | });
+      108 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:106:23)
+
+  ● recognizes native script/region metadata: {"languageTag":"zh","regionCode":"MO"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "zh-Hant"
+    Received: "zh"
+
+      104 | test.each([{ languageTag: 'zh', languageScriptCode: 'Hant' }, { languageTag: 'zh', regionCode: 'TW' }, { languageTag: 'zh', regionCode: 'HK' }, { languageTag: 'zh', regionCode: 'MO' }])('recognizes native script/region metadata: %j', locale => {
+      105 |   jest.mocked(getLocales).mockReturnValue([locale] as unknown as ReturnType<typeof getLocales>);
+    > 106 |   expect(getLocale()).toBe('zh-Hant');
+          |                       ^
+      107 | });
+      108 |
+
+      at toBe (src/i18n/__tests__/t.test.ts:106:23)
+
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 11 passed, 20 total
+Snapshots:   0 total
+Time:        5.982 s
+Ran all test suites matching /src\/i18n\/__tests__\/t.test.ts/i.

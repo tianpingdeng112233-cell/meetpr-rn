@@ -1,0 +1,17 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/zh-hant-catalog.test.js -t v2.1
+
+PASS src/i18n/__tests__/zh-hant-catalog.test.js
+  ✓ v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿 (3 ms)
+  ○ skipped all Traditional copy has the same keys, plural structure and placeholders as Simplified
+  ○ skipped generated Traditional artifacts contain zero Simplified-only characters
+  ○ skipped every approved glossary override wins over OpenCC with longest phrases first
+  ○ skipped committed generation is deterministic and current
+  ○ skipped v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下
+
+Test Suites: 1 passed, 1 total
+Tests:       5 skipped, 1 passed, 6 total
+Snapshots:   0 total
+Time:        0.793 s, estimated 1 s
+Ran all test suites matching /src\/i18n\/__tests__\/zh-hant-catalog.test.js/i with tests matching "v2.1".
