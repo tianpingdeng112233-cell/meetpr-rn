@@ -111,3 +111,20 @@ describe('stashed invite auto-resubmission', () => {
     expect(clear).not.toHaveBeenCalled();
   });
 });
+
+const binding = { ...request, status: 'accepted' as const };
+test('a new student welcomes from backend first_run without any plan reads', () => {
+  const context = { request: { ...binding, first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } }, welcomeSeen: false };
+  expect(resolveBindGateState('accepted', false, true, context).state).toBe('welcome');
+  expect(resolveBindGateState('accepted', false, true, { ...context, welcomeSeen: true }).state).toBe('bound');
+});
+
+test.each([undefined, null])('first_run %s never welcomes or guesses from client plans', first_run => {
+  expect(resolveBindGateState('accepted', false, true, { request: { ...binding, first_run }, welcomeSeen: false }).state).toBe('bound');
+});
+
+test('backend settlement keeps a student with a completed hidden plan out of welcome', () => {
+  expect(resolveBindGateState('accepted', false, true, { request: { ...binding, first_run: {
+    binding_plan_count: 1, has_settled_day: true, first_plan: null,
+  } }, welcomeSeen: false }).state).toBe('bound');
+});

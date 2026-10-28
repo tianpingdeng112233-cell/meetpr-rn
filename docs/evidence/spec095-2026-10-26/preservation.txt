@@ -1,0 +1,3 @@
+PASS: original DashboardPlanWaitingState function text is byte-for-byte unchanged.
+PASS: every pre-existing RnExtras and generated zh-Hant value is unchanged.
+PASS: StudentKit catalog is unchanged (git diff empty).

@@ -1,0 +1,882 @@
+--- a/src/api/domains/__tests__/domain-schemas.test.ts
++++ b/src/api/domains/__tests__/domain-schemas.test.ts
+@@ -313,6 +313,18 @@
+ });
+ 
+ describe('bind snake_case schemas', () => {
++  test.each([undefined, null, {
++    binding_plan_count: 1, has_settled_day: true,
++    first_plan: { id: PLAN_ID, published_at: NOW, plan_weeks: 4, day_count: 12, has_settled_day: true },
++  }])('preserves optional nullable first_run metadata: %j', first_run => {
++    const parsed = BindRequestSchema.parse({
++      id: SET_ID, student_id: STUDENT_ID, coach_id: COACH_ID,
++      coach_display_name: null, invite_code_id: null, status: 'accepted',
++      submitted_at: NOW, responded_at: NOW, expired_at: NOW,
++      skip_evaluation: true, skip_reason: null, first_run,
++    });
++    expect(parsed.first_run).toEqual(first_run);
++  });
+   test('parses a request and the bind_request:null empty state', () => {
+     expect(
+       MineBindRequestResponseSchema.parse({ bind_request: null }),
+--- a/src/api/domains/bind.ts
++++ b/src/api/domains/bind.ts
+@@ -12,7 +12,22 @@
+   'cancelled',
+ ]);
+ 
++const FirstRunSchema = z.object({
++  binding_plan_count: z.number().int().nonnegative(),
++  has_settled_day: z.boolean(),
++  first_plan: z.object({
++    id: UuidSchema,
++    published_at: TimestampSchema,
++    plan_weeks: z.number().int(),
++    day_count: z.number().int().nonnegative(),
++    has_settled_day: z.boolean(),
++  }).nullable(),
++});
++
++export type FirstPlan = NonNullable<z.infer<typeof FirstRunSchema>['first_plan']>;
++
+ export const BindRequestSchema = z.object({
++  first_run: FirstRunSchema.nullish(),
+   id: UuidSchema,
+   student_id: UuidSchema,
+   coach_id: UuidSchema,
+--- a/src/features/dashboard/DashboardScreen.tsx
++++ b/src/features/dashboard/DashboardScreen.tsx
+@@ -9,6 +9,7 @@
+ import { useStudentVideos } from '@/api/domains/videos';
+ import {
+   useDayCompletion,
++  plansRepository,
+   type PlanDay,
+   type PlanDetail,
+ } from '@/api/domains';
+@@ -222,14 +223,18 @@
+             )) : <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong }} />}
+           </View>
+         </View>
+-        {!vm.plans.isLoading && !vm.plans.isError && vm.today.firstPlan ? <FirstPlanCard
++        {vm.today.firstPlan ? <FirstPlanCard
+           coachName={coachName}
+           plan={vm.today.firstPlan}
+           onDismiss={vm.dismissFirstPlan}
+-          onStart={() => {
++          onStart={async () => {
+             const first = vm.today.firstPlan;
+-            const day = first && sequenceDays(first.days)[0];
+-            if (first && day) openTraining(day, first);
++            if (!first) return;
++            const detail = await plansRepository.detail(first.id);
++            const day = sequenceDays(detail.days)[0];
++            if (!day) throw new Error('First plan has no training day');
++            await vm.dismissFirstPlan();
++            openTraining(day, detail);
+           }}
+         /> : null}
+         <DashboardAsyncSection
+--- a/src/features/dashboard/FirstRunCards.tsx
++++ b/src/features/dashboard/FirstRunCards.tsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useState } from 'react';
+-import type { PlanDetail } from '@/api/domains/plans';
++import type { FirstPlan } from '@/api/domains/bind';
+ import { AnalyticsEvent, track } from '@/analytics';
+ import { Text, View } from 'react-native';
+ import { AppButton, Card, font, useColors } from '@/design';
+@@ -28,20 +28,20 @@
+ }
+ 
+ export function FirstPlanCard({ coachName, plan, onDismiss, onStart }: {
+-  coachName: string; plan: PlanDetail; onDismiss: () => Promise<void>; onStart: () => void;
++  coachName: string; plan: FirstPlan; onDismiss: () => Promise<void>; onStart: () => Promise<void>;
+ }) {
+   const colors = useColors();
+   const [saving, setSaving] = useState(false);
+   const [failed, setFailed] = useState(false);
+   useEffect(() => { void track(AnalyticsEvent.FirstPlanViewed, { plan_id: plan.id }); }, [plan.id]);
+   const close = async (start: boolean) => {
+-    if (start && !plan.days.length) return;
++    if (start && !plan.day_count) return;
+     setSaving(true);
+     setFailed(false);
+     try {
+-      await onDismiss();
++      if (start) await onStart();
++      else await onDismiss();
+       void track(start ? AnalyticsEvent.FirstPlanStart : AnalyticsEvent.FirstPlanDismiss, { plan_id: plan.id });
+-      if (start) onStart();
+     } catch {
+       setFailed(true);
+       setSaving(false);
+@@ -57,8 +57,8 @@
+         <Text style={{ ...font.body(24), color: colors.textSecondary }}>×</Text>
+       </Pressable>
+     </View>
+-    <Text style={{ ...font.mono(13), color: colors.textSecondary }}>{t('student.firstRun.plan.summary', [plan.plan_weeks, plan.days.length])}</Text>
++    <Text style={{ ...font.mono(13), color: colors.textSecondary }}>{t('student.firstRun.plan.summary', [plan.plan_weeks, plan.day_count])}</Text>
+     {failed ? <Text accessibilityRole="alert" style={{ color: colors.danger }}>{t('student.firstRun.saveError')}</Text> : null}
+-    <AppButton label={t('student.firstRun.plan.start')} icon="play" style={{ minHeight: 50 }} disabled={!plan.days.length} loading={saving} onPress={() => void close(true)} />
++    <AppButton label={t('student.firstRun.plan.start')} icon="play" style={{ minHeight: 50 }} disabled={!plan.day_count} loading={saving} onPress={() => void close(true)} />
+   </Card>;
+ }
+--- a/src/features/dashboard/__tests__/today-model.test.ts
++++ b/src/features/dashboard/__tests__/today-model.test.ts
+@@ -46,19 +46,37 @@
+   invite_code_id: null, skip_evaluation: true, skip_reason: null,
+ };
+ const first = plan([day('a'), day('b')], { coach_id: 'coach' });
+-test('waiting is new only when this binding has never received a plan', () => {
+-  expect(todayModel(null, now, [], { request: binding, plans: [], firstPlanDismissed: false }).waitingForFirstPlan).toBe(true);
+-  expect(todayModel(null, now, [], { request: binding, plans: [first], firstPlanDismissed: false }).waitingForFirstPlan).toBe(false);
+-  expect(todayModel(null, now, [], { request: binding, plans: [{ ...first, published_at: undefined }], firstPlanDismissed: false }).waitingForFirstPlan).toBe(false);
++test('waiting uses the backend binding count even when completed plans are absent from the list', () => {
++  const context = { request: { ...binding, first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } }, firstPlanDismissed: false };
++  expect(todayModel(null, now, [], context).waitingForFirstPlan).toBe(true);
++  expect(todayModel(null, now, [], { ...context, request: { ...binding, first_run: { binding_plan_count: 1, has_settled_day: true, first_plan: null } } }).waitingForFirstPlan).toBe(false);
+ });
+ 
+-test('the first unsettled plan has a card and suppresses the sticky start until dismissed', () => {
+-  const context = { request: binding, plans: [first], firstPlanDismissed: false };
+-  expect(todayModel(first, now, [first], context)).toMatchObject({ firstPlan: first, stickyStartDay: null });
+-  expect(todayModel(first, now, [first], { ...context, firstPlanDismissed: true })).toMatchObject({ firstPlan: null, stickyStartDay: { id: 'a' } });
+-  expect(todayModel(first, now, [first], { ...context, firstPlanDismissed: null }).firstPlan).toBeNull();
+-  const settled = { ...first, days: [day('a', { completed_at: now.toISOString() })] };
+-  expect(todayModel(settled, now, [settled], { ...context, plans: [settled] }).firstPlan).toBeNull();
+-  const second = { ...first, id: 'second', published_at: '2026-09-04T12:00:00Z' };
+-  expect(todayModel(second, now, [second, settled], { ...context, plans: [second, settled] }).firstPlan).toBeNull();
++const firstPlan = { id: first.id, published_at: '2026-09-02T12:00:00Z', plan_weeks: 6, day_count: 18, has_settled_day: false };
++const firstRun = { request: { ...binding, first_run: { binding_plan_count: 1, has_settled_day: false, first_plan: firstPlan } }, firstPlanDismissed: false };
++
++test.each([undefined, null])('first_run %s preserves both waiting and active-plan presentation', first_run => {
++  const context = { ...firstRun, request: { ...binding, first_run } };
++  expect(todayModel(null, now, [], context)).toMatchObject({ waitingForFirstPlan: false, firstPlan: null });
++  expect(todayModel(first, now, [first], context)).toMatchObject({ firstPlan: null, stickyStartDay: { id: 'a' } });
+ });
++
++test('first plan card uses backend metadata and hides sticky start until dismissed', () => {
++  expect(todayModel(first, now, [first], firstRun)).toMatchObject({ firstPlan, stickyStartDay: null });
++  for (const firstPlanDismissed of [true, null]) {
++    expect(todayModel(first, now, [first], { ...firstRun, firstPlanDismissed })).toMatchObject({ firstPlan: null, stickyStartDay: { id: 'a' } });
++  }
++});
++
++test('a settled first plan never shows a card even when the visible plan has no settled days', () => {
++  const context = { ...firstRun, request: { ...binding, first_run: {
++    binding_plan_count: 2, has_settled_day: true, first_plan: { ...firstPlan, has_settled_day: true },
++  } } };
++  expect(todayModel(first, now, [first], context)).toMatchObject({ firstPlan: null, stickyStartDay: { id: 'a' }, waitingForFirstPlan: false });
++});
++
++test('first plan eligibility uses its own settlement flag, and requires an accepted binding', () => {
++  const context = { ...firstRun, request: { ...firstRun.request, first_run: { ...firstRun.request.first_run, has_settled_day: true } } };
++  expect(todayModel(first, now, [first], context).firstPlan).toEqual(firstPlan);
++  expect(todayModel(first, now, [first], { ...context, request: { ...context.request, status: 'cancelled' } }).firstPlan).toBeNull();
++});
+--- a/src/features/dashboard/__tests__/visual-parity.test.tsx
++++ b/src/features/dashboard/__tests__/visual-parity.test.tsx
+@@ -33,7 +33,11 @@
+ const mockSetParams = jest.fn();
+ let mockProfileParams: { edit?: string; returnTo?: string } = {};
+ const mockNavigation = { setParams: mockSetParams };
+-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: mockNavigate }), useFocusEffect: () => {}, useLocalSearchParams: () => mockProfileParams, useNavigation: () => mockNavigation }));
++const mockFocusEffects = new Set<() => void>();
++jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, navigate: mockNavigate }), useFocusEffect: (effect: () => void) => {
++  const { useEffect } = jest.requireActual<typeof import('react')>('react');
++  useEffect(() => { mockFocusEffects.add(effect); return () => { mockFocusEffects.delete(effect); }; }, [effect]);
++}, useLocalSearchParams: () => mockProfileParams, useNavigation: () => mockNavigation }));
+ jest.mock('@/api/session', () => ({
+   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
+   authenticatedRequest: jest.fn(),
+@@ -60,6 +64,7 @@
+ let client: QueryClient;
+ let servedBinding: MineBindRequestResponse['bind_request'];
+ let servedPlan: PlanDetail | null;
++let servedFirstPlan: PlanDetail | null;
+ let servedProfile: OnboardingProfile | null;
+ let servedExercises: import('@/api/domains').Exercise[];
+ let feedbackItems: import('@/api/domains').FeedbackItem[];
+@@ -78,6 +83,7 @@
+   mockProfileParams = {};
+   setLocaleOverride('en');
+   servedPlan = plan;
++  servedFirstPlan = null;
+   servedExercises = [];
+   servedProfile = null;
+   feedbackItems = [];
+@@ -85,8 +91,10 @@
+   mockNavigate.mockClear();
+   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
+   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
++  jest.mocked(authenticatedRequest).mockClear();
+   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+     if (path.endsWith('/plans')) return { plans: servedPlan ? [servedPlan] : [] } as never;
++    if (servedFirstPlan && path === `/plans/${servedFirstPlan.id}`) return servedFirstPlan as never;
+     if (path === `/plans/${plan.id}`) return servedPlan as never;
+     if (path === '/exercises') return { exercises: servedExercises } as never;
+     if (path.endsWith('/onboarding')) {
+@@ -382,7 +390,7 @@
+ };
+ test('a new binding waits without the old weekly promise and opens profile and meet editors', async () => {
+   servedPlan = null;
+-  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z' };
++  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+   await renderDashboard();
+   await waitUntil(() => textCopy().includes('Alex is building your first plan'));
+   expect(textCopy()).toContain('Alex is building your first plan');
+@@ -396,21 +404,29 @@
+ 
+ test.each(['Dismiss first plan', 'Start W1D1'])('first plan %s restores the bottom button and remains dismissed after remount', async label => {
+   const track = jest.spyOn(analytics, 'track');
+-  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z' };
++  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+   servedPlan = { ...plan, coach_id: servedBinding.coach_id, published_at: '2026-09-02T00:00:00Z', days: plan.days.map(day => ({ ...day, completed_at: null })) };
++  servedFirstPlan = { ...servedPlan, id: '30000000-0000-4000-8000-000000000099', days: [
++    { ...plan.days[0], id: '40000000-0000-4000-8000-000000000099', week_number: 2 },
++    { ...plan.days[0], week_number: 1 },
++  ] };
++  servedBinding.first_run = { binding_plan_count: 2, has_settled_day: false, first_plan: {
++    id: servedFirstPlan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 6, day_count: 18, has_settled_day: false,
++  } };
+   await renderDashboard();
+   await waitUntil(() => textCopy().includes('Alex published your first plan'));
+   expect(textCopy()).toContain('Alex published your first plan');
+-  expect(textCopy()).toContain('W1 – W4 · 1 sessions');
++  expect(textCopy()).toContain('W1 – W6 · 18 sessions');
++  expect(jest.mocked(authenticatedRequest).mock.calls.map(([path]) => path)).not.toContain(`/plans/${servedFirstPlan.id}`);
+   expect(textCopy()).not.toContain(t('student.dashboardPrimaryAction.copy001'));
+   await pressFirstRun(label);
+-  expect(track).toHaveBeenCalledWith(AnalyticsEvent.FirstPlanViewed, { plan_id: plan.id });
+-  expect(track).toHaveBeenCalledWith(label === 'Start W1D1' ? AnalyticsEvent.FirstPlanStart : AnalyticsEvent.FirstPlanDismiss, { plan_id: plan.id });
++  expect(track).toHaveBeenCalledWith(AnalyticsEvent.FirstPlanViewed, { plan_id: servedFirstPlan.id });
++  expect(track).toHaveBeenCalledWith(label === 'Start W1D1' ? AnalyticsEvent.FirstPlanStart : AnalyticsEvent.FirstPlanDismiss, { plan_id: servedFirstPlan.id });
+   expect(textCopy()).not.toContain('Alex published your first plan');
+   expect(textCopy()).toContain(t('student.dashboardPrimaryAction.copy001'));
+   if (label === 'Start W1D1') {
+     expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/training');
+-    expect(useStudentTabsStore.getState().trainingHandoff).toMatchObject({ dayID: plan.days[0].id });
++    expect(useStudentTabsStore.getState().trainingHandoff).toMatchObject({ plan: { id: servedFirstPlan.id }, dayID: plan.days[0].id });
+   }
+   act(() => renderer.unmount());
+   await renderDashboard();
+@@ -419,8 +435,11 @@
+ });
+ 
+ test('a received zero-day plan keeps every original waiting-card string', async () => {
+-  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z' };
++  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+   servedPlan = { ...plan, coach_id: servedBinding.coach_id, published_at: '2026-09-02T00:00:00Z', days: [] };
++  servedBinding.first_run = { binding_plan_count: 1, has_settled_day: false, first_plan: {
++    id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 0, has_settled_day: false,
++  } };
+   await renderDashboard();
+   await waitUntil(() => textCopy().includes('Alex is programming W1 for you'));
+   const copy = textCopy();
+@@ -430,7 +449,7 @@
+   expect(start.props.disabled).toBe(true);
+ });
+ test('new waiting guidance hides Add a meet date when the profile already has one', async () => {
+-  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z' };
++  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+   servedPlan = null;
+   servedProfile = { competition_date: '2027-01-01', is_competing: true } as OnboardingProfile;
+   await renderDashboard();
+@@ -441,9 +460,81 @@
+ 
+ test('Traditional Chinese meet guidance keeps competition intentions distinct from a training plan', async () => {
+   setLocaleOverride('zh-Hant');
+-  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z' };
++  servedBinding = { ...servedBinding!, responded_at: '2026-09-01T00:00:00Z', first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
+   servedPlan = null;
+   await renderDashboard();
+   await waitUntil(() => textCopy().includes('等課表的時候'));
+   expect(textCopy()).toContain('有比賽計畫？教練會按比賽日來排');
+ });
++
++test.each([undefined, null, {
++  binding_plan_count: 1, has_settled_day: true,
++  first_plan: { id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: true },
++}])('unknown metadata or a hidden completed plan keeps the original waiting card: %j', async first_run => {
++  servedPlan = null;
++  servedBinding = { ...servedBinding!, first_run };
++  await renderDashboard();
++  await waitUntil(() => textCopy().includes('Weekly summary · W1'));
++  expect(textCopy()).toContain('Alex is programming W1 for you');
++  expect(textCopy()).not.toContain('Alex published your first plan');
++  expect(textCopy()).not.toContain('While you wait');
++  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.startsWith('/plans/'))).toHaveLength(0);
++});
++
++test('a settled first plan hides the card even while the current plan is still unstarted', async () => {
++  servedBinding = { ...servedBinding!, first_run: {
++    binding_plan_count: 2, has_settled_day: true,
++    first_plan: { id: '30000000-0000-4000-8000-000000000099', published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: true },
++  } };
++  await renderDashboard();
++  await waitUntil(() => textCopy().includes(t('student.dashboardPrimaryAction.copy001')));
++  expect(textCopy()).not.toContain('Alex published your first plan');
++  expect(jest.mocked(authenticatedRequest).mock.calls.map(([path]) => path)).not.toContain('/plans/30000000-0000-4000-8000-000000000099');
++});
++
++test.each(['unavailable', 'empty'] as const)('first plan detail %s keeps the card open and allows retry', async failure => {
++  const firstId = '30000000-0000-4000-8000-000000000099';
++  servedFirstPlan = failure === 'empty' ? { ...plan, id: firstId, days: [] } : null;
++  servedBinding = { ...servedBinding!, first_run: { binding_plan_count: 2, has_settled_day: false, first_plan: {
++    id: firstId, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false,
++  } } };
++  await renderDashboard();
++  await waitUntil(() => textCopy().includes('Alex published your first plan'));
++  await pressFirstRun('Start W1D1');
++  expect(textCopy()).toContain('Alex published your first plan');
++  expect(await AsyncStorage.getItem(`onboarding.firstPlanDismissed.${studentId}.${servedBinding.id}`)).toBeNull();
++  expect(mockNavigate).not.toHaveBeenCalled();
++  servedFirstPlan = { ...plan, id: firstId };
++  await pressFirstRun('Start W1D1');
++  expect(textCopy()).not.toContain('Alex published your first plan');
++  expect(useStudentTabsStore.getState().trainingHandoff).toMatchObject({ plan: { id: firstId }, dayID: plan.days[0].id });
++});
++
++
++test('returning from chat refreshes first_run and shows a newly published first plan', async () => {
++  servedPlan = null;
++  servedBinding = { ...servedBinding!, first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } };
++  await renderDashboard();
++  await waitUntil(() => textCopy().includes('While you wait'));
++  servedPlan = plan;
++  servedBinding = { ...servedBinding, first_run: { binding_plan_count: 1, has_settled_day: false, first_plan: {
++    id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false,
++  } } };
++  await act(async () => { for (const effect of [...mockFocusEffects]) effect(); });
++  await waitUntil(() => textCopy().includes('Alex published your first plan'));
++  expect(textCopy()).toContain('Alex published your first plan');
++});
++
++test('settling a first training day refreshes first_run through the existing plan revision', async () => {
++  servedBinding = { ...servedBinding!, first_run: { binding_plan_count: 1, has_settled_day: false, first_plan: {
++    id: plan.id, published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false,
++  } } };
++  await renderDashboard();
++  await waitUntil(() => textCopy().includes('Alex published your first plan'));
++  servedBinding = { ...servedBinding, first_run: { ...servedBinding.first_run!, has_settled_day: true, first_plan: {
++    ...servedBinding.first_run!.first_plan!, has_settled_day: true,
++  } } };
++  await act(async () => { useStudentTabsStore.getState().bumpCompletionRevision(); });
++  await waitUntil(() => !textCopy().includes('Alex published your first plan'));
++  expect(textCopy()).not.toContain('Alex published your first plan');
++});
+--- a/src/features/dashboard/today-model.ts
++++ b/src/features/dashboard/today-model.ts
+@@ -1,5 +1,4 @@
+ import type { BindRequest } from '@/api/domains/bind';
+-import { bindingPlanDetails } from '@/features/onboarding/binding-plans';
+ import type { PlanDay, PlanDetail, PlanSummary } from '@/api/domains/plans';
+ import {
+   canUndoCompletion,
+@@ -24,7 +23,7 @@
+   plan: PlanDetail | null,
+   now = new Date(),
+   plans: readonly PlanSummary[] = [],
+-  firstRun?: { request: BindRequest | null; plans: readonly PlanDetail[] | null; firstPlanDismissed: boolean | null },
++  firstRun?: { request: BindRequest | null; firstPlanDismissed: boolean | null },
+ ) {
+   const days = plan?.days ?? [];
+   const cursor = cursorDay(days);
+@@ -42,13 +41,13 @@
+           }
+         : { kind: 'current', day: cursor };
+   const latest = selectCurrentPlan(plans);
+-  const bindingPlans = firstRun ? bindingPlanDetails(firstRun.request, firstRun.plans) : null;
+-  const first = bindingPlans?.[0];
++  const metadata = firstRun?.request?.status === 'accepted' ? firstRun.request.first_run : null;
++  const first = metadata?.first_plan;
+   const firstPlan = first && firstRun?.firstPlanDismissed === false &&
+-    !first.days.some(day => day.completed_at) ? first : null;
++    !first.has_settled_day ? first : null;
+   return {
+     firstPlan,
+-    waitingForFirstPlan: action.kind === 'waiting' && bindingPlans?.length === 0,
++    waitingForFirstPlan: action.kind === 'waiting' && metadata?.binding_plan_count === 0,
+     cursor,
+     completedToday: completed,
+     action,
+--- a/src/features/dashboard/use-dashboard.ts
++++ b/src/features/dashboard/use-dashboard.ts
+@@ -123,10 +123,14 @@
+         : buildExerciseIndex(exerciseCatalogQuery.data?.exercises ?? []),
+     [exerciseCatalogQuery.data?.exercises, liftMetadataUnavailable],
+   );
+-  const firstRun = useFirstRun(studentId, plansQuery.data?.plans ?? null);
++  const firstRun = useFirstRun(studentId);
+   const todayState = todayModel(activePlan, now, planSummaries, firstRun);
+   const refetchPlans = plansQuery.refetch;
+-  useFocusEffect(useCallback(() => { void refetchPlans(); }, [refetchPlans]));
++  const refetchFirstRun = firstRun.reload;
++  useFocusEffect(useCallback(() => {
++    void refetchPlans();
++    void refetchFirstRun();
++  }, [refetchPlans, refetchFirstRun]));
+   const currentWeekIndex = currentWeekDays(activePlan?.days ?? [])[0]?.week_number ?? 1;
+   const week = useWeekOverviewViewModel(
+     studentId,
+@@ -233,7 +237,7 @@
+   });
+ 
+   const retryPlans = async () => {
+-    const requests: Promise<unknown>[] = [plansQuery.refetch()];
++    const requests: Promise<unknown>[] = [plansQuery.refetch(), refetchFirstRun()];
+     if (activeSummary) requests.push(detailQuery.refetch());
+     if (activePlan) requests.push(week.reload());
+     await Promise.all(requests);
+@@ -293,11 +297,11 @@
+   useEffect(() => {
+     if (previousPlanRevision.current !== planRevision) {
+       previousPlanRevision.current = planRevision;
+-      const requests: Promise<unknown>[] = [plansQuery.refetch()];
++      const requests: Promise<unknown>[] = [plansQuery.refetch(), refetchFirstRun()];
+       if (activeSummary) requests.push(detailQuery.refetch());
+       void Promise.all(requests);
+     }
+-  }, [activeSummary, detailQuery, planRevision, plansQuery]);
++  }, [activeSummary, detailQuery, planRevision, plansQuery, refetchFirstRun]);
+ 
+   const viewedPlans = useRef(new Set<string>());
+   useEffect(() => {
+--- a/src/features/dashboard/use-first-run.ts
++++ b/src/features/dashboard/use-first-run.ts
+@@ -1,17 +1,10 @@
+-import { useQueries } from '@tanstack/react-query';
+-import { useEffect, useState } from 'react';
++import { useCallback, useEffect, useState } from 'react';
+ import { useMineBindRequest } from '@/api/domains/bind';
+-import { planKeys, plansRepository, type PlanSummary } from '@/api/domains/plans';
+-import { plansForBinding } from '@/features/onboarding/binding-plans';
+ import { firstRunStorage } from '@/features/onboarding/first-run-storage';
+ 
+-export function useFirstRun(studentId: string, plans: readonly PlanSummary[] | null) {
++export function useFirstRun(studentId: string) {
+   const binding = useMineBindRequest();
+   const request = binding.data?.bind_request?.student_id === studentId ? binding.data.bind_request : null;
+-  const summaries = plansForBinding(request, plans);
+-  const details = useQueries({ queries: (summaries ?? []).map(plan => ({
+-    queryKey: planKeys.detail(plan.id), queryFn: () => plansRepository.detail(plan.id),
+-  })) });
+   const [dismissed, setDismissed] = useState<{ key: string; value: boolean } | null>(null);
+   const bindingId = request?.id;
+   const key = `${studentId}.${bindingId}`;
+@@ -22,17 +15,16 @@
+       .catch(() => { /* Unknown storage state must not show a previously dismissed card. */ });
+     return () => { active = false; };
+   }, [studentId, bindingId, key]);
+-  const loadedPlans = summaries !== null && details.every(query => query.data && !query.isError)
+-    ? details.map(query => query.data!) : null;
++  const refetchBinding = binding.refetch;
++  const reload = useCallback(async () => { await refetchBinding(); }, [refetchBinding]);
+   return {
+     request,
+-    plans: loadedPlans,
+     firstPlanDismissed: dismissed?.key === key ? dismissed.value : null,
+     dismiss: async () => {
+       if (!bindingId) return;
+       await firstRunStorage.mark(studentId, bindingId, 'firstPlanDismissed');
+       setDismissed({ key, value: true });
+     },
+-    reload: async () => { await Promise.all([binding.refetch(), ...details.map(query => query.refetch())]); },
++    reload,
+   };
+ }
+--- a/src/features/notifications/PlanNotificationSession.tsx
++++ b/src/features/notifications/PlanNotificationSession.tsx
+@@ -2,6 +2,7 @@
+ import { useRouter } from 'expo-router';
+ import * as Notifications from 'expo-notifications';
+ import { useEffect } from 'react';
++import { bindKeys } from '@/api/domains/bind';
+ import { planKeys } from '@/api/domains/plans';
+ import { useSessionStore } from '@/api/session';
+ import { startPlanNotifications } from './plan-notifications';
+@@ -25,6 +26,9 @@
+         // Inactive tabs become stale too; their first focus must load the new recommendation.
+         void queryClient.invalidateQueries({ queryKey: planKeys.list(studentId) }).catch(() => undefined);
+         void queryClient.invalidateQueries({ queryKey: planKeys.detail(planId) }).catch(() => undefined);
++        if (useSessionStore.getState().user?.role === 'coached_student') {
++          void queryClient.invalidateQueries({ queryKey: bindKeys.mine }).catch(() => undefined);
++        }
+       },
+       openTraining: () => router.navigate('/(student)/training'),
+       transport: {
+--- a/src/features/notifications/__tests__/plan-notification-session.test.tsx
++++ b/src/features/notifications/__tests__/plan-notification-session.test.tsx
+@@ -2,6 +2,7 @@
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+ import * as Notifications from 'expo-notifications';
++import { bindKeys } from '@/api/domains/bind';
+ import { planKeys } from '@/api/domains/plans';
+ import { PlanNotificationSession } from '../PlanNotificationSession';
+ const mockNavigate = jest.fn();
+@@ -15,16 +16,19 @@
+   clearLastNotificationResponseAsync: jest.fn(async () => {}),
+ }));
+ let tree: ReactTestRenderer;
+-afterEach(() => { if (tree) act(() => tree.unmount()); jest.clearAllMocks(); });
+-test('native notification response invalidates list/detail and routes to the training tab', async () => {
+-  const client = new QueryClient(); const plan = '20000000-0000-4000-8000-000000000000';
++let client: QueryClient;
++afterEach(() => { if (tree) act(() => tree.unmount()); client?.clear(); mockState.user.role = 'coached_student'; jest.clearAllMocks(); });
++test.each(['coached_student', 'self_train_student'])('native plan publication refreshes list/detail and %s binding metadata before opening training', async role => {
++  mockState.user.role = role;
++  client = new QueryClient(); const plan = '20000000-0000-4000-8000-000000000000';
+   client.setQueryData(planKeys.list(mockState.user.id), []); client.setQueryData(planKeys.detail(plan), {});
++  client.setQueryData(bindKeys.mine, { bind_request: null });
+   await act(async () => { tree = create(<QueryClientProvider client={client}><PlanNotificationSession /></QueryClientProvider>); });
+-  const response = { notification: { request: { identifier: 'shift', content: { data: { kind: 'plan_shifted', student_id: mockState.user.id, plan_id: plan } } } } } as unknown as Notifications.NotificationResponse;
++  const response = { notification: { request: { identifier: 'shift', content: { data: { kind: 'plan_published', student_id: mockState.user.id, plan_id: plan } } } } } as unknown as Notifications.NotificationResponse;
+   await act(async () => { jest.mocked(Notifications.addNotificationResponseReceivedListener).mock.calls[0][0](response); });
+   expect(client.getQueryState(planKeys.list(mockState.user.id))?.isInvalidated).toBe(true);
+   expect(client.getQueryState(planKeys.detail(plan))?.isInvalidated).toBe(true);
++  expect(client.getQueryState(bindKeys.mine)?.isInvalidated).toBe(role === 'coached_student');
+   expect(mockNavigate).toHaveBeenCalledWith('/(student)/training');
+   expect(Notifications.clearLastNotificationResponseAsync).toHaveBeenCalledTimes(1);
+-  client.clear();
+ });
+--- a/src/features/onboarding/__tests__/bind-model.test.ts
++++ b/src/features/onboarding/__tests__/bind-model.test.ts
+@@ -1,4 +1,3 @@
+-import { day, plan } from '@/domain/plan/test-fixtures';
+ import { describe, expect, jest, test } from '@jest/globals';
+ 
+ import { ApiError } from '@/api/client';
+@@ -113,26 +112,19 @@
+   });
+ });
+ 
+-test('a newly accepted binding with no settled days welcomes once on this device', () => {
+-  const firstRun = { request: { ...request, status: 'accepted' as const, responded_at: '2026-10-26T10:00:00Z' }, plans: [], welcomeSeen: false };
+-  expect(resolveBindGateState('accepted', false, true, firstRun).state).toBe('welcome');
+-  expect(resolveBindGateState('accepted', false, true, { ...firstRun, welcomeSeen: true }).state).toBe('bound');
++const binding = { ...request, status: 'accepted' as const };
++test('a new student welcomes from backend first_run without any plan reads', () => {
++  const context = { request: { ...binding, first_run: { binding_plan_count: 0, has_settled_day: false, first_plan: null } }, welcomeSeen: false };
++  expect(resolveBindGateState('accepted', false, true, context).state).toBe('welcome');
++  expect(resolveBindGateState('accepted', false, true, { ...context, welcomeSeen: true }).state).toBe('bound');
+ });
+ 
+-const binding = { ...request, status: 'accepted' as const, responded_at: '2026-09-02T12:00:00Z' };
+-test('welcome considers only this coach’s plans published since acceptance, including an already delivered first plan', () => {
+-  const first = plan([day('new')], { coach_id: binding.coach_id, trainee_id: binding.student_id });
+-  const history = plan([day('old', { completed_at: '2026-09-03T12:00:00Z' })], { coach_id: binding.coach_id, trainee_id: binding.student_id, published_at: '2026-09-01T12:00:00Z' });
+-  const otherCoach = { ...history, coach_id: 'other', published_at: '2026-09-05T12:00:00Z' };
+-  expect(resolveBindGateState('accepted', false, true, { request: binding, plans: [history, otherCoach, first], welcomeSeen: false }).state).toBe('welcome');
+-  expect(resolveBindGateState('accepted', false, true, { request: binding, plans: [{ ...first, days: [day('done', { completed_at: '2026-09-04T12:00:00Z' })] }], welcomeSeen: false }).state).toBe('bound');
++test.each([undefined, null])('first_run %s never welcomes or guesses from client plans', first_run => {
++  expect(resolveBindGateState('accepted', false, true, { request: { ...binding, first_run }, welcomeSeen: false }).state).toBe('bound');
+ });
+-test('missing publication, acceptance or settlement metadata never guesses a new binding', () => {
+-  const first = plan([day('new')], { coach_id: binding.coach_id, trainee_id: binding.student_id });
+-  for (const context of [
+-    { request: binding, plans: [{ ...first, published_at: undefined }] },
+-    { request: { ...binding, responded_at: null }, plans: [] },
+-    { request: binding, plans: [{ ...first, days: [day('unknown', { completed_at: undefined })] }] },
+-    { request: binding, plans: null },
+-  ]) expect(resolveBindGateState('accepted', false, true, { ...context, welcomeSeen: false }).state).toBe('bound');
++
++test('backend settlement keeps a student with a completed hidden plan out of welcome', () => {
++  expect(resolveBindGateState('accepted', false, true, { request: { ...binding, first_run: {
++    binding_plan_count: 1, has_settled_day: true, first_plan: null,
++  } }, welcomeSeen: false }).state).toBe('bound');
+ });
+--- a/src/features/onboarding/bind-model.ts
++++ b/src/features/onboarding/bind-model.ts
+@@ -2,10 +2,8 @@
+ 
+ import { ApiError } from '@/api/client';
+ import type { BindRequest, BindRequestStatus } from '@/api/domains/bind';
+-import type { PlanDetail } from '@/api/domains/plans';
+ 
+ import type { InviteStash } from './model';
+-import { bindingPlanDetails } from './binding-plans';
+ 
+ export type BindGateViewState =
+   | 'loading'
+@@ -34,13 +32,11 @@
+   status: BindRequestStatus | 'none',
+   hasStash: boolean,
+   onboardingComplete: boolean,
+-  firstRun?: { request: BindRequest; plans: readonly PlanDetail[] | null; welcomeSeen: boolean },
++  firstRun?: { request: BindRequest; welcomeSeen: boolean },
+ ): BindGateResolution {
+-  const bindingPlans = firstRun ? bindingPlanDetails(firstRun.request, firstRun.plans) : null;
+   if (status === 'accepted') return {
+     notice: null,
+-    state: firstRun && !firstRun.welcomeSeen && bindingPlans !== null &&
+-      !bindingPlans.some(plan => plan.days.some(day => day.completed_at)) ? 'welcome' : 'bound',
++    state: firstRun && !firstRun.welcomeSeen && firstRun.request.first_run?.has_settled_day === false ? 'welcome' : 'bound',
+   };
+   if (status === 'pending') return { notice: null, state: 'pendingAcceptance' };
+   const notice =
+--- a/src/features/onboarding/binding-plans.ts
++++ /dev/null
+@@ -1,18 +0,0 @@
+-import type { BindRequest } from '@/api/domains/bind';
+-import type { PlanDetail, PlanSummary } from '@/api/domains/plans';
+-
+-/** null means the API cannot establish this binding's plans; never use created_at. */
+-export function plansForBinding<T extends PlanSummary>(request: BindRequest | null, plans: readonly T[] | null): T[] | null {
+-  if (!request || request.status !== 'accepted' || !request.responded_at || plans === null) return null;
+-  const acceptedAt = Date.parse(request.responded_at);
+-  if (!Number.isFinite(acceptedAt)) return null;
+-  const coachPlans = plans.filter(plan => plan.coach_id === request.coach_id && plan.trainee_id === request.student_id && plan.status !== 'draft');
+-  if (coachPlans.some(plan => !plan.published_at || !Number.isFinite(Date.parse(plan.published_at)))) return null;
+-  return coachPlans.filter(plan => Date.parse(plan.published_at!) >= acceptedAt)
+-    .sort((a, b) => Date.parse(a.published_at!) - Date.parse(b.published_at!) || a.id.localeCompare(b.id));
+-}
+-
+-export function bindingPlanDetails(request: BindRequest | null, plans: readonly PlanDetail[] | null): PlanDetail[] | null {
+-  const matching = plansForBinding(request, plans);
+-  return matching?.some(plan => plan.days.some(day => day.completed_at === undefined)) ? null : matching;
+-}
+--- a/src/navigation/BindGate.tsx
++++ b/src/navigation/BindGate.tsx
+@@ -20,10 +20,8 @@
+ import {
+   bindRepository,
+   onboardingRepository,
+-  plansRepository,
+   type BindRequest,
+   type OnboardingProfile,
+-  type PlanDetail,
+ } from '@/api/domains';
+ import { useSessionStore } from '@/api/session';
+ import * as buildTrack from '@/config/build-track';
+@@ -52,7 +50,6 @@
+   type InviteStash,
+ } from '@/features/onboarding';
+ 
+-import { bindingPlanDetails, plansForBinding } from '@/features/onboarding/binding-plans';
+ import { firstRunStorage } from '@/features/onboarding/first-run-storage';
+ import { WelcomeScreen } from '@/features/onboarding/WelcomeScreen';
+ 
+@@ -129,30 +126,14 @@
+         if (request?.status === 'accepted') {
+           try {
+             let welcomeSeen = await firstRunStorage.read(studentId, request.id, 'welcomeSeen');
+-            const summaries = welcomeSeen ? null : plansForBinding(request, (await plansRepository.list(studentId)).plans);
+-            let plans: PlanDetail[] | null = summaries ? [] : null;
+-            // Summaries have no day settlement fields. Read oldest first and stop
+-            // as soon as welcome eligibility is decided (or becomes unknown).
+-            for (const summary of summaries ?? []) {
+-              if (!active) return;
+-              const details = bindingPlanDetails(request, [await plansRepository.detail(summary.id)]);
+-              if (!details?.length) {
+-                plans = null;
+-                break;
+-              }
+-              const plan = details[0];
+-              plans!.push(plan);
+-              if (plan.days.some(day => day.completed_at)) {
+-                // Also terminal for this binding when welcome was never shown.
+-                await firstRunStorage.mark(studentId, request.id, 'welcomeSeen');
+-                welcomeSeen = true;
+-                break;
+-              }
++            if (!welcomeSeen && request.first_run?.has_settled_day === true) {
++              await firstRunStorage.mark(studentId, request.id, 'welcomeSeen');
++              welcomeSeen = true;
+             }
+-            firstRun = { request, plans, welcomeSeen };
++            firstRun = { request, welcomeSeen };
+           } catch {
+             // First-run metadata must not revoke an already accepted student's access.
+-            firstRun = { request, plans: null, welcomeSeen: false };
++            firstRun = undefined;
+           }
+         }
+         const resolution = resolveBindGateState(
+--- a/src/navigation/__tests__/BindGate.test.tsx
++++ b/src/navigation/__tests__/BindGate.test.tsx
+@@ -1,5 +1,4 @@
+ import { setLocaleOverride, t, type Locale } from '@/i18n';
+-import { day, plan } from '@/domain/plan/test-fixtures';
+ 
+ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+ import * as analytics from '@/analytics/client';
+@@ -56,6 +55,8 @@
+   jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: null });
+   jest.spyOn(onboardingRepository, 'get').mockResolvedValue(null);
+   jest.spyOn(onboardingRepository, 'upsert').mockResolvedValue(completedProfile);
++  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [] });
++  jest.spyOn(plansRepository, 'detail').mockRejectedValue(new Error('Plans unavailable'));
+ });
+ afterEach(() => {
+   act(() => renderer?.unmount());
+@@ -169,6 +170,7 @@
+   expect(hasText(t('student.inviteCode.pasteEmpty'))).toBe(false);
+ });
+ 
++const newStudent = { binding_plan_count: 0, has_settled_day: false, first_plan: null };
+ const pendingRequest: BindRequest = {
+   id: '10000000-0000-4000-8000-000000000001', student_id: STUDENT_ID,
+   coach_id: '10000000-0000-4000-8000-000000000002', coach_display_name: 'Alex',
+@@ -182,7 +184,7 @@
+   const mine = jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: pendingRequest });
+   jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [] });
+   await renderGate();
+-  mine.mockResolvedValue({ bind_request: { ...pendingRequest, status: 'accepted', responded_at: '2026-10-26T10:01:00Z' } });
++  mine.mockResolvedValue({ bind_request: { ...pendingRequest, status: 'accepted', responded_at: '2026-10-26T10:01:00Z', first_run: newStudent } });
+   await act(async () => { await jest.advanceTimersByTimeAsync(29_999); });
+   expect(hasText("You're in")).toBe(false);
+   await act(async () => { await jest.advanceTimersByTimeAsync(1); });
+@@ -231,109 +233,58 @@
+   ['en', null, "You're now training with your coach"],
+ ] as [Locale, string | null, string][])('already delivered first plan welcomes in %s with coach %s', async (locale, name, title) => {
+   setLocaleOverride(locale);
+-  const accepted = { ...pendingRequest, status: 'accepted' as const, responded_at: '2026-09-01T00:00:00Z', coach_display_name: name };
+-  const first = plan([day('new')], { coach_id: accepted.coach_id, trainee_id: STUDENT_ID });
++  const accepted = { ...pendingRequest, status: 'accepted' as const, responded_at: '2026-09-01T00:00:00Z', coach_display_name: name, first_run: { ...newStudent, binding_plan_count: 1, first_plan: { id: '30000000-0000-4000-8000-000000000000', published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: false } } };
+   jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+-  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [first] });
+-  jest.spyOn(plansRepository, 'detail').mockResolvedValue(first);
+   await renderGate();
+   expect(hasText(title)).toBe(true);
+   expect(hasText('tabs')).toBe(false);
+ });
+-test('settled students skip welcome; rebinding to the same coach gets its own local record', async () => {
+-  const accepted = { ...pendingRequest, status: 'accepted' as const, responded_at: '2026-09-01T00:00:00Z' };
+-  const first = plan([day('done', { completed_at: '2026-09-03T00:00:00Z' })], { coach_id: accepted.coach_id, trainee_id: STUDENT_ID });
++test('completed-plan students skip welcome without reading plans and persist a binding terminal marker', async () => {
++  const accepted = { ...pendingRequest, status: 'accepted' as const, first_run: {
++    binding_plan_count: 1, has_settled_day: true,
++    first_plan: { id: '30000000-0000-4000-8000-000000000000', published_at: '2026-09-02T00:00:00Z', plan_weeks: 4, day_count: 12, has_settled_day: true },
++  } };
+   const mine = jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+-  const list = jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [first] });
+-  const detail = jest.spyOn(plansRepository, 'detail').mockResolvedValue(first);
+-  await renderGate();
+-  expect(hasText('tabs')).toBe(true);
+-  act(() => renderer.unmount());
+-  list.mockClear();
+-  detail.mockClear();
+-  await renderGate();
+-  expect(hasText('tabs')).toBe(true);
+-  expect(list).not.toHaveBeenCalled();
+-  expect(detail).not.toHaveBeenCalled();
+-  act(() => renderer.unmount());
+-  list.mockResolvedValue({ plans: [] });
+-  mine.mockResolvedValue({ bind_request: { ...accepted, id: '10000000-0000-4000-8000-000000000099' } });
++  // The student list is empty because the coach marked the plan completed.
++  await renderGate();
++  expect(hasText('tabs')).toBe(true);
++  expect(await AsyncStorage.getItem(`onboarding.welcomeSeen.${STUDENT_ID}.${accepted.id}`)).toBe('true');
++  expect(plansRepository.list).not.toHaveBeenCalled();
++  expect(plansRepository.detail).not.toHaveBeenCalled();
++  act(() => renderer.unmount());
++  mine.mockResolvedValue({ bind_request: { ...accepted, first_run: newStudent } });
++  await renderGate();
++  expect(hasText('tabs')).toBe(true);
++  act(() => renderer.unmount());
++  mine.mockResolvedValue({ bind_request: { ...accepted, id: '10000000-0000-4000-8000-000000000099', first_run: newStudent } });
+   await renderGate();
+   expect(hasText("You're now training with Alex")).toBe(true);
+-});
+-
+-test.each(['list', 'detail'] as const)('accepted students keep access to tabs when first-run %s fails', async failing => {
+-  const accepted = { ...pendingRequest, status: 'accepted' as const, responded_at: '2026-09-01T00:00:00Z' };
+-  const first = plan([day('done', { completed_at: '2026-09-03T00:00:00Z' })], { coach_id: accepted.coach_id, trainee_id: STUDENT_ID });
+-  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+-  const list = jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [first] });
+-  const detail = jest.spyOn(plansRepository, 'detail').mockResolvedValue(first);
+-  (failing === 'list' ? list : detail).mockRejectedValue(new Error('offline'));
++  expect(plansRepository.list).not.toHaveBeenCalled();
++  expect(plansRepository.detail).not.toHaveBeenCalled();
++});
++
++test.each([undefined, null])('first_run %s keeps existing access unmarked and can welcome after the backend supplies it', async first_run => {
++  const accepted = { ...pendingRequest, status: 'accepted' as const, first_run };
++  const mine = jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+   await renderGate();
+   expect(hasText('tabs')).toBe(true);
+   expect(hasText("You're in")).toBe(false);
+   expect(await AsyncStorage.getItem(`onboarding.welcomeSeen.${STUDENT_ID}.${accepted.id}`)).toBeNull();
+-});
+-
+-test.each([0, 1])('welcome eligibility stops fetching after settled plan at publication index %s', async settledIndex => {
+-  const accepted = { ...pendingRequest, status: 'accepted' as const, responded_at: '2026-09-01T00:00:00Z' };
+-  const plans = [0, 1, 2].map(index => plan([day(`day-${index}`, {
+-    completed_at: index === settledIndex ? '2026-09-06T00:00:00Z' : null,
+-  })], {
+-    id: `plan-${index}`, coach_id: accepted.coach_id, trainee_id: STUDENT_ID,
+-    published_at: `2026-09-0${index + 2}T00:00:00Z`,
+-  }));
+-  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+-  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [...plans].reverse() });
+-  const detail = jest.spyOn(plansRepository, 'detail').mockImplementation(async id => plans.find(plan => plan.id === id)!);
+-  await renderGate();
+-  expect(hasText('tabs')).toBe(true);
+-  expect(detail.mock.calls.map(([id]) => id)).toEqual(settledIndex === 0 ? ['plan-0'] : ['plan-0', 'plan-1']);
+-});
+-
+-test.each(['acceptance', 'publication', 'settlement'] as const)('unknown %s metadata stays unmarked and retries on remount', async missing => {
+-  const accepted = {
+-    ...pendingRequest, status: 'accepted' as const,
+-    responded_at: missing === 'acceptance' ? null : '2026-09-01T00:00:00Z',
+-  };
+-  const first = plan([day('unknown', { completed_at: undefined })], {
+-    coach_id: accepted.coach_id, trainee_id: STUDENT_ID,
+-    published_at: missing === 'publication' ? undefined : '2026-09-02T00:00:00Z',
+-  });
+-  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+-  const list = jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [first] });
+-  const detail = jest.spyOn(plansRepository, 'detail').mockResolvedValue(first);
+-  await renderGate();
+-  expect(hasText('tabs')).toBe(true);
+-  expect(await AsyncStorage.getItem(`onboarding.welcomeSeen.${STUDENT_ID}.${accepted.id}`)).toBeNull();
+-  expect(detail).toHaveBeenCalledTimes(missing === 'settlement' ? 1 : 0);
+-  act(() => renderer.unmount());
+-  list.mockClear();
+-  detail.mockClear();
+-  // Once the missing metadata is available, the same binding can still welcome.
+-  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: { ...accepted, responded_at: '2026-09-01T00:00:00Z' } });
+-  list.mockResolvedValue({ plans: [] });
+-  await renderGate();
+-  expect(list).toHaveBeenCalledTimes(1);
+-  expect(detail).not.toHaveBeenCalled();
++  expect(plansRepository.list).not.toHaveBeenCalled();
++  expect(plansRepository.detail).not.toHaveBeenCalled();
++  act(() => renderer.unmount());
++  mine.mockResolvedValue({ bind_request: { ...accepted, first_run: newStudent } });
++  await renderGate();
+   expect(hasText("You're now training with Alex")).toBe(true);
+-});
+-
+-test('list alone establishes no plans for this binding without fetching old, foreign or draft plans', async () => {
+-  const accepted = { ...pendingRequest, status: 'accepted' as const, responded_at: '2026-09-01T00:00:00Z' };
+-  const first = plan([day('done', { completed_at: '2026-09-03T00:00:00Z' })], {
+-    coach_id: accepted.coach_id, trainee_id: STUDENT_ID,
+-  });
+-  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: accepted });
+-  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [
+-    { ...first, published_at: '2026-08-01T00:00:00Z' },
+-    { ...first, coach_id: 'other-coach' },
+-    { ...first, trainee_id: 'other-student' },
+-    { ...first, status: 'draft', published_at: null },
+-  ] });
+-  const detail = jest.spyOn(plansRepository, 'detail');
+-  await renderGate();
+-  expect(hasText("You're now training with Alex")).toBe(true);
+-  expect(detail).not.toHaveBeenCalled();
+-  expect(await AsyncStorage.getItem(`onboarding.welcomeSeen.${STUDENT_ID}.${accepted.id}`)).toBeNull();
+-});
++  expect(plansRepository.list).not.toHaveBeenCalled();
++  expect(plansRepository.detail).not.toHaveBeenCalled();
++});
++
++test('failed terminal storage does not block an accepted settled student', async () => {
++  jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: {
++    ...pendingRequest, status: 'accepted', first_run: { ...newStudent, binding_plan_count: 1, has_settled_day: true },
++  } });
++  jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('disk unavailable'));
++  await renderGate();
++  expect(hasText('tabs')).toBe(true);
++});

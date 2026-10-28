@@ -1,8 +1,9 @@
 import { t } from '@/i18n';
 
 import * as Clipboard from 'expo-clipboard';
+import { useRouter } from 'expo-router';
 import type { PropsWithChildren } from 'react';
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -49,7 +50,10 @@ import {
   type InviteStash,
 } from '@/features/onboarding';
 
-// 2026-07-13 硬封存：accepted 直接进入 tabs。defer ≠ delete。
+import { firstRunStorage } from '@/features/onboarding/first-run-storage';
+import { WelcomeScreen } from '@/features/onboarding/WelcomeScreen';
+
+// 评估期继续封存；095 欢迎页结束后进入 tabs。
 export const evaluationSealed = true;
 
 type Snapshot = {
@@ -68,6 +72,8 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
   const user = useSessionStore((current) => current.user);
   const logout = useSessionStore((current) => current.logout);
   const studentId = explicitStudentId ?? user?.id ?? '';
+  const router = useRouter();
+  const enteringToday = useRef(false);
   const [state, setState] = useState<BindGateViewState>('loading');
   const [notice, setNotice] = useState<string | null>(null);
   const [prefillDisplayName, setPrefillDisplayName] = useState('');
@@ -116,10 +122,25 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
         if (!active) return;
         if (profile?.completed_at) await onboardingDraftStorage.clear(studentId);
         const request = mine.bind_request;
+        let firstRun;
+        if (request?.status === 'accepted') {
+          try {
+            let welcomeSeen = await firstRunStorage.read(studentId, request.id, 'welcomeSeen');
+            if (!welcomeSeen && request.first_run?.has_settled_day === true) {
+              await firstRunStorage.mark(studentId, request.id, 'welcomeSeen');
+              welcomeSeen = true;
+            }
+            firstRun = { request, welcomeSeen };
+          } catch {
+            // First-run metadata must not revoke an already accepted student's access.
+            firstRun = undefined;
+          }
+        }
         const resolution = resolveBindGateState(
           request?.status ?? 'none',
           stash !== null,
           profile?.completed_at != null,
+          firstRun,
         );
         if (!active) return;
         setSnapshot({ profile, request, stash });
@@ -129,7 +150,7 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
         if (resolution.state === 'handoffSubmitting' && stash) void runHandoff(stash);
       })
       .catch(() => {
-        if (active) setState('failed');
+        if (active) setState(current => current === 'pendingAcceptance' ? current : 'failed');
       });
     return () => {
       active = false;
@@ -137,13 +158,30 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
   }, [revision, runHandoff, studentId]);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (next) => {
-      if (next === 'active' && state === 'pendingAcceptance') {
-        setRevision((current) => current + 1);
+    if (state !== 'pendingAcceptance') return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const stop = () => { clearInterval(timer); timer = undefined; };
+    const start = () => {
+      stop();
+      timer = setInterval(() => setRevision(current => current + 1), 30_000);
+    };
+    if (AppState.currentState === 'active') start();
+    const subscription = AppState.addEventListener('change', next => {
+      stop();
+      if (next === 'active') {
+        setRevision(current => current + 1);
+        start();
       }
     });
-    return () => subscription.remove();
+    return () => { stop(); subscription.remove(); };
   }, [state]);
+
+  useEffect(() => {
+    if (enteringToday.current && state === 'bound') {
+      router.replace('/(student)/today');
+      enteringToday.current = false;
+    }
+  }, [router, state]);
 
   const retry = () => {
     setState('loading');
@@ -151,6 +189,12 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
   };
 
   if (state === 'bound' && evaluationSealed) return children;
+  if (state === 'welcome' && snapshot.request) return <WelcomeScreen
+    key={`${studentId}.${snapshot.request.id}`}
+    studentId={studentId} bindingId={snapshot.request.id}
+    coachName={snapshot.request.coach_display_name}
+    onContinue={() => { enteringToday.current = true; setState('bound'); }}
+  />;
   if (state === 'loading') {
     return (
       <GateFrame title={t('student.bindGateView.copy001')}>

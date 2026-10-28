@@ -1,0 +1,91 @@
+095 R 返修 2 · 2026-10-26
+Baseline: /tmp/spec095-r2-before/src (uncommitted repair 1 snapshot); HEAD a232d03
+Commands: npm test -- --runInBand [target paths]; npx tsc --noEmit; npm run lint
+No commit / push.
+
+/tmp/spec095-r2-bind-red.log
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 13 passed, 14 total
+Snapshots:   0 total
+Time:        0.438 s, estimated 1 s
+
+/tmp/spec095-r2-schema-red.log
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 14 passed, 16 total
+Snapshots:   0 total
+Time:        0.519 s, estimated 1 s
+
+/tmp/spec095-r2-bind-green.log
+Test Suites: 2 passed, 2 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        0.399 s, estimated 1 s
+
+/tmp/spec095-r2-gate-red.log
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 19 passed, 22 total
+Snapshots:   0 total
+Time:        0.974 s, estimated 2 s
+
+/tmp/spec095-r2-today-red.log
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        0.373 s, estimated 1 s
+
+/tmp/spec095-r2-today-green.log
+Test Suites: 2 passed, 2 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        0.876 s, estimated 2 s
+
+/tmp/spec095-r2-card-red.log
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 19 passed, 22 total
+Snapshots:   0 total
+Time:        1.622 s
+
+/tmp/spec095-r2-card-green.log
+Test Suites: 1 passed, 1 total
+Tests:       22 passed, 22 total
+Snapshots:   0 total
+Time:        2.536 s
+
+/tmp/spec095-r2-focus-red.log
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 28 skipped, 30 total
+Snapshots:   0 total
+Time:        3.646 s
+
+/tmp/spec095-r2-focus-green.log
+Test Suites: 1 passed, 1 total
+Tests:       30 passed, 30 total
+Snapshots:   0 total
+Time:        1.782 s, estimated 4 s
+
+/tmp/spec095-r2-notification-red.log
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.536 s, estimated 1 s
+
+/tmp/spec095-r2-notification-green.log
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.352 s, estimated 1 s
+
+/tmp/spec095-r2-jest-final.log
+Test Suites: 184 passed, 184 total
+Tests:       1872 passed, 1872 total
+Snapshots:   0 total
+Time:        26.867 s, estimated 28 s
+
+Final tsc: exit 0 (/tmp/spec095-r2-tsc-final.log)
+Final lint: exit 0, 0 errors / 0 warnings (/tmp/spec095-r2-lint-final.log)
+git diff --check: exit 0
+Deleted binding-plans.ts; no plansRepository call or import remains in BindGate.
+Analytics names and properties: five names match AMEND; welcome events have no properties; plan events use plan_id.
+Read-only review-loop: Standards initial 1 refresh-chain issue, resolved; final 0. Spec initial 1 focus-refresh issue, resolved; final 0.
+The notification RED assertions finished (1 failed / 1 passed), but the failed path skipped old end-of-test QueryClient cleanup; the process was stopped after recording the result. Cleanup now runs in afterEach; final full Jest exited normally.
+AVD/fixture and deployed backend not revalidated this round; prior environment-denial evidence remains separate.

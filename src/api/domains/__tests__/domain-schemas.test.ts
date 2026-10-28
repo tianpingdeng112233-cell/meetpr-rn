@@ -313,6 +313,18 @@ describe('videos snake_case schemas', () => {
 });
 
 describe('bind snake_case schemas', () => {
+  test.each([undefined, null, {
+    binding_plan_count: 1, has_settled_day: true,
+    first_plan: { id: PLAN_ID, published_at: NOW, plan_weeks: 4, day_count: 12, has_settled_day: true },
+  }])('preserves optional nullable first_run metadata: %j', first_run => {
+    const parsed = BindRequestSchema.parse({
+      id: SET_ID, student_id: STUDENT_ID, coach_id: COACH_ID,
+      coach_display_name: null, invite_code_id: null, status: 'accepted',
+      submitted_at: NOW, responded_at: NOW, expired_at: NOW,
+      skip_evaluation: true, skip_reason: null, first_run,
+    });
+    expect(parsed.first_run).toEqual(first_run);
+  });
   test('parses a request and the bind_request:null empty state', () => {
     expect(
       MineBindRequestResponseSchema.parse({ bind_request: null }),

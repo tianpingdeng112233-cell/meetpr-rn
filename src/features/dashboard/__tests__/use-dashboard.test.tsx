@@ -1,5 +1,7 @@
+import type { ReactElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, afterEach, expect, jest, test } from '@jest/globals';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { act, create as createRenderer, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
 
 import { setLocaleOverride } from '@/i18n';
@@ -28,6 +30,7 @@ jest.mock('@/api/domains', () => ({
   useSetLogs: jest.fn(),
 }));
 jest.mock('@/api/session', () => ({
+  authenticatedRequest: jest.fn(async () => ({ bind_request: null })),
   useSessionStore: (selector: (state: { user: { role: string } }) => unknown) =>
     selector({ user: { role: 'coached_student' } }),
 }));
@@ -62,6 +65,14 @@ jest.mock('../plan-seen', () => ({
 jest.mock('../week-overview', () => ({
   useWeekOverviewViewModel: jest.fn(),
 }));
+
+const queryClients: QueryClient[] = [];
+function create(element: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  queryClients.push(client);
+  return createRenderer(<QueryClientProvider client={client}>{element}</QueryClientProvider>);
+}
+afterEach(() => { queryClients.splice(0).forEach(client => client.clear()); });
 
 const STUDENT_ID = '10000000-0000-4000-8000-000000000000';
 const PLAN_ID = '30000000-0000-4000-8000-000000000000';
@@ -314,7 +325,7 @@ test('Today focus resets selection to the current day and defaults to the day ju
   act(() => { mockFocus?.(); });
   expect(vm!.selectedDayID).toBe('day-1');
   active = { ...active, days: [{ ...days[0], completed_at: new Date().toISOString() }, { ...days[1], week_number: 2 }] };
-  act(() => { view!.update(<Harness />); });
+  act(() => { view!.update(<QueryClientProvider client={queryClients[queryClients.length - 1]}><Harness /></QueryClientProvider>); });
   expect(vm!.selectedDayID).toBe('day-1');
   act(() => view!.unmount());
 });

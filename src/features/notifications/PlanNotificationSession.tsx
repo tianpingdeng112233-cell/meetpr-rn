@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
+import { bindKeys } from '@/api/domains/bind';
 import { planKeys } from '@/api/domains/plans';
 import { useSessionStore } from '@/api/session';
 import { startPlanNotifications } from './plan-notifications';
@@ -25,6 +26,9 @@ export function PlanNotificationSession() {
         // Inactive tabs become stale too; their first focus must load the new recommendation.
         void queryClient.invalidateQueries({ queryKey: planKeys.list(studentId) }).catch(() => undefined);
         void queryClient.invalidateQueries({ queryKey: planKeys.detail(planId) }).catch(() => undefined);
+        if (useSessionStore.getState().user?.role === 'coached_student') {
+          void queryClient.invalidateQueries({ queryKey: bindKeys.mine }).catch(() => undefined);
+        }
       },
       openTraining: () => router.navigate('/(student)/training'),
       transport: {

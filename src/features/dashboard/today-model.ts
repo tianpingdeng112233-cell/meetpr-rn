@@ -1,3 +1,4 @@
+import type { BindRequest } from '@/api/domains/bind';
 import type { PlanDay, PlanDetail, PlanSummary } from '@/api/domains/plans';
 import {
   canUndoCompletion,
@@ -22,6 +23,7 @@ export function todayModel(
   plan: PlanDetail | null,
   now = new Date(),
   plans: readonly PlanSummary[] = [],
+  firstRun?: { request: BindRequest | null; firstPlanDismissed: boolean | null },
 ) {
   const days = plan?.days ?? [];
   const cursor = cursorDay(days);
@@ -39,11 +41,17 @@ export function todayModel(
           }
         : { kind: 'current', day: cursor };
   const latest = selectCurrentPlan(plans);
+  const metadata = firstRun?.request?.status === 'accepted' ? firstRun.request.first_run : null;
+  const first = metadata?.first_plan;
+  const firstPlan = first && firstRun?.firstPlanDismissed === false &&
+    !first.has_settled_day ? first : null;
   return {
+    firstPlan,
+    waitingForFirstPlan: action.kind === 'waiting' && metadata?.binding_plan_count === 0,
     cursor,
     completedToday: completed,
     action,
-    stickyStartDay: action.kind === 'current' ? cursor : null,
+    stickyStartDay: !firstPlan && action.kind === 'current' ? cursor : null,
     segments: progressSegments(currentWeekDays(days), cursor?.id),
     isAwaitingNextPlan:
       (days.length > 0 && !cursor) ||

@@ -12,7 +12,22 @@ export const BindRequestStatusSchema = z.enum([
   'cancelled',
 ]);
 
+const FirstRunSchema = z.object({
+  binding_plan_count: z.number().int().nonnegative(),
+  has_settled_day: z.boolean(),
+  first_plan: z.object({
+    id: UuidSchema,
+    published_at: TimestampSchema,
+    plan_weeks: z.number().int(),
+    day_count: z.number().int().nonnegative(),
+    has_settled_day: z.boolean(),
+  }).nullable(),
+});
+
+export type FirstPlan = NonNullable<z.infer<typeof FirstRunSchema>['first_plan']>;
+
 export const BindRequestSchema = z.object({
+  first_run: FirstRunSchema.nullish(),
   id: UuidSchema,
   student_id: UuidSchema,
   coach_id: UuidSchema,
