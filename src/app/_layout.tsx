@@ -15,6 +15,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { t } from '@/i18n';
+import { authTypography } from '@/features/auth/auth-typography';
 import { BUILD_TRACK } from '@/config/build-track';
 import { Toast } from '@/design/Toast';
 
@@ -29,6 +31,7 @@ import {
 import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
 import { RestTimerNotificationSession } from '@/features/training/RestTimerNotificationSession';
 import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
+import { AndroidUpdateSession } from '@/features/updates/AndroidUpdateSession';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
 import { useChatRealtimeLifecycle } from '@/features/chat/realtime';
@@ -67,15 +70,13 @@ function RootNavigator() {
         headerShown: false,
       }}>
       <Stack.Screen name="index" />
-      <Stack.Protected guard={!bootstrapped || (BUILD_TRACK === 'china' && status === 'authenticating')}>
+      <Stack.Protected guard={!bootstrapped}>
         <Stack.Screen name="validating" />
       </Stack.Protected>
-      <Stack.Protected guard={bootstrapped && (status === 'anonymous' || (BUILD_TRACK === 'global' && status === 'authenticating'))}>
+      <Stack.Protected guard={bootstrapped && (status === 'anonymous' || status === 'authenticating')}>
         <Stack.Screen name="login" />
-        <Stack.Protected guard={BUILD_TRACK === 'global'}>
-          <Stack.Screen name="register" options={{ headerShown: true, title: 'Create account' }} />
-          <Stack.Screen name="forgot-password" options={{ headerShown: true, title: 'Forgot password' }} />
-        </Stack.Protected>
+        <Stack.Screen name="register" options={{ headerShown: true, title: t('auth.createAccount'), headerTitleStyle: authTypography() }} />
+        <Stack.Screen name="forgot-password" options={{ headerShown: true, title: t('auth.forgotHeader'), headerTitleStyle: authTypography() }} />
       </Stack.Protected>
       <Stack.Protected guard={isCoach}>
         <Stack.Screen name="(coach)" />
@@ -86,6 +87,8 @@ function RootNavigator() {
         <Stack.Screen name="profile/about" />
         <Stack.Screen name="profile/health" />
         <Stack.Screen name="profile/settings" />
+        <Stack.Screen name="progress/e1rm" />
+        <Stack.Screen name="progress/intensity" />
       </Stack.Protected>
     </Stack>
   );
@@ -109,6 +112,8 @@ function ThemedRoot() {
   const bootstrap = useSessionStore((state) => state.bootstrap);
   const user = useSessionStore((state) => state.user);
   const [privacyNoticeVisible, setPrivacyNoticeVisible] = useState(false);
+  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const bootstrapped = useSessionStore((state) => state.bootstrapped);
 
   useEffect(() => {
     void bootstrap();
@@ -143,6 +148,7 @@ function ThemedRoot() {
           return;
         }
         setPrivacyNoticeVisible(!confirmed);
+        setPrivacyChecked(true);
       })
       .catch(() => undefined);
 
@@ -161,6 +167,7 @@ function ThemedRoot() {
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
         <RootNavigator />
+        <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} />
         <TrainingReminderSession />
         <PlanNotificationSession />
         <RestTimerNotificationSession />

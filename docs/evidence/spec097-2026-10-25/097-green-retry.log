@@ -1,0 +1,13 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/updates/__tests__
+
+PASS src/features/updates/__tests__/android-update-session.test.tsx
+PASS src/features/updates/__tests__/android-update.test.ts
+PASS src/features/updates/__tests__/android-update-recheck.test.tsx
+
+Test Suites: 3 passed, 3 total
+Tests:       40 passed, 40 total
+Snapshots:   0 total
+Time:        0.612 s, estimated 1 s
+Ran all test suites matching /src\/features\/updates\/__tests__/i.

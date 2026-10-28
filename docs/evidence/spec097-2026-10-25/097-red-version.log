@@ -1,0 +1,89 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/settings/__tests__/settings-page.test.tsx
+
+FAIL src/features/settings/__tests__/settings-page.test.tsx
+  ✕ Android settings end with the localized native version (zh) (1317 ms)
+  ✕ Android settings end with the localized native version (en) (1 ms)
+  ✕ Android settings end with the localized native version (zh-Hant) (1 ms)
+  ✓ missing nativeBuildVersion hides the version row (1 ms)
+  ✓ missing nativeApplicationVersion hides the version row (1 ms)
+  ✓ iOS settings do not show an Android version row (1 ms)
+
+  ● Android settings end with the localized native version (zh)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "Preference",
+    -   "版本 0.1.0 (4)",
+      ]
+
+      33 |   await renderPage();
+      34 |   const rows = tree.root.findByType(ScrollView).findAllByType(Text);
+    > 35 |   expect(rows.map(row => row.props.children)).toEqual(['Preference', expected]);
+         |                                               ^
+      36 |   expect(rows[1].props.onPress).toBeUndefined();
+      37 |   expect(rows[1].props.style).toEqual(expect.objectContaining({ textAlign: 'center', fontSize: 12 }));
+      38 | });
+
+      at toEqual (src/features/settings/__tests__/settings-page.test.tsx:35:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Android settings end with the localized native version (en)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "Preference",
+    -   "Version 0.1.0 (4)",
+      ]
+
+      33 |   await renderPage();
+      34 |   const rows = tree.root.findByType(ScrollView).findAllByType(Text);
+    > 35 |   expect(rows.map(row => row.props.children)).toEqual(['Preference', expected]);
+         |                                               ^
+      36 |   expect(rows[1].props.onPress).toBeUndefined();
+      37 |   expect(rows[1].props.style).toEqual(expect.objectContaining({ textAlign: 'center', fontSize: 12 }));
+      38 | });
+
+      at toEqual (src/features/settings/__tests__/settings-page.test.tsx:35:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Android settings end with the localized native version (zh-Hant)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "Preference",
+    -   "版本 0.1.0 (4)",
+      ]
+
+      33 |   await renderPage();
+      34 |   const rows = tree.root.findByType(ScrollView).findAllByType(Text);
+    > 35 |   expect(rows.map(row => row.props.children)).toEqual(['Preference', expected]);
+         |                                               ^
+      36 |   expect(rows[1].props.onPress).toBeUndefined();
+      37 |   expect(rows[1].props.style).toEqual(expect.objectContaining({ textAlign: 'center', fontSize: 12 }));
+      38 | });
+
+      at toEqual (src/features/settings/__tests__/settings-page.test.tsx:35:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 3 passed, 6 total
+Snapshots:   0 total
+Time:        2.105 s
+Ran all test suites matching /src\/features\/settings\/__tests__\/settings-page.test.tsx/i.

@@ -37,7 +37,7 @@ export function dayName(
   );
   if (families.length === 3) return names.join('·');
   return t('student.progression.dayName', [
-    names.join(getLocale() === 'zh' ? '' : ' / '),
+    names.join(getLocale() !== 'en' ? '' : ' / '),
   ]);
 }
 export function daySummary(day: PlanDay): string {

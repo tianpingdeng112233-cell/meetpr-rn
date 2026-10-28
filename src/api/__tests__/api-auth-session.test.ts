@@ -9,6 +9,7 @@ import {
   registerRequest,
   UserSchema,
 } from '../auth';
+import { setLocaleOverride, type Locale } from '@/i18n';
 import { ApiError, apiRequest } from '../client';
 import {
   authenticatedRequest,
@@ -91,9 +92,24 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.clearAllMocks();
+  setLocaleOverride(null);
 });
 
 describe('API error classification', () => {
+  test.each([
+    [400, 'SETS_PLAN_DAY_NOT_PUBLISHED'],
+    [409, 'SETS_ADHOC_DAY_CONFLICT'],
+    [409, 'SET_NOT_STUDENT_ADDED'],
+    [409, 'SET_HAS_ATTACHMENT'],
+    [409, 'SET_HAS_COACH_FEEDBACK'],
+    [404, 'SET_NOT_FOUND'],
+  ] satisfies [number, string][])('preserves student-added HTTP %s %s as a backend ApiError', async (status, code) => {
+    jest.mocked(fetch).mockResolvedValueOnce(mockResponse(status, { error: code }));
+    const error = await apiRequest('/sets/log', { method: 'POST' }).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ kind: 'backend', status, code, envelope: { error: code } });
+  });
+
   test('preserves CHAT_BIND_REQUIRED so student chat can show binding-invalidated copy', async () => {
     jest.mocked(fetch).mockResolvedValueOnce(mockResponse(403, { error: 'CHAT_BIND_REQUIRED' }));
     await expect(apiRequest('/conversations', { method: 'POST' })).rejects.toMatchObject({
@@ -178,6 +194,7 @@ describe('auth wire format', () => {
     });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -207,6 +224,7 @@ describe('auth wire format', () => {
     });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -227,6 +245,7 @@ describe('auth wire format', () => {
     expect(requestBody(init)).toEqual({ refresh_token: 'refresh-old' });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -244,6 +263,7 @@ describe('auth wire format', () => {
     expect(requestBody(init)).toEqual({ snake_case: true });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
+      'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
       authorization: 'Bearer access-token',
     });
@@ -612,4 +632,15 @@ describe('credential mutation races', () => {
 
 test('ApiError remains identifiable across callers', () => {
   expect(new ApiError('network', 'offline')).toBeInstanceOf(ApiError);
+});
+
+test.each<[Locale, string]>([['zh', 'zh-Hans'], ['zh-Hant', 'zh-Hant'], ['en', 'en']])('every API request reports a single interface language (%s)', async (locale, expected) => {
+  setLocaleOverride(locale);
+  jest.mocked(fetch).mockResolvedValue(mockResponse(200, {}));
+  await apiRequest('/auth/signup-code', { method: 'POST', body: { email: 'locale@example.test' } });
+  await apiRequest('/me', { accessToken: 'test-token' });
+  for (const [, options] of jest.mocked(fetch).mock.calls) {
+    expect(requestHeaders(options)['X-MeetPR-Locale']).toBe(expected);
+    expect(Object.keys(requestHeaders(options)).map(key => key.toLowerCase())).not.toContain('accept-language');
+  }
 });

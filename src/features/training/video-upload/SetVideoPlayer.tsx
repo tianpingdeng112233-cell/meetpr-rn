@@ -13,13 +13,14 @@ import { useSetVideoPlayerHost } from './SetVideoPlayerHost';
 import { initialSetPlayback, setPlaybackRates, setPlaybackReducer } from './set-playback';
 
 /** The host keeps the native surface mounted across inline/full-screen layout changes. */
-export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refreshURL: () => Promise<string>; badge?: VideoBadgeInfo | null }) {
-  const host = useSetVideoPlayerHost();
+export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClose, onReview }: { uri: string; refreshURL: () => Promise<string>; badge?: VideoBadgeInfo | null; readOnly?: boolean; onClose?: () => void; onReview?: () => void }) {
+  const availableHost = useSetVideoPlayerHost();
+  const host = readOnly ? null : availableHost;
   const anchor = useRef<View>(null);
   const [inlineWidth, setInlineWidth] = useState(0);
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const [state, dispatch] = useReducer(setPlaybackReducer, initialSetPlayback);
+  const [state, dispatch] = useReducer(setPlaybackReducer, { ...initialSetPlayback, expanded: readOnly, paused: !readOnly });
   const player = useRef<VideoRef>(null);
   const [loaded, setLoaded] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
@@ -92,7 +93,7 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
         <Text style={{ ...font.body(fontMetrics.size13, 'semibold'), color: colors.inkOnCTAFill }}>{state.rate}×</Text>
       </Pressable>
     </View>
-    <PlayerIconButton name={state.expanded ? 'fullscreen-exit' : 'fullscreen'} label={t(state.expanded ? 'training.previewCollapse' : 'training.previewExpand')} onPress={resize} />
+    {!readOnly ? <PlayerIconButton name={state.expanded ? 'fullscreen-exit' : 'fullscreen'} label={t(state.expanded ? 'training.previewCollapse' : 'training.previewExpand')} onPress={resize} /> : null}
   </View>;
   const inlineOverlay = Boolean(host) && !state.expanded;
   const centralPlayStyle = { width: spacing.point56, height: spacing.point56, borderRadius: radius.pill, backgroundColor: colors.modalShadow, alignItems: 'center', justifyContent: 'center' } as const;
@@ -110,12 +111,25 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
         onError={() => { if (!renewed.current) { renewed.current = true; void retry(); } else setFailed(true); }} />
       {!loaded && !failed ? <ActivityIndicator style={StyleSheet.absoluteFill} color={colors.inkOnCTAFill} /> : null}
     </View>
-    {failed ? <View pointerEvents={inlineOverlay ? 'box-none' : 'auto'} style={[StyleSheet.absoluteFill, { bottom: state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center', gap: spacing.sm }]}>
+    {failed ? <View pointerEvents={inlineOverlay ? 'box-none' : 'auto'} style={[StyleSheet.absoluteFill, { top: readOnly ? insets.top + spacing.minimumHitTarget + spacing.sm : 0, bottom: readOnly ? controlsHeight + spacing.point56 : state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center', gap: spacing.sm }]}>
       <Text pointerEvents={inlineOverlay ? 'none' : 'auto'} style={{ ...font.body(fontMetrics.size13), color: colors.inkOnCTAFill }}>{t('student.videoAttachmentSection.copy004')}</Text>
       <PlayerIconButton name="refresh" label={t('student.videoAttachmentSection.copy002')} onPress={() => void retry()} />
     </View> : null}
     {state.expanded ? <>
-      <View style={{ padding: spacing.base, paddingTop: insets.top + spacing.sm, backgroundColor: colors.modalShadow }}>
+      {readOnly ? <>
+        <View style={{ paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <PlayerIconButton name="close" label={t('chat.closePlayback')} onPress={() => onClose?.()} />
+          {onReview ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.coachReviewed')} onPress={onReview}
+            style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
+            <View style={{ height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.videoReviewedFill, borderWidth: 1, borderColor: colors.videoReviewedBorder, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Text style={{ ...font.body(12, 'semibold'), color: colors.videoReviewedText }}>{t('training.coachReviewed')}</Text>
+              <MaterialCommunityIcons name="chevron-right" size={14} color={colors.videoReviewedText} />
+            </View>
+          </Pressable> : null}
+        </View>
+        <View style={{ flex: 1 }} />
+      </> : null}
+      <View style={{ padding: spacing.base, paddingTop: readOnly ? spacing.sm : insets.top + spacing.sm, backgroundColor: colors.modalShadow }}>
         <Text style={{ ...font.body(fontMetrics.size17, 'semibold'), color: colors.inkOnCTAFill }}>{badge?.exerciseName}</Text>
         <Text style={{ ...font.body(fontMetrics.size13), color: colors.inkOnCTAFill }}>{[
           badge?.setOrdinal != null ? t('chat.setPosition %@', [badge.setOrdinal]) : null,
@@ -123,11 +137,11 @@ export function SetVideoPlayer({ uri, refreshURL, badge }: { uri: string; refres
           badge?.rpe != null ? `${t('chat.rpeMetric')} ${badge.rpe}` : null,
         ].filter(Boolean).join(' · ')}</Text>
       </View>
-      <View style={{ flex: 1 }} />
+      {!readOnly ? <View style={{ flex: 1 }} /> : null}
     </> : null}
     {controls}
     {state.expanded ? <StatusBar style="light" /> : null}
-    {state.paused && loaded && !failed ? <View pointerEvents={inlineOverlay ? 'none' : 'box-none'} importantForAccessibility={inlineOverlay ? 'no-hide-descendants' : 'auto'} style={[StyleSheet.absoluteFill, { bottom: state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center' }]}>
+    {state.paused && loaded && !failed ? <View pointerEvents={inlineOverlay ? 'none' : 'box-none'} importantForAccessibility={inlineOverlay ? 'no-hide-descendants' : 'auto'} style={[StyleSheet.absoluteFill, { top: readOnly ? insets.top + spacing.minimumHitTarget + spacing.sm : 0, bottom: readOnly ? controlsHeight + spacing.point56 : state.expanded ? 0 : inlineControlsHeight, alignItems: 'center', justifyContent: 'center' }]}>
       {inlineOverlay ? <View testID="set-video-central-play" style={centralPlayStyle}>{centralPlayIcon}</View> : <Pressable testID="set-video-central-play" accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={togglePlayback}
         style={centralPlayStyle}>
         {centralPlayIcon}

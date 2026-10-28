@@ -1,3 +1,4 @@
+import { getLocaleHeader } from '@/i18n';
 import { z } from 'zod';
 
 export type RealtimeEvent =
@@ -74,7 +75,7 @@ export function createRealtimeClient({ baseUrl, accessToken, socketFactory = nat
         const url = new URL(baseUrl);
         url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
         url.pathname = `${url.pathname.replace(/\/+$/, '')}/realtime`;
-        const socket = socketFactory(url.toString(), undefined, { headers: { Authorization: `Bearer ${token}` } });
+        const socket = socketFactory(url.toString(), undefined, { headers: { 'X-MeetPR-Locale': getLocaleHeader(), Authorization: `Bearer ${token}` } });
         await new Promise<void>(resolve => {
           let ended = false;
           const finish = () => {

@@ -1,0 +1,412 @@
+--- before/scripts/generate-zh-hant.cjs
++++ after/scripts/generate-zh-hant.cjs
+@@ -15,7 +15,8 @@
+   if (source === '邮箱') return [['邮箱', '信箱']];
+   if (source === '“ ”') return [['“', '「'], ['”', '」']];
+   if (source === '‘ ’') return [['‘', '『'], ['’', '』']];
+-  const sources = source.split(' / ');
++  // Parenthesized glossary notes describe the term; they are not source text.
++  const sources = source.replace(/（.*）$/, '').split(' / ');
+   const targets = target.split(' / ');
+   return sources.map((word, index) => [word, targets[index] ?? targets[0]]);
+ });
+@@ -76,6 +77,10 @@
+       for (const char of target) if (t2s(char) !== char && !search[char]) search[char] = t2s(char);
+     }
+   }
++  // 杆 and 杠 share 槓 in display copy. Fold all search targets to one spelling
++  // so both canonical names and compound translations (including 槓桿) match.
++  search['杆'] = '杠';
++  for (const target of Object.keys(search)) search[target] = search[target].replace(/杆/g, '杠');
+   const searchPattern = new RegExp(Object.keys(search).sort((a, b) => b.length - a.length).map(escape).join('|'), 'g');
+   const normalizeAlias = name => name.toLowerCase().replace(searchPattern, word => search[word]);
+   const aliases = Object.fromEntries(aliasGlossary.split('\n').filter(line => line.startsWith('| ')).flatMap(line => {
+--- before/src/i18n/__tests__/zh-hant-catalog.test.js
++++ after/src/i18n/__tests__/zh-hant-catalog.test.js
+@@ -52,6 +52,24 @@
+   expect(() => generate(true)).not.toThrow();
+ });
+ 
++test('v2.1 converts equipment 杆 to 槓 while preserving lever 杠杆 as 槓桿', () => {
++  // Synthetic copy exercises the converter shared by UI copy and exercise names.
++  expect(convert('选择EZ杆，检查杠杆式器械：{name}')).toBe('選擇EZ槓，檢查槓桿式器械：{name}');
++  expect(convert('EZ杆二头弯举')).toBe('EZ槓二頭彎舉');
++  expect(convert('坐姿杠杆臂屈伸')).toBe('坐姿槓桿臂屈伸');
++  expect(convert('T杆、六角杆、安全杆、地雷杆、专项杆、软杆/硬杆、低杆位、引体向上杆、过杆'))
++    .toBe('T槓、六角槓、安全槓、地雷槓、專項槓、軟槓/硬槓、低槓位、引體向上槓、過槓');
++});
++
++test('v2.1 generated UI copy and exercise names use the approved bar terms', () => {
++  expect(generated['coach.bind.equipment.deadliftBar']).toBe('硬舉專項槓(軟槓)');
++  expect(generated['coach.bind.equipment.powerBar']).toBe('健力專項槓(硬槓)');
++  expect(generated['coach.bind.equipment.pullupBar']).toBe('引體向上槓');
++  const exercises = require('../generated/exercise-names-zh-Hant.json');
++  expect(exercises['EZ杆二头弯举']).toBe('EZ槓二頭彎舉');
++  expect(exercises['坐姿杠杆臂屈伸']).toBe('坐姿槓桿臂屈伸');
++});
++
+ 
+ test('v2 generated copy uses 課表, 反饋 and reps-only 下數 / 下', () => {
+   expect(convert('发布计划，训练计划，计划编辑器，视频反馈，反馈备注')).toBe('發布課表，課表，課表編輯器，影片反饋，反饋備註');
+--- before/src/i18n/generated/exercise-names-zh-Hant.json
++++ after/src/i18n/generated/exercise-names-zh-Hant.json
+@@ -13,17 +13,17 @@
+   "Anderson 深蹲": "Anderson 深蹲",
+   "B 站距 RDL": "B 站距 RDL",
+   "B 站距臀推": "B 站距臀推",
+-  "EZ曲杆反重力推举": "EZ曲杆反重力推舉",
+-  "EZ杆二头弯举": "EZ杆二頭彎舉",
++  "EZ曲杆反重力推举": "EZ曲槓反重力推舉",
++  "EZ杆二头弯举": "EZ槓二頭彎舉",
+   "EZ正手杠铃弯举": "EZ正手槓鈴彎舉",
+   "Helms 划船": "Helms 划船",
+   "JM推举（孤立三头）": "JM推舉（孤立三頭）",
+   "Jefferson 硬拉": "Jefferson 硬舉",
+   "Kroc 划船": "Kroc 划船",
+   "L 撑": "L 撐",
+-  "PIN低杆位早安式": "PIN低杆位早安式",
++  "PIN低杆位早安式": "PIN低槓位早安式",
+   "PVC管/木棍绕肩": "PVC管/木棍繞肩",
+-  "SSB(安全杆)深蹲": "SSB(安全杆)深蹲",
++  "SSB(安全杆)深蹲": "SSB(安全槓)深蹲",
+   "TRX-三头臂屈伸": "TRX-三頭臂屈伸",
+   "TRX-二头弯举": "TRX-二頭彎舉",
+   "TRX-后束飞鸟": "TRX-後束飛鳥",
+@@ -36,9 +36,9 @@
+   "TRX-水平划船(中难度)": "TRX-水平划船(中難度)",
+   "TRX-水平划船(负重)": "TRX-水平划船(負重)",
+   "TRX-面拉": "TRX-面拉",
+-  "T杆划船": "T杆划船",
+-  "T杆划船(宽)": "T杆划船(寬)",
+-  "T杆划船(窄)": "T杆划船(窄)",
++  "T杆划船": "T槓划船",
++  "T杆划船(宽)": "T槓划船(寬)",
++  "T杆划船(窄)": "T槓划船(窄)",
+   "V-Bar绳索下压": "V-Bar繩索下壓",
+   "V-bar下拉": "V-bar下拉",
+   "V-bar划船": "V-bar划船",
+@@ -94,7 +94,7 @@
+   "交替伸薄船腿": "交替伸薄船腿",
+   "交替抬腿": "交替抬腿",
+   "交替触脚跟": "交替觸腳跟",
+-  "仰卧EZ杆臂屈伸": "仰臥EZ杆臂屈伸",
++  "仰卧EZ杆臂屈伸": "仰臥EZ槓臂屈伸",
+   "仰卧下背拉伸": "仰臥下背拉伸",
+   "仰卧下背拉伸_屈膝": "仰臥下背拉伸_屈膝",
+   "仰卧举腿收腹": "仰臥舉腿收腹",
+@@ -112,7 +112,7 @@
+   "仰卧抬腿膝部上举": "仰臥抬腿膝部上舉",
+   "仰卧抱臂卷腹": "仰臥抱臂卷腹",
+   "仰卧旋转屈臂上拉": "仰臥旋轉屈臂上拉",
+-  "仰卧杠杆式胸推": "仰臥槓杆式胸推",
++  "仰卧杠杆式胸推": "仰臥槓桿式胸推",
+   "仰卧杠铃臂屈伸": "仰臥槓鈴臂屈伸",
+   "仰卧泡沫轴开胸放松": "仰臥泡沫軸開胸放鬆",
+   "仰卧泡沫轴颈部减压放松": "仰臥泡沫軸頸部減壓放鬆",
+@@ -124,7 +124,7 @@
+   "传统节奏硬拉": "傳統節奏硬舉",
+   "低位等长传统硬拉": "低位等長傳統硬舉",
+   "低位等长相扑硬拉": "低位等長相撲硬舉",
+-  "低杆位早安式": "低杆位早安式",
++  "低杆位早安式": "低槓位早安式",
+   "低杠位深蹲": "低槓位深蹲",
+   "低箱深蹲": "低箱深蹲",
+   "佐特曼弯举": "佐特曼彎舉",
+@@ -179,8 +179,8 @@
+   "公文包硬拉": "公文包硬舉",
+   "公文包负重行走": "公文包負重行走",
+   "六角推": "六角推",
+-  "六角杆硬拉": "六角杆硬舉",
+-  "六角杆跳": "六角杆跳",
++  "六角杆硬拉": "六角槓硬舉",
++  "六角杆跳": "六角槓跳",
+   "六角杠深蹲": "六角槓深蹲",
+   "军事俯卧撑（标准）": "軍事俯臥撐（標準）",
+   "农夫行走": "農夫行走",
+@@ -270,7 +270,7 @@
+   "双杠臂屈伸": "雙槓臂屈伸",
+   "双杠臂屈伸(负重)": "雙槓臂屈伸(負重)",
+   "双杠臂屈伸(辅助)": "雙槓臂屈伸(輔助)",
+-  "反向T杆划船": "反向T杆划船",
++  "反向T杆划船": "反向T槓划船",
+   "反向划船": "反向划船",
+   "反向北欧弯举": "反向北歐彎舉",
+   "反向卷腹": "反向卷腹",
+@@ -394,7 +394,7 @@
+   "哑铃掌心旋转俯身划船": "啞鈴掌心旋轉俯身划船",
+   "哑铃推肩": "啞鈴推肩",
+   "哑铃摆荡": "啞鈴擺盪",
+-  "哑铃杠杆握法相扑深蹲": "啞鈴槓杆握法相撲深蹲",
++  "哑铃杠杆握法相扑深蹲": "啞鈴槓桿握法相撲深蹲",
+   "哑铃深蹲": "啞鈴深蹲",
+   "哑铃火箭推": "啞鈴火箭推",
+   "哑铃环抱弯举": "啞鈴環抱彎舉",
+@@ -466,7 +466,7 @@
+   "固定熊爬": "固定熊爬",
+   "圆木推": "圓木推",
+   "圆石装载": "圓石裝載",
+-  "圆石过杆": "圓石過杆",
++  "圆石过杆": "圓石過槓",
+   "土耳其起身": "土耳其起身",
+   "地板卧推": "地板臥推",
+   "地板卷腹": "地板卷腹",
+@@ -477,10 +477,10 @@
+   "地板飞鸟(中难度)": "地板飛鳥(中難度)",
+   "地板飞鸟(负重)": "地板飛鳥(負重)",
+   "地雷推": "地雷推",
+-  "地雷杆单手划船": "地雷杆單手划船",
+-  "地雷杆甩": "地雷杆甩",
+-  "地雷杆硬拉": "地雷杆硬舉",
+-  "地雷杆罗马尼亚硬拉": "地雷杆羅馬尼亞硬舉",
++  "地雷杆单手划船": "地雷槓單手划船",
++  "地雷杆甩": "地雷槓甩",
++  "地雷杆硬拉": "地雷槓硬舉",
++  "地雷杆罗马尼亚硬拉": "地雷槓羅馬尼亞硬舉",
+   "坐姿 v 把划船": "坐姿 v 把划船",
+   "坐姿划船": "坐姿划船",
+   "坐姿单手划船": "坐姿單手划船",
+@@ -503,7 +503,7 @@
+   "坐姿弹力带外展": "坐姿彈力帶外展",
+   "坐姿弹力带腿屈伸": "坐姿彈力帶腿屈伸",
+   "坐姿早安屈体": "坐姿早安屈體",
+-  "坐姿杠杆臂屈伸": "坐姿槓杆臂屈伸",
++  "坐姿杠杆臂屈伸": "坐姿槓桿臂屈伸",
+   "坐姿杠铃推举": "坐姿槓鈴推舉",
+   "坐姿杠铃提踵": "坐姿槓鈴提踵",
+   "坐姿杠铃过头臂屈伸": "坐姿槓鈴過頭臂屈伸",
+@@ -549,9 +549,9 @@
+   "壶铃风车": "壺鈴風車",
+   "大猩猩蹲": "大猩猩蹲",
+   "奥蒂斯起身": "奧蒂斯起身",
+-  "安全杆前蹲": "安全杆前蹲",
+-  "安全杆早安式": "安全杆早安式",
+-  "安全杆暂停深蹲": "安全杆暫停深蹲",
++  "安全杆前蹲": "安全槓前蹲",
++  "安全杆早安式": "安全槓早安式",
++  "安全杆暂停深蹲": "安全槓暫停深蹲",
+   "安全杠节奏深蹲": "安全槓節奏深蹲",
+   "实力推": "實力推",
+   "宽握 spoto 卧推": "寬握 spoto 臥推",
+@@ -732,7 +732,7 @@
+   "彭德雷划船（潘德雷）": "彭德雷划船（潘德雷）",
+   "忍者箱跳": "忍者箱跳",
+   "悍马俯身划船": "悍馬俯身划船",
+-  "悍马多连杆卧推": "悍馬多連桿臥推",
++  "悍马多连杆卧推": "悍馬多連槓臥推",
+   "悍马式站姿维京推举": "悍馬式站姿維京推舉",
+   "悍马式高位深蹲": "悍馬式高位深蹲",
+   "悍马机-鹦鹉螺": "悍馬機-鸚鵡螺",
+@@ -768,8 +768,8 @@
+   "扛重登台": "扛重登臺",
+   "扭转前平板支撑": "扭轉前平板支撐",
+   "扭转深蹲": "扭轉深蹲",
+-  "扶手安全杆暂停深蹲": "扶手安全杆暫停深蹲",
+-  "扶手安全杆深蹲": "扶手安全杆深蹲",
++  "扶手安全杆暂停深蹲": "扶手安全槓暫停深蹲",
++  "扶手安全杆深蹲": "扶手安全槓深蹲",
+   "把手式蝴蝶机飞鸟": "把手式蝴蝶機飛鳥",
+   "抓举": "抓舉",
+   "抓举握距RDL": "抓舉握距RDL",
+@@ -781,8 +781,8 @@
+   "抬腿开合": "抬腿開合",
+   "抬腿杠铃卧推": "抬腿槓鈴臥推",
+   "抱头后仰": "抱頭後仰",
+-  "拉杆坐姿划船(宽握)": "拉桿坐姿划船(寬握)",
+-  "拉杆坐姿划船(窄握)": "拉桿坐姿划船(窄握)",
++  "拉杆坐姿划船(宽握)": "拉槓坐姿划船(寬握)",
++  "拉杆坐姿划船(窄握)": "拉槓坐姿划船(窄握)",
+   "拉森卧推（无腿直腿卧推）": "拉森臥推（無腿直腿臥推）",
+   "挂片后摆腿": "掛片後襬腿",
+   "挂片器划船": "掛片器划船",
+@@ -800,7 +800,7 @@
+   "斜腹肌仰卧卷腹_地面版": "斜腹肌仰臥卷腹_地面版",
+   "斯文德推": "斯文德推",
+   "斯科特推举": "斯科特推舉",
+-  "无腰带低杆位早安式": "無腰帶低杆位早安式",
++  "无腰带低杆位早安式": "無腰帶低槓位早安式",
+   "无腿卧推": "無腿臥推",
+   "早安": "早安",
+   "早安式": "早安式",
+@@ -811,16 +811,16 @@
+   "暂停深蹲": "暫停深蹲",
+   "暂停深蹲(半程上)": "暫停深蹲(半程上)",
+   "暂停深蹲(半程下)": "暫停深蹲(半程下)",
+-  "曲杆上提": "曲杆上提",
++  "曲杆上提": "曲槓上提",
+   "最伟大拉伸": "最偉大拉伸",
+   "木板垫高卧推": "木板墊高臥推",
+-  "杠杆反向挺身_片式负重": "槓杆反向挺身_片式負重",
+-  "杠杆坐姿卷腹": "槓杆坐姿卷腹",
+-  "杠杆坐姿小腿屈伸": "槓杆坐姿小腿屈伸",
+-  "杠杆坐姿腿屈伸": "槓杆坐姿腿屈伸",
+-  "杠杆夹胸": "槓杆夾胸",
+-  "杠杆式单腿水平腿屈伸": "槓杆式單腿水平腿屈伸",
+-  "杠杆腹部摆动": "槓杆腹部擺動",
++  "杠杆反向挺身_片式负重": "槓桿反向挺身_片式負重",
++  "杠杆坐姿卷腹": "槓桿坐姿卷腹",
++  "杠杆坐姿小腿屈伸": "槓桿坐姿小腿屈伸",
++  "杠杆坐姿腿屈伸": "槓桿坐姿腿屈伸",
++  "杠杆夹胸": "槓桿夾胸",
++  "杠杆式单腿水平腿屈伸": "槓桿式單腿水平腿屈伸",
++  "杠杆腹部摆动": "槓桿腹部擺動",
+   "杠铃上凳": "槓鈴上凳",
+   "杠铃侧弓步": "槓鈴側弓步",
+   "杠铃保加利亚深蹲": "槓鈴保加利亞深蹲",
+@@ -883,7 +883,7 @@
+   "毛毛虫爬行": "毛毛蟲爬行",
+   "水平划船": "水平划船",
+   "水平山羊挺身": "水平山羊挺身",
+-  "水牛杆节奏深蹲": "水牛杆節奏深蹲",
++  "水牛杆节奏深蹲": "水牛槓節奏深蹲",
+   "水瓶俄罗斯转体": "水瓶俄羅斯轉體",
+   "沙发拉伸": "沙發拉伸",
+   "沙袋搬运": "沙袋搬運",
+@@ -930,9 +930,9 @@
+   "瑞士球卷腹抬腿": "瑞士球卷腹抬腿",
+   "登台": "登臺",
+   "盆骨旋转": "盆骨旋轉",
+-  "直杆正手绳索弯举": "直杆正手繩索彎舉",
+-  "直杆绳索下压": "直杆繩索下壓",
+-  "直杆绳索弯举": "直杆繩索彎舉",
++  "直杆正手绳索弯举": "直槓正手繩索彎舉",
++  "直杆绳索下压": "直槓繩索下壓",
++  "直杆绳索弯举": "直槓繩索彎舉",
+   "直立器械推胸": "直立器械推胸",
+   "直腿上举卷腹": "直腿上舉卷腹",
+   "直腿内收": "直腿內收",
+@@ -989,12 +989,12 @@
+   "站姿弹力带侧屈": "站姿彈力帶側屈",
+   "站姿弹力带后束划船": "站姿彈力帶後束划船",
+   "站姿旋转划船": "站姿旋轉划船",
+-  "站姿杠杆髋后伸": "站姿槓杆髖後伸",
++  "站姿杠杆髋后伸": "站姿槓桿髖後伸",
+   "站姿杠铃推举": "站姿槓鈴推舉",
+   "站姿杠铃提踵": "站姿槓鈴提踵",
+   "站姿绳索Y字": "站姿繩索Y字",
+   "站姿绳索卷腹": "站姿繩索卷腹",
+-  "站姿绳索反握弯举_直杆": "站姿繩索反握彎舉_直杆",
++  "站姿绳索反握弯举_直杆": "站姿繩索反握彎舉_直槓",
+   "站姿绳索转体": "站姿繩索轉體",
+   "站姿绳索高位下拉": "站姿繩索高位下拉",
+   "站姿自重提踵": "站姿自重提踵",
+@@ -1020,7 +1020,7 @@
+   "粗杠硬拉": "粗槓硬舉",
+   "绳索Pallof推": "繩索Pallof推",
+   "绳索三头下压": "繩索三頭下壓",
+-  "绳索三头下压_SZ杆": "繩索三頭下壓_SZ杆",
++  "绳索三头下压_SZ杆": "繩索三頭下壓_SZ槓",
+   "绳索下斜飞鸟": "繩索下斜飛鳥",
+   "绳索交叉": "繩索交叉",
+   "绳索交叉反向飞鸟": "繩索交叉反向飛鳥",
+@@ -1101,7 +1101,7 @@
+   "腘绳肌弯举（GHR）": "膕繩肌彎舉（GHR）",
+   "腰带机早安": "腰帶機早安",
+   "腰带机硬拉": "腰帶機硬舉",
+-  "腰带机硬拉_V杆": "腰帶機硬舉_V杆",
++  "腰带机硬拉_V杆": "腰帶機硬舉_V槓",
+   "腰带深蹲": "腰帶深蹲",
+   "腹斜肌仰卧卷腹_直腿版": "腹斜肌仰臥卷腹_直腿版",
+   "腹肌轮收": "腹肌輪收",
+@@ -1212,7 +1212,7 @@
+   "重负重绳索穿裆": "重負重繩索穿襠",
+   "钟摆深蹲": "鐘擺深蹲",
+   "钻石俯卧撑": "鑽石俯臥撐",
+-  "铁杆直臂下压": "鐵桿直臂下壓",
++  "铁杆直臂下压": "鐵槓直臂下壓",
+   "链条卧推": "鏈條臥推",
+   "阿诺德推肩": "阿諾德推肩",
+   "集中弯举": "集中彎舉",
+--- before/src/i18n/generated/search-zh.json
++++ after/src/i18n/generated/search-zh.json
+@@ -907,7 +907,7 @@
+   "柺": "拐",
+   "査": "查",
+   "桱": "𣐕",
+-  "桿": "杆",
++  "桿": "杠",
+   "梔": "栀",
+   "梖": "𪱷",
+   "梘": "枧",
+@@ -4609,6 +4609,7 @@
+   "臥推": "卧推",
+   "硬舉": "硬拉",
+   "槓鈴": "杠铃",
++  "槓桿": "杠杠",
+   "啞鈴": "哑铃",
+   "頂組": "顶组",
+   "回退組": "退让组",
+@@ -4635,5 +4636,6 @@
+   "」": "”",
+   "『": "‘",
+   "』": "’",
+-  "發布課表": "发布计划"
++  "發布課表": "发布计划",
++  "杆": "杠"
+ }
+--- before/src/i18n/generated/zh-Hant.json
++++ after/src/i18n/generated/zh-Hant.json
+@@ -194,18 +194,18 @@
+   "coach.bind.equipment.dbMax20": "啞鈴 ≤20kg",
+   "coach.bind.equipment.dbMax40": "啞鈴 ≤40kg",
+   "coach.bind.equipment.dbMax40Plus": "啞鈴 >40kg",
+-  "coach.bind.equipment.deadliftBar": "硬舉專項杆(軟杆)",
++  "coach.bind.equipment.deadliftBar": "硬舉專項槓(軟槓)",
+   "coach.bind.equipment.fractionalPlates": "微增片(0.25kg 起)",
+   "coach.bind.equipment.ghr": "GHR(臀腿舉)",
+   "coach.bind.equipment.hackSquat": "哈克深蹲機",
+   "coach.bind.equipment.heavyDumbbells": "啞鈴區(>30kg)",
+-  "coach.bind.equipment.landmine": "地雷架(含 T 杆划船)",
++  "coach.bind.equipment.landmine": "地雷架(含 T 槓划船)",
+   "coach.bind.equipment.latPulldown": "高位下拉",
+   "coach.bind.equipment.legCurlExtension": "腿彎舉 / 腿屈伸",
+   "coach.bind.equipment.legPress": "倒蹬機 / 腿舉機",
+   "coach.bind.equipment.liftingPlatform": "舉重臺 / 硬舉臺",
+-  "coach.bind.equipment.powerBar": "健力專項杆(硬杆)",
+-  "coach.bind.equipment.pullupBar": "引體向上杆",
++  "coach.bind.equipment.powerBar": "健力專項槓(硬槓)",
++  "coach.bind.equipment.pullupBar": "引體向上槓",
+   "coach.bind.equipment.rackPinsBlocks": "架上銷 / 墊塊",
+   "coach.bind.equipment.reverseHyper": "反向過伸機",
+   "coach.bind.equipment.safetyBar": "特種槓(SSB / 六角等)",
+@@ -533,7 +533,7 @@
+   "coach.planning.equipment.dumbbell": "啞鈴",
+   "coach.planning.equipment.kettlebell": "壺鈴",
+   "coach.planning.equipment.machine": "器械",
+-  "coach.planning.equipment.specialtyBar": "特殊杆",
++  "coach.planning.equipment.specialtyBar": "特殊槓",
+   "coach.planning.library.addExercise": "新增 {exercise}",
+   "coach.planning.library.clearSearch": "清空搜尋",
+   "coach.planning.library.equipment": "器械",
+@@ -1283,7 +1283,7 @@
+   "student.enterCodeViewModel.copy002": "邀請碼為 10 位字母數字(不含 I/O/0/1)",
+   "student.equipmentCatalog.copy001": "槓鈴 + 啞鈴",
+   "student.equipmentCatalog.copy002": "深蹲架 + 臥推架",
+-  "student.equipmentCatalog.copy003": "引體向上杆",
++  "student.equipmentCatalog.copy003": "引體向上槓",
+   "student.equipmentCatalog.copy004": "啞鈴 ≤20kg",
+   "student.equipmentCatalog.copy005": "啞鈴 ≤40kg",
+   "student.equipmentCatalog.copy006": "啞鈴 >40kg",
+@@ -1293,11 +1293,11 @@
+   "student.equipmentCatalog.copy010": "倒蹬機 / 腿舉機",
+   "student.equipmentCatalog.copy011": "腿彎舉 / 腿屈伸",
+   "student.equipmentCatalog.copy012": "坐姿划船",
+-  "student.equipmentCatalog.copy013": "地雷架(含 T 杆划船)",
++  "student.equipmentCatalog.copy013": "地雷架(含 T 槓划船)",
+   "student.equipmentCatalog.copy014": "海豹划船凳",
+   "student.equipmentCatalog.copy015": "哈克深蹲機",
+-  "student.equipmentCatalog.copy016": "健力專項杆(硬杆)",
+-  "student.equipmentCatalog.copy017": "硬舉專項杆(軟杆)",
++  "student.equipmentCatalog.copy016": "健力專項槓(硬槓)",
++  "student.equipmentCatalog.copy017": "硬舉專項槓(軟槓)",
+   "student.equipmentCatalog.copy018": "特種槓(SSB / 六角等)",
+   "student.equipmentCatalog.copy019": "微增片(0.25kg 起)",
+   "student.equipmentCatalog.copy020": "舉重臺 / 硬舉臺",
+@@ -1750,7 +1750,7 @@
+   "student.step4EnvironmentSection.copy008": "訓練場館",
+   "student.step4EnvironmentSection.copy009": "家裡有深蹲架和槓鈴,自己安排訓練",
+   "student.step4EnvironmentSection.copy010": "連鎖 / 綜合健身房 — 有架有槓,健力專項器械通常沒有",
+-  "student.step4EnvironmentSection.copy011": "健力專項館 — 專項杆、微增片、專項機齊全,可做全部變式",
++  "student.step4EnvironmentSection.copy011": "健力專項館 — 專項槓、微增片、專項機齊全,可做全部變式",
+   "student.step4EnvironmentSection.copy012": "器械微調",
+   "student.step4EnvironmentSection.copy013": "按場館預填 — 勾掉沒有的、補上有的,不確定就保持預設",
+   "student.step4EnvironmentSection.copy014": "基礎",

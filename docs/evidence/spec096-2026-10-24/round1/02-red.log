@@ -1,0 +1,169 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/history/__tests__/student-added-history.test.tsx src/features/training/__tests__/set-save.test.tsx
+
+FAIL src/features/training/__tests__/set-save.test.tsx (5.682 s)
+  ● a completed day shows the overview card with logged counts and expandable sets instead of a set hero
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "1/1 sets logged"
+    Received string:    "W1D1 󰑐 󰋕 󰍥 1 W1 Completed 1 / 1 Training history 󰅂 󰅁 Tue 󰄬 9/1 Wed Rest Thu Rest Fri Rest Sat Rest Sun Rest Mon Rest 󰅂 Today's workout 󰄬 Completed 1 exercise total · 2 sets 󰄬 Workout 2/2 sets logged › 󰄬 Workout Added · 1 logged › 󰞑 Today's workout completed · 3 sets View review 󰅂"
+
+      663 |   expect(renderer.root.findAllByProps({ testID: 'completed-day-card' }).length).toBeGreaterThan(0);
+      664 |   // The extra set is logged but never inflates the prescription count.
+    > 665 |   expect(copy()).toContain(t('student.completedDay.loggedSets %lld %lld', [1, 1]));
+          |                  ^
+      666 |   expect(copy()).toContain(t('student.completedDay.addedSets %lld', [1]));
+      667 |   expect(copy()).not.toContain('85 kg × 5');
+      668 |   const rows = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false && typeof node.props.onPress === 'function');
+
+      at Object.toContain (src/features/training/__tests__/set-save.test.tsx:665:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: uploaded
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 2
+    Received length: 1
+    Received array:  [{"_fiber": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": {"_debugHookTypes": ["useContext", "useContext", "useCallback", "useCallback", "useSyncExternalStore", "useDebugValue", "useCallback", "useCallback", "useSyncExternalStore", "useDebugValue"], "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": {"_debugHookTypes": [Array], "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 1, "actualStartTime": 1792849200995, "alternate": [FiberNode], "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": [Object], "elementType": [Function WorkoutBody], "flags": 13109253, "index": 0, "key": "10000000-0000-4000-8000-000000000000:40000000-0000-4000-8000-000000000000", "lanes": 0, "memoizedProps": [Object], "memoizedState": [Object], "mode": 3, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": 1, "sibling": [FiberNode], "stateNode": null, "subtreeFlags": 81529351, "tag": 0, "treeBaseDuration": 1, "type": [Function WorkoutBody], "updateQueue": [Object]}, "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 0, "actualStartTime": 1792849200996, "alternate": null, "child": [Circular], "childLanes": 0, "deletions": null, "dependencies": {"_debugThenableState": null, "firstContext": [Object], "lanes": 0}, "elementType": [Function CompletedSetVideo], "flags": 9963521, "index": 2, "key": null, "lanes": 0, "memoizedProps": {"badge": [Object], "setLogId": "80000000-0000-4000-8000-000000000000", "stableSetId": "70000000-0000-4000-8000-000000000000"}, "memoizedState": {"baseQueue": null, "baseState": null, "memoizedState": [Array], "next": [Object], "queue": null}, "mode": 3, "pendingProps": {"badge": [Object], "setLogId": "80000000-0000-4000-8000-000000000000", "stableSetId": "70000000-0000-4000-8000-000000000000"}, "ref": null, "refCleanup": null, "return": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 0, "actualStartTime": 1792849200996, "alternate": null, "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": null, "elementType": "View", "flags": 0, "index": 0, "key": null, "lanes": 0, "memoizedProps": [Object], "memoizedState": null, "mode": 3, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": 0, "sibling": null, "stateNode": [Object], "subtreeFlags": 14158341, "tag": 5, "treeBaseDuration": 0, "type": "View", "updateQueue": null}, "selfBaseDuration": 0, "sibling": null, "stateNode": null, "subtreeFlags": 13634053, "tag": 0, "treeBaseDuration": 0, "type": [Function CompletedSetVideo], "updateQueue": {"events": null, "lastEffect": [Object], "memoCache": null, "stores": null}}, "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 0, "actualStartTime": 1792849200996, "alternate": null, "child": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [Circular], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 0, "actualStartTime": 1792849200996, "alternate": null, "child": {"_debugHookTypes": [Array], "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 0, "actualStartTime": 1792849200996, "alternate": null, "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": null, "elementType": [Object], "flags": 8390657, "index": 0, "key": null, "lanes": 0, "memoizedProps": [Object], "memoizedState": [Object], "mode": 3, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [Circular], "selfBaseDuration": 0, "sibling": null, "stateNode": null, "subtreeFlags": 5243397, "tag": 11, "treeBaseDuration": 0, "type": [Object], "updateQueue": [Object]}, "childLanes": 0, "deletions": null, "dependencies": null, "elementType": "View", "flags": 0, "index": 0, "key": null, "lanes": 0, "memoizedProps": {"children": [Object], "style": [Object]}, "memoizedState": null, "mode": 3, "pendingProps": {"children": [Object], "style": [Object]}, "ref": null, "refCleanup": null, "return": [Circular], "selfBaseDuration": 0, "sibling": null, "stateNode": {"children": [Array], "internalInstanceHandle": [Circular], "isHidden": false, "props": [Object], "rootContainerInstance": [Object], "tag": "INSTANCE", "type": "View"}, "subtreeFlags": 13634053, "tag": 5, "treeBaseDuration": 0, "type": "View", "updateQueue": null}, "childLanes": 0, "deletions": null, "dependencies": null, "elementType": [Function View], "flags": 1, "index": 0, "key": null, "lanes": 0, "memoizedProps": {"children": {"$$typeof": Symbol(react.transitional.element), "_owner": [FiberNode], "_store": [Object], "key": null, "props": [Object], "type": [Object]}, "style": {"alignSelf": "stretch", "width": 22}}, "memoizedState": null, "mode": 3, "pendingProps": {"children": {"$$typeof": Symbol(react.transitional.element), "_owner": [FiberNode], "_store": [Object], "key": null, "props": [Object], "type": [Object]}, "style": {"alignSelf": "stretch", "width": 22}}, "ref": null, "refCleanup": null, "return": {"_debugHookTypes": ["useContext", "useContext", "useCallback", "useCallback", "useSyncExternalStore", "useDebugValue", "useCallback", "useCallback", "useSyncExternalStore", "useDebugValue"], "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": {"_debugHookTypes": [Array], "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 1, "actualStartTime": 1792849200995, "alternate": [FiberNode], "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": [Object], "elementType": [Function WorkoutBody], "flags": 13109253, "index": 0, "key": "10000000-0000-4000-8000-000000000000:40000000-0000-4000-8000-000000000000", "lanes": 0, "memoizedProps": [Object], "memoizedState": [Object], "mode": 3, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": 1, "sibling": [FiberNode], "stateNode": null, "subtreeFlags": 81529351, "tag": 0, "treeBaseDuration": 1, "type": [Function WorkoutBody], "updateQueue": [Object]}, "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 0, "actualStartTime": 1792849200996, "alternate": null, "child": [Circular], "childLanes": 0, "deletions": null, "dependencies": {"_debugThenableState": null, "firstContext": [Object], "lanes": 0}, "elementType": [Function CompletedSetVideo], "flags": 9963521, "index": 2, "key": null, "lanes": 0, "memoizedProps": {"badge": [Object], "setLogId": "80000000-0000-4000-8000-000000000000", "stableSetId": "70000000-0000-4000-8000-000000000000"}, "memoizedState": {"baseQueue": null, "baseState": null, "memoizedState": [Array], "next": [Object], "queue": null}, "mode": 3, "pendingProps": {"badge": [Object], "setLogId": "80000000-0000-4000-8000-000000000000", "stableSetId": "70000000-0000-4000-8000-000000000000"}, "ref": null, "refCleanup": null, "return": {"_debugHookTypes": null, "_debugInfo": null, "_debugNeedsRemount": false, "_debugOwner": [FiberNode], "_debugStack": [Error: react-stack-top-frame], "_debugTask": null, "actualDuration": 0, "actualStartTime": 1792849200996, "alternate": null, "child": [FiberNode], "childLanes": 0, "deletions": null, "dependencies": null, "elementType": "View", "flags": 0, "index": 0, "key": null, "lanes": 0, "memoizedProps": [Object], "memoizedState": null, "mode": 3, "pendingProps": [Object], "ref": null, "refCleanup": null, "return": [FiberNode], "selfBaseDuration": 0, "sibling": null, "stateNode": [Object], "subtreeFlags": 14158341, "tag": 5, "treeBaseDuration": 0, "type": "View", "updateQueue": null}, "selfBaseDuration": 0, "sibling": null, "stateNode": null, "subtreeFlags": 13634053, "tag": 0, "treeBaseDuration": 0, "type": [Function CompletedSetVideo], "updateQueue": {"events": null, "lastEffect": [Object], "memoCache": null, "stores": null}}, "selfBaseDuration": 0, "sibling": null, "stateNode": {"_reactInternalInstance": {}, "_reactInternals": [Circular], "context": {}, "props": {"children": [Object], "style": [Object]}, "refs": {}, "state": null, "updater": {"enqueueForceUpdate": [Function enqueueForceUpdate], "enqueueReplaceState": [Function enqueueReplaceState], "enqueueSetState": [Function enqueueSetState]}}, "subtreeFlags": 13634053, "tag": 1, "treeBaseDuration": 0, "type": [Function View], "updateQueue": {"baseState": null, "callbacks": null, "firstBaseUpdate": null, "lastBaseUpdate": null, "shared": {"hiddenCallbacks": null, "lanes": 0, "pending": null}}}}]
+
+      726 |   }
+      727 |   expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+    > 728 |   expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(2);
+          |                                                                                                                                                                           ^
+      729 |   const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
+      730 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+      731 |   expect(playButton.props.hitSlop).toBe(11);
+
+      at toHaveLength (src/features/training/__tests__/set-save.test.tsx:728:171)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: uploading
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 2
+    Received length: 1
+    Received array:  [{"_fiber": [FiberNode]}]
+
+      726 |   }
+      727 |   expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+    > 728 |   expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(2);
+          |                                                                                                                                                                           ^
+      729 |   const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
+      730 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+      731 |   expect(playButton.props.hitSlop).toBe(11);
+
+      at toHaveLength (src/features/training/__tests__/set-save.test.tsx:728:171)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: failed
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 2
+    Received length: 1
+    Received array:  [{"_fiber": [FiberNode]}]
+
+      726 |   }
+      727 |   expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
+    > 728 |   expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(2);
+          |                                                                                                                                                                           ^
+      729 |   const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
+      730 |   expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22, position: 'absolute' });
+      731 |   expect(playButton.props.hitSlop).toBe(11);
+
+      at toHaveLength (src/features/training/__tests__/set-save.test.tsx:728:171)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/history/__tests__/student-added-history.test.tsx (9.193 s)
+  ● history reserves a video column only within the exercise with playable video: bench-log
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 7
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+       97 |   await render(<TrainingHistoryScreen />);
+       98 |   const rows = renderer.root.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.minHeight === 32);
+    >  99 |   expect(rows).toHaveLength(5);
+          |                ^
+      100 |   rows.forEach((row, index) => {
+      101 |     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+      102 |     const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22);
+
+      at toHaveLength (src/features/history/__tests__/student-added-history.test.tsx:99:16)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: extra-bench
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 7
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+       97 |   await render(<TrainingHistoryScreen />);
+       98 |   const rows = renderer.root.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.minHeight === 32);
+    >  99 |   expect(rows).toHaveLength(5);
+          |                ^
+      100 |   rows.forEach((row, index) => {
+      101 |     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+      102 |     const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22);
+
+      at toHaveLength (src/features/history/__tests__/student-added-history.test.tsx:99:16)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: added-squat
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 7
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+       97 |   await render(<TrainingHistoryScreen />);
+       98 |   const rows = renderer.root.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.minHeight === 32);
+    >  99 |   expect(rows).toHaveLength(5);
+          |                ^
+      100 |   rows.forEach((row, index) => {
+      101 |     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+      102 |     const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22);
+
+      at toHaveLength (src/features/history/__tests__/student-added-history.test.tsx:99:16)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● history reserves a video column only within the exercise with playable video: null
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 7
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+       97 |   await render(<TrainingHistoryScreen />);
+       98 |   const rows = renderer.root.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.minHeight === 32);
+    >  99 |   expect(rows).toHaveLength(5);
+          |                ^
+      100 |   rows.forEach((row, index) => {
+      101 |     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+      102 |     const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22);
+
+      at toHaveLength (src/features/history/__tests__/student-added-history.test.tsx:99:16)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 2 failed, 2 total
+Tests:       8 failed, 39 passed, 47 total
+Snapshots:   0 total
+Time:        14.997 s

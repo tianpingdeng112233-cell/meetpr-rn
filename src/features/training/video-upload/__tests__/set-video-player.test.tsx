@@ -10,7 +10,9 @@ import { SetEntrySheet } from '../../SetEntrySheet';
 import { day, set } from '@/domain/plan/test-fixtures';
 import { synthesizeDrafts } from '../../drafts';
 import { useVideoUploadStore } from '../store';
-import { spacing } from '@/design';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { resolveColors, spacing } from '@/design';
+import { ColorSchemeProvider } from '@/design/theme';
 import { VideoAttachmentControls } from '../VideoAttachmentControls';
 import { EMPTY_VIDEO_UPLOAD } from '../model';
 import { SetVideoPlayer } from '../SetVideoPlayer';
@@ -256,4 +258,55 @@ test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video atta
     const label = button.findAllByType(Text).find(node => node.props.children === button.props.accessibilityLabel)!;
     expect(label.props.numberOfLines).toBe(1);
   }
+});
+
+test.each([{ locale: 'en', reviewedLabel: 'Coach reviewed' }, { locale: 'zh', reviewedLabel: '教练已点评' }, { locale: 'zh-Hant', reviewedLabel: '教練已點評' }] as const)('read-only replay in $locale opens full screen with close and coach feedback, without editing actions', async ({ locale, reviewedLabel }) => {
+  setLocaleOverride(locale);
+  const close = jest.fn();
+  const review = jest.fn();
+  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}>
+    <SetVideoPlayer uri="file:///sample.mp4" refreshURL={async () => 'file:///sample.mp4'} readOnly onClose={close} onReview={review}
+      badge={{ exerciseName: 'Squat', setOrdinal: 2, weightKg: 100, reps: 5, rpe: 8 }} />
+  </SafeAreaInsetsContext.Provider>); });
+  const labels = renderer.root.findAllByType(FeedbackPressable).map(node => node.props.accessibilityLabel);
+  expect(labels).toContain(t('chat.closePlayback'));
+  expect(labels).toContain(reviewedLabel);
+  expect(labels).not.toContain(t('training.previewExpand'));
+  expect(labels).not.toContain(t('training.previewCollapse'));
+  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(0);
+  press(reviewedLabel);
+  expect(review).toHaveBeenCalledTimes(1);
+  press(t('chat.closePlayback'));
+  expect(close).toHaveBeenCalledTimes(1);
+});
+
+
+test('unreviewed replay hides the badge and silently renews an expired playback URL', async () => {
+  setLocaleOverride('en');
+  const refreshURL = jest.fn<() => Promise<string>>().mockResolvedValue('https://video.test/renewed');
+  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}>
+    <SetVideoPlayer uri="https://video.test/expired" refreshURL={refreshURL} readOnly onClose={() => {}} />
+  </SafeAreaInsetsContext.Provider>); });
+  expect(renderer.root.findAllByType(FeedbackPressable).some(node => node.props.accessibilityLabel === t('training.coachReviewed'))).toBe(false);
+  await act(async () => renderer.root.findByType(Video).props.onError?.({} as never));
+  expect(renderer.root.findByType(Video).props.source).toEqual({ uri: 'https://video.test/renewed' });
+  act(() => renderer.root.findByType(Video).props.onLoad?.({ duration: 20 } as never));
+  expect(renderer.root.findByType(Video).props.paused).toBe(false);
+  expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.videoAttachmentSection.copy004'))).toBe(false);
+});
+
+
+test.each(['light', 'dark'] as const)('replay colors use semantic tokens in %s', async scheme => {
+  const colors = resolveColors(scheme);
+  expect(colors).toMatchObject({ completedVideoIcon: scheme === 'light' ? '#9CA3AF' : '#6B6B72',
+    videoReviewedFill: 'rgba(17,24,39,.72)', videoReviewedBorder: 'rgba(255,255,255,.18)', videoReviewedText: '#FFFFFF' });
+  setLocaleOverride('en');
+  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}><ColorSchemeProvider scheme={scheme}>
+    <SetVideoPlayer uri="file:///sample.mp4" refreshURL={async () => 'file:///sample.mp4'} readOnly onReview={() => {}} />
+  </ColorSchemeProvider></SafeAreaInsetsContext.Provider>); });
+  const review = renderer.root.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('training.coachReviewed'))!;
+  const pill = review.findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.height === 30)!;
+  expect(StyleSheet.flatten(pill.props.style)).toMatchObject({ backgroundColor: colors.videoReviewedFill, borderColor: colors.videoReviewedBorder });
+  expect(StyleSheet.flatten(pill.findAllByType(Text).find(node => node.props.children === t('training.coachReviewed'))!.props.style).color).toBe(colors.videoReviewedText);
+  expect(pill.findByType(MaterialCommunityIcons).props.color).toBe(colors.videoReviewedText);
 });

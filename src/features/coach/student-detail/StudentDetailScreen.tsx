@@ -107,7 +107,7 @@ export function StudentDetailScreen({ studentId, now, onBack, coachName = t('coa
       </>}
     </ScrollView>
     <Modal visible={day != null || playback != null} onRequestClose={() => { setDay(null); setPlayback(null); }} animationType="slide">
-      {playback ? <CoachVideoPlayer video={playback.video} log={playback.log} title={videoTitle(playback.video)} coachName={coachName} onClose={() => setPlayback(null)} /> : day ? <CoachDayDetailView day={day} exerciseName={exerciseName} onClose={() => setDay(null)} /> : null}
+      {playback ? <CoachVideoPlayer video={playback.video} log={playback.log} title={videoTitle(playback.video)} coachName={coachName} onClose={() => setPlayback(null)} /> : day ? <CoachDayDetailView day={day} planDays={plan?.days ?? []} exerciseName={exerciseName} onClose={() => setDay(null)} /> : null}
     </Modal>
   </Screen>;
 }

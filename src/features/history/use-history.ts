@@ -59,7 +59,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
   });
   const logsQuery = useSetLogs(
     studentId,
-    dashboardE1RMRange(today),
+    { ...dashboardE1RMRange(today), scope: 'all' },
     Boolean(studentId),
   );
   const exerciseQuery = useExerciseCatalog(Boolean(studentId));

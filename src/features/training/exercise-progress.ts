@@ -6,7 +6,7 @@ export type ExerciseProgressGroup = { exercise: PlanExercise; drafts: readonly W
 
 /** Shared by the hero, exercise partition and set segments, including assumed results. */
 export function needsSetResult(draft: WorkoutSetDraft): boolean {
-  return !isDraftTerminal(draft) || Boolean(draft.sourceLog?.assumed);
+  return !draft.kind && (!isDraftTerminal(draft) || Boolean(draft.sourceLog?.assumed));
 }
 
 export function partitionExerciseProgress(groups: readonly ExerciseProgressGroup[]) {
@@ -19,8 +19,9 @@ export function partitionExerciseProgress(groups: readonly ExerciseProgressGroup
 
 export type SetProgressSegment = 'complete' | 'failed' | 'current' | 'upcoming';
 export function setProgressSegments(drafts: readonly WorkoutSetDraft[]): SetProgressSegment[] {
-  const current = drafts.findIndex(needsSetResult);
-  return drafts.map((draft, index) => needsSetResult(draft)
+  const prescribed = drafts.filter(draft => !draft.kind);
+  const current = prescribed.findIndex(needsSetResult);
+  return prescribed.map((draft, index) => needsSetResult(draft)
     ? index === current ? 'current' : 'upcoming'
     : draft.status === 'failed' ? 'failed' : 'complete');
 }

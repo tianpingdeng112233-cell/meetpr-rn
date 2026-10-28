@@ -84,6 +84,7 @@ const mount = async () => {
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
 };
 const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
+const completedRow = () => renderer.root.findAll(node => node.props.testID === 'training.completedDay');
 const press = async (label: string) => {
   await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0].props.onPress(); });
 };
@@ -202,7 +203,7 @@ test('completion immediately celebrates while sending, then acknowledges the coa
 
 const expectRetryable = () => {
   expect(copy()).not.toContain(t('student.workoutCompletionFlowView.copy001'));
-  expect(copy()).not.toContain(t('student.todayWorkoutScreen.copy024'));
+  expect(completedRow()).toHaveLength(0);
   expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.accessibilityState.disabled).toBe(false);
   expect(copy()).toContain('80');
   expect(Alert.alert).toHaveBeenCalledWith(t('student.todayWorkoutScreen.copy001'), t('student.todayWorkoutViewModel.copy001'));
@@ -213,7 +214,7 @@ test('a 503 closes celebration, restores completion eligibility and keeps the re
   await mount();
   await complete();
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(copy()).toContain(t('student.todayWorkoutScreen.copy024'));
+  expect(completedRow().length).toBeGreaterThan(0);
   await act(async () => { request.reject(new ApiError('server', 'Unavailable', { status: 503 })); });
   expectRetryable();
   request.restore();
@@ -228,7 +229,7 @@ test('30 seconds without a response closes celebration and rolls back, ignoring 
   await complete();
   await act(async () => { await jest.advanceTimersByTimeAsync(29_999); });
   expect(copy()).toContain('Sending to your coach…');
-  expect(copy()).toContain(t('student.todayWorkoutScreen.copy024'));
+  expect(completedRow().length).toBeGreaterThan(0);
   await act(async () => { await jest.advanceTimersByTimeAsync(1); });
   expectRetryable();
   await act(async () => { request.resolve(); await jest.advanceTimersByTimeAsync(1); });
@@ -490,4 +491,27 @@ test.each([
     act(() => layoutCompletedRows(recorded));
     expect(scrollTo).toHaveBeenCalledTimes(1);
   }
+});
+
+test('a day completed today shows one status row whose undo reopens the day', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: new Date().toISOString() })) };
+  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/complete') && options?.method === 'DELETE') { servedPlan = plan; return undefined as never; }
+    return base(path, options);
+  });
+  await mount();
+  expect(completedRow().length).toBeGreaterThan(0);
+  expect(copy()).toContain(t('student.todayWorkoutScreen.copy009'));
+  expect(copy()).not.toContain(t('student.todayWorkoutScreen.copy024'));
+  await press(t('student.todayWorkoutScreen.copy023'));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(jest.mocked(authenticatedRequest).mock.calls.some(([path, options]) => path === `/plans/days/${plan.days[0].id}/complete` && options?.method === 'DELETE')).toBe(true);
+});
+
+test('a day completed on an earlier day shows the status row without undo', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
+  await mount();
+  expect(completedRow().length).toBeGreaterThan(0);
+  expect(renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy023'))).toHaveLength(0);
 });

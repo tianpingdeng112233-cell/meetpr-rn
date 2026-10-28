@@ -1,0 +1,9 @@
+PASS src/features/training/__tests__/exercise-picker.test.ts
+PASS src/features/training/video-upload/__tests__/trim-selection.test.ts
+PASS src/domain/coach/__tests__/invite-code-status.test.ts
+
+Test Suites: 180 passed, 180 total
+Tests:       1718 passed, 1718 total
+Snapshots:   0 total
+Time:        30.423 s, estimated 116 s
+Ran all test suites.

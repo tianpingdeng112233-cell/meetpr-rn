@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Text, TextInput, Modal, StyleSheet } from 'react-native';
+import { Text, TextInput, Modal, StyleSheet, Platform, ScrollView } from 'react-native';
+import * as Application from 'expo-application';
 import { onboardingRepository, OnboardingProfileSchema, type OnboardingProfile } from '@/api/domains/onboarding';
 import { bindRepository } from '@/api/domains/bind';
 import { useSessionStore } from '@/api/session';
-import { setLocaleOverride, t } from '@/i18n';
+import { setLocaleOverride, t, type Locale } from '@/i18n';
 import { ProfileAboutScreen } from '../ProfileAboutScreen';
 import { ProfileHealthScreen } from '../ProfileHealthScreen';
 import { ProfileSettingsScreen } from '../ProfileSettingsScreen';
@@ -21,6 +22,7 @@ import { ProfileModal } from '../components';
 import type { ReactNode } from 'react';
 import { ProfileEditor } from '../ProfileEditor';
 
+jest.mock('expo-application', () => ({ nativeApplicationVersion: '0.1.0', nativeBuildVersion: '4' }));
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('@react-native-community/netinfo', () => jest.requireActual('@react-native-community/netinfo/jest/netinfo-mock'));
 const mockPush = jest.fn();
@@ -100,6 +102,38 @@ test('Settings switches appearance persistently and opens both existing preferen
   act(() => renderer.root.findByType(TrainingReminderSettingsScreen).props.onClose());
   act(() => renderer.unmount()); await mount(<ProfileSettingsScreen />);
   expect(renderer.root.findAll(node => node.props.accessibilityState?.selected && typeof node.props.onPress === 'function').some(node => node.findAllByType(Text).some(text => text.props.children === 'Dark'))).toBe(true);
+});
+test.each<[Locale, string]>([
+  ['zh', '版本 0.1.0 (4)'], ['en', 'Version 0.1.0 (4)'], ['zh-Hant', '版本 0.1.0 (4)'],
+])('Android main settings end with the localized native version (%s)', async (locale, expected) => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  setLocaleOverride(locale);
+  await mount(<ProfileSettingsScreen />);
+  const rows = renderer.root.findByType(ScrollView).findAllByType(Text);
+  const version = rows[rows.length - 1];
+  expect(version.props.children).toBe(expected);
+  expect(rows.filter(row => row.props.children === expected)).toHaveLength(1);
+  expect(version.props.onPress).toBeUndefined();
+  expect(StyleSheet.flatten(version.props.style)).toEqual(expect.objectContaining({ textAlign: 'center', fontSize: 12, color: resolveColors('light').textMuted }));
+});
+test.each(['nativeBuildVersion', 'nativeApplicationVersion'] as const)('main settings hide the version when %s is missing', async field => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  jest.replaceProperty(Application, field, null);
+  await mount(<ProfileSettingsScreen />);
+  expect(texts().some(text => typeof text === 'string' && text.startsWith('Version '))).toBe(false);
+});
+test('iOS main settings do not show an Android version row', async () => {
+  jest.replaceProperty(Platform, 'OS', 'ios');
+  await mount(<ProfileSettingsScreen />);
+  expect(texts()).not.toContain('Version 0.1.0 (4)');
+});
+test('rest timer subpage does not show the app version', async () => {
+  jest.replaceProperty(Platform, 'OS', 'android');
+  await mount(<ProfileSettingsScreen />);
+  await press('Rest between sets');
+  const subpage = renderer.root.findByType(Modal);
+  expect(subpage.findAllByType(Text).map(node => node.props.children)).toContain('Rest between sets');
+  expect(subpage.findAllByType(Text).map(node => node.props.children)).not.toContain('Version 0.1.0 (4)');
 });
 test.each(['Change password', 'Export training data', 'Delete account'])('Settings opens the unchanged %s modal', async label => {
   await mount(<ProfileSettingsScreen />); await press(label);

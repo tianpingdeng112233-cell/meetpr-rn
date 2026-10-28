@@ -1,0 +1,36 @@
+First full run (concurrent lint and unstable AVD):
+
+
+Test Suites: 3 failed, 181 passed, 184 total
+Tests:       65 failed, 1720 passed, 1785 total
+Snapshots:   0 total
+Time:        387.195 s
+Ran all test suites.
+
+Unchanged failing suites rerun:
+PASS src/features/chat/__tests__/student-conversation-screen.test.tsx
+
+Test Suites: 3 passed, 3 total
+Tests:       103 passed, 103 total
+Snapshots:   0 total
+Time:        20.253 s, estimated 169 s
+Ran all test suites matching /src\/features\/training\/__tests__\/set-save.test.tsx|src\/features\/chat\/__tests__\/student-conversation-screen.test.tsx|src\/features\/training\/video-upload\/__tests__\/attachment-trim.test.tsx/i.
+
+Subsequent full run before final preview repair:
+PASS src/features/training/__tests__/rest-timer-session.test.ts
+
+Test Suites: 184 passed, 184 total
+Tests:       1789 passed, 1789 total
+Snapshots:   0 total
+Time:        126.817 s, estimated 215 s
+Ran all test suites.
+
+Full run after final preview repair (host load average ~253 on 10 logical CPUs):
+
+
+Test Suites: 2 failed, 182 passed, 184 total
+Tests:       3 failed, 1787 passed, 1790 total
+Snapshots:   0 total
+Time:        390.007 s
+Ran all test suites.
+Failed suites: completion-entry.test.tsx and profile/editor.test.tsx; all three failures are 5000ms timeouts. No tests/configuration changed.

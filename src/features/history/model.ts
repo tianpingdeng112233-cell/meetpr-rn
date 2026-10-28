@@ -10,6 +10,7 @@ import {
 } from '@/domain/e1rm';
 import { scheduledDate } from '@/domain/plan/sequence';
 import {
+  formatKg,
   addUtcDays,
   chineseMonthDay,
   e1RMPeriodLabel,
@@ -245,9 +246,11 @@ export function buildHistoryWeeks(
     const planExerciseIds = new Set(
       plan.days.flatMap((day) => day.exercises.map((exercise) => exercise.id)),
     );
+    const planDayIds = new Set(plan.days.map(day => day.id));
     const planLogs = logs.filter(
       (log) =>
-        log.plan_exercise_id !== null && planExerciseIds.has(log.plan_exercise_id),
+        (log.plan_exercise_id !== null && planExerciseIds.has(log.plan_exercise_id)) ||
+        (log.adhoc && log.plan_exercise_id === null && log.plan_day_id != null && planDayIds.has(log.plan_day_id)),
     );
     const firstDate = [plan.start_date, ...planLogs.map(log => log.logged_date)].sort()[0];
     if (firstDate > today) continue;
@@ -287,6 +290,20 @@ export function buildHistoryWeeks(
           }
         }
         for (const log of planLogs.filter((candidate) => candidate.logged_date === date)) {
+          if (log.plan_exercise_id === null && log.plan_day_id) {
+            const id = `added:${log.plan_day_id}:${log.exercise_id}`;
+            const existing = dayExerciseMap.get(id);
+            if (existing) existing.logs.push(log);
+            else dayExerciseMap.set(id, {
+              studentAdded: true,
+              // Read-only history adapter; never inserted into the plan tree.
+              planExercise: { id, plan_day_id: log.plan_day_id, exercise_id: log.exercise_id,
+                is_main_lift: false, sort_order: dayExerciseMap.size, notes: null, sets: [] },
+              name: exerciseName(log.exercise_id, exerciseIndex),
+              notes: [], plannedSets: [], logs: [log],
+            });
+            continue;
+          }
           if (log.plan_exercise_id === null) continue;
           const existing = dayExerciseMap.get(log.plan_exercise_id);
           if (existing) {
@@ -303,7 +320,9 @@ export function buildHistoryWeeks(
         );
         const done = exercises.reduce(
           (sum, exercise) =>
-            sum + completedHistoryLogs(exercise.logs).length,
+            sum + new Set(completedHistoryLogs(exercise.logs)
+              .filter(log => log.set_index >= 0 && log.set_index < exercise.plannedSets.length)
+              .map(log => log.set_index)).size,
           0,
         );
         return { date, done, total, exercises, isRest: exercises.length === 0 };
@@ -408,4 +427,53 @@ export function feedbackTitle(
 export function feedbackDate(item: FeedbackItem): string {
   const dateText = item.day_date ?? item.posted_at.slice(0, 10);
   return chineseMonthDay(dateText);
+}
+
+
+export type TotalPoint = { date: Date; valueKg: number };
+
+/** Sum the same daily main-line points drawn by the individual lift segments. */
+export function buildTotalSeries(curves: Record<LiftFamily, GrowthCurve>, now = new Date()): TotalPoint[] {
+  const updates = LIFT_FAMILIES.flatMap(family => growthSnapshot(curves[family], 'all', now).samples
+    .map(point => ({ family, point })))
+    .sort((a, b) => a.point.date.getTime() - b.point.date.getTime());
+  const latest: Partial<Record<LiftFamily, number>> = {};
+  const days = new Map<string, TotalPoint>();
+  for (const { family, point } of updates) {
+    latest[family] = point.valueKg;
+    if (!LIFT_FAMILIES.every(lift => latest[lift] !== undefined)) continue;
+    const day = `${point.date.getFullYear()}-${point.date.getMonth()}-${point.date.getDate()}`;
+    days.set(day, { date: point.date, valueKg: LIFT_FAMILIES.reduce((sum, lift) => sum + latest[lift]!, 0) });
+  }
+  return [...days.values()];
+}
+
+export function totalSnapshot(curves: Record<LiftFamily, GrowthCurve>, range: GrowthTimeRange, now = new Date()) {
+  const all = buildTotalSeries(curves, now);
+  const missing = LIFT_FAMILIES.filter(family => growthSnapshot(curves[family], 'all', now).samples.length === 0);
+  const days = range === '30' ? E1RM_POLICY.rollingWindowDays : 90;
+  const cutoff = range === 'all' ? -Infinity : now.getTime() - days * E1RM_MATH.millisecondsPerDay;
+  const samples = all.filter(point => point.date.getTime() >= cutoff);
+  const values = samples.map(point => point.valueKg);
+  const state = missing.length ? 'missing' : samples.length < TREND_UNLOCK_THRESHOLD || Math.max(...values) === Math.min(...values) ? 'sparse' : 'chart';
+  return { samples, missing,
+    deltaKg: samples.length > 1 ? samples[samples.length - 1].valueKg - samples[0].valueKg : null,
+    state };
+}
+
+
+export function progressRowValues({ stats, feedback, volumeIntensity }: {
+  stats: GrowthStats;
+  feedback: readonly Pick<FeedbackItem, 'read_at'>[];
+  volumeIntensity: VolumeIntensitySeries;
+}) {
+  const unread = feedback.filter(item => item.read_at === null).length;
+  const rpe = volumeIntensity.points.at(-1)?.averageRPE;
+  return {
+    e1rm: stats.sbdTotalKg === null ? '—' : t('student.progressMenu.totalValue', [formatKg(stats.sbdTotalKg)]),
+    history: stats.trainingSessionCount === 0 ? '—' : t(stats.trainingSessionCount === 1 ? 'student.progressMenu.session' : 'student.progressMenu.sessions', [stats.trainingSessionCount]),
+    feedback: unread > 0 ? t('student.progressMenu.new', [unread]) : feedback.length > 0 ? String(feedback.length) : '—',
+    feedbackEmphasized: unread > 0,
+    intensity: stats.unlocksTrends && rpe != null ? t('student.progressMenu.rpe', [rpe.toFixed(1)]) : '—',
+  };
 }

@@ -11,7 +11,6 @@
       "android"
     ],
     "android": {
-      "package": "com.meetpr.app",
       "adaptiveIcon": {
         "backgroundColor": "#F5F6F8",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

@@ -76,3 +76,18 @@ test('today source keeps logs even when their exercise has no remaining prescrip
   jest.spyOn(exercisesRepository, 'list').mockResolvedValue({ exercises: [] });
   expect(await loadTodaySetRefCandidates(id)).toEqual([expect.objectContaining({ id, source: expect.objectContaining({ source: 'logged', setNumber: 3, setTotal: null }) })]);
 });
+
+test.each(['卧推', '臥推'])('Traditional sharing displays 臥推 but stages canonical 卧推 from %s', async name => {
+  setLocaleOverride('zh-Hant');
+  const planned = { id, exercise_id: id, plan_day_id: id, sort_order: 0, is_main_lift: true, notes: null, sets: [] };
+  const current = plan([day(id, { exercises: [planned] })]);
+  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [current] });
+  jest.spyOn(plansRepository, 'detail').mockResolvedValue(current);
+  jest.spyOn(setsRepository, 'range').mockResolvedValue({ logs: [{ id, student_id: id, exercise_id: id, plan_exercise_id: id, set_index: 0, weight_kg: '100.00', reps: 5, rpe: null, logged_at: new Date().toISOString(), logged_date: gymDayText(new Date()), completed: true, failed: false, assumed: false, adhoc: false }] });
+  jest.spyOn(exercisesRepository, 'list').mockResolvedValue({ exercises: [{ id, name, name_en: 'Bench Press', exercise_type: 'main_lift', main_lift_family: 'bench', is_competition_lift: true, competition_stance: null, muscle_groups: null, equipment: null, movement_pattern: null, created_by_coach_id: null, created_at: '' }] });
+  await mount(() => loadTodaySetRefCandidates(id));
+  expect(copy()).toContain('臥推');
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress());
+  await press('chat.sendToCoach');
+  expect(useSetRefStagingStore.getState().intents[id]).toMatchObject({ setRef: { exerciseName: '卧推' }, body: expect.stringContaining('卧推') });
+});

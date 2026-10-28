@@ -1,0 +1,1437 @@
+Missing signing environment variables: MEETPR_UPLOAD_STORE_FILE MEETPR_UPLOAD_STORE_PASSWORD MEETPR_UPLOAD_KEY_ALIAS MEETPR_UPLOAD_KEY_PASSWORD
+WARNING: DEBUG SIGNING — NOT FOR DISTRIBUTION.
+- Creating native directory (./android)
+✔ Created native directory
+- Updating package.json
+✔ Updated package.json | no changes
+- Running prebuild
+✔ Finished prebuild
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:settings-plugin:pluginDescriptors
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors
+> Task :gradle-plugin:settings-plugin:processResources
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:compileKotlin
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:jar
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+> Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar
+> Task :gradle-plugin:settings-plugin:compileKotlin
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:classes
+> Task :gradle-plugin:settings-plugin:jar
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes
+> Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar
+> Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-module-gradle-plugin:pluginDescriptors
+> Task :expo-module-gradle-plugin:processResources
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:pluginDescriptors
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:processResources
+> Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors
+> Task :expo-gradle-plugin:expo-autolinking-plugin:processResources
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors
+> Task :gradle-plugin:react-native-gradle-plugin:processResources
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileKotlin
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:classes
+> Task :expo-gradle-plugin:expo-max-sdk-override-plugin:jar
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin
+> Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+> Task :expo-gradle-plugin:expo-autolinking-plugin:classes
+> Task :expo-gradle-plugin:expo-autolinking-plugin:jar
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:classes
+> Task :gradle-plugin:react-native-gradle-plugin:jar
+
+> Task :expo-module-gradle-plugin:compileKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt:9:24 'var targetSdk: Int?' is deprecated. Will be removed from library DSL in v9.0. Use testOptions.targetSdk or/and lint.targetSdk instead.
+
+> Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+> Task :expo-module-gradle-plugin:classes
+> Task :expo-module-gradle-plugin:jar
+
+> Configure project :
+[32m[ExpoRootProject][0m Using the following versions:
+  - buildTools:  [32m36.0.0[0m
+  - minSdk:      [32m24[0m
+  - compileSdk:  [32m36[0m
+  - targetSdk:   [32m36[0m
+  - ndk:         [32m27.1.12297006[0m
+  - kotlin:      [32m2.1.20[0m
+  - ksp:         [32m2.1.20-2.0.1[0m
+
+> Configure project :app
+ ℹ️  [33mApplying gradle plugin[0m '[32mexpo-max-sdk-override-plugin[0m'
+  [expo-max-sdk-override-plugin] This plugin will find all permissions declared with `android:maxSdkVersion`. If there exists a declaration with the `android:maxSdkVersion` annotation and another one without, the plugin will remove the annotation from the final merged manifest. In order to see a log with the changes run a clean build of the app.
+*** MEETPR: DEBUG SIGNING — missing upload signing values or explicitly forced; NOT FOR DISTRIBUTION ***
+
+> Configure project :expo
+
+Using expo modules
+  - [32mexpo-log-box[0m (57.0.1)
+  - [32mexpo-constants[0m (57.0.17)
+
+> Configure project :expo-modules-core
+Linking react-native-worklets native libs into expo-modules-core build tasks
+task ':react-native-worklets:mergeDebugNativeLibs'
+task ':react-native-worklets:mergeReleaseNativeLibs'
+
+> Configure project :expo
+  - [32mexpo-modules-core[0m (57.0.6)
+  - [32mrest-timer-notification[0m (1.0.0)
+  - [32mtraining-reminder-alarm[0m (1.0.0)
+  - [32mtraining-video[0m (1.0.0)
+  - [33m[📦][0m [32mexpo-dom-webview[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-ui[0m (57.0.7)
+  - [33m[📦][0m [32mexpo-application[0m (57.0.3)
+  - [33m[📦][0m [32mexpo-asset[0m (57.0.6)
+  - [33m[📦][0m [32mexpo-camera[0m (57.0.4)
+  - [33m[📦][0m [32mexpo-clipboard[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-crypto[0m (57.0.2)
+  - [33m[📦][0m [32mexpo-file-system[0m (57.0.6)
+  - [33m[📦][0m [32mexpo-font[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-image[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-image-loader[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-image-picker[0m (57.0.16)
+  - [33m[📦][0m [32mexpo-keep-awake[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-linking[0m (57.0.9)
+  - [33m[📦][0m [32mexpo-localization[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-media-library[0m (57.0.4)
+  - [33m[📦][0m [32mexpo-notifications[0m (57.0.17)
+  - [33m[📦][0m [32mexpo-router[0m (57.0.7)
+  - [33m[📦][0m [32mexpo-secure-store[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-sharing[0m (57.0.18)
+  - [33m[📦][0m [32mexpo-splash-screen[0m (57.0.4)
+  - [33m[📦][0m [32mexpo-status-bar[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-system-ui[0m (57.0.1)
+  - [33m[📦][0m [32mexpo-web-browser[0m (57.0.2)
+
+
+> Configure project :react-native-compressor
+[NitroModules] 🔥 NitroCompressor is boosted by nitro!
+
+> Configure project :react-native-nitro-modules
+[NitroModules] 🔥 Your app is boosted by nitro modules!
+
+> Configure project :react-native-video
+Kotlin version is correct: 2.1.20
+AndroidX version is correct: 1.9.3
+useExoplayerIMA: false
+useExoplayerSmoothStreaming: true
+useExoplayerDash: true
+useExoplayerHls: true
+useExoplayerRtsp: false
+buildFromSource: false
+
+> Task :expo-modules-core:preBuild UP-TO-DATE
+> Task :expo-log-box:preBuild UP-TO-DATE
+> Task :react-native-masked-view_masked-view:preBuild UP-TO-DATE
+> Task :react-native-compressor:preBuild UP-TO-DATE
+> Task :expo:generatePackagesList
+> Task :expo:preBuild
+> Task :app:generateAutolinkingNewArchitectureFiles
+> Task :app:generateAutolinkingPackageList
+> Task :app:generateCodegenSchemaFromJavaScript SKIPPED
+> Task :app:generateCodegenArtifactsFromSchema SKIPPED
+> Task :app:generateReactNativeEntryPoint
+> Task :react-native-video:preBuild UP-TO-DATE
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask
+> Task :react-native-worklets:assertMinimalReactNativeVersionTask
+> Task :react-native-reanimated:assertWorkletsVersionTask
+> Task :react-native-async-storage_async-storage:generateCodegenSchemaFromJavaScript
+> Task :react-native-gesture-handler:generateCodegenSchemaFromJavaScript
+> Task :react-native-safe-area-context:generateCodegenSchemaFromJavaScript
+> Task :react-native-community_netinfo:generateCodegenSchemaFromJavaScript
+> Task :react-native-nitro-modules:generateCodegenSchemaFromJavaScript
+> Task :react-native-screens:generateCodegenSchemaFromJavaScript
+> Task :react-native-worklets:generateCodegenSchemaFromJavaScript
+> Task :react-native-svg:generateCodegenSchemaFromJavaScript
+> Task :react-native-reanimated:generateCodegenSchemaFromJavaScript
+> Task :react-native-async-storage_async-storage:generateCodegenArtifactsFromSchema
+> Task :react-native-async-storage_async-storage:preBuild
+> Task :rest-timer-notification:preBuild UP-TO-DATE
+> Task :training-reminder-alarm:preBuild UP-TO-DATE
+> Task :training-video:preBuild UP-TO-DATE
+> Task :expo:preReleaseBuild
+> Task :react-native-gesture-handler:generateCodegenArtifactsFromSchema
+> Task :react-native-gesture-handler:preBuild
+> Task :expo-log-box:preReleaseBuild UP-TO-DATE
+> Task :expo:mergeReleaseJniLibFolders
+> Task :expo-log-box:mergeReleaseJniLibFolders
+> Task :expo-log-box:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-log-box:copyReleaseJniLibsProjectOnly
+> Task :expo-modules-core:preReleaseBuild UP-TO-DATE
+> Task :expo:copyReleaseJniLibsProjectOnly
+> Task :react-native-async-storage_async-storage:preReleaseBuild
+> Task :expo-modules-core:mergeReleaseJniLibFolders
+> Task :react-native-compressor:preReleaseBuild UP-TO-DATE
+> Task :react-native-compressor:mergeReleaseJniLibFolders
+> Task :react-native-async-storage_async-storage:mergeReleaseJniLibFolders
+> Task :react-native-gesture-handler:preReleaseBuild
+> Task :react-native-async-storage_async-storage:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectOnly
+> Task :react-native-masked-view_masked-view:preReleaseBuild UP-TO-DATE
+> Task :react-native-gesture-handler:mergeReleaseJniLibFolders
+> Task :react-native-video:preReleaseBuild UP-TO-DATE
+> Task :react-native-community_netinfo:generateCodegenArtifactsFromSchema
+> Task :react-native-community_netinfo:preBuild
+> Task :react-native-community_netinfo:preReleaseBuild
+> Task :react-native-community_netinfo:mergeReleaseJniLibFolders
+> Task :react-native-video:mergeReleaseJniLibFolders
+> Task :react-native-masked-view_masked-view:mergeReleaseJniLibFolders
+> Task :react-native-masked-view_masked-view:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-video:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-community_netinfo:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-community_netinfo:copyReleaseJniLibsProjectOnly
+> Task :react-native-masked-view_masked-view:copyReleaseJniLibsProjectOnly
+> Task :rest-timer-notification:preReleaseBuild UP-TO-DATE
+> Task :training-reminder-alarm:preReleaseBuild UP-TO-DATE
+> Task :react-native-video:copyReleaseJniLibsProjectOnly
+> Task :training-video:preReleaseBuild UP-TO-DATE
+> Task :training-reminder-alarm:mergeReleaseJniLibFolders
+> Task :training-video:mergeReleaseJniLibFolders
+> Task :training-reminder-alarm:mergeReleaseNativeLibs NO-SOURCE
+> Task :training-video:mergeReleaseNativeLibs NO-SOURCE
+> Task :training-reminder-alarm:copyReleaseJniLibsProjectOnly
+> Task :training-video:copyReleaseJniLibsProjectOnly
+> Task :react-native-gesture-handler:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-compressor:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-gesture-handler:generateReleaseBuildConfig
+> Task :react-native-nitro-modules:generateCodegenArtifactsFromSchema
+> Task :react-native-compressor:generateReleaseBuildConfig
+> Task :react-native-gesture-handler:generateReleaseResValues
+> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema
+> Task :react-native-safe-area-context:preBuild
+> Task :react-native-compressor:generateReleaseResValues
+> Task :react-native-safe-area-context:preReleaseBuild
+> Task :react-native-compressor:generateReleaseResources
+> Task :react-native-gesture-handler:generateReleaseResources
+> Task :react-native-safe-area-context:mergeReleaseJniLibFolders
+> Task :react-native-safe-area-context:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-safe-area-context:copyReleaseJniLibsProjectOnly
+> Task :react-native-safe-area-context:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :rest-timer-notification:mergeReleaseJniLibFolders
+> Task :react-native-safe-area-context:generateReleaseBuildConfig
+> Task :rest-timer-notification:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-safe-area-context:generateReleaseResValues
+> Task :react-native-safe-area-context:generateReleaseResources
+> Task :rest-timer-notification:copyReleaseJniLibsProjectOnly
+> Task :react-native-video:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-safe-area-context:packageReleaseResources
+> Task :react-native-gesture-handler:packageReleaseResources
+> Task :react-native-video:generateReleaseBuildConfig
+> Task :react-native-video:generateReleaseResValues
+> Task :react-native-video:generateReleaseResources
+> Task :react-native-compressor:packageReleaseResources
+> Task :react-native-nitro-modules:prepareHeaders
+> Task :react-native-nitro-modules:preBuild
+> Task :react-native-nitro-modules:preReleaseBuild
+> Task :react-native-screens:generateCodegenArtifactsFromSchema
+> Task :react-native-screens:preBuild
+> Task :react-native-screens:preReleaseBuild
+> Task :react-native-worklets:generateCodegenArtifactsFromSchema
+> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs
+> Task :react-native-worklets:preBuild
+> Task :react-native-worklets:preReleaseBuild
+> Task :react-native-safe-area-context:parseReleaseLocalResources
+> Task :react-native-compressor:parseReleaseLocalResources
+> Task :react-native-gesture-handler:parseReleaseLocalResources
+> Task :react-native-compressor:javaPreCompileRelease
+> Task :react-native-video:packageReleaseResources
+> Task :react-native-gesture-handler:generateReleaseRFile
+> Task :react-native-safe-area-context:generateReleaseRFile
+> Task :react-native-compressor:generateReleaseRFile
+> Task :expo:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-gesture-handler:javaPreCompileRelease
+> Task :expo-modules-core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-safe-area-context:javaPreCompileRelease
+> Task :expo:generateReleaseBuildConfig
+> Task :react-native-video:javaPreCompileRelease
+> Task :expo:generateReleaseResValues
+> Task :expo-modules-core:generateReleaseBuildConfig
+> Task :expo:generateReleaseResources
+> Task :react-native-svg:generateCodegenArtifactsFromSchema
+> Task :react-native-svg:preBuild
+> Task :react-native-svg:preReleaseBuild
+> Task :expo:packageReleaseResources
+> Task :react-native-video:parseReleaseLocalResources
+> Task :react-native-svg:mergeReleaseJniLibFolders
+> Task :react-native-svg:mergeReleaseNativeLibs NO-SOURCE
+> Task :react-native-svg:copyReleaseJniLibsProjectOnly
+> Task :react-native-svg:generateReleaseBuildConfig
+> Task :react-native-svg:generateReleaseResValues
+> Task :react-native-svg:generateReleaseResources
+> Task :expo-modules-core:generateReleaseResValues
+> Task :expo-modules-core:generateReleaseResources
+> Task :react-native-svg:packageReleaseResources
+> Task :expo:parseReleaseLocalResources
+> Task :react-native-svg:parseReleaseLocalResources
+> Task :react-native-video:generateReleaseRFile
+> Task :react-native-reanimated:generateCodegenArtifactsFromSchema
+> Task :react-native-svg:generateReleaseRFile
+> Task :expo-modules-core:packageReleaseResources
+> Task :expo:generateReleaseRFile
+> Task :expo-constants:createExpoConfig
+> Task :expo-constants:preBuild
+> Task :expo-constants:preReleaseBuild
+> Task :expo-constants:mergeReleaseJniLibFolders
+> Task :expo-constants:mergeReleaseNativeLibs NO-SOURCE
+> Task :expo-constants:copyReleaseJniLibsProjectOnly
+> Task :expo-constants:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-constants:generateReleaseBuildConfig
+> Task :expo-constants:generateReleaseResValues
+> Task :expo-modules-core:parseReleaseLocalResources
+> Task :react-native-svg:javaPreCompileRelease
+> Task :expo-constants:generateReleaseResources
+> Task :expo-modules-core:javaPreCompileRelease
+> Task :expo-log-box:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-log-box:generateReleaseBuildConfig
+> Task :expo-constants:packageReleaseResources
+> Task :expo-modules-core:generateReleaseRFile
+> Task :rest-timer-notification:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-log-box:generateReleaseResValues
+> Task :rest-timer-notification:generateReleaseBuildConfig
+> Task :expo-constants:javaPreCompileRelease
+> Task :expo-log-box:generateReleaseResources
+> Task :rest-timer-notification:generateReleaseResValues
+> Task :expo-constants:parseReleaseLocalResources
+> Task :rest-timer-notification:generateReleaseResources
+> Task :expo-constants:generateReleaseRFile
+> Task :training-reminder-alarm:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :expo-log-box:packageReleaseResources
+> Task :training-reminder-alarm:generateReleaseBuildConfig
+> Task :training-reminder-alarm:generateReleaseResValues
+> Task :expo-log-box:javaPreCompileRelease
+> Task :expo-log-box:parseReleaseLocalResources
+> Task :training-reminder-alarm:generateReleaseResources
+> Task :expo-log-box:generateReleaseRFile
+> Task :training-video:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :training-video:generateReleaseBuildConfig
+> Task :training-video:generateReleaseResValues
+> Task :training-video:generateReleaseResources
+> Task :training-reminder-alarm:packageReleaseResources
+> Task :training-video:packageReleaseResources
+> Task :training-reminder-alarm:javaPreCompileRelease
+> Task :training-reminder-alarm:parseReleaseLocalResources
+> Task :rest-timer-notification:packageReleaseResources
+> Task :training-reminder-alarm:generateReleaseRFile
+> Task :rest-timer-notification:parseReleaseLocalResources
+> Task :rest-timer-notification:javaPreCompileRelease
+> Task :training-video:javaPreCompileRelease
+> Task :training-video:parseReleaseLocalResources
+> Task :expo:javaPreCompileRelease
+> Task :react-native-async-storage_async-storage:generateReleaseBuildConfig
+> Task :rest-timer-notification:generateReleaseRFile
+> Task :react-native-async-storage_async-storage:generateReleaseResValues
+> Task :react-native-community_netinfo:generateReleaseBuildConfig
+> Task :react-native-async-storage_async-storage:generateReleaseResources
+> Task :react-native-community_netinfo:generateReleaseResValues
+> Task :training-video:generateReleaseRFile
+> Task :react-native-community_netinfo:generateReleaseResources
+> Task :react-native-masked-view_masked-view:generateReleaseBuildConfig
+> Task :react-native-community_netinfo:packageReleaseResources
+> Task :react-native-masked-view_masked-view:generateReleaseResValues
+> Task :react-native-masked-view_masked-view:generateReleaseResources
+> Task :react-native-async-storage_async-storage:packageReleaseResources
+> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs
+> Task :react-native-reanimated:preBuild
+> Task :app:preBuild
+> Task :app:preReleaseBuild
+> Task :react-native-reanimated:preReleaseBuild
+> Task :react-native-async-storage_async-storage:parseReleaseLocalResources
+> Task :app:mergeReleaseJniLibFolders
+> Task :react-native-masked-view_masked-view:packageReleaseResources
+> Task :react-native-reanimated:mergeReleaseJniLibFolders
+> Task :react-native-reanimated:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-masked-view_masked-view:parseReleaseLocalResources
+> Task :react-native-community_netinfo:parseReleaseLocalResources
+> Task :react-native-async-storage_async-storage:generateReleaseRFile
+> Task :react-native-reanimated:generateReleaseBuildConfig
+> Task :react-native-reanimated:generateReleaseResValues
+> Task :react-native-async-storage_async-storage:javaPreCompileRelease
+> Task :react-native-reanimated:generateReleaseResources
+> Task :react-native-community_netinfo:generateReleaseRFile
+> Task :react-native-masked-view_masked-view:generateReleaseRFile
+> Task :react-native-community_netinfo:javaPreCompileRelease
+> Task :react-native-masked-view_masked-view:javaPreCompileRelease
+> Task :react-native-reanimated:packageReleaseResources
+> Task :react-native-reanimated:parseReleaseLocalResources
+> Task :react-native-reanimated:generateReleaseRFile
+> Task :react-native-reanimated:javaPreCompileRelease
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:buildKotlinToolingMetadata
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateReleaseBuildConfig
+> Task :expo:writeReleaseAarMetadata
+> Task :expo-constants:writeReleaseAarMetadata
+> Task :expo-log-box:writeReleaseAarMetadata
+> Task :expo-modules-core:writeReleaseAarMetadata
+> Task :react-native-compressor:writeReleaseAarMetadata
+> Task :react-native-gesture-handler:writeReleaseAarMetadata
+> Task :react-native-reanimated:writeReleaseAarMetadata
+> Task :react-native-safe-area-context:writeReleaseAarMetadata
+> Task :react-native-video:writeReleaseAarMetadata
+> Task :rest-timer-notification:writeReleaseAarMetadata
+> Task :training-reminder-alarm:writeReleaseAarMetadata
+> Task :training-video:writeReleaseAarMetadata
+> Task :react-native-screens:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-nitro-modules:configureCMakeRelWithDebInfo[arm64-v8a]
+
+> Task :react-native-masked-view_masked-view:compileReleaseJavaWithJavac
+Note: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/@react-native-masked-view/masked-view/android/src/main/java/org/reactnative/maskedview/RNCMaskedViewPackage.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :react-native-worklets:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-masked-view_masked-view:bundleLibRuntimeToDirRelease
+
+> Task :react-native-community_netinfo:compileReleaseJavaWithJavac
+/Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/@react-native-community/netinfo/android/src/newarch/com/reactnativecommunity/netinfo/NetInfoModule.java:43: warning: [removal] onCatalystInstanceDestroy() in NativeModule has been deprecated and marked for removal
+    public void onCatalystInstanceDestroy() {
+                ^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+1 warning
+
+> Task :react-native-async-storage_async-storage:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/@react-native-async-storage/async-storage/android/src/javaPackage/java/com/reactnativecommunity/asyncstorage/AsyncStoragePackage.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :react-native-community_netinfo:bundleLibRuntimeToDirRelease
+
+> Task :app:createBundleReleaseJsAndAssets
+Using src/app as the root directory for Expo Router.
+
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToDirRelease
+
+> Task :app:createBundleReleaseJsAndAssets
+React Compiler enabled
+Starting Metro Bundler
+
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+
+> Task :react-native-async-storage_async-storage:writeReleaseAarMetadata
+> Task :react-native-community_netinfo:writeReleaseAarMetadata
+> Task :react-native-masked-view_masked-view:writeReleaseAarMetadata
+> Task :expo:extractDeepLinksRelease
+> Task :expo:processReleaseManifest
+> Task :expo-constants:extractDeepLinksRelease
+> Task :expo-constants:processReleaseManifest
+> Task :expo-log-box:extractDeepLinksRelease
+> Task :expo-log-box:processReleaseManifest
+> Task :expo-modules-core:extractDeepLinksRelease
+
+> Task :expo-modules-core:processReleaseManifest
+/Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/AndroidManifest.xml:8:9-11:45 Warning:
+	meta-data#com.facebook.soloader.enabled@android:value was tagged at AndroidManifest.xml:8 to replace other declarations but no other declaration present
+
+> Task :react-native-async-storage_async-storage:extractDeepLinksRelease
+
+> Task :react-native-async-storage_async-storage:processReleaseManifest
+package="com.reactnativecommunity.asyncstorage" found in source AndroidManifest.xml: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/@react-native-async-storage/async-storage/android/src/main/AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.reactnativecommunity.asyncstorage" from the source AndroidManifest.xml: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/@react-native-async-storage/async-storage/android/src/main/AndroidManifest.xml.
+
+> Task :react-native-community_netinfo:extractDeepLinksRelease
+
+> Task :react-native-community_netinfo:processReleaseManifest
+package="com.reactnativecommunity.netinfo" found in source AndroidManifest.xml: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/@react-native-community/netinfo/android/src/main/AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.reactnativecommunity.netinfo" from the source AndroidManifest.xml: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/@react-native-community/netinfo/android/src/main/AndroidManifest.xml.
+
+> Task :react-native-compressor:extractDeepLinksRelease
+> Task :react-native-compressor:processReleaseManifest
+> Task :react-native-gesture-handler:extractDeepLinksRelease
+> Task :react-native-gesture-handler:processReleaseManifest
+> Task :react-native-masked-view_masked-view:extractDeepLinksRelease
+> Task :react-native-masked-view_masked-view:processReleaseManifest
+> Task :react-native-reanimated:extractDeepLinksRelease
+> Task :react-native-reanimated:processReleaseManifest
+> Task :react-native-safe-area-context:extractDeepLinksRelease
+
+> Task :react-native-safe-area-context:processReleaseManifest
+package="com.th3rdwave.safeareacontext" found in source AndroidManifest.xml: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/AndroidManifest.xml.
+Setting the namespace via the package attribute in the source AndroidManifest.xml is no longer supported, and the value is ignored.
+Recommendation: remove package="com.th3rdwave.safeareacontext" from the source AndroidManifest.xml: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/AndroidManifest.xml.
+
+> Task :react-native-video:extractDeepLinksRelease
+> Task :react-native-video:processReleaseManifest
+> Task :rest-timer-notification:extractDeepLinksRelease
+> Task :rest-timer-notification:processReleaseManifest
+> Task :training-reminder-alarm:extractDeepLinksRelease
+> Task :training-reminder-alarm:processReleaseManifest
+> Task :training-video:extractDeepLinksRelease
+> Task :training-video:processReleaseManifest
+> Task :expo:compileReleaseLibraryResources
+> Task :expo-constants:compileReleaseLibraryResources
+> Task :expo-log-box:compileReleaseLibraryResources
+> Task :expo-modules-core:compileReleaseLibraryResources
+> Task :react-native-async-storage_async-storage:compileReleaseLibraryResources
+> Task :react-native-community_netinfo:compileReleaseLibraryResources
+> Task :react-native-gesture-handler:compileReleaseLibraryResources
+> Task :react-native-masked-view_masked-view:compileReleaseLibraryResources
+> Task :react-native-reanimated:compileReleaseLibraryResources
+> Task :react-native-safe-area-context:compileReleaseLibraryResources
+> Task :react-native-compressor:compileReleaseLibraryResources
+> Task :training-reminder-alarm:compileReleaseLibraryResources
+> Task :training-video:compileReleaseLibraryResources
+> Task :react-native-async-storage_async-storage:bundleLibCompileToJarRelease
+> Task :react-native-video:compileReleaseLibraryResources
+> Task :rest-timer-notification:compileReleaseLibraryResources
+> Task :expo:prepareReleaseArtProfile
+> Task :react-native-masked-view_masked-view:bundleLibCompileToJarRelease
+> Task :react-native-community_netinfo:bundleLibCompileToJarRelease
+> Task :expo-constants:prepareReleaseArtProfile
+> Task :expo-modules-core:prepareReleaseArtProfile
+> Task :react-native-community_netinfo:prepareReleaseArtProfile
+> Task :expo-log-box:prepareReleaseArtProfile
+> Task :react-native-gesture-handler:prepareReleaseArtProfile
+> Task :react-native-masked-view_masked-view:prepareReleaseArtProfile
+> Task :react-native-async-storage_async-storage:prepareReleaseArtProfile
+> Task :react-native-compressor:prepareReleaseArtProfile
+> Task :react-native-video:prepareReleaseArtProfile
+> Task :rest-timer-notification:prepareReleaseArtProfile
+> Task :react-native-safe-area-context:prepareReleaseArtProfile
+> Task :react-native-reanimated:prepareReleaseArtProfile
+> Task :training-reminder-alarm:prepareReleaseArtProfile
+> Task :react-native-community_netinfo:bundleLibRuntimeToJarRelease
+> Task :training-video:prepareReleaseArtProfile
+> Task :react-native-masked-view_masked-view:bundleLibRuntimeToJarRelease
+> Task :react-native-async-storage_async-storage:bundleLibRuntimeToJarRelease
+> Task :expo:mergeReleaseShaders
+> Task :expo:compileReleaseShaders NO-SOURCE
+> Task :expo:generateReleaseAssets UP-TO-DATE
+> Task :expo:mergeReleaseAssets
+> Task :expo-constants:mergeReleaseShaders
+> Task :expo-constants:compileReleaseShaders NO-SOURCE
+> Task :expo-constants:generateReleaseAssets UP-TO-DATE
+> Task :expo-constants:mergeReleaseAssets
+> Task :expo-log-box:mergeReleaseShaders
+> Task :expo-log-box:compileReleaseShaders NO-SOURCE
+> Task :expo-log-box:generateReleaseAssets UP-TO-DATE
+> Task :expo-log-box:mergeReleaseAssets
+> Task :expo-modules-core:mergeReleaseShaders
+> Task :expo-modules-core:compileReleaseShaders NO-SOURCE
+> Task :expo-modules-core:generateReleaseAssets UP-TO-DATE
+> Task :expo-modules-core:mergeReleaseAssets
+> Task :react-native-async-storage_async-storage:mergeReleaseShaders
+> Task :react-native-async-storage_async-storage:compileReleaseShaders NO-SOURCE
+> Task :react-native-async-storage_async-storage:generateReleaseAssets UP-TO-DATE
+> Task :react-native-async-storage_async-storage:mergeReleaseAssets
+> Task :react-native-community_netinfo:mergeReleaseShaders
+> Task :react-native-community_netinfo:compileReleaseShaders NO-SOURCE
+> Task :react-native-community_netinfo:generateReleaseAssets UP-TO-DATE
+
+> Task :react-native-safe-area-context:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaProviderManager.kt:39:19 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt:9:8 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt:50:54 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaView.kt:59:23 'val uiImplementation: UIImplementation!' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaViewShadowNode.kt:9:32 'class LayoutShadowNode : ReactShadowNodeImpl' is deprecated. This class is part of Legacy Architecture and will be removed in a future release.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-safe-area-context/android/src/main/java/com/th3rdwave/safeareacontext/SafeAreaViewShadowNode.kt:110:61 'class NativeViewHierarchyOptimizer : Any' is deprecated. This class is part of Legacy Architecture and will be removed in a future release.
+
+> Task :react-native-community_netinfo:mergeReleaseAssets
+> Task :react-native-compressor:mergeReleaseShaders
+> Task :react-native-compressor:compileReleaseShaders NO-SOURCE
+> Task :react-native-compressor:generateReleaseAssets UP-TO-DATE
+> Task :react-native-compressor:mergeReleaseAssets
+> Task :react-native-gesture-handler:mergeReleaseShaders
+> Task :react-native-gesture-handler:compileReleaseShaders NO-SOURCE
+> Task :react-native-gesture-handler:generateReleaseAssets UP-TO-DATE
+> Task :react-native-gesture-handler:mergeReleaseAssets
+> Task :react-native-masked-view_masked-view:mergeReleaseShaders
+> Task :react-native-masked-view_masked-view:compileReleaseShaders NO-SOURCE
+> Task :react-native-masked-view_masked-view:generateReleaseAssets UP-TO-DATE
+> Task :react-native-masked-view_masked-view:mergeReleaseAssets
+> Task :react-native-reanimated:mergeReleaseShaders
+> Task :react-native-reanimated:compileReleaseShaders NO-SOURCE
+> Task :react-native-reanimated:generateReleaseAssets UP-TO-DATE
+> Task :react-native-reanimated:mergeReleaseAssets
+> Task :react-native-video:mergeReleaseShaders
+> Task :react-native-video:compileReleaseShaders NO-SOURCE
+> Task :react-native-video:generateReleaseAssets UP-TO-DATE
+> Task :react-native-video:mergeReleaseAssets
+> Task :rest-timer-notification:mergeReleaseShaders
+> Task :rest-timer-notification:compileReleaseShaders NO-SOURCE
+> Task :rest-timer-notification:generateReleaseAssets UP-TO-DATE
+> Task :rest-timer-notification:mergeReleaseAssets
+> Task :training-reminder-alarm:mergeReleaseShaders
+> Task :training-reminder-alarm:compileReleaseShaders NO-SOURCE
+> Task :training-reminder-alarm:generateReleaseAssets UP-TO-DATE
+> Task :training-reminder-alarm:mergeReleaseAssets
+> Task :training-video:mergeReleaseShaders
+> Task :training-video:compileReleaseShaders NO-SOURCE
+> Task :training-video:generateReleaseAssets UP-TO-DATE
+> Task :training-video:mergeReleaseAssets
+> Task :expo:extractProguardFiles
+> Task :expo-constants:extractProguardFiles
+> Task :expo-modules-core:extractProguardFiles
+> Task :expo-modules-core:prepareLintJarForPublish
+> Task :expo-constants:prepareLintJarForPublish
+> Task :expo-log-box:extractProguardFiles
+> Task :expo-log-box:prepareLintJarForPublish
+> Task :rest-timer-notification:extractProguardFiles
+> Task :rest-timer-notification:prepareLintJarForPublish
+> Task :training-reminder-alarm:extractProguardFiles
+> Task :training-reminder-alarm:prepareLintJarForPublish
+> Task :training-video:extractProguardFiles
+> Task :training-video:prepareLintJarForPublish
+> Task :expo:prepareLintJarForPublish
+> Task :react-native-async-storage_async-storage:processReleaseJavaRes NO-SOURCE
+> Task :react-native-async-storage_async-storage:createFullJarRelease
+> Task :react-native-community_netinfo:processReleaseJavaRes NO-SOURCE
+> Task :react-native-async-storage_async-storage:extractProguardFiles
+> Task :react-native-community_netinfo:createFullJarRelease
+> Task :react-native-community_netinfo:extractProguardFiles
+> Task :react-native-video:compileReleaseKotlin
+> Task :react-native-svg:compileReleaseJavaWithJavac
+> Task :react-native-compressor:extractProguardFiles
+> Task :react-native-compressor:prepareLintJarForPublish
+> Task :react-native-gesture-handler:extractProguardFiles
+> Task :react-native-reanimated:extractProguardFiles
+> Task :react-native-reanimated:prepareLintJarForPublish
+> Task :react-native-gesture-handler:prepareLintJarForPublish
+> Task :react-native-masked-view_masked-view:processReleaseJavaRes NO-SOURCE
+> Task :react-native-masked-view_masked-view:createFullJarRelease
+> Task :react-native-masked-view_masked-view:extractProguardFiles
+> Task :react-native-screens:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-nitro-modules:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-async-storage_async-storage:generateReleaseLintModel
+
+> Task :react-native-svg:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :react-native-community_netinfo:generateReleaseLintModel
+> Task :react-native-community_netinfo:prepareLintJarForPublish
+> Task :react-native-async-storage_async-storage:prepareLintJarForPublish
+> Task :react-native-video:extractProguardFiles
+> Task :react-native-compressor:extractDeepLinksForAarRelease
+> Task :react-native-video:prepareLintJarForPublish
+> Task :react-native-reanimated:extractDeepLinksForAarRelease
+> Task :react-native-video:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-gesture-handler:extractDeepLinksForAarRelease
+> Task :react-native-worklets:buildCMakeRelWithDebInfo[arm64-v8a][worklets]
+> Task :react-native-video:copyReleaseJniLibsProjectAndLocalJars
+> Task :expo:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-video:extractDeepLinksForAarRelease
+> Task :expo:copyReleaseJniLibsProjectAndLocalJars
+> Task :expo:extractDeepLinksForAarRelease
+> Task :react-native-async-storage_async-storage:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-modules-core:extractDeepLinksForAarRelease
+> Task :react-native-async-storage_async-storage:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-community_netinfo:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-async-storage_async-storage:extractDeepLinksForAarRelease
+> Task :react-native-community_netinfo:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-community_netinfo:extractDeepLinksForAarRelease
+> Task :react-native-async-storage_async-storage:extractReleaseAnnotations
+> Task :react-native-community_netinfo:extractReleaseAnnotations
+> Task :react-native-community_netinfo:mergeReleaseGeneratedProguardFiles
+> Task :react-native-async-storage_async-storage:mergeReleaseGeneratedProguardFiles
+> Task :react-native-community_netinfo:mergeReleaseConsumerProguardFiles
+> Task :react-native-async-storage_async-storage:mergeReleaseConsumerProguardFiles
+> Task :react-native-masked-view_masked-view:generateReleaseLintModel
+> Task :react-native-masked-view_masked-view:prepareLintJarForPublish
+> Task :react-native-masked-view_masked-view:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-masked-view_masked-view:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-masked-view_masked-view:extractDeepLinksForAarRelease
+> Task :react-native-masked-view_masked-view:extractReleaseAnnotations
+> Task :react-native-svg:bundleLibCompileToJarRelease
+> Task :react-native-svg:writeReleaseAarMetadata
+> Task :react-native-svg:extractDeepLinksRelease
+> Task :react-native-svg:processReleaseManifest
+> Task :react-native-svg:compileReleaseLibraryResources
+> Task :react-native-svg:prepareReleaseArtProfile
+> Task :react-native-async-storage_async-storage:mergeReleaseJavaResource
+> Task :react-native-community_netinfo:mergeReleaseJavaResource
+> Task :react-native-community_netinfo:syncReleaseLibJars
+> Task :react-native-async-storage_async-storage:syncReleaseLibJars
+> Task :react-native-community_netinfo:bundleReleaseLocalLintAar
+> Task :react-native-async-storage_async-storage:bundleReleaseLocalLintAar
+> Task :react-native-svg:bundleLibRuntimeToJarRelease
+> Task :react-native-svg:mergeReleaseShaders
+> Task :react-native-svg:bundleLibRuntimeToDirRelease
+> Task :react-native-svg:compileReleaseShaders NO-SOURCE
+> Task :react-native-svg:generateReleaseAssets UP-TO-DATE
+> Task :react-native-svg:mergeReleaseAssets
+> Task :react-native-svg:processReleaseJavaRes NO-SOURCE
+> Task :react-native-masked-view_masked-view:mergeReleaseGeneratedProguardFiles
+> Task :react-native-masked-view_masked-view:mergeReleaseConsumerProguardFiles
+> Task :react-native-masked-view_masked-view:mergeReleaseJavaResource
+> Task :react-native-svg:createFullJarRelease
+> Task :react-native-masked-view_masked-view:syncReleaseLibJars
+> Task :react-native-svg:extractProguardFiles
+> Task :react-native-masked-view_masked-view:bundleReleaseLocalLintAar
+> Task :expo-log-box:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-svg:generateReleaseLintModel
+> Task :expo-log-box:copyReleaseJniLibsProjectAndLocalJars
+> Task :expo-log-box:extractDeepLinksForAarRelease
+> Task :expo-constants:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-svg:prepareLintJarForPublish
+> Task :react-native-svg:stripReleaseDebugSymbols NO-SOURCE
+> Task :expo-constants:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-svg:copyReleaseJniLibsProjectAndLocalJars
+> Task :expo-constants:extractDeepLinksForAarRelease
+> Task :rest-timer-notification:stripReleaseDebugSymbols NO-SOURCE
+> Task :rest-timer-notification:copyReleaseJniLibsProjectAndLocalJars
+> Task :rest-timer-notification:extractDeepLinksForAarRelease
+> Task :training-reminder-alarm:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-svg:extractDeepLinksForAarRelease
+> Task :training-reminder-alarm:copyReleaseJniLibsProjectAndLocalJars
+> Task :training-reminder-alarm:extractDeepLinksForAarRelease
+> Task :training-video:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-svg:extractReleaseAnnotations
+> Task :training-video:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-svg:mergeReleaseGeneratedProguardFiles
+> Task :react-native-svg:mergeReleaseConsumerProguardFiles
+> Task :training-video:extractDeepLinksForAarRelease
+> Task :react-native-svg:mergeReleaseJavaResource
+> Task :expo-constants:writeReleaseLintModelMetadata
+> Task :expo-log-box:writeReleaseLintModelMetadata
+> Task :expo-modules-core:writeReleaseLintModelMetadata
+> Task :rest-timer-notification:writeReleaseLintModelMetadata
+> Task :training-reminder-alarm:writeReleaseLintModelMetadata
+> Task :training-video:writeReleaseLintModelMetadata
+> Task :expo:writeReleaseLintModelMetadata
+> Task :react-native-svg:syncReleaseLibJars
+> Task :react-native-svg:bundleReleaseLocalLintAar
+> Task :react-native-async-storage_async-storage:writeReleaseLintModelMetadata
+> Task :react-native-safe-area-context:compileReleaseJavaWithJavac
+> Task :react-native-safe-area-context:bundleLibRuntimeToDirRelease
+> Task :react-native-safe-area-context:bundleLibCompileToJarRelease
+> Task :react-native-safe-area-context:bundleLibRuntimeToJarRelease
+> Task :react-native-safe-area-context:mergeReleaseShaders
+> Task :react-native-safe-area-context:compileReleaseShaders NO-SOURCE
+> Task :react-native-safe-area-context:generateReleaseAssets UP-TO-DATE
+> Task :react-native-safe-area-context:mergeReleaseAssets
+> Task :react-native-safe-area-context:processReleaseJavaRes
+> Task :react-native-safe-area-context:createFullJarRelease
+> Task :react-native-safe-area-context:extractProguardFiles
+> Task :react-native-safe-area-context:generateReleaseLintModel
+> Task :react-native-safe-area-context:prepareLintJarForPublish
+> Task :react-native-safe-area-context:stripReleaseDebugSymbols NO-SOURCE
+> Task :react-native-safe-area-context:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-safe-area-context:extractDeepLinksForAarRelease
+> Task :react-native-safe-area-context:extractReleaseAnnotations
+> Task :react-native-safe-area-context:mergeReleaseGeneratedProguardFiles
+> Task :react-native-safe-area-context:mergeReleaseConsumerProguardFiles
+> Task :react-native-safe-area-context:mergeReleaseJavaResource
+> Task :react-native-safe-area-context:syncReleaseLibJars
+> Task :react-native-safe-area-context:bundleReleaseLocalLintAar
+> Task :react-native-community_netinfo:writeReleaseLintModelMetadata
+> Task :react-native-compressor:writeReleaseLintModelMetadata
+> Task :react-native-reanimated:writeReleaseLintModelMetadata
+> Task :react-native-svg:writeReleaseLintModelMetadata
+> Task :react-native-gesture-handler:writeReleaseLintModelMetadata
+> Task :react-native-screens:mergeReleaseJniLibFolders
+> Task :react-native-screens:mergeReleaseNativeLibs
+> Task :react-native-screens:copyReleaseJniLibsProjectOnly
+> Task :react-native-screens:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-screens:generateReleaseBuildConfig
+> Task :react-native-screens:generateReleaseResValues
+> Task :react-native-screens:generateReleaseResources
+> Task :react-native-screens:packageReleaseResources
+> Task :react-native-screens:parseReleaseLocalResources
+> Task :react-native-screens:generateReleaseRFile
+> Task :react-native-async-storage_async-storage:lintVitalAnalyzeRelease
+
+> Task :react-native-video:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/common/react/VideoEventEmitter.kt:97:42 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/DRMManager.kt:21:18 'static field SDK_INT: Int' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/DataSourceUtil.kt:64:23 'constructor(reactContext: ReactContext): ForwardingCookieHandler' is deprecated. Use the default constructor.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/ExoPlayerView.kt:49:9 'fun setUseArtwork(p0: Boolean): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/VideoPlaybackService.kt:38:48 'constructor(): CommandButton.Builder' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/VideoPlaybackService.kt:41:10 'fun setIconResId(p0: Int): CommandButton.Builder' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/VideoPlaybackService.kt:45:49 'constructor(): CommandButton.Builder' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/VideoPlaybackService.kt:48:10 'fun setIconResId(p0: Int): CommandButton.Builder' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/react/ReactVideoPackage.kt:14:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/react/VideoManagerModule.kt:23:106 'val DEFAULT: Int' is deprecated. UIManagerType.DEFAULT will be deleted in the next release of React Native. Use [LEGACY] instead.
+
+> Task :react-native-community_netinfo:lintVitalAnalyzeRelease
+> Task :react-native-screens:javaPreCompileRelease
+> Task :react-native-screens:writeReleaseAarMetadata
+> Task :react-native-screens:extractDeepLinksRelease
+> Task :react-native-screens:processReleaseManifest
+> Task :react-native-screens:compileReleaseLibraryResources
+> Task :react-native-screens:prepareReleaseArtProfile
+> Task :react-native-screens:mergeReleaseShaders
+> Task :react-native-screens:compileReleaseShaders NO-SOURCE
+> Task :react-native-screens:generateReleaseAssets UP-TO-DATE
+> Task :react-native-screens:mergeReleaseAssets
+> Task :react-native-screens:extractProguardFiles
+> Task :react-native-screens:prepareLintJarForPublish
+> Task :react-native-masked-view_masked-view:writeReleaseLintModelMetadata
+> Task :react-native-safe-area-context:writeReleaseLintModelMetadata
+> Task :react-native-screens:extractDeepLinksForAarRelease
+> Task :react-native-screens:writeReleaseLintModelMetadata
+> Task :react-native-screens:stripReleaseDebugSymbols
+> Task :react-native-async-storage_async-storage:generateReleaseLintVitalModel
+> Task :react-native-screens:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-community_netinfo:generateReleaseLintVitalModel
+> Task :react-native-safe-area-context:generateReleaseLintVitalModel
+> Task :react-native-masked-view_masked-view:generateReleaseLintVitalModel
+> Task :react-native-svg:generateReleaseLintVitalModel
+> Task :expo-constants:mapReleaseSourceSetPaths
+> Task :expo-constants:mergeReleaseResources
+> Task :expo-log-box:mapReleaseSourceSetPaths
+
+> Task :react-native-video:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-video/android/src/main/java/com/brentvatne/exoplayer/ReactExoplayerView.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :expo-constants:verifyReleaseResources
+> Task :react-native-async-storage_async-storage:bundleReleaseAar
+> Task :react-native-async-storage_async-storage:mapReleaseSourceSetPaths
+> Task :react-native-video:bundleLibRuntimeToDirRelease
+> Task :react-native-masked-view_masked-view:lintVitalAnalyzeRelease
+> Task :react-native-async-storage_async-storage:mergeReleaseResources
+> Task :react-native-video:bundleLibCompileToJarRelease
+> Task :react-native-video:bundleLibRuntimeToJarRelease
+> Task :expo-log-box:mergeReleaseResources
+> Task :react-native-video:processReleaseJavaRes
+> Task :react-native-video:createFullJarRelease
+> Task :react-native-video:generateReleaseLintModel
+> Task :react-native-video:extractReleaseAnnotations
+> Task :react-native-video:mergeReleaseGeneratedProguardFiles
+> Task :react-native-video:mergeReleaseConsumerProguardFiles
+> Task :react-native-video:mergeReleaseJavaResource
+> Task :react-native-video:syncReleaseLibJars
+> Task :react-native-video:bundleReleaseLocalLintAar
+> Task :react-native-video:writeReleaseLintModelMetadata
+> Task :react-native-video:generateReleaseLintVitalModel
+> Task :react-native-screens:compileReleaseKotlin
+> Task :react-native-nitro-modules:externalNativeBuildRelease
+> Task :react-native-nitro-modules:generateJsonModelRelease
+> Task :react-native-nitro-modules:prefabReleaseConfigurePackage
+> Task :react-native-nitro-modules:prefabReleasePackage
+> Task :react-native-nitro-modules:mergeReleaseJniLibFolders
+> Task :react-native-nitro-modules:mergeReleaseNativeLibs
+> Task :react-native-nitro-modules:copyReleaseJniLibsProjectOnly
+> Task :react-native-nitro-modules:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-nitro-modules:generateReleaseBuildConfig
+> Task :react-native-nitro-modules:generateReleaseResValues
+> Task :react-native-nitro-modules:generateReleaseResources
+> Task :react-native-nitro-modules:packageReleaseResources
+> Task :react-native-nitro-modules:parseReleaseLocalResources
+> Task :react-native-nitro-modules:generateReleaseRFile
+> Task :react-native-async-storage_async-storage:verifyReleaseResources
+> Task :react-native-nitro-modules:javaPreCompileRelease
+> Task :react-native-nitro-modules:writeReleaseAarMetadata
+> Task :react-native-nitro-modules:extractDeepLinksRelease
+> Task :react-native-nitro-modules:processReleaseManifest
+> Task :react-native-nitro-modules:compileReleaseLibraryResources
+> Task :react-native-nitro-modules:prepareReleaseArtProfile
+> Task :react-native-nitro-modules:mergeReleaseShaders
+> Task :react-native-nitro-modules:compileReleaseShaders NO-SOURCE
+> Task :react-native-nitro-modules:generateReleaseAssets UP-TO-DATE
+> Task :react-native-nitro-modules:mergeReleaseAssets
+> Task :react-native-nitro-modules:extractProguardFiles
+> Task :react-native-nitro-modules:prepareLintJarForPublish
+> Task :react-native-nitro-modules:stripReleaseDebugSymbols
+> Task :react-native-nitro-modules:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-nitro-modules:extractDeepLinksForAarRelease
+> Task :react-native-nitro-modules:writeReleaseLintModelMetadata
+> Task :react-native-async-storage_async-storage:assembleRelease
+> Task :react-native-community_netinfo:bundleReleaseAar
+> Task :react-native-community_netinfo:mapReleaseSourceSetPaths
+> Task :react-native-compressor:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :expo-log-box:verifyReleaseResources
+> Task :react-native-masked-view_masked-view:bundleReleaseAar
+> Task :react-native-masked-view_masked-view:mapReleaseSourceSetPaths
+> Task :react-native-community_netinfo:mergeReleaseResources
+> Task :react-native-nitro-modules:compileReleaseKotlin
+> Task :react-native-nitro-modules:compileReleaseJavaWithJavac
+> Task :react-native-safe-area-context:lintVitalAnalyzeRelease
+> Task :react-native-svg:lintVitalAnalyzeRelease
+> Task :react-native-nitro-modules:bundleLibCompileToJarRelease
+> Task :react-native-nitro-modules:bundleLibRuntimeToJarRelease
+
+> Task :app:createBundleReleaseJsAndAssets
+Android Bundled 117163ms node_modules/expo-router/entry.js (2550 modules)
+Writing bundle output to: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/android/app/build/generated/assets/react/release/index.android.bundle
+
+> Task :react-native-nitro-modules:bundleLibRuntimeToDirRelease
+> Task :react-native-community_netinfo:verifyReleaseResources
+> Task :react-native-community_netinfo:assembleRelease
+> Task :react-native-safe-area-context:bundleReleaseAar
+> Task :react-native-nitro-modules:processReleaseJavaRes
+> Task :react-native-nitro-modules:createFullJarRelease
+> Task :react-native-safe-area-context:mapReleaseSourceSetPaths
+
+> Task :app:createBundleReleaseJsAndAssets
+Writing sourcemap output to: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/android/app/build/intermediates/sourcemaps/react/release/index.android.bundle.packager.map
+Copying 58 asset files
+Done writing bundle output
+Done writing sourcemap output
+
+> Task :react-native-nitro-modules:generateReleaseLintModel
+> Task :react-native-nitro-modules:extractReleaseAnnotations
+> Task :react-native-nitro-modules:mergeReleaseGeneratedProguardFiles
+> Task :react-native-nitro-modules:mergeReleaseConsumerProguardFiles
+> Task :react-native-nitro-modules:mergeReleaseJavaResource
+> Task :react-native-masked-view_masked-view:mergeReleaseResources
+> Task :react-native-nitro-modules:syncReleaseLibJars
+> Task :react-native-worklets:externalNativeBuildRelease
+> Task :react-native-worklets:generateJsonModelRelease
+> Task :react-native-worklets:prefabReleaseConfigurePackage
+> Task :react-native-nitro-modules:bundleReleaseLocalLintAar
+> Task :react-native-worklets:prefabReleasePackage
+> Task :react-native-worklets:mergeReleaseJniLibFolders
+> Task :react-native-worklets:mergeReleaseNativeLibs
+> Task :react-native-worklets:copyReleaseJniLibsProjectOnly
+> Task :react-native-safe-area-context:mergeReleaseResources
+> Task :react-native-worklets:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :react-native-worklets:generateReleaseBuildConfig
+> Task :react-native-worklets:generateReleaseResValues
+> Task :react-native-masked-view_masked-view:verifyReleaseResources
+> Task :react-native-worklets:generateReleaseResources
+> Task :react-native-worklets:packageReleaseResources
+> Task :react-native-worklets:parseReleaseLocalResources
+> Task :react-native-worklets:generateReleaseRFile
+> Task :react-native-reanimated:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-reanimated:generateJsonModelRelease
+> Task :react-native-nitro-modules:generateReleaseLintVitalModel
+> Task :react-native-reanimated:prefabReleaseConfigurePackage
+> Task :react-native-worklets:javaPreCompileRelease
+> Task :expo-modules-core:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-compressor:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-worklets:compileReleaseKotlin
+> Task :react-native-worklets:compileReleaseJavaWithJavac
+> Task :react-native-worklets:bundleLibCompileToJarRelease
+> Task :react-native-worklets:bundleLibRuntimeToDirRelease
+> Task :react-native-worklets:writeReleaseAarMetadata
+> Task :react-native-worklets:extractDeepLinksRelease
+> Task :react-native-worklets:processReleaseManifest
+> Task :react-native-worklets:compileReleaseLibraryResources
+> Task :react-native-worklets:prepareReleaseArtProfile
+> Task :react-native-worklets:bundleLibRuntimeToJarRelease
+> Task :react-native-worklets:mergeReleaseShaders
+> Task :react-native-worklets:compileReleaseShaders NO-SOURCE
+> Task :react-native-worklets:generateReleaseAssets UP-TO-DATE
+> Task :react-native-worklets:mergeReleaseAssets
+> Task :react-native-worklets:processReleaseJavaRes
+> Task :react-native-worklets:createFullJarRelease
+> Task :react-native-worklets:extractProguardFiles
+> Task :react-native-worklets:generateReleaseLintModel
+> Task :react-native-worklets:prepareLintJarForPublish
+> Task :react-native-worklets:stripReleaseDebugSymbols
+> Task :react-native-worklets:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-worklets:extractDeepLinksForAarRelease
+> Task :react-native-worklets:extractReleaseAnnotations
+> Task :react-native-worklets:mergeReleaseGeneratedProguardFiles
+> Task :react-native-worklets:mergeReleaseConsumerProguardFiles
+> Task :react-native-worklets:mergeReleaseJavaResource
+> Task :react-native-worklets:syncReleaseLibJars
+> Task :react-native-video:lintVitalAnalyzeRelease
+> Task :react-native-worklets:bundleReleaseLocalLintAar
+> Task :react-native-worklets:writeReleaseLintModelMetadata
+> Task :react-native-worklets:generateReleaseLintVitalModel
+> Task :expo:mapReleaseSourceSetPaths
+> Task :react-native-reanimated:buildCMakeRelWithDebInfo[arm64-v8a][reanimated]
+> Task :react-native-gesture-handler:configureCMakeRelWithDebInfo[arm64-v8a]
+> Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :expo:mergeReleaseResources
+> Task :react-native-nitro-modules:lintVitalAnalyzeRelease
+> Task :expo:verifyReleaseResources
+> Task :react-native-masked-view_masked-view:assembleRelease
+> Task :react-native-nitro-modules:bundleReleaseAar
+> Task :react-native-nitro-modules:mapReleaseSourceSetPaths
+> Task :react-native-worklets:lintVitalAnalyzeRelease SKIPPED
+> Task :react-native-nitro-modules:mergeReleaseResources
+> Task :react-native-screens:mapReleaseSourceSetPaths
+> Task :react-native-safe-area-context:verifyReleaseResources
+> Task :react-native-safe-area-context:assembleRelease
+> Task :react-native-svg:bundleReleaseAar
+> Task :react-native-svg:mapReleaseSourceSetPaths
+> Task :react-native-nitro-modules:verifyReleaseResources
+> Task :react-native-nitro-modules:assembleRelease
+> Task :react-native-video:bundleReleaseAar
+> Task :react-native-video:mapReleaseSourceSetPaths
+> Task :react-native-compressor:mergeReleaseNativeLibs
+> Task :react-native-compressor:copyReleaseJniLibsProjectOnly
+
+> Task :react-native-screens:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/RNScreensPackage.kt:66:9 The corresponding parameter in the supertype 'BaseReactPackage' is named 'name'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/RNScreensPackage.kt:67:9 The corresponding parameter in the supertype 'BaseReactPackage' is named 'reactContext'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/RNScreensPackage.kt:79:17 'constructor(name: String, className: String, canOverrideExistingModule: Boolean, needsEagerInit: Boolean, hasConstants: Boolean, isCxxModule: Boolean, isTurboModule: Boolean): ReactModuleInfo' is deprecated. This constructor is deprecated and will be removed in the future. Use ReactModuleInfo(String, String, boolean, boolean, boolean, boolean)].
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/Screen.kt:53:77 Unchecked cast of '(CoordinatorLayout.Behavior<View!>?..CoordinatorLayout.Behavior<*>?)' to 'BottomSheetBehavior<Screen>'.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/Screen.kt:58:33 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/Screen.kt:515:14 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenContainer.kt:250:18 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenContainer.kt:260:18 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenFragment.kt:225:37 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenFragment.kt:242:14 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenFragment.kt:258:22 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenFragment.kt:327:22 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenModalFragment.kt:180:22 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStack.kt:106:14 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:169:18 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:226:31 'var targetElevation: Float' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:229:13 'fun setHasOptionsMenu(p0: Boolean): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:439:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:446:22 'fun onPrepareOptionsMenu(p0: Menu): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:449:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackFragment.kt:454:22 'fun onCreateOptionsMenu(p0: Menu, p1: MenuInflater): Unit' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt:181:14 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenStackHeaderConfig.kt:191:14 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:48:42 'fun replaceSystemWindowInsets(p0: Int, p1: Int, p2: Int, p3: Int): @NonNull() WindowInsetsCompat' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:49:39 'val systemWindowInsetLeft: Int' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:51:39 'val systemWindowInsetRight: Int' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreenWindowTraits.kt:52:39 'val systemWindowInsetBottom: Int' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/ScreensModule.kt:100:14 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/SearchBarView.kt:137:29 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:7:8 'object ReactFeatureFlags : Any' is deprecated. Use com.facebook.react.internal.featureflags.ReactNativeFeatureFlags instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:25:13 'object ReactFeatureFlags : Any' is deprecated. Use com.facebook.react.internal.featureflags.ReactNativeFeatureFlags instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:32:9 The corresponding parameter in the supertype 'ReactViewGroup' is named 'left'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:33:9 The corresponding parameter in the supertype 'ReactViewGroup' is named 'top'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:34:9 The corresponding parameter in the supertype 'ReactViewGroup' is named 'right'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:35:9 The corresponding parameter in the supertype 'ReactViewGroup' is named 'bottom'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:71:9 The corresponding parameter in the supertype 'RootView' is named 'childView'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:72:9 The corresponding parameter in the supertype 'RootView' is named 'ev'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:79:46 The corresponding parameter in the supertype 'RootView' is named 'ev'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:83:9 The corresponding parameter in the supertype 'RootView' is named 'childView'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:84:9 The corresponding parameter in the supertype 'RootView' is named 'ev'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/BottomSheetDialogRootView.kt:95:34 The corresponding parameter in the supertype 'RootView' is named 't'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingView.kt:64:9 The corresponding parameter in the supertype 'ReactCompoundView' is named 'touchX'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingView.kt:65:9 The corresponding parameter in the supertype 'ReactCompoundView' is named 'touchY'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingView.kt:69:9 The corresponding parameter in the supertype 'ReactCompoundViewGroup' is named 'touchX'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/bottomsheet/DimmingView.kt:70:9 The corresponding parameter in the supertype 'ReactCompoundViewGroup' is named 'touchY'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/common/event/BaseEventEmitter.kt:12:38 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/host/TabsHostViewManager.kt:44:9 The corresponding parameter in the supertype 'TabsHostViewManager' is named 'view'. This may cause problems when calling this function with named arguments.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/safearea/SafeAreaView.kt:143:45 'fun consumeDisplayCutout(): @NonNull() WindowInsetsCompat' is deprecated. Deprecated in Java.
+
+> Task :react-native-svg:mergeReleaseResources
+> Task :react-native-screens:mergeReleaseResources
+> Task :react-native-video:mergeReleaseResources
+> Task :react-native-compressor:stripReleaseDebugSymbols
+> Task :react-native-compressor:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-compressor:mapReleaseSourceSetPaths
+> Task :react-native-svg:verifyReleaseResources
+> Task :react-native-svg:assembleRelease
+> Task :react-native-compressor:compileReleaseKotlin
+> Task :react-native-video:verifyReleaseResources
+> Task :react-native-screens:compileReleaseJavaWithJavac
+> Task :react-native-video:assembleRelease
+> Task :react-native-screens:bundleLibRuntimeToDirRelease
+> Task :react-native-compressor:mergeReleaseResources
+> Task :react-native-screens:verifyReleaseResources
+> Task :react-native-screens:bundleLibRuntimeToJarRelease
+> Task :react-native-screens:bundleLibCompileToJarRelease
+> Task :react-native-screens:processReleaseJavaRes
+> Task :react-native-screens:createFullJarRelease
+> Task :react-native-worklets:bundleReleaseAar
+> Task :react-native-screens:generateReleaseLintModel
+> Task :react-native-screens:extractReleaseAnnotations
+> Task :react-native-screens:mergeReleaseGeneratedProguardFiles
+> Task :react-native-screens:mergeReleaseConsumerProguardFiles
+> Task :react-native-screens:mergeReleaseJavaResource
+> Task :react-native-screens:syncReleaseLibJars
+> Task :react-native-screens:bundleReleaseLocalLintAar
+> Task :react-native-compressor:verifyReleaseResources
+> Task :react-native-screens:generateReleaseLintVitalModel
+> Task :react-native-screens:bundleReleaseAar
+> Task :react-native-screens:assembleRelease
+> Task :react-native-worklets:mapReleaseSourceSetPaths
+> Task :react-native-worklets:mergeReleaseResources
+
+> Task :expo-modules-core:buildCMakeRelWithDebInfo[arm64-v8a]
+C/C++: ninja: Entering directory `/Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/.cxx/RelWithDebInfo/612t204g/arm64-v8a'
+C/C++: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/cpp/fabric/ExpoComponentDescriptorFactory.cpp:17:5: warning: 'RawPropsParser' is deprecated [-Wdeprecated-declarations]
+C/C++:    17 |     react::RawPropsParser(/*useRawPropsJsiValue=*/true)
+C/C++:       |     ^
+C/C++: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native/ReactCommon/react/renderer/core/RawPropsParser.h:31:5: note: 'RawPropsParser' has been explicitly marked deprecated here
+C/C++:    31 |   [[deprecated]] explicit RawPropsParser(bool /* ignored */) : RawPropsParser() {}
+C/C++:       |     ^
+C/C++: 1 warning generated.
+
+> Task :react-native-worklets:verifyReleaseResources
+> Task :react-native-worklets:assembleRelease
+> Task :rest-timer-notification:mapReleaseSourceSetPaths
+> Task :rest-timer-notification:mergeReleaseResources
+> Task :rest-timer-notification:verifyReleaseResources
+> Task :expo-modules-core:mergeReleaseNativeLibs
+> Task :training-reminder-alarm:mapReleaseSourceSetPaths
+> Task :training-reminder-alarm:mergeReleaseResources
+> Task :training-reminder-alarm:verifyReleaseResources
+> Task :training-video:mapReleaseSourceSetPaths
+> Task :training-video:mergeReleaseResources
+> Task :expo-modules-core:copyReleaseJniLibsProjectOnly
+> Task :expo-modules-core:stripReleaseDebugSymbols
+> Task :expo-modules-core:copyReleaseJniLibsProjectAndLocalJars
+> Task :expo-modules-core:mapReleaseSourceSetPaths
+> Task :training-video:verifyReleaseResources
+> Task :expo-modules-core:mergeReleaseResources
+
+> Task :react-native-compressor:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Audio/AudioCompressor.kt:247:28 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Audio/AudioCompressor.kt:253:26 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:29:35 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:31:39 'fun toURL(): URL!' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:177:29 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:182:33 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:227:17 'field inDither: Boolean' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:228:17 'field inPurgeable: Boolean' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:229:17 'field inInputShareable: Boolean' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageCompressor.kt:250:13 Condition is always 'true'.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Image/ImageMain.kt:44:23 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Utils/UploaderHelper.kt:106:56 Unchecked cast of 'HashMap<String, Any?>?' to 'Map<String, String>'.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Utils/UploaderHelper.kt:116:62 Unchecked cast of 'HashMap<String, Any?>?' to 'Map<String, String>'.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Utils/createVideoThumbnail.kt:64:115 Unchecked cast of 'HashMap<String, Any?>' to 'Map<String, String>'.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Utils/createVideoThumbnail.kt:108:15 Condition is always 'true'.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Video/AutoVideoCompression.kt:19:29 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-compressor/android/src/main/java/com/reactnativecompressor/Video/VideoMain.kt:67:23 Java type mismatch: inferred type is 'String?', but 'String' was expected.
+
+> Task :react-native-compressor:compileReleaseJavaWithJavac
+> Task :react-native-compressor:bundleLibCompileToJarRelease
+> Task :react-native-compressor:bundleLibRuntimeToJarRelease
+> Task :react-native-compressor:processReleaseJavaRes
+> Task :react-native-compressor:createFullJarRelease
+> Task :react-native-compressor:generateReleaseLintModel
+> Task :react-native-compressor:extractReleaseAnnotations
+> Task :react-native-compressor:mergeReleaseGeneratedProguardFiles
+> Task :react-native-compressor:mergeReleaseConsumerProguardFiles
+> Task :react-native-compressor:mergeReleaseJavaResource
+> Task :react-native-compressor:bundleLibRuntimeToDirRelease
+> Task :expo-modules-core:verifyReleaseResources
+> Task :react-native-compressor:syncReleaseLibJars
+> Task :react-native-compressor:bundleReleaseLocalLintAar
+> Task :react-native-compressor:generateReleaseLintVitalModel
+> Task :react-native-compressor:bundleReleaseAar
+> Task :react-native-compressor:assembleRelease
+> Task :react-native-screens:lintVitalAnalyzeRelease
+> Task :expo-modules-core:compileReleaseKotlin
+> Task :react-native-compressor:lintVitalAnalyzeRelease
+> Task :app:configureCMakeRelWithDebInfo[arm64-v8a]
+
+> Task :expo-modules-core:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/apploader/AppLoaderProvider.kt:34:52 Unchecked cast of 'Class<*>!' to 'Class<out HeadlessAppLoader>'.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt:14:8 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt:22:8 'typealias ErrorManagerModule = JSLoggerModule' is deprecated. Use JSLoggerModule instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt:61:13 'val hostingRuntimeContext: MainRuntime' is deprecated. Use AppContext.runtimeContext instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt:271:21 'typealias ErrorManagerModule = JSLoggerModule' is deprecated. Use JSLoggerModule instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt:380:21 'val DEFAULT: Int' is deprecated. UIManagerType.DEFAULT will be deleted in the next release of React Native. Use [LEGACY] instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/AppContext.kt:381:10 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/defaultmodules/NativeModulesProxyModule.kt:16:5 'fun Constants(legacyConstantsProvider: () -> Map<String, Any?>): Unit' is deprecated. Use `Constant` or `Property` instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/events/KModuleEventEmitterWrapper.kt:99:21 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/events/KModuleEventEmitterWrapper.kt:108:21 'fun getEventDispatcherForReactTag(context: ReactContext, reactTag: Int): EventDispatcher?' is deprecated. reactTag is no longer needed.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/views/ViewDefinitionBuilder.kt:470:16 'val errorManager: JSLoggerModule?' is deprecated. Use AppContext.jsLogger instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/views/ViewDefinitionBuilder.kt:470:30 'fun reportExceptionToLogBox(codedException: CodedException): Unit' is deprecated. Use appContext.jsLogger.error(...) instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/views/ViewManagerDefinition.kt:41:16 'val errorManager: JSLoggerModule?' is deprecated. Use AppContext.jsLogger instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/views/ViewManagerDefinition.kt:41:30 'fun reportExceptionToLogBox(codedException: CodedException): Unit' is deprecated. Use appContext.jsLogger.error(...) instead.
+
+> Task :react-native-reanimated:externalNativeBuildRelease
+> Task :react-native-reanimated:prefabReleasePackage
+> Task :react-native-reanimated:mapReleaseSourceSetPaths
+> Task :react-native-reanimated:mergeReleaseNativeLibs
+
+> Task :expo-modules-core:compileReleaseJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :expo-modules-core:processReleaseJavaRes
+> Task :expo-modules-core:generateReleaseLintModel
+> Task :expo-modules-core:extractReleaseAnnotations
+> Task :expo-modules-core:mergeReleaseGeneratedProguardFiles
+> Task :expo-modules-core:mergeReleaseConsumerProguardFiles
+> Task :expo-modules-core:mergeReleaseJavaResource
+> Task :expo-modules-core:bundleLibRuntimeToJarRelease
+> Task :expo-modules-core:bundleLibCompileToJarRelease
+> Task :react-native-reanimated:mergeReleaseResources
+> Task :react-native-reanimated:stripReleaseDebugSymbols
+> Task :react-native-reanimated:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-reanimated:copyReleaseJniLibsProjectOnly
+> Task :expo-modules-core:syncReleaseLibJars
+> Task :expo-modules-core:bundleLibRuntimeToDirRelease
+> Task :react-native-reanimated:verifyReleaseResources
+> Task :training-reminder-alarm:compileReleaseKotlin
+> Task :training-reminder-alarm:compileReleaseJavaWithJavac
+> Task :training-reminder-alarm:bundleLibCompileToJarRelease
+> Task :training-reminder-alarm:bundleLibRuntimeToDirRelease
+
+> Task :expo-constants:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo-constants/android/src/main/java/expo/modules/constants/ConstantsModule.kt:13:5 'fun Constants(legacyConstantsProvider: () -> Map<String, Any?>): Unit' is deprecated. Use `Constant` or `Property` instead.
+
+> Task :expo-constants:compileReleaseJavaWithJavac
+> Task :expo-constants:bundleLibCompileToJarRelease
+> Task :expo-constants:bundleLibRuntimeToDirRelease
+> Task :expo-constants:bundleLibRuntimeToJarRelease
+> Task :training-reminder-alarm:bundleLibRuntimeToJarRelease
+> Task :expo-constants:processReleaseJavaRes
+> Task :expo-constants:createFullJarRelease
+
+> Task :react-native-reanimated:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/NodesManager.kt:13:8 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/NodesManager.kt:58:95 'fun resolveCustomDirectEventName(eventName: String): String?' is deprecated.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/NodesManager.kt:234:29 'fun receiveEvent(surfaceId: Int, targetTag: Int, eventName: String, canCoalesceEvent: Boolean, customCoalesceKey: Int, params: WritableMap?, category: Int): Unit' is deprecated. Use the overload with eventTimestamp parameter instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/ReanimatedPackage.kt:5:8 'class ReactInstanceManager : Any' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/ReanimatedPackage.kt:60:73 'class ReactInstanceManager : Any' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/ReanimatedPackage.kt:61:63 'val reactNativeHost: ReactNativeHost' is deprecated. You should not use ReactNativeHost directly in the New Architecture. Use ReactHost instead.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/EventHandler.kt:7:8 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/EventHandler.kt:25:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/EventHandler.kt:38:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/EventHandler.kt:48:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/EventHandler.kt:57:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/NoopEventHandler.kt:8:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/NoopEventHandler.kt:20:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/NoopEventHandler.kt:29:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/nativeProxy/NoopEventHandler.kt:37:18 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-reanimated/android/src/main/java/com/swmansion/reanimated/sensor/ReanimatedSensor.kt:28:26 'val defaultDisplay: Display!' is deprecated. Deprecated in Java.
+
+> Task :expo-modules-core:createFullJarRelease
+> Task :rest-timer-notification:compileReleaseKotlin
+> Task :expo-constants:generateReleaseLintModel
+> Task :training-reminder-alarm:processReleaseJavaRes
+> Task :training-reminder-alarm:createFullJarRelease
+> Task :training-reminder-alarm:generateReleaseLintModel
+> Task :expo-modules-core:bundleReleaseLocalLintAar
+> Task :react-native-reanimated:compileReleaseJavaWithJavac
+> Task :react-native-reanimated:bundleLibCompileToJarRelease
+> Task :react-native-reanimated:bundleLibRuntimeToDirRelease
+> Task :react-native-reanimated:bundleLibRuntimeToJarRelease
+> Task :expo-log-box:compileReleaseKotlin
+> Task :expo-log-box:compileReleaseJavaWithJavac
+> Task :expo-log-box:bundleLibCompileToJarRelease
+> Task :expo-log-box:bundleLibRuntimeToDirRelease
+> Task :expo-log-box:bundleLibRuntimeToJarRelease
+> Task :expo-log-box:processReleaseJavaRes
+> Task :expo-log-box:createFullJarRelease
+> Task :react-native-reanimated:processReleaseJavaRes
+> Task :react-native-reanimated:createFullJarRelease
+> Task :expo-log-box:generateReleaseLintModel
+> Task :expo-log-box:extractReleaseAnnotations
+> Task :react-native-reanimated:generateReleaseLintModel
+> Task :expo-log-box:mergeReleaseGeneratedProguardFiles
+> Task :expo-log-box:mergeReleaseConsumerProguardFiles
+> Task :react-native-reanimated:extractReleaseAnnotations
+> Task :react-native-reanimated:mergeReleaseGeneratedProguardFiles
+> Task :react-native-reanimated:mergeReleaseConsumerProguardFiles
+> Task :expo-log-box:mergeReleaseJavaResource
+> Task :react-native-reanimated:mergeReleaseJavaResource
+> Task :expo-log-box:syncReleaseLibJars
+> Task :expo-log-box:bundleReleaseLocalLintAar
+> Task :training-video:compileReleaseKotlin
+> Task :expo-constants:extractReleaseAnnotations
+> Task :expo-constants:mergeReleaseGeneratedProguardFiles
+> Task :expo-constants:mergeReleaseConsumerProguardFiles
+> Task :expo-constants:mergeReleaseJavaResource
+> Task :expo-constants:syncReleaseLibJars
+> Task :expo-constants:bundleReleaseLocalLintAar
+> Task :training-reminder-alarm:extractReleaseAnnotations
+> Task :training-reminder-alarm:mergeReleaseGeneratedProguardFiles
+> Task :training-reminder-alarm:mergeReleaseConsumerProguardFiles
+> Task :training-reminder-alarm:mergeReleaseJavaResource
+> Task :react-native-reanimated:syncReleaseLibJars
+> Task :training-reminder-alarm:syncReleaseLibJars
+> Task :training-reminder-alarm:bundleReleaseLocalLintAar
+> Task :training-video:compileReleaseJavaWithJavac
+> Task :training-video:bundleLibCompileToJarRelease
+> Task :training-video:bundleLibRuntimeToDirRelease
+> Task :react-native-reanimated:bundleReleaseLocalLintAar
+> Task :training-video:bundleLibRuntimeToJarRelease
+> Task :rest-timer-notification:compileReleaseJavaWithJavac
+> Task :rest-timer-notification:bundleLibCompileToJarRelease
+> Task :rest-timer-notification:bundleLibRuntimeToDirRelease
+> Task :expo-constants:lintVitalAnalyzeRelease
+> Task :rest-timer-notification:bundleLibRuntimeToJarRelease
+> Task :rest-timer-notification:processReleaseJavaRes
+> Task :rest-timer-notification:createFullJarRelease
+> Task :rest-timer-notification:generateReleaseLintModel
+> Task :training-video:processReleaseJavaRes
+> Task :training-video:createFullJarRelease
+> Task :rest-timer-notification:extractReleaseAnnotations
+> Task :rest-timer-notification:mergeReleaseGeneratedProguardFiles
+> Task :rest-timer-notification:mergeReleaseConsumerProguardFiles
+> Task :rest-timer-notification:mergeReleaseJavaResource
+> Task :training-video:generateReleaseLintModel
+> Task :rest-timer-notification:syncReleaseLibJars
+> Task :rest-timer-notification:bundleReleaseLocalLintAar
+> Task :training-video:extractReleaseAnnotations
+> Task :training-video:mergeReleaseGeneratedProguardFiles
+> Task :training-video:mergeReleaseConsumerProguardFiles
+> Task :training-video:mergeReleaseJavaResource
+> Task :training-video:syncReleaseLibJars
+> Task :training-video:bundleReleaseLocalLintAar
+> Task :react-native-reanimated:lintVitalAnalyzeRelease SKIPPED
+> Task :expo-constants:generateReleaseLintVitalModel
+> Task :expo-modules-core:generateReleaseLintVitalModel
+> Task :react-native-reanimated:generateReleaseLintVitalModel
+> Task :rest-timer-notification:generateReleaseLintVitalModel
+> Task :expo-log-box:generateReleaseLintVitalModel
+> Task :training-video:generateReleaseLintVitalModel
+> Task :expo-constants:bundleReleaseAar
+> Task :expo-constants:assembleRelease
+> Task :training-reminder-alarm:generateReleaseLintVitalModel
+> Task :expo-log-box:bundleReleaseAar
+> Task :expo-log-box:assembleRelease
+> Task :expo-modules-core:bundleReleaseAar
+> Task :expo-modules-core:assembleRelease
+> Task :rest-timer-notification:bundleReleaseAar
+> Task :rest-timer-notification:assembleRelease
+> Task :training-reminder-alarm:bundleReleaseAar
+> Task :training-reminder-alarm:assembleRelease
+> Task :training-video:bundleReleaseAar
+> Task :training-video:assembleRelease
+> Task :react-native-gesture-handler:buildCMakeRelWithDebInfo[arm64-v8a]
+> Task :react-native-gesture-handler:mergeReleaseNativeLibs
+> Task :react-native-gesture-handler:copyReleaseJniLibsProjectOnly
+> Task :react-native-gesture-handler:stripReleaseDebugSymbols
+> Task :react-native-gesture-handler:copyReleaseJniLibsProjectAndLocalJars
+> Task :react-native-gesture-handler:mapReleaseSourceSetPaths
+> Task :react-native-gesture-handler:mergeReleaseResources
+
+> Task :expo:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/ExpoModulesPackage.kt:34:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:22:8 'class ReactInstanceManager : Any' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:102:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:102:43 'class ReactInstanceManager : Any' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/ReactActivityDelegateWrapper.kt:103:21 'val reactInstanceManager: ReactInstanceManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/fetch/ExpoFetchModule.kt:33:39 'constructor(reactContext: ReactContext): ForwardingCookieHandler' is deprecated. Use the default constructor.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/fetch/NativeResponse.kt:42:16 This declaration overrides a deprecated member but is not marked as deprecated itself. Add the '@Deprecated' annotation or suppress the diagnostic.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/expo/android/src/main/java/expo/modules/fetch/NativeResponse.kt:44:11 'fun deallocate(): Unit' is deprecated. Use sharedObjectDidRelease() instead.
+
+> Task :react-native-reanimated:bundleReleaseAar
+> Task :react-native-reanimated:assembleRelease
+> Task :react-native-gesture-handler:verifyReleaseResources
+> Task :expo:compileReleaseJavaWithJavac
+> Task :expo:bundleLibCompileToJarRelease
+> Task :expo:processReleaseJavaRes
+> Task :expo:bundleLibRuntimeToJarRelease
+> Task :expo:bundleLibRuntimeToDirRelease
+> Task :expo:generateReleaseLintModel
+> Task :expo:createFullJarRelease
+> Task :expo:extractReleaseAnnotations
+> Task :expo:mergeReleaseGeneratedProguardFiles
+> Task :expo:mergeReleaseConsumerProguardFiles
+> Task :expo:mergeReleaseJavaResource
+> Task :expo:syncReleaseLibJars
+> Task :expo:bundleReleaseLocalLintAar
+> Task :rest-timer-notification:lintVitalAnalyzeRelease
+> Task :expo:generateReleaseLintVitalModel
+> Task :expo:bundleReleaseAar
+> Task :expo:assembleRelease
+> Task :training-reminder-alarm:lintVitalAnalyzeRelease
+> Task :expo-modules-core:lintVitalAnalyzeRelease
+> Task :expo-log-box:lintVitalAnalyzeRelease
+> Task :app:buildCMakeRelWithDebInfo[arm64-v8a]
+
+> Task :react-native-gesture-handler:compileReleaseKotlin
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/Extensions.kt:8:8 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/Extensions.kt:13:29 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+w: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/Extensions.kt:14:32 'class UIManagerModule : ReactContextBaseJavaModule, LifecycleEventListener, UIManager' is deprecated. Deprecated in Java.
+
+> Task :react-native-gesture-handler:compileReleaseJavaWithJavac
+> Task :react-native-gesture-handler:processReleaseJavaRes
+> Task :react-native-gesture-handler:bundleLibCompileToJarRelease
+> Task :react-native-gesture-handler:bundleLibRuntimeToJarRelease
+> Task :react-native-gesture-handler:bundleLibRuntimeToDirRelease
+> Task :react-native-gesture-handler:generateReleaseLintModel
+> Task :react-native-gesture-handler:createFullJarRelease
+> Task :react-native-gesture-handler:extractReleaseAnnotations
+> Task :react-native-gesture-handler:mergeReleaseGeneratedProguardFiles
+> Task :react-native-gesture-handler:mergeReleaseConsumerProguardFiles
+> Task :react-native-gesture-handler:mergeReleaseJavaResource
+> Task :react-native-gesture-handler:generateReleaseLintVitalModel
+> Task :react-native-gesture-handler:syncReleaseLibJars
+> Task :react-native-gesture-handler:bundleReleaseLocalLintAar
+> Task :react-native-gesture-handler:bundleReleaseAar
+> Task :react-native-gesture-handler:assembleRelease
+> Task :training-video:lintVitalAnalyzeRelease
+> Task :expo:lintVitalAnalyzeRelease
+> Task :react-native-gesture-handler:lintVitalAnalyzeRelease
+> Task :app:generateReleaseResValues
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:checkReleaseAarMetadata
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:parseReleaseLocalResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:mergeReleaseResources
+
+> Task :app:processReleaseMainManifest
+/Users/david/Projects/apps/meetpr-rn-wt-invite-share/android/app/src/main/AndroidManifest.xml Warning:
+	provider#expo.modules.filesystem.FileSystemFileProvider@android:authorities was tagged at AndroidManifest.xml:0 to replace other declarations but no other declaration present
+/Users/david/Projects/apps/meetpr-rn-wt-invite-share/android/app/src/main/AndroidManifest.xml Warning:
+	activity#expo.modules.imagepicker.ExpoCropImageActivity@android:exported was tagged at AndroidManifest.xml:0 to replace other declarations but no other declaration present
+
+> Task :app:expoReleaseOverrideMaxSdkConflicts
+[33m---------- Expo Max Sdk Override Plugin ----------[0m
+[32m>>> No 'android:maxSdkVersion' conflicts found[0m
+[33m--------------------------------------------------[0m
+
+> Task :app:processReleaseManifest
+> Task :app:javaPreCompileRelease
+> Task :app:desugarReleaseFileDependencies
+> Task :app:mergeReleaseStartupProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:extractReleaseVersionControlInfo
+> Task :app:extractProguardFiles
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:processReleaseManifestForPackage
+> Task :app:mergeReleaseNativeLibs
+> Task :app:stripReleaseDebugSymbols
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:mergeReleaseNativeDebugMetadata
+> Task :app:processReleaseResources
+> Task :app:compileReleaseKotlin
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:dexBuilderRelease
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:generateReleaseLintVitalReportModel
+> Task :app:optimizeReleaseResources
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseJavaResource
+> Task :app:mergeExtDexRelease
+> Task :app:lintVitalAnalyzeRelease
+> Task :app:lintVitalReportRelease
+> Task :app:lintVitalRelease
+> Task :app:mergeDexRelease
+> Task :app:compileReleaseArtProfile
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+
+[Incubating] Problems report is available at: file:///Users/david/Projects/apps/meetpr-rn-wt-invite-share/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 12m 13s
+918 actionable tasks: 918 executed
+Signer #1 certificate SHA-256 digest: fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c
+Package: com.meetpr.app
+Version: 0.1.0 (2)
+APK: /Users/david/Projects/apps/meetpr-rn-wt-invite-share/dist/invite-share/meetpr-china-0.1.0-2-DEBUGSIGNED.apk

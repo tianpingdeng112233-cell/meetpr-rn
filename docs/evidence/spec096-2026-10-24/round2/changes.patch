@@ -1,0 +1,21 @@
+--- a/src/features/history/HistoryEntriesView.tsx
++++ b/src/features/history/HistoryEntriesView.tsx
+@@ -276,7 +276,7 @@
+   setRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 },
+   setLabel: { color: colors.textSecondary, ...typography.footnote },
+   setValue: { color: colors.textPrimary, fontVariant: ['tabular-nums'], ...typography.footnote },
+-  videoSetValue: { flex: 1, textAlign: 'right' },
++  videoSetValue: { flex: 1, textAlign: 'right', marginRight: spacing.sm },
+   scrim: { backgroundColor: 'rgba(0,0,0,0.68)', flex: 1, justifyContent: 'flex-end' },
+   choiceSheet: {
+     backgroundColor: colors.surfaceCard,
+--- a/src/features/history/__tests__/student-added-history.test.tsx
++++ b/src/features/history/__tests__/student-added-history.test.tsx
+@@ -125,6 +125,7 @@
+     const valueStyle = StyleSheet.flatten(value.props.style);
+     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+     expect(valueStyle.textAlign).toBe(reserved ? 'right' : undefined);
++    expect(valueStyle.marginRight).toBe(reserved ? 8 : undefined);
+     expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
+   });
+ });

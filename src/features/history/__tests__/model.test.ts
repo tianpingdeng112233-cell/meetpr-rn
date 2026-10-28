@@ -4,6 +4,9 @@ import type { PlanDetail, SetLog } from '@/api/domains';
 import type { E1RMSample, LiftFamily } from '@/domain/e1rm';
 
 import {
+  progressRowValues,
+  buildTotalSeries,
+  totalSnapshot,
   buildGrowthCurves,
   buildGrowthStats,
   buildHistoryWeeks,
@@ -263,4 +266,88 @@ test('daily-best chart uses declining window values and the smoothed winner as h
   expect(snapshot.deltaKg).toBe(-10);
   expect(snapshot.chartCurrentPoint?.valueKg).toBe(140);
   expect(snapshot.latestRecordDate).toEqual(raw[0].date);
+});
+
+
+describe('Progress Total carried-forward series', () => {
+  test('waits for all lifts, carries previous values, merges same-day updates and excludes low confidence', () => {
+    const curves = { squat: curve('squat', 100), bench: curve('bench', 80), deadlift: curve('deadlift', null) };
+    expect(buildTotalSeries(curves)).toEqual([]);
+    expect(totalSnapshot(curves, 'all').missing).toEqual(['deadlift']);
+    expect(totalSnapshot(curves, 'all').state).toBe('missing');
+    const sample = (family: LiftFamily, day: number, valueKg: number, hour = 12): E1RMSample => ({ ...curve(family, valueKg).point!, date: new Date(2026, 6, day, hour) });
+    curves.squat.series = { ...curves.squat.series, rawEligible: [sample('squat', 1, 100), sample('squat', 3, 110), sample('squat', 4, 115)] };
+    curves.bench.series = { ...curves.bench.series, rawEligible: [sample('bench', 2, 80), sample('bench', 4, 85, 18)] };
+    curves.deadlift.series = { ...curves.deadlift.series, rawEligible: [sample('deadlift', 2, 120)] };
+    curves.deadlift.series = { ...curves.deadlift.series, rawEligible: [...curves.deadlift.series.rawEligible, { ...sample('deadlift', 5, 999), winnerConfidence: 'low' }] };
+    expect(buildTotalSeries(curves).map(p => [p.date.getDate(), p.valueKg])).toEqual([[2, 300], [3, 310], [4, 320]]);
+    expect(totalSnapshot(curves, 'all')).toMatchObject({ deltaKg: 20, state: 'chart', missing: [] });
+  });
+});
+
+
+test('Total windows use the existing 28-day cutoff and reject sparse or flat lines', () => {
+  const curves = { squat: curve('squat', 100), bench: curve('bench', 80), deadlift: curve('deadlift', 120) };
+  const point = curves.squat.point!;
+  curves.squat.series = { ...curves.squat.series, rawEligible: [0, 1, 2].map(index => ({ ...point, date: new Date(2026, 6, index + 1, 12), valueKg: 100 })) };
+  expect(totalSnapshot(curves, 'all').state).toBe('sparse');
+  curves.squat.series = { ...curves.squat.series, rawEligible: curves.squat.series.rawEligible.map((p, index) => ({ ...p, valueKg: 100 - index * 5 })) };
+  expect(totalSnapshot(curves, 'all')).toMatchObject({ state: 'chart', deltaKg: -10 });
+  expect(totalSnapshot(curves, '30', new Date(2026, 6, 30, 12))).toMatchObject({ state: 'sparse', deltaKg: -5 });
+  expect(totalSnapshot(curves, '90', new Date(2026, 6, 30, 12)).state).toBe('chart');
+  expect(totalSnapshot(curves, '30', new Date(2026, 9, 1))).toMatchObject({ state: 'sparse', deltaKg: null, samples: [] });
+});
+
+
+test('Progress row values cover totals, singular/plural sessions, unread/read/empty feedback and the latest RPE', () => {
+  const stats = buildGrowthStats([], { squat: curve('squat', 100), bench: curve('bench', 80), deadlift: curve('deadlift', 120) });
+  const volumeIntensity = buildVolumeIntensitySeries([log('rpe', '2026-07-01', 'squat', { rpe: '7.75' })]);
+  const feedback = [{ read_at: null }, { read_at: '2026-07-01' }];
+  expect(progressRowValues({ stats, volumeIntensity, feedback })).toEqual({ e1rm: 'Total 300 kg', history: '—', feedback: '1 new', feedbackEmphasized: true, intensity: '—' });
+  expect(progressRowValues({ stats: { ...stats, trainingSessionCount: 1, unlocksTrends: true }, volumeIntensity, feedback: [{ read_at: 'read' }] })).toMatchObject({ history: '1 session', feedback: '1', feedbackEmphasized: false, intensity: 'RPE 7.8' });
+  volumeIntensity.points.push({ ...volumeIntensity.points[0], averageRPE: null });
+  expect(progressRowValues({ stats: { ...stats, sbdTotalKg: null, trainingSessionCount: 42, unlocksTrends: true }, volumeIntensity, feedback: [] })).toMatchObject({ e1rm: '—', history: '42 sessions', feedback: '—', intensity: '—' });
+  expect(progressRowValues({ stats: { ...stats, unlocksTrends: true }, volumeIntensity: { scale: 0, points: [] }, feedback: [] }).intensity).toBe('—');
+});
+
+test('real growth curves preserve every Total update and sum the latest all-history main-line points', () => {
+  const families = ['squat', 'bench', 'deadlift'] as const;
+  const points = families.flatMap(family => [
+    ['2026-05-01', 200], ['2026-10-01', 100], ['2026-10-02', 110], ['2026-10-03', 120],
+  ].map(([date, value], index) => ({
+    id: `${family}-${index}`, studentId: 'student', exerciseId: family, setLogId: `${family}-${index}`,
+    computedAt: new Date(`${date}T12:00:00Z`), e1RMKg: Number(value),
+    sourceWeightKg: Number(value), sourceReps: 1, sourceRPE: 10,
+    origin: 'logged' as const, confidence: 'normal' as const,
+  })));
+  const curves = buildGrowthCurves([], new Map(families.map(family => [family, family])), new Date('2026-10-09T12:00:00Z'), points);
+  const now = new Date('2026-10-09T12:00:00Z');
+  const total = buildTotalSeries(curves, now);
+  expect(total.map(point => [point.date.toISOString().slice(0, 10), point.valueKg])).toEqual([
+    ['2026-05-01', 600], ['2026-10-01', 300], ['2026-10-02', 330], ['2026-10-03', 360],
+  ]);
+  expect(total.at(-1)?.valueKg).toBe(families.reduce((sum, family) => sum + growthSnapshot(curves[family], 'all', now).samples.at(-1)!.valueKg, 0));
+});
+
+test('history groups student-added records by their training day and actual date without inflating prescribed progress', () => {
+  const exercise = { id: 'plan-exercise', plan_day_id: 'day', exercise_id: 'squat', is_main_lift: true, sort_order: 0, notes: null, sets: [makeSet(), makeSet({ id: 'second', set_number: 2 })] };
+  const plan = makePlan([makeDay('day', { exercises: [exercise] }), makeDay('other-day', { day_of_week: 4 })]);
+  const logs = [
+    log('prescribed', '2026-09-09', 'squat'),
+    log('extra', '2026-09-09', 'squat', { set_index: 2 }),
+    log('added', '2026-09-09', 'bench', { plan_exercise_id: null, plan_day_id: 'day', adhoc: true }),
+    log('other-day', '2026-09-09', 'bench', { plan_exercise_id: null, plan_day_id: 'other-day', adhoc: true, set_index: 1 }),
+    log('outside-plan', '2026-09-09', 'bench', { plan_exercise_id: null, plan_day_id: 'foreign-day', adhoc: true }),
+    log('legacy-adhoc', '2026-09-09', 'bench', { plan_exercise_id: null, adhoc: true }),
+    log('only-added', '2026-09-21', 'deadlift', { plan_exercise_id: null, plan_day_id: 'day', adhoc: true }),
+  ];
+  const days = buildHistoryWeeks([plan], logs, new Map(), '2026-09-21').flatMap(week => week.days);
+  const recorded = days.find(day => day.date === '2026-09-09')!;
+  expect(recorded.exercises.map(exercise => exercise.logs.map(log => log.id))).toEqual([['prescribed', 'extra'], ['added'], ['other-day']]);
+  expect(recorded).toMatchObject({ done: 1, total: 2, isRest: false });
+  expect(recorded.exercises.slice(1).map(exercise => exercise.planExercise.plan_day_id)).toEqual(['day', 'other-day']);
+  expect(recorded.exercises.slice(1).every(exercise => exercise.plannedSets.length === 0)).toBe(true);
+  expect(days.find(day => day.date === '2026-09-21')).toMatchObject({ done: 0, total: 0, isRest: false });
+  expect(days.find(day => day.date === '2026-09-21')?.exercises[0].logs[0].id).toBe('only-added');
+  expect(plan.days[0].exercises).toEqual([exercise]);
 });

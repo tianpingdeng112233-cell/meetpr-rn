@@ -1,0 +1,8 @@
+PASS src/features/coach/profile/__tests__/invite-card-state.test.ts
+PASS src/features/coach/profile/__tests__/invite-message.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       34 passed, 34 total
+Snapshots:   0 total
+Time:        5.337 s
+Ran all test suites matching /src\/features\/coach\/profile\/__tests__\/invite-message.test.ts|src\/features\/coach\/profile\/__tests__\/invite-card-state.test.ts/i.

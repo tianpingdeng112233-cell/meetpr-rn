@@ -2936,6 +2936,183 @@ seam 沿用卡内已批准的纯函数、hook、两页组件，逐行为先失�
 - `git diff --check`：通过；HEAD 仍为 `61fa6b8`。未 commit、push、增依赖、改原生、增文案或修改用户任务卡。
 - 首轮 lint / tsc 报告仅涉及新增测试的 hook harness 全局赋值、重复导入及类型 / 测试 helper 包裹问题，已修正后全量复跑。最终代码 diff（含新文件）见 `/private/tmp/r4-final.diff`；原始测试与审查日志留在 `/private/tmp/`，不包含账号或素材。
 
+## 2026-10-09 — wordmark-unify：统一 MEETPR 字标（T0）
+
+按 `specs/wordmark-unify/CARD.md` 实装。`src/design/MeetPRMark.tsx` 成为唯一实现，沿用原页头的 97×24 viewBox、16pt display black、整串 MEETPR、零字距及 5.12 圆角描边；支持等比尺寸、testID、自定义描边/填充色与可选 accessibilityLabel。删除 dashboard 重复组件，四个页头仅更换 import，原尺寸与 testID 不变。AuthForm 保留 15pt，原外框宽高与标题间距不变，字标垂直居中、左对齐。VideoBadgeCard 改用共享组件，保留原槽位、palette 颜色和 MEETPR 无障碍标签。
+
+### 红测与验证
+
+- 实现改动前运行新增组件测试和角标测试：`Tests:       4 failed, 5 passed, 9 total`；组件字距断言 `Expected: 0` / `Received: -1.65`。原始输出：`/private/tmp/wordmark-red.log`。
+- 仓内没有独立 VideoBadgeCard 测试文件，角标卡用例追加到既有 `video-badge-overlay.test.tsx`。SVG 库会将字符串内部包装成 TSpan，因此“不拆 TSpan”断言检查传给 SvgText 的子节点；两层均必须为整串 MEETPR，未 mock SVG。
+- `npm test -- --runInBand`：154 suites / 1173 tests passed，0 failed，81.272s；`/private/tmp/wordmark-test.log`。既有页头测试断言未改。
+- `npm run lint`：0 errors / 0 warnings，exit 0；`/private/tmp/wordmark-lint.log`。
+- `npx tsc --noEmit`：0 errors，exit 0；`/private/tmp/wordmark-tsc.log`。
+- `grep -rn "MEETP<" src`：0 命中（exit 1）；dashboard 重复组件不存在；`git diff --check` 通过。
+
+未覆盖：登录页、角标卡及四个页头在浅/深色下的实屏验证，按卡由 Opus 在模拟器收货。本次只完成开发自测，不宣称实屏验收通过。未安装依赖，未改原生、文案、PARITY.md 或 iOS 仓，未 commit / push。
+
+## 2026-10-09 · Spec 087 CARD-1 · Progress 四入口与独立页面（未提交，Total 口径待决定）
+
+### 范围与交付状态
+
+工作树 `meetpr-rn-wt-087`，分支 `feat/087-progress-menu`，起点/交付 HEAD 均为 `91c2e7e`。开工 `touch .codex-write-test && rm .codex-write-test` 成功。按 CONTEXT → AGENTS → SPEC 全文 → CARD-1 顺序读取，并查阅 Expo SDK 57 文档。
+
+四行入口、e1RM 四段页面及共享范围、历史三格、强度页已接线。所有数据沿用 `useHistoryViewModel`；聚焦时仅失效已有 feedback query。未改 API/依赖、反馈页、Training、tab bar、e1RM 算法或历史列表内部；未做体重第二步。未读取 `.env`，未写 node_modules，未 commit/push/开 PR。
+
+**开发自测不等于验收通过：Total 数据来源存在卡片与 spec 冲突；验收 4/11 的一致性未完成。** 下方保留真实路径红测证据和 1 项显式 skipped 测试，不以全量退出码 0 掩盖这个缺口。
+
+### 文件变更
+
+- 路由：`src/app/_layout.tsx`；新增 `src/app/progress/e1rm.tsx`、`src/app/progress/intensity.tsx`。
+- 入口：`src/features/history/GrowthScreen.tsx`、`GrowthScreenHeader.tsx`；新增 `ProgressMenuRow.tsx`；`src/features/student-tabs.ts` 删除无调用方的 feedbackJumpToken/bumpFeedbackJump。
+- e1RM：新增 `E1RMScreen.tsx`、`GrowthTotalCard.tsx`、`GrowthRangeControl.tsx`；`GrowthE1RMCard.tsx` 接收页面范围、零训练三段均可去 Today；`GrowthE1RMChart.tsx` 接受仅 date/value 的 Total 点，原点选逻辑保留。
+- 历史/强度：`TrainingHistoryScreen.tsx`、`HistoryEntriesView.tsx`；新增 `HistoryStatsCard.tsx`、`IntensityScreen.tsx`。历史 modal 不加统计，列表内部不改；VolumeIntensityChart 文件未改。
+- 公共页面结构：新增 `ProgressPageHeader.tsx`、`ProgressLoadState.tsx`。
+- 模型与文案：`src/features/history/model.ts`；`src/i18n/catalog/RnExtras.json`（英中同时增加；Bench 短标签独立于原卡的 Bench press）。
+- 测试：`src/features/history/__tests__/model.test.ts`、`growth-screen.test.tsx`；新增 `e1rm-screen.test.tsx`、`progress-details.test.tsx`、`src/features/history/test-support/progress-screen.tsx`。
+- 文档：仅追加本节；PARITY 与正典验收记录留 Opus。
+
+### 先红后绿与既有断言
+
+按卡片 seam 顺序推进：
+
+1. Total 函数未定义：模型 1 failed / 20 passed → 21 passed。随后窗口/稀疏/平线补充测试直接绿（22 passed），不宣称它单独经历失败。
+2. 行值函数未定义：1 failed / 22 passed → 23 passed，覆盖合计、单复数、未读/已读/空反馈、末周无 RPE 和未解锁。
+3. 四行组件：旧页面对新入口断言 4 failed → 4 passed。
+4. e1RM 页面：先因新模块不存在而红；实装后 1 failed / 4 passed（缺项文案测试误写 Bench，而旧名称为 Bench press），更正测试预期并按批准稿给分段增加 Bench 短标签 → 5 passed。
+5. 历史/强度组件：先因新 IntensityScreen 模块不存在而红 → 5 passed。后续补充三页失败恢复、突破提示直接绿；测试环境的动态 import 错误改为静态 import，不算产品行为红测。
+6. `history-points` / `imported-baseline` / `source-detail` / `growth-chart-selection` 四个文件 **零 diff**；独立运行 **4 suites / 22 tests passed**。
+
+原 growth-screen 每项断言去向：
+
+| 原测试 | 新位置或不再适用原因 |
+| --- | --- |
+| zero training / Today only on squat / locked history / dashes | 三段 Today 与零态迁 `e1rm-screen` 的 `missing Total...`；三格横杠迁 `progress-details` 的 `history stack shows three empty stat tiles...`；强度锁定迁 `intensity retains the locked explanation...`。仅 squat 有 Today、历史 disabled、旧解锁副文案被新 spec 明确替换，不保留。 |
+| three completed days unlock volume/history | 图表解锁、周数无障碍 label 迁 `three completed days unlock the existing intensity chart and both legends`；历史始终可点由 `four ordered rows remain tappable...` 覆盖。 |
+| squat capsule cycles | 迁 `defaults to Total...shared ranges...`，循环仍验证 30/90/All/30，额外验证跨段不重置。 |
+| selected catalog language | 入口中英文名称和顺序仍验证；释义迁 e1RM 默认段测试；旧反馈归档副文案和 disabled 已按 §1 删除。 |
+| header wordmark/chat/title/subtitle/no Eyebrow | wordmark、chat badge、打开 chat、无 Eyebrow、无 growth 导航保留；入口 subtitle 按 spec 删除并断言不存在，e1RM 页断言存在；已删 jump token 的“不变”断言不再适用。 |
+| pending/failure/retry | 改为加载/失败仍有四个空值可点入口、重试恢复、下拉刷新。旧 skeleton accessibilityLabel 与原始异常文本不是新 spec 的入口态，已移除。 |
+| feedback archive/detail marks read | 旧两个弹层已要求删除，故弹层出现/markRead 调用断言不再适用。改测路由到现有 inbox、返回聚焦刷新后 1 new → 1，chat badge 不变；现有反馈页实现和独立测试未改。 |
+
+### 验收项与测试映射（非实屏收货结论）
+
+| SPEC 项 | 开发证据 / 未覆盖部分 |
+| --- | --- |
+| 1 | `growth-screen`: `four ordered rows remain tappable without charts, tiles or Body weight in both languages`；图标、值、chevron 的组件结构已自审，未实屏看。 |
+| 2 | `model`: `Progress row values cover totals, singular/plural sessions, unread/read/empty feedback and the latest RPE`；`growth-screen` 额外验证四个空值及反馈值。 |
+| 3 | `e1rm-screen`: `defaults to Total with comparisons and no source interaction; shared ranges survive all segment switches`，含重挂后 Total。 |
+| 4 | `model`: `waits for all lifts...`、`Total windows keep all-history current...` 覆盖卡片输入的累加/窗口；`e1rm-screen` 验证缺项及不可点。真实曲线一致性 **阻塞，1 skipped**，见下。 |
+| 5 | `e1rm-screen`: 默认段比较格；`Total alone shows the legacy breakthrough comparison when estimates exceed training 1RM`。 |
+| 6 | `e1rm-screen`: 默认段测试逐项打开真实来源弹层；`missing Total...`、`lift forming-progress state retains %s recorded points`（1/2）、`old lift points show range-sparse state...`；来源四组既有回归断言不变。 |
+| 7 | `progress-details`: `history stack shows three empty stat tiles...`、`history stack moves session/week/volume totals unchanged`、`modal history presentation does not gain stat tiles`。Training 原路由与列表未改。 |
+| 8 | `growth-screen`: `feedback navigates to the existing inbox and focus refresh updates its unread value without changing chat`。Today/反馈页未改；真实账号读完返回仍待 Opus。 |
+| 9 | `progress-details`: `intensity retains the locked explanation...`、`three completed days unlock the existing intensity chart and both legends`。 |
+| 10 | `growth-screen`: `pending and failed requests keep blank tappable rows, with retry and pull-to-refresh recovery`；`progress-details` 的三页 `retains back navigation, loading, failure and retry`。 |
+| 11 | 行值仍从原 stats 和 feedback 派生；Total 页面真实路径存在阻塞。未覆盖安装或使用真实账号，不声明升级第一屏通过。 |
+| 12 | 新组件使用 useColors/design tokens；名称和值允许换行，未用 numberOfLines 截断入口文案。**未实测 Light/Dark、360×640dp、1.3×字体、中文/四位数 Total 排版**，交 Opus。 |
+| 13 | 最终全量结果如下；i18n guards 通过。PARITY 授权差异登记由 Opus 写，本轮未改。 |
+
+### 待 Opus 决定
+
+**Total 来源与当前值冲突（Spec reviewer 1 项 blocker）：** CARD-1 §2 明确输入 `GrowthCurve.trajectory`；SPEC §2 同时要求它是三段实际主线、覆盖所有更新日期、All history，并要求末点等于三项 All history 当前值。现场代码并不满足这个前提：
+
+- `buildGrowthCurves` 的 trajectory 来自 `ninetyDayRecordTrajectory`，仅历史纪录，裁到 90 天并补窗口边界和今天的投影点（`src/domain/e1rm/series.ts:146–180`）。
+- 三段实际图来自 `growthSnapshot.samples`（每日最佳 normal 点）；headline 来自最后 smoothed 点的 winner。既有 `daily-best chart uses declining window values...` 测试已证明主线末值 140 与 headline 150 可以不同。
+- 当前新增实现按卡片使用 trajectory，**尚未决定/未修正上述来源冲突**，所以不能保证验收 4、11，不能放行 Total。未改三项原算法以强凑相等。
+- 真实 fixture：三项各有 5/1=200、10/1=100、10/2=110、10/3=120，now=10/9。SPEC 更新日期应出 600→300→330→360；实际 trajectory 合计仅 7/11=600、10/9=600。失败测试 `pending Opus: real growth curves must preserve every Total update and match all-history lift headlines` 已先运行确认失败，再明确 `test.skip` 保留待决断言；不是已通过。
+- 需要决定：以每日主线建立完整 Total 时，Total headline 是主线最新合计还是沿用三项 smoothed-winner 合计；两种口径在下降期不能同时相等。实现不自行改写 spec、卡片或 e1RM 算法。
+
+失败差异摘记（为便于阅读重新排版；计数来自原始输出）：
+
+```text
+-     "2026-05-01",
++     "2026-07-11",
+      600,
+-     "2026-10-01", 300,
+-     "2026-10-02", 330,
+-     "2026-10-03", 360,
++     "2026-10-09", 600,
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 23 skipped, 24 total
+```
+
+### 独立审查
+
+review-loop 两个只读子代理审当前 HEAD=91c2e7e 的未提交 diff 与新增文件：**Standards 0 findings；Spec 1 blocker（Total）**。主代理核实并补真实路径红测，未擅自拍产品取舍。review 后仅补测试、清理 lint 警告及本文，无额外产品变更。缺 `docs/agents/issue-tracker.md`，已告知完整 Matt tracker 流程需 `$setup-matt-pocock-skills`；未私建配置。
+
+无 ADB/模拟器操作，无视觉验证或线上联调。未要求额外权限；所有验证命令均能在本 sandbox 执行。未完成项明确为 Total 口径、Opus 实屏收货与 PARITY 登记。
+
+### 最终全量检查（原始尾部）
+
+`npx jest --runInBand`，exit 0；**155 suites passed / 0 failed；1183 tests passed / 0 failed / 1 skipped，1184 total**：
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1 skipped, 1183 passed, 1184 total
+Snapshots:   0 total
+Time:        38.711 s, estimated 71 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`，exit 0，**0 errors**。stdout/stderr 为空，无可粘贴的输出行。
+
+`npm run lint`，exit 0，**0 errors / 0 warnings**，原始输出：
+
+```text
+> meetpr-rn@1.0.0 lint
+> expo lint
+```
+
+`git diff --check` 无输出，exit 0。原始中间日志仅用于本轮取证，最终摘要保留在本节；未将测试输出中的长篇 React 警告落成仓内交付文件。
+
+### 2026-10-09 · Spec 087 CARD-1 · 返修一
+
+按 Opus 已修订的 SPEC §2（2026-10-09 修订）与本轮用户指令执行；上节“待 Opus 决定”的 Total 来源/主值阻塞现已解决。未编辑 SPEC 或 CARD，工作区中 SPEC 的改动为接手本轮时已有的 Opus 修订。
+
+**本轮改动文件：**
+
+- `src/features/history/model.ts`：`buildTotalSeries(curves, now)` 改从三项 `growthSnapshot(curve, 'all', now).samples` 聚合，按当地日历日合并、沿用各项最新主线值；`totalSnapshot` 同源判缺项，保留可注入 now 与窗口 delta，删除 currentKg。
+- `src/features/history/GrowthTotalCard.tsx`、`E1RMScreen.tsx`：页面显式传入 `stats.sbdTotalKg` 为 headlineKg，卡内大号数字保留一位小数，null 显示 `—`，不再从曲线末点取主值。
+- `src/features/history/ProgressPageHeader.tsx`：标题紧随返回按钮左对齐，删除右侧 spacer；19 bold、44 点命中区与返回读屏标签保留。e1RM、Intensity、Training history 共用此行。
+- `src/features/history/__tests__/model.test.ts`：真实路径待决测试取消 skip、改名，合成曲线改经 series.rawEligible 输入。
+- `src/features/history/__tests__/e1rm-screen.test.tsx`：新增上升/回落主值与对比格一致、跨范围不变，以及缺项横杠测试。
+- `src/features/history/__tests__/progress-details.test.tsx`：三页标题顺序、左对齐、字号、命中区、读屏与返回操作测试。
+- `docs/CODEX-JOURNAL.md`：仅追加本节。
+
+**红 → 绿证据：**
+
+| seam | 首次红测 | 绿测 / 行为证据 |
+| --- | --- | --- |
+| Total 数据源 | model 3 failed / 21 passed | 24 passed；真实 5/1、10/1、10/2、10/3 fixture 明确出 600→300→330→360；末点等于三项最后 samples 点的合计；无历史截断或今天补点。 |
+| Total headline | e1rm-screen 2 failed / 7 passed | 9 passed；正常样本主值=480、末点=480；回落样本主值=450、末点=420；主值与 stats 及左对比格数值一致，30/90/All 三档不变；缺项为横杠。 |
+| 返回栏布局 | progress-details 3 failed / 8 passed | 11 passed；三页返回按钮后直接跟左对齐标题，无右侧 spacer，返回仍可点。 |
+
+主值和曲线末值现在各循批准的独立口径，下降期不再强求相等；窗口 delta 仍是窗口末点减首点。未修改 `growthSnapshot`、三项 e1RM 算法或分段行为，其余上一轮交付内容不变。
+
+首轮 TypeScript 报 6 处 TS2540：合成测试直接赋值只读 `rawEligible`。已改为通过 spread 替换整个 series，未改类型或断言；重新运行 tsc、受影响模型测试和 lint。此为测试夹具类型修复，不计作产品行为红测。
+
+**定向独立复审：Standards 0 findings；Spec 0 findings。** 两个只读 reviewer 确认上一轮 Total blocker 已解决；随后仅做上述测试夹具类型修复和记录追加。无新产品待决项。实屏验收仍由 Opus 完成，本轮未使用 ADB/模拟器、未声称视觉验证。PARITY 未改。未 commit/push/开 PR。
+
+**最终检查原始尾部：**
+
+`npx jest --runInBand`：exit 0，**155 suites / 1190 tests passed；0 failed / 0 skipped**。
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1190 passed, 1190 total
+Snapshots:   0 total
+Time:        107.764 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`：exit 0，**0 errors**；stdout/stderr 为空，无输出尾行。
+
+`npm run lint`：exit 0，**0 errors / 0 warnings**：
+
+```text
 ## 2026-10-09 · Spec 086 · Training 周条 2B 与 hero 教练备注（开发自测交付）
 
 ### 范围与现场
@@ -3731,6 +3908,52 @@ tsc exit code: 0
 > expo lint
 ```
 
+只读字段夹具修正后的定向复跑 `npx jest src/features/history/__tests__/model.test.ts --runInBand`，exit 0：
+
+```text
+
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        1.303 s
+Ran all test suites matching /src\/features\/history\/__tests__\/model.test.ts/i.
+```
+
+`git diff --check`：无输出，exit 0。原有四组来源/历史回归断言保持不变，已随全量通过。本轮中间日志在摘录后清理；未改变任何既有提交或用户的 spec 修订。
+
+
+### 2026-10-09 · Spec 087 CARD-1 · 返修二（最终轮）
+
+用户回报：返修一的 Total、对比格、共享范围、来源弹层、历史三格、强度页、空态、失败重试及升级路径已通过模拟器验收。本轮只处理其指出的两处样式，不重新改动上述行为。
+
+**本轮文件与改动：**
+
+- `src/features/history/E1RMScreen.tsx`：选中分段背景与边框统一用 `colors.ctaBackground`，文字用 `colors.ctaText`。沿用现有主题 token，Light 保持深底白字，Dark 使用金底深字；未选中状态不变。
+- `src/features/history/ProgressMenuRow.tsx`：标题去掉 `flex: 1`，改为 `flexShrink: 0`，按短标题自身宽度占位；右侧值使用 `flex: 1` / `flexShrink: 1` 占剩余宽度、右对齐，需要时自然换行，删除 `maxWidth: '42%'`。两段文字均未添加 numberOfLines、ellipsis 或字体缩小；原行最小高度与点击区域保留。
+- `docs/CODEX-JOURNAL.md`：仅追加本节。
+
+**测试断言调整：无。** 已检查现有 history 页面测试，未发现锁定旧 CTA token 名称、标题 flex 或值 maxWidth 的断言。按本轮“仅调整已有固定旧样式的断言”要求，没有增加或修改测试。
+
+本轮自审确认仅上述两处样式变化，无数据、路由、文案或算法变化；未编辑 SPEC/CARD。未进行本轮改后的模拟器/实屏复验，不把组件测试作为视觉验收。未 commit、push 或开 PR，全部改动继续保留在当前工作树。
+
+**最终检查及原始尾部：**
+
+`npx jest --runInBand`：exit 0，**155 suites / 1190 tests passed，0 failed / 0 skipped**：
+
+```text
+
+Test Suites: 155 passed, 155 total
+Tests:       1190 passed, 1190 total
+Snapshots:   0 total
+Time:        23.225 s
+Ran all test suites.
+```
+
+`npx tsc --noEmit`：exit 0，**0 errors**。stdout/stderr 为空，无输出尾行。
+
+`npm run lint`：exit 0，**0 errors / 0 warnings**，原始输出：
+
+```text
 各最终命令退出码存同名 `.exit`；首轮 lint 的两条重复 import 警告已修，随后完整复跑以上三个命令。`git diff --check` 通过。
 
 未做项：未运行模拟器/真机，不声明滚动落点、过渡观感、tab/计时条叠放、录入页视频行首屏、深色/中文/磅单位实屏通过；按 CARD 留 Opus 与 David 验证。浅色完成文案的稿差异仍待 Opus 确认。未改 PARITY/收货记录，未做 Global 联调、后端或 iOS 工作。
@@ -3840,8 +4063,890 @@ tsc exit code: 0
 > expo lint
 ```
 
+`git diff --check`：无输出，exit 0。中间日志摘录后清理。
 三条退出码分别保存为同名 `.exit`；`git diff --check` 通过。本轮最终增量含 JOURNAL 存 `/private/tmp/090-r1-final.diff`。未做项仅本轮原生实屏复验；无未完成的已授权代码项。
 `git diff --check` 通过；`ProgressPageHeader` 只读字节核对通过；临时日志已删除。
+
+## 2026-10-10 · 091 CARD-B · CN email auth（未提交交付）
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091b`，分支 `feat/091b-cn-auth`，起点 `ff909c9`。第一条实际命令在本树用 `mktemp` 写入并删除探针，exit 0；没有切换工作目录、重装依赖、读取凭证、commit、push 或开 PR。改动仅 `src/` 与本节。已依序读 CONTEXT、AGENTS、SPEC、CARD-B，核对 Expo SDK 57 版本文档。
+
+已实现 CARD-B 1–6：两轨复用邮箱认证与匿名/认证中路由守卫；三屏、字段、按钮、错误和顶栏文案进入 catalog；CN 去 Google、固定英文口号与中文隐私 URL；CN 四框注册、验证码请求、60 秒真实时间倒计时、后台恢复校正、改邮箱复位及旧响应隔离、确认密码与错误处理；CN 中文系统字体；新增英文文案。Global 英文文案、字体及两框注册保持，验证码仅有值才追加请求体，session 保留现有透传。手机号请求仍被 session 与既有 API 测试引用，因此按卡保留；旧手机号屏幕及其专用文案已移除。没有改构建配置、依赖、全局字体或其他屏幕。
+
+### 测试覆盖对应卡项
+
+新增测试只在卡中指定的三个 seam。屏幕测试以 `jest.isolateModules` / `jest.doMock` 切轨，语言走现有 `setLocaleOverride` / `getLocale`，网络均 mock。
+
+| CARD-B 项 | 覆盖测试名（文件均为既定 seam） |
+| --- | --- |
+| 1 路由与旧屏移除 | `global-auth-screens.test.tsx`：`CN login route uses email, the fixed slogan and Chinese privacy URL without Google`；直接加载真实 login route；顶层 register/forgot-password 守卫及顶栏 i18n 另经代码审查。 |
+| 2 三屏与错误 i18n | `CN Chinese screens use localized copy and light system typography while keeping the slogan`；`CN Chinese login and recovery submit email and preserve the existing reset success flow`；`error-copy.test.ts`：`signup code error copy follows the system locale`，以及全部原有错误映射测试。 |
+| 3 分轨差异 | `CN login route uses email, the fixed slogan and Chinese privacy URL without Google`；`Global registration stays at two inputs in both languages`；全部原有 Global 登录、隐私、注册和找回测试。 |
+| 4 四框注册与 API | `CN signup requires four valid fields and sends only email, password and six digit code`；`CN signup code has a 60 second cooldown, resets after email edits and cleans up on unmount`；`CN signup corrects cooldown using elapsed time on foreground`；`CN signup rejects invalid codes inline and immediately allows resend`；`CN signup code request prevents duplicate sends and ignores a response for an edited email`；`CN failed code request shows the existing error without a cooldown %#`；`CN existing account failure provides a sign-in link`；`CN confirmation waits until blur or both passwords are present and validates each signup field`。`auth-global.test.ts`：`requests a signup code with trimmed email and accepts an empty 204`；`registers CN email with code and never sends password confirmation`；原有 `registers email with the fixed student role and device timezone` 保留逐字节 JSON body 断言。 |
+| 5 字体 | `CN Chinese screens use localized copy and light system typography while keeping the slogan` 断言系统字体、标题 30/500/40/1、标签 12/400/0.5；原生实屏字重与像素对照不以组件测试替代。 |
+| 6 CN 新增英文文案 | 上述 CN 英文屏幕测试覆盖四框、三态小按钮、发码提示、确认密码、错码与未收信说明；`CN signup help visually identifies the sign-in link after code delivery` 验证末尾 sign in 的可见下划线及登录跳转。 |
+
+先红后绿记录：实现前先写三个 seam 的测试。第一轮 API/错误映射为真实功能失败；屏幕替身先遇到 Jest 导入顺序及缺少 `DEFAULT_API_BASE_URL` 的装载错误，修正替身后屏幕为 10 failed / 8 passed。动态 getter 不能可靠切换本仓编译后的模块常量，最终改用卡指定的 isolateModules/doMock。三个 seam 随后 42/42 通过。审查返修新增底部链接可识别性测试，先 1 failed / 18 skipped，再实现为绿色；补充确认失焦与 CN 中文登录/找回回归测试。原有三文件中的 Global 测试断言逐段与 HEAD 比较，均保持原文未改。
+
+### 自审与待 Opus 确认
+
+使用 `review-loop` 本地独立只读 Standards/Spec 两轴审查。仓中没有 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的 Matt PR 审查流程；该配置可另用 `$setup-matt-pocock-skills` 补齐。Standards 最终无阻断发现。Spec 最初指出底部登录文字缺少独立链接样式，已用金色下划线突出句末登录，并保留外层至少 44dp 触控区；定向复审已关闭，无剩余实现偏差。
+
+两处需 Opus 确认的边界，均按保守解释执行：
+
+1. SPEC 字体段限定“只管 CN 轨这三屏里的中文”“Global 轨一律不动”，CARD-B 第 5 项仅说中文语言时生效。以 SPEC 为准，仅 `china + zh` 使用系统字体；Global 中文仍翻译文字，字体保留原规则。
+2. SPEC 要求“邮箱框始终可编辑”，未定义提交注册请求后再改邮箱的成功处理。当前仍允许编辑，清空验证码、提示及倒计时；已经提交的注册成功时按提交时的邮箱登录，不取消服务器已接受的注册。Standards reviewer 曾建议提交中锁邮箱，复核明确条文后撤回该建议。若需锁邮箱或取消注册，应由 Opus 改定该口径。
+
+模拟器截图、中文原生字重、Global 英文逐像素对照、真实 QQ/163 发码、老账号数据、绑定教练实机流程均按 CARD-B 留给 Opus 收货；本轮未运行真实后端请求，不将 mock 验证写作功能验收通过。
+
+### 自检执行记录
+
+第一轮 `npx tsc --noEmit` exit 0，无输出。第一轮 `EXPO_NO_DOTENV=1 npm run lint` exit 0，14 条新增测试导入写法 warning；已整理 imports，并以 `jest.requireActual` 代替裸 require。禁用 Expo dotenv 装载以遵守不得读凭证文件的要求。
+
+第一轮原样 `npm test` exit 1：`Test Suites: 6 failed, 163 passed, 169 total`，`Tests: 9 failed, 1555 passed, 1564 total`，最后非空行 `Ran all test suites.`。其中 auth suite 在审查返修新增红测时仍被该轮读取；其他五个 suite 为 coach-conversation-screen、student-conversation-screen、set-video-player、completion-entry、set-save，主要含 `Exceeded timeout of 5000 ms for a test.`，另有滚动目标 y=190/30 差异和超时后节点不存在。未修改这些无关测试；最终代码固定后用串行完整测试复核。
+
+辅助进程查询 `ps -axo pid,ppid,stat,etime,comm` 被沙箱阻止，原始错误 `zsh:1: operation not permitted: ps`；不影响三项自检执行。
+
+最终固定代码后的自检（全部 exit 0）：
+
+| 命令 | 结果 | 原始最后非空行 |
+| --- | --- | --- |
+| `npx tsc --noEmit` | 通过，无 stdout/stderr | 无输出，不虚构结果行 |
+| `EXPO_NO_DOTENV=1 npm run lint` | 通过，0 warning / 0 error | `> expo lint` |
+| `npm test -- --runInBand`（完整测试集，未过滤） | 169 suites / 1566 tests 全部通过 | `Ran all test suites.` |
+
+完整 Jest 汇总原文：
+
+```text
+Test Suites: 169 passed, 169 total
+Tests:       1566 passed, 1566 total
+Snapshots:   0 total
+Time:        60.948 s, estimated 985 s
+Ran all test suites.
+```
+
+包含 `no-literal-zh.test.ts` 与 `no-i18n-todo.test.ts`，均 PASS。前述五个无关失败 suite 在最终串行完整运行中全部通过；没有以修改旧断言或延长 timeout 消除失败。最终 `git diff --check` 无输出、exit 0。日志原始证据在 `/private/tmp/091b-{tsc,lint,test}-final.log`，相应 `.exit` 均为 0；首轮失败日志 `/private/tmp/091b-test.log` 保留。工作区交付不代表真机/后端验收放行。
+
+### 返修第 1 轮
+
+按 David 本轮收货决定，在上一轮未提交交付上定向修改。两处旧待决定项以本节为准：中文字体只按 `getLocale() === 'zh'`，同时适用于 Global/CN；注册提交期间两轨均锁邮箱，“始终可编辑”仅指发码后、提交前。SPEC 正典由 Opus 更新，本轮不改。
+
+范围：`auth-typography.ts` 去掉构建轨条件，验证码字体改为已加载的 `fontNames.mono.regular`，保持 17 号、字距 2、regular；`GlobalForgotPasswordScreen.tsx` 的验证码标签只按中文语言显示；`GlobalRegisterScreen.tsx` 邮箱改为 `editable={!busy}`。`brand` 英文口号样式维持，未改路由、文案、Google 分屏、错误映射、倒计时、footer 或 API。
+
+新增测试仍只放既有屏幕 seam `src/features/auth/__tests__/global-auth-screens.test.tsx`：
+
+- 第 1 项：`Global Chinese registration uses Chinese title and field label typography`；`%s English registration retains the original title and field typography`（global/china）；`%s Chinese login keeps the English slogan typography`（global/china）。
+- 第 1、2 项：`%s Chinese recovery labels the code and uses the loaded regular monospace font`（global/china）；`CN Chinese signup uses the loaded regular monospace font for verification digits`。
+- 第 3 项：`%s registration locks email while submit is pending and unlocks after failure`（global/china），以未完成 Promise 验证提交中锁定，失败后恢复可编辑。
+- 第 4 项：复用原有 `CN signup code request prevents duplicate sends and ignores a response for an edited email`，覆盖请求 pending 时改邮箱、旧响应返回后无 `Sent to` 提示且可重新发码；未重复造测试或修改 generation 实现。
+
+先红后绿：生产实现改动前，屏幕测试明确为 `5 failed, 26 passed, 31 total`（exit 1），失败对应 Global 中文样式、Global 中文验证码标签、两处验证码字体与 CN 提交锁邮箱；英文样式及口号保持测试已绿。按三处指定修改后，定向测试全部通过。原有 Global 断言与第 4 项竞态测试保持原文。
+
+本轮最终自检原始结果（全部 exit 0）：
+
+- `npx tsc --noEmit`：stdout/stderr 为空，无结果行。
+- `EXPO_NO_DOTENV=1 npm run lint`：最后非空行 `> expo lint`，无 error/warning；禁用 dotenv 装载以延续不读凭证文件的约束。
+- `npx jest --runInBand src/features/auth src/api/__tests__/auth-global.test.ts`：
+
+```text
+Test Suites: 4 passed, 4 total
+Tests:       79 passed, 79 total
+Snapshots:   0 total
+Time:        18.829 s, estimated 31 s
+Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-global.test.ts/i.
+```
+
+`git diff --check`：无输出，exit 0。本轮没有运行全量测试，按交付要求留给 Opus 在沙箱外重跑。独立只读 Standards / Spec 定向复核均无遗留发现；以上实际测试由主代理执行。开工/完工哈希核对确认仅上述三个实现文件、屏幕测试文件及本 JOURNAL 改变，上一轮其余 src 改动未动。临时测试日志仅写本树，摘录后删除；没有写其他 worktree，没有 commit/push/PR。此前两处歧义已由用户明确决定，无新增待决定项。
+
+### 返修第 2 轮
+
+基于 Opus 已提交并收货的 `1d6bf8c` 继续，开工工作区干净；没有改写提交。仅按两项实机反馈修复：`GlobalAuthField` 复用现有 `hasText`，中文验证码空值时用正文样式，输入数字后才启用 regular 等宽字体与字距 2；英文空值/有值样式保持。`GlobalRegisterScreen` 仅调整发码按钮文字颜色：发码中或倒计时中用 `textTertiary`，无效邮箱保留 `textDisabled`；背景、点击条件及 accessibilityState 不变。
+
+既有屏幕 seam 中新增恰好两条回归测试，先运行得到 `2 failed, 31 skipped, 33 total`（exit 1），分别复现了占位符等宽字体和发码中文字颜色错误：
+
+- `code placeholders use Chinese body typography until a digit is entered and preserve English styles`：覆盖注册与找回第二步的空值→输入一位→清空，以及英文空值/输入样式不变。
+- `signup code button keeps pending and countdown text legible while invalid email stays faded`：覆盖无效邮箱、发码请求进行中、倒计时 58 秒及改回无效邮箱，并断言 disabled 无障碍状态。
+
+上一轮验证码数字字体测试仅补充输入一位数字的前置步骤，保留原字体断言，适配本轮“空值显示正文占位符”的明确要求。未改其他已有断言、文案、路由、错误处理、倒计时、footer 或 API。
+
+定向测试命令 `npx jest --runInBand src/features/auth src/api/__tests__/auth-global.test.ts`，exit 0，原始汇总：
+
+```text
+Test Suites: 4 passed, 4 total
+Tests:       81 passed, 81 total
+Snapshots:   0 total
+Time:        5.969 s
+Ran all test suites matching /src\/features\/auth|src\/api\/__tests__\/auth-global.test.ts/i.
+```
+
+`EXPO_NO_DOTENV=1 npm run lint`：exit 0，无 warning/error，最后非空行 `> expo lint`；沿用禁用 dotenv 装载以免读取凭证文件。本轮未运行全量测试或模拟器，不将组件样式断言称为新的实机验收；待 Opus 复看。
+
+`npx tsc --noEmit`：exit 0，stdout/stderr 为空，无结果行。最终自查逐行 diff 与用户两项返修范围一致；`git diff --check` 无输出、exit 0。临时日志已摘录并删除，最终 `git status --short` 仅包含 `GlobalAuthField.tsx`、`GlobalRegisterScreen.tsx`、`global-auth-screens.test.tsx` 及本 JOURNAL 四个预期文件；无临时日志遗留。未 commit、push、开 PR 或写其他 worktree。
+
+## 2026-10-10 · Spec 091 CARD-C · Android 构建与出包
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091c`，分支 `feat/091c-build-tracks`，起点 `ff909c9`，开工工作区干净。第一条实际命令在本目录 `mktemp .codex-write-probe.XXXXXX` 并删除临时文件，exit 0。全程没有进入其他 worktree 或主仓；沿用已有 node_modules 软链，未安装依赖、未 commit/push/开 PR，未修改 src、依赖、锁文件或正典台账。
+
+已依序读 CONTEXT、AGENTS、SPEC §1/§3/验收/Out of Scope、CARD-C；查阅 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)、[SDK 57 app config](https://docs.expo.dev/versions/v57.0.0/config/app/) 和 [config plugin 文档](https://docs.expo.dev/config-plugins/plugins/)。Gradle fixture 参照已安装 Expo 57.0.7 的模板签名/buildTypes 结构，省略模板 debug 签名值，不包含口令。
+
+Opus 本轮明确解释：Global 配置允许包名变更，以及新增 `android.versionCode: 1` 与签名 plugin 注册项；其他输出严格保持。后续同类实现卡内目标所必需的最小配置新增可由 Codex 判断并记录；范围、取舍或用户可见行为仍交回。
+
+| 目标 | 实装与对应证据 |
+| --- | --- |
+| 1 包名分轨 | `plugins/build-track.js` 的 `getAndroidBuildConfig` 为唯一映射，供 app.config.ts 调用；app.json 移除旧固定包名。`Android build track / %s selects its package and the first distribution versionCode` 覆盖 china/global/未设置/未知值。两轨显示名仍为 MeetPR，iOS 字段未改。 |
+| 2 签名 plugin | `with-release-signing.js` 通过 `expo/config-plugins` 的 `withAppBuildGradle` 接入；纯函数 `rewriteReleaseSigning` 追加/替换带标记的 Groovy 块，原模板逐字保留。四个值在 Gradle 运行期读取，非空环境变量优先，缺失时读同名 Gradle 属性；四项完整才切 release，否则 debug 并警告 NOT FOR DISTRIBUTION。测试 `release signing reads all four values at Gradle runtime and preserves the Expo template`、`any missing signing value selects debug signing and warns that the package is not distributable`、`repeated prebuild is byte-for-byte idempotent with %j line endings`（LF/CRLF）。 |
+| 3 出包脚本 | `scripts/pack-android.sh <china|global> [output-directory] [--allow-debug-signing]`；默认输出 dist/android、arm64-v8a；`MEETPR_ANDROID_ARCHITECTURES` 可扩展架构。保留已有 JAVA_HOME/ANDROID_HOME，未设时用仓规路径。配置求值读取版本；prebuild 使用 `--platform android --clean --no-install`，随后 assembleRelease。缺任一签名变量先失败；显式允许后强制 debug 并加 `-DEBUGSIGNED`，避免 Gradle 属性补全造成签名与文件名不一致（对应 `the packaging script can force debug signing even when Gradle properties supply missing values`）。正式签名路径要求位于生成目录 android/ 之外，避免 clean 删除。apksigner 找到时验签并输出证书 SHA-256；验签失败停止复制，工具缺失则提示。脚本未设置 API 地址，dotenv 禁用，所有口令只经环境进入 Gradle。手动检查命令见下。 |
+| 4 忽略规则 | .gitignore 原有 `*.jks` 保留，新增 `*.keystore` 与 `keystore.properties`。`git check-ignore --no-index sample.keystore nested/sample.jks nested/keystore.properties` 三项均命中，exit 0；没有为此创建文件。 |
+| 5 版本 | `plugins/build-track.js` 单一 `ANDROID_VERSION_CODE = 1`，注释“每次对外发包 +1”；app.config.ts 从纯函数读取。两轨配置求值均为 version 0.1.0 / versionCode 1，versionName 沿用 app.json.version。 |
+
+先红后绿：包名/版本 seam 先因模块不存在失败，再 4 passed；Gradle seam 先因模块不存在失败，再逐项添加缺值回落、LF/CRLF 幂等、强制 debug 测试，每项先观察失败后补实现，最终 2 suites / 9 tests passed。Jest 原配置可收集 plugins/__tests__，未改 Jest 配置；脚本按卡要求不新增自动化测试。
+
+实际手动检查：
+
+- `bash -n scripts/pack-android.sh`：exit 0。
+- `env -u MEETPR_UPLOAD_STORE_FILE -u MEETPR_UPLOAD_STORE_PASSWORD -u MEETPR_UPLOAD_KEY_ALIAS -u MEETPR_UPLOAD_KEY_PASSWORD bash scripts/pack-android.sh china`：预期 exit 1，构建前停止，原始输出：
+
+```text
+Missing signing environment variables: MEETPR_UPLOAD_STORE_FILE MEETPR_UPLOAD_STORE_PASSWORD MEETPR_UPLOAD_KEY_ALIAS MEETPR_UPLOAD_KEY_PASSWORD
+Refusing to package. Use --allow-debug-signing only for a local, non-distributable APK.
+```
+
+- `bash scripts/pack-android.sh invalid`：预期 exit 2，打印 Usage。
+- `EXPO_NO_DOTENV=1 EXPO_PUBLIC_BUILD_TRACK=china npx expo config --type public --json`：exit 0，`android.package=com.meetpr.app`。
+- `EXPO_NO_DOTENV=1 EXPO_PUBLIC_BUILD_TRACK=global npx expo config --type public --json`：exit 0，`android.package=com.meetpr.global`。
+- 开工前保存 Global public config，改后完整 JSON 深比较：仅 android.package、android.versionCode 和 plugins 新增末项三个获准变化，其他字段完全相同。
+- `expo prebuild`：未执行。完整 prebuild 会解包模板 debug.keystore，与本轮“不生成、读取或写入任何 keystore/jks”硬约束冲突；这是未调用的原因，没有伪造沙箱错误。plugin 的 Gradle 运行期分支和 APK 签名仍需原生实跑，不能用文本单测代替。
+- Gradle assembleRelease：未执行（未进入 Gradle）。尝试 `bash -c './android/gradlew assembleRelease'` 得到 exit 127，原始错误：
+
+```text
+bash: ./android/gradlew: No such file or directory
+```
+
+没有生成 APK，未执行 apksigner，没有读写任何 keystore/jks、.env 或凭证文件，没有在文件/输出中写入口令。
+
+独立只读双轴审查（review-loop，以本地 CARD-C 为 Spec 来源）：Standards 0 findings，Spec 0 findings。仓内缺少 `docs/agents/issue-tracker.md`，未声称运行依赖 tracker 的 code-review 分支流程；如以后需要该流程，由 David 调用 `$setup-matt-pocock-skills`。reviewer 审阅代码，不把它当作原生出包验收；JOURNAL 由主代理核对。
+
+开放项交 Opus：沙箱外执行两轨 prebuild/Gradle、APK 元数据与真实签名/指纹核验、同机并存验证；真正可分发 CN APK 依赖 David 创建并保管 release keystore。Global 包名变化还需新 Google Android OAuth client 和后端 audience 登记；完成前 Google 登录不可用。旧 Global 包不会被新包覆盖，卸载重装前确认无未同步记录。均为已明确人工前置/验收项，本卡未自行操作；无新增产品决策题。
+
+自检中间失败与处置（保留实际过程）：
+
+1. 第一轮 `npx tsc --noEmit` 因新增 TS 测试使用隐式 Jest globals 失败（TS2593 / TS2304）；显式导入 `@jest/globals` 后，新增测试入口改变了全仓环境类型加载顺序，既有 src 测试的 fetch mock 出现 TS2345 / TS2322。用 TypeScript API 读取同一 tsconfig、仅排除两个新增测试根节点，保留全部生产改动，得到 `Type check excluding only the two new test roots: 0 diagnostics`。两份测试不含 TS 专有语法，最终改为 `.test.js`，与被测 JS plugin 一致；断言不变、不压制类型、不改 src/tsconfig/Jest。随后实际 `npx tsc --noEmit` exit 0，无输出。类型加载顺序问题经此对照定位，未遗留诊断脚本。
+2. 首轮 `EXPO_NO_DOTENV=1 npm test -- --runInBand`：exit 1，`Test Suites: 1 failed, 170 passed, 171 total`；`Tests: 31 failed, 1527 passed, 1558 total`。首个失败为 student-conversation-screen 的 `empty conversation invites a message to the coach and shows tonight online` 超过默认 5000ms，后续同套测试因 overlapping act / unmounted renderer 连锁失败。没有修改或跳过它；独立复跑原套件 `EXPO_NO_DOTENV=1 npx jest src/features/chat/__tests__/student-conversation-screen.test.tsx --runInBand`：exit 0，33/33 passed，耗时 3.282s。随后按原默认超时重新跑全量，最终结果见下。
+3. `npm run lint`（环境 `EXPO_NO_DOTENV=1`）首轮及测试改扩展名后复跑均 exit 0，输出只有 `expo lint` 命令行，0 errors / 0 warnings。
+
+最终自检（最终文件状态）：
+
+```text
+npx tsc --noEmit: PASS (exit 0, no output)
+npm run lint: PASS (exit 0, 0 errors / 0 warnings; EXPO_NO_DOTENV=1)
+npm test -- --runInBand: PASS (exit 0; EXPO_NO_DOTENV=1)
+Test Suites: 171 passed, 171 total
+Tests:       1558 passed, 1558 total
+Snapshots:   0 total
+Time:        43.002 s, estimated 234 s
+bash -n scripts/pack-android.sh: PASS (exit 0)
+git diff --check: PASS (exit 0)
+china android.package: com.meetpr.app
+global android.package: com.meetpr.global
+```
+
+最终全量包括两个新增 JS 测试文件的 9 项测试；没有改测试超时、跳过套件或缩小全量范围。两轨配置求值和 Global 完整比较已在生产代码最终状态执行，之后只改测试扩展名与追加 JOURNAL，未重复无变化的配置验证。最终 `git diff --numstat -- src package.json package-lock.json` 无输出。
+
+本卡最终改动文件：
+
+```text
+.gitignore
+app.config.ts
+app.json
+docs/CODEX-JOURNAL.md
+plugins/__tests__/build-track.test.js
+plugins/__tests__/release-signing.test.js
+plugins/build-track.js
+plugins/with-release-signing.js
+scripts/pack-android.sh
+```
+
+目标 1–5 代码已实现且工作区未提交；原生出包/签名/并存验收尚未执行，交 Opus 按上述开放项完成。不以本次本地自检替代 Spec 验收或宣告可分发。
+
+## 2026-10-10 · Spec 091 Card D · CN usage-data notice
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-091`，分支 `feat/091-cn-android-first`，基线 `c08b194`。启动第一步在本工作树创建并删除临时文件成功（exit 0），初始工作区干净。按 CONTEXT → AGENTS → CARD-D 顺序读取；实施使用 TDD，未重装依赖。
+
+`PrivacyNoticeSheet` 按 `BUILD_TRACK` 选择正文：china 使用新增 `appShell.privacy.analytics.bodyChina`，global 继续使用原键。新键仅加入 `RnExtras.json`，中英文均从现有正文精确替换 CARD-D 指定的存放地点片段；其余字符保留。脚本比对确认 `AppShell.json` 与 HEAD 逐字节一致、RnExtras 旧键值全部一致，`usage-notice.test.ts` 也逐字节未改。布局、按钮、出现时机未改。
+
+隐私政策链接现状：本面板的 `PRIVACY_POLICY_URL` 写死为 `https://meetpr.app/privacy`，不按语言或构建轨切换。已满足 CN 要求，因此保持原实现；新增两轨 × 两语言的点击断言，Global 行为保持不变。
+
+先红后绿证据：先在 `PrivacyNoticeSheet.test.tsx` 新增 CN/Global 两语言正文测试，未实现时 CN 两条失败（仍显示 DigitalOcean），其余三条通过。实现后发现测试 mock 的 namespace 导出被 Babel 复制，补 `__esModule: true` 后通过；初轮 tsc 发现链接参数表的 readonly tuple 类型不匹配，改为 `satisfies` 后通过。为复核最终测试确能捕捉缺陷，临时恢复组件原取键逻辑再跑：2 failed / 9 passed；恢复按轨取键后：11 passed。未删改既有断言。
+
+最终自检（命令均设置 `EXPO_NO_DOTENV=1`，禁用自动加载 .env）：
+
+```text
+npx tsc --noEmit: PASS (exit 0, no output)
+npm run lint: PASS (exit 0, 0 errors / 0 warnings)
+npx jest src/analytics/__tests__/PrivacyNoticeSheet.test.tsx src/i18n/__tests__/usage-notice.test.ts --runInBand: PASS (exit 0; 2 suites, 11 tests)
+git diff --check: PASS (exit 0)
+Exact CN substitutions / existing catalog values / unchanged usage-notice assertions: PASS
+```
+
+同一上下文自审：Standards 未发现范围或文案落点违规；Spec 未发现缺做、多做或做错。T0 文案任务未运行独立双轴审查。本次未运行模拟器视觉验收，不以 Jest 渲染自检代替上机验收。
+
+改动文件：`src/analytics/PrivacyNoticeSheet.tsx`、`src/analytics/__tests__/PrivacyNoticeSheet.test.tsx`、`src/i18n/catalog/RnExtras.json`、`docs/CODEX-JOURNAL.md`。交付未提交工作区改动；未 commit、push 或开 PR，未读取/输出 .env、密钥或凭证文件，未在工作树留下临时日志。
+
+## 2026-10-14 · Spec 092 Card A · flexible days / student-added sets
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-092`，分支 `feat/092-flexible-day-self-added`，基线 `f6edf99`。启动第一条命令在当前目录创建并删除临时文件成功（exit 0），初始工作区干净；未切换到主仓。已读 CONTEXT、AGENTS/CLAUDE、092 SPEC 全文及屏幕稿/文案表、CARD-A、089 SPEC、工程工作流及历史 journal；查阅 Expo SDK 57 官方版本文档。`node_modules -> ../meetpr-rn/node_modules` 保持原软链，未重装。未读取 .env，全部检查设置 `EXPO_NO_DOTENV=1`。未 commit、push、开 PR；未改 coach、android、依赖、SPEC、CONTEXT、PARITY。
+
+交付状态：授权目录内已实装、自测；不是功能验收通过。两处跨目录缺口已提出范围澄清，尚未收到扩围授权，停在下述边界。
+
+### 实现与工程细节
+
+- 本周所有未结算日共用可写判定，保存前复查已发布计划；默认恢复 gym-day 内最后一条真实记录所在未结算日。首次加载后保留当前页选日，跨 04:00 不跳页，新访问重新计算。撤销仍只允许当日最后实际结算的训练日，排序由计划顺序纠正为 completed_at；接口不变，周条外观不变。
+- 额外组使用 coached 请求及处方之后的 set_index，稳定 ID 与处方分离；预填最近真实记录，否则末组处方，纯 RPE 处方不塞重量，RPE 可空。进度/剩余/批量完成只计处方，补记已有额外组只读。主项复用完整录入与视频路径；辅助项用行内表格。休息不继承教练末组处方，按已有学生设置与动作类型选规则。
+- 自加动作使用 adhoc + plan_day_id；训练页两个读取范围明确 scope=all，其他消费者默认范围未改。卡内全组首次发出请求时钉住 logged_date；网络错误保留该日期供幂等重试（响应丢失不等于服务端未写入），删掉最后一行/整卡后清日期，重加采用新 gym-day。未保存输入随切日保留，换账号清空。每日 10 动作、每动作 10 组、每计划动作 10 额外组。
+- 删除逐条串行，遇错误停止，已成功删除不回滚；同步可见行、查询缓存、本地 e1RM/PR 派生记录及当前页建议。自加卡无视频/完整录入/全部完成。选择页使用三组可折行标签、中英联合搜索和不可选原因；现有 DTO 无 alias 字段，未虚构别名搜索。
+- 行内完成调用 Vibration.vibrate(15) 一次；取消、无效、重复、批量不调用。用户明确要求批量不震，优先于 SPEC §3b 括号中“沿用按钮现有反馈”，该按钮显式 haptic="none"。
+
+### 先红后绿与审查证据
+
+沿用 domain/plan 纯函数、training 模型/屏幕、API schema 三类 seam。原始日志均在 `/tmp/092-*.log`，未提交日志文件。
+
+- `092-sequence-red.log`：新增可写/默认日/乱序撤销 3 条失败；实现后 17 条通过。
+- `092-rows-red.log`：额外组未并入导致失败；`092-added-red.log`：自加模型/请求未实现的 2 条失败。后续组模型、进度、上限及日期钉住通过。
+- `092-api-red.log`：缺 plan_day_id 与删除方法，2 条失败；`092-errors-red.log`：4 个新错误提示仍返回通用提示，4 条失败；契约替身层已绿（不代表真实 API 传输层已支持，见阻塞）。
+- `092-haptic-red.log`：完成未震的断言失败；修后补取消、禁用、防重、失败不补震、批量不震及保留输入。`092-picker-red.log`：模块尚未实现；实现后族/肌群/中英筛选通过。
+- `092-screen-red.log`：本周非游标日仍只读，主路径失败；`092-quick-red.log`：额外组可被补记写入，失败；`092-completion-red.log`：附加组撑大处方总数，失败；均修复。
+- `092-delete-history-red.log`：缺删除本地 e1RM 方法，失败；`092-editor-red.log`：额外组完整录入自动填 RPE，失败；`092-review-red.log`：跨 04:00 自动跳页、trap 肌群漏项 2 条失败；`092-rest-red.log`：额外组未采用学生自定义 RPE 休息时长，失败；均修复。
+- `092-final-review-red.log`：删除/取消后建议仍为 83.33、应回到 76.92，两条失败；已结算详情显示 Set 1 of 0，一条失败。修复后 set-save 31/31；追加整卡部分删除冲突测试通过。初版 UI 测试也曾因 dynamic import 测试配置失败，已改静态 import；不把该脚手架失败算成产品行为红证据。
+- 独立 Standards / Spec 各完成两轮只读审查（review-loop 本地流程）。仓缺 `docs/agents/issue-tracker.md`，未私建 tracker，也未声称执行完整 tracker 版 code-review。Standards：日期 pin 生命周期、删除后页面 e1RM 陈旧已修，API 白名单问题保留。Spec：主项额外组空 RPE/重量、选日跨 04:00、trap、单位、日期 pin、只读详情 hero 处方计数已修；历史/进步读取缺口保留。第二轮发现均定向补红绿，未开始第三轮泛审。无“收货通过”结论。
+
+### SPEC 学员端验收项 → 测试名
+
+以下名称均为 Jest 原名；“覆盖”只指自动化覆盖，未代替 Opus 验收。
+
+| 项 | 对应测试名与范围 |
+|---|---|
+| 1 本周换日记录、互不影响 | `in-week switch starts, logs and settles the selected day without changing the cursor day`；`inline drafts survive switching cards and preserve values in both days`。覆盖选日→开始→写入→结算目标及跨卡输入隔离。 |
+| 2 乱序结算、游标、撤销 | 上述屏幕主路径；`out-of-order completion can only undo the latest actual completion`；既有 `defaults to the current week and keeps selection independent of day progress`。完整 D2 两组→D4 记满→两次结算的连续上机路径待验。 |
+| 3 其他周/已结算只读 | `every unsettled day in the cursor week is writable, other weeks and unpublished plans are not`；`completed detail keeps the hero on prescription rows when extra and student-added records exist`。 |
+| 4 重进恢复、跨 04:00 | `default returns to latest real log in the gym-day and resets across 04:00`；`restored non-cursor selection stays on the open day across 04:00 and a new visit returns to the cursor`。 |
+| 5 主项额外组 | `extra rows merge after prescriptions with stable identities and never replace missing prescription results`；`main-lift extra full entry keeps RPE optional and unprescribed weight empty`；`extra main-lift rest uses student RPE settings instead of prescription rest`；`delete uses DELETE sets/id, accepts an already deleted row and propagates feedback conflicts`；`student-added error SET_HAS_ATTACHMENT gives its specific recovery message`。实际视频上传→教练待看未验，真实删除错误受白名单阻塞。 |
+| 6 辅助额外组、批量排除 | `extra rows merge after prescriptions with stable identities and never replace missing prescription results`（含 rowsToCompleteAll 与 coached 请求）；`busy duplicate and batch completion do not add tick vibration; failed saves keep typed values`；`extra and student-added saves retain their identities and card date across 04:00; deleting updates the visible day`。 |
+| 7 2 处方+1 额外仍缺1 | `extra rows merge after prescriptions with stable identities and never replace missing prescription results` 明确断言三段进度为 complete/complete/current；`extra work contributes actual volume without inflating prescription completion totals`。 |
+| 8 自加动作、搜索、删卡、历史/进步 | `picker family %s includes main lifts and variations`；`picker muscle %s maps to %s`；`picker combines bilingual search and one tag; multi-muscle and missing metadata remain predictable`；`student-added card records inline with a day-bound adhoc request and offers no video or complete-all`；`student-added cards hydrate by training day and pin every group to the first logged gym-day`；`extra and student-added saves retain their identities and card date across 04:00; deleting updates the visible day`；`removing a student-added card stops on a feedback conflict without restoring earlier deletions`；`extra delete immediately refreshes the current e1RM suggestion` / `extra cancel immediately refreshes the current e1RM suggestion`。训练页与本地派生状态覆盖；历史页标记/远端进步读取未完成，见阻塞。 |
+| 9 上限 | `extra prefill falls back to the last prescription and stops at ten additional rows`；`student-added exercise and set limits are ten and cannot duplicate a planned or already added exercise`。模型拒绝第11项；置灰的真屏表现待验。 |
+| 9b 震动 | `inline completion vibrates once immediately; cancellation and disabled rows do not vibrate`；`busy duplicate and batch completion do not add tick vibration; failed saves keep typed values`。断言调用15ms一次及负面路径。 |
+| 10 老用户升级 | `old responses default plan_day_id to null and new responses retain the training day`；默认日测试；既有 `an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and save failures retain retry inputs`；`removing a student-added log clears only its local e1RM points and leaves other students and sets intact`。无本地存储迁移；带历史安装升级第一屏未验。 |
+| 11 断网、保留输入、重试 | `busy duplicate and batch completion do not add tick vibration; failed saves keep typed values`；既有 `an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and save failures retain retry inputs`。替身覆盖失败输入保留及重试；真实断网/恢复未验。 |
+
+额外要求：`existing extra sets remain visible but cannot be selected or written by quick log` 覆盖补记只读，并拒绝伪造 included=true 的额外组。API 新响应/旧响应各自解析通过。
+
+### 待 Opus 上模拟器验
+
+- 第 1–4 项完整双日流程、真进程退出重进、跨凌晨和“回到今天”；第 10 项带历史的安装升级第一屏。路径 TodayWorkoutView → TrainingWeekStrip / WorkoutBody；周条无样式改动。
+- 第 5、6、8、9 项按屏幕稿第 1–4 张核对中英、Light/Dark、窄屏/大字体、标签全可见无横滑、键盘不遮挡、上限入口置灰、已结算详情。路径 StudentExercisePicker、WorkoutBody、AccessoryLogCard、SetEntrySheet。未运行 Android 构建/模拟器，未产出视觉截图。
+- 第 5 项额外组视频从拍摄上传到教练待看、已有附件删除拦截；第 8 项整卡删除部分成功/教练反馈冲突、同日另一训练日冲突；需后端 spec 050 部署且解决错误白名单后联调。契约替身不证明后端部署。
+- 第 9b 项模拟器验 Vibration 调用及取消/批量负面路径，约15ms体感另需真机。第 11 项两类附加记录实际断网、恢复重试且输入不丢；代码路径 AccessoryLogCard.saveRow / SetEntrySheet → TodayWorkoutView.commit。
+- 第 8 项历史/进步远端可见性须先处理下述范围缺口，再验；本轮不得勾为通过。
+
+### 停下待裁决的事项（硬范围冲突）
+
+1. 历史/进步：实际入口在 `src/features/history/TrainingHistoryScreen.tsx`、`src/features/history/use-history.ts` 及关联 model。当前 `dashboardE1RMRange`（`src/features/dashboard/model.ts`）刻意省略 scope，使用 plan 默认，无法在历史/进步远端查询拿回新 adhoc。CARD-A 同时要求第8项历史标记/进步可见，又只授权 training/domain-plan/student-route/sets/i18n。未越界修改。建议明确允许 history 的读取/归集/显示及相关测试（局部 scope=all，避免改所有默认消费者），再补该项；本轮只完成训练页、已结算详情及既有本地 e1RM/PR 记录路径。
+2. API 新错误码：`src/api/client.ts` 白名单未包含 `SETS_PLAN_DAY_NOT_PUBLISHED`、`SETS_ADHOC_DAY_CONFLICT`、`SET_NOT_STUDENT_ADDED`、`SET_HAS_ATTACHMENT`、`SET_HAS_COACH_FEEDBACK`、`SET_NOT_FOUND`，未知400/404/409被转换成没有 code/envelope 的 network ApiError。sets.ts/save-errors 已按新契约处理，但真实响应到不了这些分支：404不能视作已删，409只能给通用失败提示。建议限定扩围到 client.ts 白名单及其测试；未获授权，保持文件不动。当前错误测试直接注入带 code 的 ApiError，只是契约替身，不能据此宣称传输层完成。
+
+两项已在会话中分别发起范围澄清，写本节时未获答复。除此之外未发现需要另立产品取舍的分支；未自行扩围或绕过门禁。
+
+### 最终自检
+
+全部在本工作树执行，前缀 `EXPO_NO_DOTENV=1`；三条均实际运行成功，无沙箱执行失败项。
+
+```text
+npx jest --runInBand
+Test Suites: 174 passed, 174 total
+Tests:       1648 passed, 1648 total
+Snapshots:   0 total
+Time:        23.678 s
+Ran all test suites.
+exit 0
+
+npx tsc --noEmit
+(no output)
+exit 0
+
+npm run lint
+> meetpr-rn@1.0.0 lint
+> expo lint
+exit 0
+
+git diff --check
+(no output)
+exit 0
+```
+
+原始最终输出：`/tmp/092-final-jest.log`、`/tmp/092-final-tsc.log`、`/tmp/092-final-lint.log`。Jest 有现有测试的预期错误路径控制台输出，但结果无失败；tsc 无输出；lint 未报错误或警告。
+
+### 改动文件清单
+
+```text
+docs/CODEX-JOURNAL.md
+src/api/domains/__tests__/student-added-sets.test.ts
+src/api/domains/sets.ts
+src/domain/plan/__tests__/sequence.test.ts
+src/domain/plan/sequence.ts
+src/features/training/AccessoryLogCard.tsx
+src/features/training/QuickLogSheet.tsx
+src/features/training/SetEntrySheet.tsx
+src/features/training/StudentExercisePicker.tsx
+src/features/training/TodayWorkoutView.tsx
+src/features/training/WorkoutBody.tsx
+src/features/training/__tests__/accessory-log-card.test.tsx
+src/features/training/__tests__/completion-presentation.test.ts
+src/features/training/__tests__/exercise-picker.test.ts
+src/features/training/__tests__/quick-log.test.ts
+src/features/training/__tests__/save-errors.test.ts
+src/features/training/__tests__/set-save.test.tsx
+src/features/training/__tests__/storage-isolation.test.ts
+src/features/training/__tests__/student-added.test.ts
+src/features/training/accessory-quick-log.ts
+src/features/training/completion-presentation.ts
+src/features/training/drafts.ts
+src/features/training/exercise-picker.ts
+src/features/training/exercise-progress.ts
+src/features/training/model.ts
+src/features/training/quick-log.ts
+src/features/training/save-errors.ts
+src/features/training/storage.ts
+src/i18n/catalog/RnExtras.json
+```
+
+### 收尾（2026-10-14 · Opus 三项裁决落地）
+
+接手前已确认上一写者结束，本轮独占同一工作树；保留上一线程全部实现与本节以上 JOURNAL 原文。上文“两处停下待裁决”已由本轮用户转达的 Opus 答复放行并完成，无剩余待裁决事项。依然不 commit/push/开 PR，不改 SPEC、CONTEXT、PARITY、coach、android、依赖或权限，不读 .env。
+
+1. **历史 / 进步**：仅 `useHistoryViewModel` 的读取显式传 `scope: 'all'`，覆盖历史与进步共同使用的数据源。`dashboardE1RMRange` 本身、API 默认值、其他调用方和 history 路由均无需修改。历史以 `plan_day_id + exercise_id` 区分自加动作，并保留实际 `logged_date`（含计划结束后的实际训练日）；自加动作排在计划动作之后，只读且有「自加」标记；额外组在处方行后有「额外」标记。处方进度按组序去重，只计处方内的完成记录，不被自加/额外记录撑大。e1RM/PR 沿用现有计算与来源详情，无新计算规则。
+   - 红：`progress explicitly requests all logs and includes student-added family records in e1RM and PR series` 得到空 e1RM（1 failed）；局部 scope 接线后绿，断言 100 kg、PR series 与来源 setLogId。
+   - 红：`history groups student-added records by their training day and actual date without inflating prescribed progress` 缺自加记录（1 failed / 24 passed）；归集后 25/25 通过，含不同训练日隔离、排除外计划/旧无归属 adhoc、仅自加的实际日、处方计数与原计划不变。
+   - 红：`history renders student-added and extra records with localized markers in %s` 的 en/zh 缺标记（2 failed / 1 passed）；渲染后绿。另加 `legacy history responses without plan_day_id keep prescribed records visible when scope is ignored`，验证旧响应仍显示原处方记录且不出现新标记；该屏幕套件最终 4/4。
+2. **API 错误白名单**：`src/api/client.ts` 只追加获准六项，错误分类逻辑及已有 code 原样保留。
+   - 测试 `preserves student-added HTTP %s %s as a backend ApiError`：通过 fetch 替身返回真实形态的 400/404/409 JSON error envelope，检查 ApiError 实例、backend kind、status、code 与 envelope。红阶段六项均得到 network/缺 code（6 failed / 32 passed）；加白名单后，与删除契约及保存提示测试合跑 3 suites / 46 tests 全绿。
+   - 六项为 `SETS_PLAN_DAY_NOT_PUBLISHED`、`SETS_ADHOC_DAY_CONFLICT`、`SET_NOT_STUDENT_ADDED`、`SET_HAS_ATTACHMENT`、`SET_HAS_COACH_FEEDBACK`、`SET_NOT_FOUND`。真实传输分类缺口已补，后端部署与设备联调仍不由替身测试证明。
+3. **批量按钮震动改回**：删掉 `AccessoryLogCard` 中 Complete all as planned 的 `haptic="none"`，恢复 AppButton 既有反馈。上文“用户明确要求批量不震”的解释由本轮裁决纠正：批量不额外加 15ms 勾完成震动，但保留原按钮反馈。
+   - 测试改名为 `busy duplicate does not add tick vibration; batch retains button feedback without a 15ms tick and failures keep input`。按真实底层按钮 onPress，单组完成/重复防护/失败保留输入后清空 spy，再按批量按钮，断言无 15ms、恰好一次既有 10ms。红阶段为 0 次按钮反馈（1 failed / 10 passed），移除覆盖属性后 11/11 通过。原 `inline completion vibrates once immediately; cancellation and disabled rows do not vibrate` 保持通过。
+
+**验收表第 8 项补充（替代上表该项末尾的未完成描述，保留历史原文）**：历史/进步现已完成代码接线。对应测试为：
+
+- `history groups student-added records by their training day and actual date without inflating prescribed progress`
+- `history renders student-added and extra records with localized markers in %s`（en、zh）
+- `progress explicitly requests all logs and includes student-added family records in e1RM and PR series`
+- `legacy history responses without plan_day_id keep prescribed records visible when scope is ignored`
+
+工程决定：复用现有 HistoryExercise 的只读展示适配形态，追加可选 `studentAdded` 标识，不向 PlanDetail 写动作/处方；使用已有 i18n 标记与历史行样式。需要 all 的读取点只在 history hook，未放宽全局默认，避免影响既有 dashboard/其他消费者。原 API schema 缺 plan_day_id 默认为 null 的测试继续保留。
+
+**审查**：使用 review-loop 的本地独立双轴审查，限定本轮 10 个代码/测试文件；Standards 无发现，Spec 无发现。未声称执行缺 tracker 配置的完整 tracker 版 code-review，也不把开发自测当作 Opus 终验。只读 reviewers 未改文件。审查后的唯一代码调整为 Jest 参数表类型 `as const` 改 `satisfies [number, string][]`，断言与运行行为未变。
+
+**验证过程**：首轮全量 Jest 为 `175 passed, 175 total` / `1659 passed, 1659 total`，tsc 发现新增参数表 readonly tuple 的 TS2345 后修复，复跑 tsc exit 0；lint exit 0、无警告。一次早期 tsc 包装命令误用 zsh 只读变量 `status`，包装层报 `zsh:1: read-only variable: status`，随后改为任务变量 `result_code`；未将该次包装命令当作通过。红绿原始输出在 `/tmp/092-close-*-red.log`、`/tmp/092-close-*-green.log`。本收尾节落盘后再运行最终全量 Jest、tsc、lint，以满足“最后一次改动之后跑”；最终输出分别为 `/tmp/092-close-final-jest.log`、`/tmp/092-close-final-tsc.log`、`/tmp/092-close-final-lint.log`，退出结果由交付回报列明，不再回改本节。
+
+**待 Opus 上模拟器验**：沿用前节设备验收清单；新增历史页中英文「自加/额外」排版、深色及窄屏大字号，部署 spec 050 后历史/进步真实读取及 400/404/409 恢复提示；批量原反馈与单组 15ms 体感需真机。未运行 Android 构建/模拟器、无新增截图；无产品或范围待裁决事项。
+
+本轮改动文件（不含仅保留的上一线程文件）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/api/client.ts
+src/api/__tests__/api-auth-session.test.ts
+src/features/history/HistoryEntriesView.tsx
+src/features/history/model.ts
+src/features/history/types.ts
+src/features/history/use-history.ts
+src/features/history/__tests__/model.test.ts
+src/features/history/__tests__/student-added-history.test.tsx
+src/features/training/AccessoryLogCard.tsx
+src/features/training/__tests__/accessory-log-card.test.tsx
+```
+
+## 2026-10-14 · Spec 092 卡 B · 教练端学员自加记录
+
+工作树 `/Users/david/Projects/apps/meetpr-rn-wt-092b`，分支 `feat/092b-coach-student-added`，基线 `f6edf99`。第一条命令在该树内 mktemp 后删除成功（exit 0），初始工作区干净。已读 CONTEXT、AGENTS、CLAUDE、SPEC 092 全文、CARD-B、PLAN、历史 JOURNAL、工程规约和 Expo SDK 57 文档。未重装 node_modules（仍为 `../meetpr-rn/node_modules` 软链），未读 .env；所有 Expo/Jest 自检设置 `EXPO_NO_DOTENV=1`。未 commit、push、开 PR，未改 SPEC、CONTEXT、PARITY 或卡 A 路径。
+
+实现：计划动作的处方组与额外组按 set_index 排序分开；小灰字「学员自加」只出现于两段之间，行继续复用 ReadOnlySet，x / y 只数处方内记录。自加动作按 plan_day_id 归日、exercise_id 分卡，标题不带标签，副标题按定稿中英文，卡内只读。详情读取 scope=all；响应 plan_day_id 可省略并默认 null，保留可选 TypeScript 属性以兼容既有调用。共享 sets.ts 只加字段，RnExtras.json 只加两个键，旧键逐项比对未变。按屏幕稿补页头计划日编号与该日结算状态。
+
+### 先红后绿
+
+沿卡片已确认的领域函数、API/schema、组件 seam 逐项实施，没有另设验收矩阵。各红阶段均先运行测试，再实现对应行为：
+
+- Schema：1 failed；旧 schema 丢弃 plan_day_id。加可选字段及缺省后 1 passed。
+- 自加动作归日：1 failed / 4 passed；按记录日期落到错误训练日。改按 owner 归日后 5 passed；补合法训练日 fixture（含计划动作）区分 freeLog 分支。
+- 动作分组与额外组划分：1 failed / 5 passed（executionExercises 尚不存在），实现后 6 passed。
+- 中英文详情组件：2 failed（额外组把处方计数撑大且无副标题）；实现后修正测试的只读行选择器，排除同样 accessible 的返回按钮，最终组件初轮 4 passed（含刷新与 freeLog 回归）。
+- 同日 D2/D4：1 failed / 6 passed，D4 记录错误落进 D2；按计划动作归日、按 completed_at 判定后 7 passed。旧「有完成组即完成」测试改为缺失 completed_at 的旧契约 fixture，并修正原 fixture 跨两个训练日复用同一计划动作 ID 的不合法数据；原 fallback 断言保留。
+- 名单周视图：1 failed / 3 passed，D2 被同日记录误标完成；传递各日结算信息后 4 passed。
+- 未训练信号：1 failed / 3 passed，提前结算的训练日因当天没有记录被误计漏练；修正后 4 passed。
+- 实际读取 hook → repository → HTTP：1 failed，请求仍为 scope=plan；改 all 后 1 passed，覆盖删除刷新与旧响应。
+- Spec 审查发现页头遗漏，新增页头测试先 1 failed / 4 passed，补齐后 5 passed。
+- 首轮 lint 报测试探针在 render 中赋外部变量；改到 useEffect，并用可观察条件等待刷新。最终 lint 0 errors / 0 warnings。
+
+### 验收项与测试名
+
+验收 12（额外组/自加动作可见、标记位置、处方计数、删除后刷新）：
+
+- `exercise cards sort and separate extra sets, count only prescription slots, and group student-added exercises` — 处方/额外排序、x 计数用的处方集合、多个自加动作分组、同动作组顺序、忽略无 plan_day_id 行。
+- `student-added exercises belong to plan_day_id rather than the logging date` — owner 优先、不串日、忽略未知 owner、无 owner 不混入计划动作详情、保留无计划自由记录。
+- `day detail shows a separate muted student-added divider and read-only exercise card (en)` / `(zh)` — 双语准确文案、分隔字在额外组前、相同行样式且行无标签、卡标题无标签、无新增编辑按钮。
+- `refreshing the day removes deleted student-added records and preserves ordinary cards` — 新数据重渲染后额外组与自加卡消失，普通处方卡保留。
+- `coach detail requests scope=all and refresh drops deleted student-added logs with old-backend compatibility` — HTTP 请求真实查询参数、读取结果归日、刷新清空已删除记录、旧后端不返回新字段仍加载成功。
+- `coach set schema retains plan_day_id and defaults an old backend response to null` — 新字段保留、显式 null 与旧响应缺字段兼容。
+- `free-log and empty rest-day branches keep their existing presentation` — 原自由记录与空休息日分支不改。
+
+验收 13（D4 先结算，D2 仍未完成）：
+
+- `D4 settlement leaves D2 unfinished even when both days have completed sets on the same date` — 计划动作记录按所属训练日归集；D2 未完成、D4 完成，概览/计划卡数据 1 / 2。
+- `roster week cells use each day settlement rather than same-date logs for D2 and D4` — 从实际计划投影到名单/首页周视图，D2 未完成、D4 完成，完成率 50%。
+- `out-of-order settlement prevents missed-day alerts even when its logs were written on another day` — 不把已提前结算的天算漏练。
+- `day header displays its plan day code and individual settlement status` — 详情页头编号与状态逐日准确，不以先后顺序推测。
+- `legacy days without settlement fields retain completed-set fallback and free logs do not increase completion` — completed_at 缺失时保留旧 fallback，不把休息日自由记录计成计划完成。
+
+### 教练侧逐项核对结论
+
+- 未发现使用学员训练游标推断之前/之后都完成/未完成的教练逻辑；`receiving-api.ts` 的 cursor 是并发读取数组下标，与训练进度无关。
+- 发现实际等价风险是按记录日期推断训练日完成。详情 `makeExecutionDays` 现按 plan_exercise_id 对应的计划动作归日，自加动作按 plan_day_id 归日，避免同日 D2/D4 串记录；无归属的历史数据保留日期 fallback。
+- 学员详情周列表（OverviewSection）与概览/计划卡进度（makeOverview → StudentDetailScreen）改用逐日 completed_at：null 为未结算，有值为已结算，字段缺失才回退历史「有完成组」。计划卡 planCardState 只判断加载/失败/有无计划，无游标假设，无需改。
+- 名单/首页周表（projectCoachPlan → pairTrainingDays → makeSummary → CoachDashboardScreen）保留并读取结算字段；日期早晚仍只影响未完成格的既有 missed/upcoming 外观。名单 StudentRosterRow 的短横条是完成数量累计而非某一天的标记，无游标假设，保留。
+- triage 的未训练信号使用同一逐日结算依据，避免提前结算后仍误报；最近活跃和待回复依旧按真实记录时间，未改时间窗口/阈值，没有新增通知或跳练标记。
+- 视频补读、待看视频、聊天组卡片/反馈维持原链路与 scope=plan；额外组仍是普通计划内行，不需要新增视频逻辑。scope=all 只用于本卡训练日详情读取。freeLog 原组件分支保留。
+
+### 独立审查、最终自检与开放项
+
+本仓缺 `docs/agents/issue-tracker.md`，已告知完整 tracker 流程需 `$setup-matt-pocock-skills`，未私建。按 review-loop 的本地双轴路径，两个独立只读 reviewer 审 HEAD 起本卡 diff 及新增测试；报告按本卡只追加 JOURNAL 的约束记录于此。Standards 初审与增量补审均 0 findings；Spec 初审 1 项（屏幕稿第 5 张页头编号/状态遗漏），定向修复并复审后未决 0。主代理亲读最终 diff。代码自检不等于 Opus 收货或真机验收。
+
+最终命令均设置 `EXPO_NO_DOTENV=1`，结果：
+
+```text
+npx jest --runInBand: exit 0
+Test Suites: 174 passed, 174 total
+Tests:       1607 passed, 1607 total
+Snapshots:   0 total
+Time:        33.848 s
+Ran all test suites.
+npx tsc --noEmit: exit 0 (no output)
+npm run lint: exit 0; final nonempty output line: > expo lint
+0 errors / 0 warnings
+git diff --check: exit 0 (no output)
+```
+
+原始最终日志位于本机临时目录：`/tmp/092b-jest-full-final.log`、`/tmp/092b-tsc-final.log`、`/tmp/092b-lint-final.log`；红阶段日志 `/tmp/092b-{schema,group,cards,ui,completion,roster,triage,read,header}-red.log`（不作为长期仓证据）。全量包含既有 React 测试 act/native warning 输出，未跳测试、改超时或压制它们。
+
+Android 上机验证未完成：尝试 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices -l`，exit 1，原始关键报错 `could not install *smartsocket* listener: Operation not permitted`，随后 `adb: failed to check server version: cannot connect to daemon`。沙箱禁止监听 ADB 5037，未尝试绕过或转到主仓；未运行 expo run:android、未取得截图。不以组件测试代替模拟器验收。后端 spec 050 按卡片用 HTTP 替身验证，未部署或实机联调；删除刷新为 hook 与组件两层证据，完整真实 UI 操作仍待可用环境验证。
+
+需要产品裁决而停下的事项：无。开放验收项仅 Android 视觉/真实刷新路径与新后端联调。
+
+改动文件（17）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/api/domains/sets.ts
+src/api/domains/__tests__/coach-added-sets.test.ts
+src/domain/coach/detail-week.ts
+src/domain/coach/triage.ts
+src/domain/coach/week-overview.ts
+src/domain/coach/__tests__/detail-week.test.ts
+src/domain/coach/__tests__/triage.test.ts
+src/domain/coach/__tests__/week-overview.test.ts
+src/features/coach/roster/load-roster.ts
+src/features/coach/student-detail/CoachDayDetailView.tsx
+src/features/coach/student-detail/OverviewSection.tsx
+src/features/coach/student-detail/StudentDetailScreen.tsx
+src/features/coach/student-detail/use-student-detail.ts
+src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx
+src/features/coach/student-detail/__tests__/student-detail-read.test.tsx
+src/i18n/catalog/RnExtras.json
+```
+
+### 返修第 1 轮（2026-10-14 · Opus 收货 R1 / R2）
+
+本轮按 David 转交的 R1/R2 实施，取代上一节中「有 completed_at 字段就只按结算判完成」「无 owner 的 adhoc 从归集中过滤」「周外 owner 记录丢弃」等错误实现及结论。开工先读 CARD-B、本卡 JOURNAL 和未提交 diff；轮前快照保存在 `/tmp/092b-r1-before`，用于限定本轮差异。继续使用已确认的教练域层 seam 先红后绿。未 commit/push/开 PR，未读 .env、未改 SPEC/CONTEXT/PARITY、未重装依赖。
+
+R1：`log-ownership.ts` 集中解释归属。计划动作通过当前计划的动作 ID 找训练日；自加动作通过 adhoc + plan_day_id 找训练日；没有归属或计划动作不在当前计划中的旧记录按原 logged_at 当地日期回退。详情、名单周表、triage 统一为「已结算 OR 至少一条属于该日的已完成记录」。有归属的别日记录不会替当天消除漏练。CoachPlan / CoachLog 及派生类型只新增可选信息；load-roster 投影保留训练日 ID、动作 ID，现有完整 SetLog 继续传入。名单有计划时也请求 scope=all，否则真实后端不会返回自加动作记录；无计划名单保留 scope=plan。原详情 scope=all、sets.ts schema、i18n 与已通过的 UI 生产文件逐字节保持不变。
+
+R2：归属日仅在当前显示的 7 天里时才将记录移动到归属日；否则按 logged_at 留在日期对应的 day.logs。无 plan_day_id 的 adhoc 不再过滤。完成归属与展示日期分别计算，所以旧周记录出现在本周日期格内，也不会误把本周另一个计划日算成练过。makeOverview 新增可选 allLogs 输入，useStudentDetail 传入本次读取的全部记录，latestActivityAt 不再依赖显示窗口是否接住这些记录。没有新增跨周记录 UI。
+
+红阶段证据（均先跑测试再写对应实现）：
+
+- R1 练过未结算：detail-week 2 failed / 7 passed，planned、student-added 两种都错误得到 false；共享完成归属接通后 detail-week + week-overview + triage 共 17 passed。
+- R2 周外归属：2 failed / 9 passed，旧实现丢掉两种记录；加入可见日判断与日期 fallback 后 11 passed。
+- R2 全量活跃时间：1 failed / 11 passed，预期最新时间而得到 null；allLogs 参数与生产调用接线后 12 passed。
+- R1 名单实际读取：1 failed / 4 passed，scope=plan 没读到自加记录；有计划读 all 后，名单域测试与既有 roster-state 共 15 passed。
+- 补充已结算无记录、旧记录日期 fallback、triage 不串日等回归；未改原有测试断言。首轮 tsc 指出本轮新增学生 fixture 缺 evaluationEndAt，补 null 后类型检查通过，相关 suite 5 passed。
+
+验收要求对应测试（新增均位于 `src/domain/coach/__tests__/`）：
+
+| 要求 | 测试名 |
+| --- | --- |
+| R1 / 测试 1：练过未结算，详情概览/名单算练过，triage 不误计漏练 | `R1 owned planned logs count as trained without settlement across coach views`；`R1 owned student-added logs count as trained without settlement across coach views` |
+| R1 / 测试 2：已结算无记录仍完成 | `R1 settled days count as trained without any logs across coach views` |
+| R1 / 测试 3：D4 有记录并结算，D2 同日无自身记录 | 保留并修正上轮 `D4 settlement leaves D2 unfinished when only D4 has completed sets on the same date`；保留 `roster week cells use each day settlement rather than same-date logs for D2 and D4` |
+| R1：名单实际读取自加记录 | `R1 roster reads student-added logs with their day ownership` |
+| R1：其他日记录不能掩盖两天漏练 | `R1 planned logs do not hide two untrained days sharing their recording date`；`R1 student-added logs do not hide two untrained days sharing their recording date` |
+| R2 / 测试 4：周外归属按记录日保留且可取活跃时间，不误计当前日完成 | `R2 off-window planned logs remain on their logging date without completing another day`；`R2 off-window student-added logs remain on their logging date without completing another day` |
+| R2：即使显示窗口内无法落位，活跃时间仍使用全部读取记录 | `R2 latest activity uses all fetched logs even when none can appear in the seven-day window` |
+| R1/R2 / 测试 5：无归属、动作不在当前计划的旧记录按日期 | `R1/R2 legacy no-owner logs retain date fallback across coach views`；`R1/R2 legacy removed-exercise logs retain date fallback across coach views` |
+
+是否改过自己上一轮断言：是，且仅改自己新增的内容。
+
+- 上轮 D2/D4 详情测试错误地给 D2 一条完成记录，却要求 D2 未完成。现删除 D2 的那条输入记录，将 D2 day.logs 的期望从一条改为空，并改测试名为 only D4；仍断言 D2 未完成、D4 完成、总进度 1 / 2。
+- 上轮 `student-added exercises belong to plan_day_id rather than the logging date` 曾期待无 owner 与未知 owner 被丢掉；按 R2 改为两条留在 logged_at 当天，总记录数从 1 改为 3。
+- 上轮名单 D2/D4 测试的记录补 `plan_exercise_id: 'b'`，明确属于 D4；断言不变。
+- 上轮页头组件测试两个训练日错误复用同一计划动作 ID。为避免它继续隐含「练过但未结算=未练」，仅将 earlier 的动作 fixture 改为独立 ID；页头断言不变，UI 生产代码不动。
+- 本轮没有修改卡 B 实装前（HEAD=f6edf99）已有的测试断言；前述旧日期 fallback 断言及名单 ±36 小时边界测试仍通过。
+
+独立定向复审：review-loop 两个只读 reviewer 对比轮前快照与本轮改动；Standards 0 findings，Spec 0 findings。主代理亲读最终增量。没有待产品裁决事项。本轮未新增 UI 验收主张，上一轮模拟器/后端联调限制仍在。
+
+最终自检（全部设置 EXPO_NO_DOTENV=1）：
+
+```text
+EXPO_NO_DOTENV=1 npx jest --runInBand: exit 0
+Test Suites: 174 passed, 174 total
+Tests:       1618 passed, 1618 total
+Snapshots:   0 total
+Time:        24.207 s, estimated 34 s
+Ran all test suites.
+npx tsc --noEmit: exit 0 (no output)
+npm run lint: exit 0; final nonempty output line: > expo lint
+0 errors / 0 warnings
+git diff --check: exit 0 (no output)
+```
+
+全量 Jest 后仅给测试 fixture 补齐 TypeScript 所需的 evaluationEndAt: null，没有生产语义改动；该 suite 再跑 5 passed，tsc/lint 复跑通过。原始日志：`/tmp/092b-r1-full.log`、`/tmp/092b-r1-tsc-final.log`、`/tmp/092b-r1-lint-final.log`、`/tmp/092b-r1-fixture-final.log`。上述测试结果为本地自检，不替代 Opus 最终收货。
+
+本轮改动文件（11）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/domain/coach/log-ownership.ts
+src/domain/coach/detail-week.ts
+src/domain/coach/triage.ts
+src/domain/coach/week-overview.ts
+src/domain/coach/__tests__/detail-week.test.ts
+src/domain/coach/__tests__/triage.test.ts
+src/domain/coach/__tests__/week-overview.test.ts
+src/features/coach/roster/load-roster.ts
+src/features/coach/student-detail/use-student-detail.ts
+src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx
+```
+
+### 返修第 2 轮（2026-10-14 · 同一计划周内归属）
+
+开工先读 CONTEXT；本线程保留卡 B 全部前序工作，复核本轮涉及的域函数、测试与当前工作区。轮前快照：`/tmp/092b-r2-before`。以本轮 David 转交的 Opus 意见为准：第 1 轮「全计划按归属判断」适用范围过大，本节替代其跨周口径。未 commit/push/开 PR、未读 .env、未改 SPEC/CONTEXT/PARITY、未改已通过的界面/API/i18n。
+
+实现：DayOwnership 只新增可选 week_number，projectCoachPlan 与 makeExecutionDays 带入实际计划周。log-ownership.ts 的 logBelongsToDay 为统一规则：已知归属日且与目标日同计划周时按训练日 ID；跨周、无归属或无法取得归属日/计划周时按 logged_at 当地日期。hasCompletedDayLog 在该规则之上检查 completed；详情 day.logs 也用同一函数过滤。删除 visibleDayIds，不再维护「是否在七天窗口里」的独立归属规则。triage 与名单周表通过原 hasCompletedDayLog 调用共用修正；完成仍为「已结算 OR 按本轮规则有完成记录」。latestActivityAt 继续使用本次读取的全部记录。
+
+先红后绿：
+
+- 先新增跨周 planned / student-added 两种 W4 日历练 W2 场景，并将本卡自加的 off-window 完成断言改成新要求；未改实现时 detail-week 为 4 failed / 13 passed，均复现“按日期应完成但得到未完成”。原始日志 `/tmp/092b-r2-week-red.log`。
+- 同周规则、周字段传递、落位统一后，detail-week / week-overview / triage 为 3 suites passed、28 tests passed。原始日志 `/tmp/092b-r2-week-green.log`。
+- 再补两条移期边界，detail-week 为 19 passed。原始日志 `/tmp/092b-r2-boundaries.log`。
+
+本轮测试映射：
+
+| 要求 | 测试名与结果 |
+| --- | --- |
+| 1. 日历 W4、实际 W2，最近七天仍训练，三处均保持原日期口径 | `round 2 cross-week planned logs preserve date-based training status in all coach views`；`round 2 cross-week student-added logs preserve date-based training status in all coach views`。断言详情两天完成、名单两个 completed 格且 active、triage 无 notTrained、活跃时间保留 |
+| 2. 同周 D4 先练并结算、D2 无自己的记录 | 保留 `D4 settlement leaves D2 unfinished when only D4 has completed sets on the same date`、`roster week cells use each day settlement rather than same-date logs for D2 and D4`；均通过，断言未改 |
+| 3. 练过未结算 | 保留 `R1 owned planned logs count as trained without settlement across coach views`、`R1 owned student-added logs count as trained without settlement across coach views`；均通过，断言未改 |
+| 4. 无归属旧形态、计划动作不在当前计划 | 保留 `R1/R2 legacy no-owner logs retain date fallback across coach views`、`R1/R2 legacy removed-exercise logs retain date fallback across coach views`；均通过，断言未改 |
+| 跨周 off-window 的完成口径 | 上轮自加测试改名为 `R2 off-window %s logs retain cross-week date-based completion`，planned / student-added 两种均通过 |
+| 同计划周优先于显示范围 | `round 2 same-plan-week ownership wins even when the owner is shifted outside the visible window` |
+| 跨计划周优先于显示范围 | `round 2 cross-plan-week date fallback applies even when both owners are visible` |
+
+边界说明（按本轮明确要求以同一计划周为准）：
+
+- 同计划周 D4 因 shifted_to_date 移到当前七天窗口外，记录写在 D2 日期：D2 不接手这条记录、不据此算完成；该窗口不展示这条记录，但 latestActivityAt 仍从全部读取记录取得它。与上一轮「窗口外一律日期接手」不等价。
+- 不同计划周的两个日子因移期同时出现在一个七天窗口：对记录日期上的另一周训练日，按日期回退；对记录的归属日，按同周归属判断。因此同一记录可能进入两个日期桶、两日均算练过。这是逐目标日应用本轮三条规则的结果，测试已明确锁定；未擅加唯一落位或去重口径。
+
+自己此前测试的修改：
+
+- 按用户明确授权，将第 1 轮自加 off-window 两种用例的 isExecutionDayComplete 期望 false → true，completedTrainingDays 期望 0 → 1，并改测试名；记录保留与 latestActivityAt 断言不变。
+- 第 1 轮自加 triage 两种防串日用例，仅给三天的 fixture 补 week_number: 1，明确它们在同一计划周；断言不变。
+- 卡 B 实装前 HEAD=f6edf99 的原有测试断言本轮未改；上轮 D2/D4、练过未结算、无归属 fallback 回归均保留。
+
+review-loop 独立定向复审：Standards 0 findings，Spec 0 findings；两位只读 reviewer 对比本轮快照审查 5 个代码/测试文件。主代理亲读最终增量；没有待产品裁决事项。
+
+本轮改动文件（6，含本节）：
+
+```text
+docs/CODEX-JOURNAL.md
+src/domain/coach/log-ownership.ts
+src/domain/coach/detail-week.ts
+src/domain/coach/__tests__/detail-week.test.ts
+src/domain/coach/__tests__/triage.test.ts
+src/features/coach/roster/load-roster.ts
+```
+
+最终验证时序：先写完本节并冻结全部代码、测试及 JOURNAL，再执行 `EXPO_NO_DOTENV=1 npx jest --runInBand` 全量、`EXPO_NO_DOTENV=1 npx tsc --noEmit`、`EXPO_NO_DOTENV=1 npm run lint`；不以定向 suite 替代最终全量。结果及原始末行见本轮交付回报与 `/tmp/092b-r2-full-final.log`、`/tmp/092b-r2-tsc-final.log`、`/tmp/092b-r2-lint-final.log`。本节不预填尚未完成的最终结果；验证结束后核对文件摘要无变化，不再改动本节。
+
+## 2026-10-17 · Spec093 R-verify（Android 原始收货记录）
+
+从用户指定分支 `origin/claude/blissful-curie-wk8cxa` 的 `3697ca5` 接续，在 `verify/093-android-invites` 验证既有 R 实装。已读完整 CARDS/SPEC、仓规与 Expo v57 文档；冲突以 SPEC 为准，未读 iOS handoff。此节记录开发自测，功能终验与 PARITY 正典留 Opus。
+
+改动：现场复现两处绑定输入问题后，仅邀请码 TextField 加 `numberOfLines={1}`，防止原生长消息粘贴把单行框撑高；输入或原生粘贴有效码时清除之前的错误 banner，补两条组件行为回归。未改共享 TextField、未硬编码输入框高度。另在 native prebuild 暴露的既有类型错误上，把 AccessoryLogCard 的 column 返回类型从整个 ViewStyle 收窄为实际 flex/minWidth；运行时样式不变。
+
+验证：中文 AVD `meetpr` 新建隔离 OS user 10，以本机合成 API seam 运行 China/Global 两个原生 debug 构建。China 整段消息按钮粘贴、无关内容报错、系统长按粘贴、教练我的与邀请码页复制完整消息、永久码系统分享面板均留截图；Global 无粘贴入口，两个复制入口均从真实剪贴板读到纯码。没有选择外部分享收件人。原用户 0 账号/数据未清理。
+
+先红后绿：有效码清错误用例 2 failed / 9 passed → 11 passed；原生粘贴 EditText 高度 164→529 px 失败 → 164→160 px 通过，值始终正确归一化。原生脚本、失败日志与前后截图见 [证据目录](evidence/spec093-2026-10-17/README.md)。该高度回归依赖原生测量，不以只断言 React prop 的测试替代。
+
+最终检查：全量 Jest 180 suites / 1718 tests 通过；类型收窄后全量 `tsc --noEmit`、`expo lint` exit 0，AccessoryLogCard 既有 11 tests 通过。首次 tsc 的空日志发生在 npm 安装期间，不能作为完整依赖基线通过证据；prebuild 后失败的 TS2769 原始日志已保存，根因是 Expo types 扩展 ViewStyle.userSelect 后宽返回类型污染 TextStyle。代码增量经主代理安排 Standards / Spec 两轴只读审查，均 0 findings。
+
+未验到：真实 staging 的邀请码/绑定持久化、生产邀请落地页/安装链路、真实姓名和跨端真实账户链路、分享发出、物理安卓机与 iOS。本卡未执行任何远端 API 写入、账号创建或数据库写入，未分发含本机 fixture 地址的包。截图只含合成码、合成姓名和本机地址，不含真实账号邮箱/手机/凭证。系统分享、原生剪贴板与输入框证据不替代上述未验项。
+
+收尾：仅恢复本轮生成的 tracked `modules/training-video/android/build` 产物；未改业务外文件。本轮临时 fixture 与两轨 Metro 已停止，adb reverse 已移除，AVD 已切回 user 0；user 10 保留，未删任何用户数据。目录保留启动脚本供复现。此卡不 commit/push/merge，由主代理统一交付 PR 等 David 合并。
+
+## 2026-10-19 — Android CN update prompt (David direct implementation)
+
+David approved startup version checking, release notes and a download button with user-confirmed APK installation, clarified no external users have received the first package, and explicitly instructed Codex to start after the spec handoff discussion. This implements that approved scope; canonical product/release acceptance remains with Opus.
+
+Engineering boundaries before tests: `checkForAndroidUpdate` (native installed build + public HTTPS release metadata → newer compatible release or no prompt), `AndroidUpdateSession` (root startup → native optional alert → browser download). External boundaries are fetch, native app metadata, AppState and Linking. Regression coverage: numeric newer/equal/older versions, CN/package isolation, bad/failed/timed-out metadata, privacy/startup readiness, dismissal/background/unmount and download opening/failure. These are developer checks, not a replacement for Opus acceptance.
+
+Implementation defaults: one optional native alert per cold startup after privacy confirmation and session bootstrap; no forced update, background push, JS hot update, in-app APK installer or Global/iOS changes. Existing OSS HTTPS download host carries `android/latest.json` and immutable versioned APKs; the existing fixed APK entry remains for first installs. Publish APK before metadata. Keep the existing CN package and signing identity; compare native versionCode, not display-version strings. Release evidence must distinguish local tests, signed artifact and actual published asset.
+
+### Implementation and developer evidence
+
+- Added `expo-application ~57.0.3` for the actual installed package/build (Expo SDK 57 docs read); CN versionCode moves 1→2, Global remains 1. Existing public APK independently downloaded from `https://dl.meetpr.cn/android/meetpr-cn.apk`: CN `com.meetpr.app`, 0.1.0 (1), certificate SHA-256 `bef954dce0a6c56c6586b2d375f1067f1c29eca7e8a6b58e5e8102966508b746`.
+- Release metadata schema: `schemaVersion:1`, `packageName:"com.meetpr.app"`, numeric `versionCode`, `versionName`, `releaseNotes` (1–1200 chars), exact HTTPS `downloadUrl` = `https://dl.meetpr.cn/android/releases/<versionCode>/meetpr-cn.apk`. Wrong track/package, equal/older builds, malformed metadata and failures produce no alert. Request deadline 8 seconds; cancellation cannot surface late results.
+- Root integration waits for privacy confirmation and session bootstrap. A native optional alert offers download or dismissal; background results wait for foreground. Browser-open failure offers retry. Alert strings use the existing i18n catalog.
+- Release preparation: `node scripts/prepare-android-update.cjs <new.apk> <previous-public.apk> <notes.txt> <new-output-directory>` with `ANDROID_HOME` and `JAVA_HOME` set. Reads actual APK metadata using aapt, verifies both signatures using apksigner, refuses debug/different signing identity, wrong package or non-increasing version. Produces versioned APK, fixed first-install APK alias, `android/latest.json` and SHA/certificate report. No credential or upload behavior is embedded in this script.
+- Publishing order once signed: upload `android/releases/2/meetpr-cn.apk` without overwriting an existing version; download/verify its SHA; replace fixed `android/meetpr-cn.apk` (Cache-Control no-cache); publish `android/latest.json` last (application/json, Cache-Control no-cache), then verify all three public objects. Future releases increase CN code and use a new immutable version directory. Keeping notes and version metadata in sync is required on each release.
+- TDD evidence: service/newer-build red→green; isolation red→green; metadata/network red→green; timeout/cancel red→green; UI startup/lifecycle/retry red→green; release artifact validation red→green. Equal/older fixtures were corrected after independent review so they pass schema and genuinely exercise version comparison.
+- Final developer tests: 183 suites / 1,756 tests passed; typecheck, lint and diff check passed. Earlier full run found literal-copy placement (fixed via i18n) and an existing set-save first-test timeout during concurrent native compilation; targeted 34 set-save tests and the subsequent full serial run both passed.
+- Native arm64 QA release build (explicit debug signing, NOT FOR DISTRIBUTION) succeeded. Real component/native Alert visually checked with an ignored local harness that supplies release metadata at the external fetch boundary. Screenshot `update-dialog.png`, cancellation/foreground evidence `update-cancel.xml`, cold-reopen/download evidence under `/Users/david/Projects/scratch/android-update-20261019/`. Generated Gradle entry override restored after harness; no fixture code is included in tracked source.
+- Independent review-loop: Standards 0 unresolved; Spec 0 unresolved after repairing the equal/older fixture test. Review record `/Users/david/CodexConfig/reviews/2026-10-19-android-cn-update.md`. Matt tracker setup is absent; used review-loop's local dual-axis path, not a configured tracker workflow.
+- Release boundary: signing credentials and OSS upload access are not present in this session; David has been asked asynchronously for an approved channel. Do not distribute the debug-signed QA artifacts. Formal signing, public asset replacement and end-to-end installed-update validation are still pending; developer tests do not assert those steps succeeded. Opus owns canonical acceptance/release closeout.
+
+## 2026-10-22 · CN 教练码分享方案 A（测试准备，环境阻塞）
+
+David 直驱 P0，指定当前 worktree、`fix/invite-share-wechat`，基线与 `origin/main` 均现场核实为 `c565eb4b5a77424cff40d1df6d65b576f69c9586`。开工工作区干净，先读 CONTEXT 与本日志末尾，再读仓内 AGENTS/CLAUDE/PLAN 和邀请码实现、既有测试与 spec093 原始验证记录。遵守本轮仅当前 worktree 的文件访问限制，未读取外部技能、记忆、其他 worktree 源码或依赖。未 commit/push，未改正典台账。
+
+已在两个既有测试文件准备方案 A 的回归：邀请消息唯一链接独占末行；中英标题和缺失姓名 fallback；两个真实屏幕 CN 主分享/次复制按钮顺序、Share.share 的 title/message、复制反馈与管理入口；Global 纯码复制、原卡片入口、无分享/溢出菜单；CN 菜单重新生成需原二次确认，取消不写入。未改生产实现，测试引用的 `inviteShareTitle` 尚待实现。
+
+环境阻塞：当前 worktree 起初没有 node_modules 或 Android 工程。`npm ci --cache "$PWD/.task-tmp/npm-cache" --no-audit --no-fund` 返回 exit 1，registry 下载连接被沙箱以 EPERM 拒绝；没有升级权限重试。安装只留下不完整的 node_modules。直接运行仓内 Jest 入口也在 preset 初始化时失败；进一步定位为缺失 `react-native`，不是已验证的行为失败。不得将该失败计作 TDD 红阶段。
+
+证据：`docs/evidence/invite-share/install.log`、`docs/evidence/invite-share/jest-preflight-blocked.log`。测试实际执行 0 项；全量 Jest、tsc、lint、CN Android 中文浅/深色截图、系统分享面板与菜单截图均未验证。微信物理安卓机也未验证。`git diff --check` 通过。本轮没有新截图，不复用历史截图充当本次证据。临时 npm 缓存移入当前 worktree 的 `node_modules/.cache/invite-share-task` 保留；不完整依赖和缓存均被既有 gitignore 排除。
+
+已向 David 提出依赖/Android 工具文件只读访问边界问题，尚未收到答复。恢复后须先取得真实行为红结果，再实现并转绿，完成全量检查及当前构建的模拟器截图；本条不代表方案 A 实装或验收完成。
+
+### 续条：方案 A 实装与开发自测交付
+
+David 随后在本 worktree 安装好依赖，并授权 Android 工具文件只读访问；本轮直接使用本地 node_modules，没有复用其他 worktree。adb 尝试因沙箱禁止本地 socket 监听而失败。David 后续明确将 CN 构建、运行和截图交给 Opus 沙箱外收货，本轮停止原生验证。保留上述历史阻塞记录；当前开发检查已恢复且完成，不再处于依赖阻塞状态。
+
+实现限于 China track（`sharesInviteMessage()` 为 true）：
+
+- `invite-message.ts` 增加 `inviteShareTitle`，修剪教练名，缺失时使用既有 fallbackName；两处实际调用 `Share.share({ title, message })`。
+- `RnExtras.json` 添加 shareToStudent、copyMessage、manage、shareTitle 四组中英串；原邀请语保留步骤和姓名，将唯一链接移至末行并独占一行。Global 的复制仍返回裸码。
+- `CoachMyProfileScreen.tsx` 有永久码时显示金色小标题、右上「管理 ›」、大号码、使用次数、满宽 AppButton 主分享/次复制；复制成功按钮显示「已复制」。本体为 View，管理入口单独导航。无永久码、加载和失败继续原分支。
+- `InviteCodesScreen.tsx` CN 永久码区改为主分享/次复制；CoachNavHeader trailing 的「…」打开沿用仓内 Modal + SafeAreaView 模式的底部动作面板，重新生成仍进入原 Confirmation。Global 保留行内复制/重新生成。未改 AppButton、导航/tab、API、包配置或依赖；按最小改动选择不添加分享图标。
+
+分享参数依据：已读 Expo v57 文档及 RN Share 官方文档，并核对本 worktree 安装的 `react-native/ReactAndroid/.../ShareModule.kt`：message → `Intent.EXTRA_TEXT`、title → `Intent.EXTRA_SUBJECT`、类型为 `text/plain`；dialogTitle 仅传给 chooser，不构成微信链接识别保证，因此不额外添加。官方参考：<https://docs.expo.dev/versions/v57.0.0/>、<https://reactnative.dev/docs/share>。
+
+先红后绿证据均在 `docs/evidence/invite-share/`：
+
+1. `red-behavior-final.log`：生产改动前，2 suites failed；11 failed / 23 passed。两处 CN 按钮、菜单位置、链接末行和标题缺失均复现；Global 回归通过。之前遇到的 native worklets/gesture 初始化错误不算行为红；测试仅 mock 原生手势容器与 Swipeable，仍挂载真实 screen、model、AppButton 和 Confirmation。
+2. `green.log`：实装后同样 2 suites / 34 tests passed。组件测试验证主次顺序/文案、完整 Share.share 参数、复制成功反馈、管理导航、本体不可点击、Global 原入口、重新生成取消不写入与确认才写入。
+3. 首次 tsc 指出本轮新增 title 参数表的 readonly 元组类型不匹配（`tsc.log`）；显式声明 `test.each<['zh' | 'en', string]>` 后通过，输入与行为断言未变。未修改任何实装前既有断言。
+
+最终开发验证（所有命令设置 `EXPO_NO_DOTENV=1`；Jest 缓存在当前 worktree）：
+
+```text
+jest --runInBand --watchman=false: exit 0
+Test Suites: 183 passed, 183 total
+Tests:       1767 passed, 1767 total
+Snapshots:   0 total
+Time:        230.159 s
+tsc --noEmit: exit 0
+npm run lint / expo lint: exit 0（无 lint errors/warnings）
+git diff --check: exit 0
+```
+
+日志：`jest-full.log`、`tsc-final.log`、`lint.log`。全量 Jest 最后执行本轮两个 suite，已覆盖类型注解修正后的文件。主代理完成 Standards/Spec 两轴自审：CN 分支范围、原状态保留、文案与 theme token、Share 参数、导航及确认链均核对；这不是独立验收，不替代 Opus 收货。
+
+Opus 原生收货命令与校验方法见 `docs/evidence/invite-share/README.md`：含 `EXPO_ROUTER_APP_ROOT="$PWD/src/app"`、China track、本机 fixture、既有 pack 入口、pack 后 `:app:createBundleReleaseJsAndAssets --rerun-tasks --no-build-cache`、重新 assemble、APK 内 bundle 与输出文件逐字节比对、packager sourcemap 与当前源码比对、安装/运行及截图命名。文档中的 3 段 shell 和内嵌 Python 已做语法检查，未实际构建/执行。
+
+未验项：CN Android 原生构建/运行、中文浅/深色两页及系统分享/菜单截图（由 Opus 收货时补入本证据目录）；微信真机发送和聊天链接点击；真实后端、生产落地页/下载链路。没有本轮截图，不以旧图替代。交付为未提交工作区：四个生产文件、两个既有测试文件、本 JOURNAL 和证据目录；未 commit/push、未改正典台账、未写凭证。
+
+
+## 2026-10-22 · 邀请分享标题文案与缺名整句 fallback
+
+基线：当前 worktree `meetpr-rn-wt-invite-share`，分支 `fix/invite-share-wechat`，HEAD `46fec47`（PR #101）。按 David 本轮拍板，仅改 `RnExtras.json` 的分享标题及新增 `coach.invites.shareTitleFallback`、`inviteShareTitle` 分支与相关单测。标题使用指定中英文；姓名 trim 后为空时直接取完整 fallback 句子，不再使用 `coach.profile.fallbackName`。复制邀请正文不变。David 追加授权后，仅同步 `invite-card-state.test.ts` 中写死的标题期望，未改测试逻辑。
+
+公开测试 seam 沿用本任务指定的 `inviteShareTitle`。真实 red → green：
+- 有名标题：先改中英期望，invite-message suite 为 2 failed / 9 passed；更新 shareTitle 串后定向运行 `-t 'share title uses'`，2 passed / 9 skipped。
+- 缺名标题：再加入中英完整句子的期望，invite-message suite 为 2 failed / 7 passed；实测旧逻辑返回「教练 教练邀请你在 MeetPR 跟练训练计划」及「Coach Coach invited you to train with them on MeetPR」。随后新增 fallback key 与实现分支；覆盖 undefined、null、空串、纯空白四种输入。
+- 最终相关 Jest（invite-message、invite-card-state、i18n/t）：3 suites passed / 0 failed，43 tests passed / 0 failed，exit 0；包含两处真实分享组件参数验证。命令：`EXPO_NO_DOTENV=1 node_modules/.bin/jest --runInBand --watchman=false --cacheDirectory=node_modules/.cache/invite-title-jest --runTestsByPath src/features/coach/profile/__tests__/invite-message.test.ts src/features/coach/profile/__tests__/invite-card-state.test.ts src/i18n/__tests__/t.test.ts`。
+- `EXPO_NO_DOTENV=1 node_modules/.bin/tsc --noEmit`：exit 0，0 errors。
+- `EXPO_NO_DOTENV=1 npm run lint`：exit 0，0 errors / 0 warnings。
+- `git diff --check` 通过。主代理核对 Standards/Spec：改动限定为批准文案、整句 fallback、对应测试及本条 JOURNAL，无无关重构。
+
+未 commit/push；保留开工前已有的 3 个未跟踪原生验证日志。本轮未运行全量 Jest、原生构建或模拟器验证，不将上述开发自测写作原生验收。
+## 2026-10-22 · 094-Android 繁体中文实装（Claude 派卡）
+
+入口：在指定可写根试写 `.codex-write-check-094` 成功后删除；读取 CONTEXT、AGENTS、CLAUDE（仅引用 AGENTS）、094 CARD/SPEC/GLOSSARY、PLAN、工程流程与 tdd。FOLLOWUPS.md 不存在。现场分支 `feat/094-zh-hant`，基线 `ccc42b5`，初始工作区干净；依赖已安装，新增仅开发依赖 `opencc-js@1.0.5`。遵守仓内 ESLint/TypeScript/Jest 配置，未改配置、超时值、版本或界面结构。Expo SDK 57 版本文档已读。
+
+### 改动与实现边界
+
+- 系统 `zh-Hant*`、zh-TW/HK/MO，以及中文的 Hant script / TW/HK/MO region 元数据选择 `zh-Hant`；其他中文保持 zh，其他语言保持 en。繁体→简体→key 回退，参数文本不转换。
+- `npm run i18n:zh-Hant` 使用 OpenCC s2twp（cn→twp）和批准的 Markdown 术语表，最长词先标记、转换后还原覆写。2393 条文案独立生成入仓，原 `src/i18n/catalog/*.json` 简英内容零改动；保留复数结构、所有占位符、品牌名，邮箱标签「電子郵件」、句中「信箱」。运行时只读 JSON，不导入 OpenCC。
+- 1261 个系统动作名称对照表，明确 `created_by_coach_id === null` 才按系统名称表展示；自建/未知来源名称原样。动作选择器及历史动作筛选支持双字形与台湾词组（含「肩部觸控」）；未改存储对象。本仓无自由文本速记解析器，QuickLog 是结构化输入，未添加新解析功能。
+- API、analytics config/event、WebSocket 握手、更新检查显式发送单值 `Accept-Language: zh-Hans|zh-Hant|en`。注册/找回邮件经原 API seam 继承头；邮件/远端推送与缺少来源标识的视频嵌入名称，由后端 052 卡履约，本仓不转换无法辨别的自写内容。
+- 既有通知渠道、休息/训练提醒、错误与更新 UI 的 t() 文案自动取繁体；日期 short weekday 实测单测「週日」，中文排版与分隔符分支包含 zh-Hant。
+- 远端更新说明原 manifest 仅有 releaseNotes：既有开发期发布准备脚本现在同时生成可选 releaseNotesZhHant，旧客户端兼容。已公开 build 2 文案加入生成的旧格式 fallback；其他未知旧 manifest 的繁体界面只显示已有安装提示/下载按钮，不显示未翻译说明。简英仍显示原 releaseNotes。未执行出包或发布脚本的真实 APK 路径。
+- 训练分享 candidate/staging 单独携带本地 displayExerciseName；发送 body/set_ref 仍为 canonical 名，重试 payload 不变。繁体发送失败气泡与 composer 使用本地显示名，用户备注原样。已发送 ChatSetRefV1 是冻结聊天快照，保留原文，不按名称猜测系统/自建来源；此边界须在 Opus 跨端收货时明确核对。
+
+数据来源：`scripts/i18n/exercise-names-zh.json` 为 iOS `c3d27ccbe585522474a9b7c5ee16ebc6dd98229a` 的 `Modules/CoachKit/Sources/CoachKit/Resources/exercise-catalog-v2.json` + backend `1e494dbd46952ffcb6a07577a12133efaed7e917` 的 exercises migrations 中系统名称快照，并含三主项简称。以后增补简体源再重跑；不依赖兄弟仓运行时路径。旧更新说明来源为 2026-10-22 只读获取 `https://dl.meetpr.cn/android/latest.json` 的 build 2 文案。
+
+共享字集：`scripts/i18n/simplified-only.txt`，3800 字；从固定 OpenCC 字典取简体源字，排除合法繁体词组/台湾变体目标字（避免把皇后/公里等误判）。SHA-256 `d56ee6e9f456e92519e21498acad5e1c8c9f3a7e75bf9157d4c88e105be5f2b2`。本卡只写当前 worktree；四仓文件逐字统一交 Opus 分发核对，未宣称其他仓已同步。
+
+### 测试与审查证据
+
+所有 npm 命令前设 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`；全量复跑的 TMPDIR 为本 worktree `node_modules/.cache/tmp`。脚本与原始红绿片段见 [spec094 证据](evidence/spec094-zh-hant/)。
+
+- `npm test -- --runInBand src/i18n/__tests__/t.test.ts`：首轮 9 failed / 11 passed → 20 passed；后补缺繁体回退与用户参数保持原文。
+- `npm test -- --runInBand src/features/training/__tests__/exercise-picker.test.ts`：8 failed / 24 passed → green；后补台湾词组回归与 1261 个生成动作名全表匹配。
+- `npm test -- --runInBand src/api/__tests__/api-auth-session.test.ts`：新增语言头 3 failed / 38 passed；实现后按新契约补原有 exact-header 预期，定向检查全绿。
+- auth / update UI / release-preparation 三 suites：3 failed / 44 passed → green。通知、日期、catalog、API 等合并定向 13 suites / 142 tests 通过。
+- 产物扫描验证所有 key/复数结构/占位符一致、简体特有字零命中、每个 glossary 覆写与复合词、品牌/引号、生成幂等。该测试首跑是路径错误，修正后通过；不将导入错误当作行为红测试证据。lint 首跑发现新 JS 测试 __dirname 未声明，改用 require.resolve 定位根目录后通过，未改变 lint 配置。
+- 第一轮独立审查捕获台湾词组搜索与 SetRef 落库问题，新增真实路径回归 3 failed / 39 passed → 4 suites / 55 tests 通过；追加动作全表检查后 2 suites / 43 tests 通过。
+- 第二轮定向复审捕获分享失败待发预览遗漏：单条新回归先红（显示 `[训练计划] 卧推`）→ 整个 chat 定向 3 suites / 52 tests 通过，覆盖 picker→发送失败→重试。
+- 初轮全量 3 suites / 65 tests failed：三个首用例超时造成 act/renderer 连锁失败；保留失败记录，未改业务或超时配置。相同三个 suites 单独复跑 103 tests 全过；随后全量 184 suites / 1789 tests 全过。此事实只说明未稳定复现超时，不断言已找到或修复其根因；最后预览修复后的一轮 182 suites / 1787 tests 通过、2 suites / 3 tests 超时；现场读取 10 逻辑核、load average 约 253，失败项为 completion-entry 与 profile/editor 的 5000ms 超时。未修改这些测试或配置，再次串行全量确认（结果见下）。
+- 最终 typecheck 曾指出新更新说明测试的 fixture literal 被拓宽成 number/string；仅给 fixture 加 `as const` 收窄，未改 tsconfig。
+- 本地 review-loop 两位只读 reviewer 独立报告：Standards 与 Spec 最终各 0 未决代码 findings；两轮定向返修，记录见 [review.txt](evidence/spec094-zh-hant/review.txt)。缺 docs/agents/issue-tracker.md，已提示配置需 `$setup-matt-pocock-skills`，使用本地卡片审查，未冒称 tracker 流程或 Opus 功能终验。
+
+### 偏离、未验与交接
+
+AVD `emulator-5554` 初期 shell/console 5–8 秒超时、package service 尚不可用；定向 reconnect 后能读到 boot_completed=1 和已装 com.meetpr.app，但 dumpsys package 又超时，无法确认可加载本次 JS 的 native debug 环境。没有出包、替换安装或改用户数据，没有取得本次原生截图。SPEC 的逐屏繁体与简英 5/2 屏截图、带历史老用户升级首屏、真实后端 052 推送/邮件/出参联调，留 Opus 按原验收清单收货；单测绿不代表这些通过。未改 PARITY/发布正典，未 push、开 PR、出包或改版本。
+
+### v2 返修（2026-10-22）
+
+接续上一轮模型容量错误中断的工作区。指定根目录临时文件试写成功并删除；重读 AGENTS/CLAUDE、CONTEXT、094 SPEC/CARD/AMEND-v2/GLOSSARY、JOURNAL 末段、工程流程及记忆索引，核对 worktree/status/log 与 staged/unstaged diff。保留全部原有改动；基线仍为 `feat/094-zh-hant @ ccc42b5`。未 commit、未 push，未改版本、出包或改正典 spec/glossary；先前的 `android-update.test.ts` fixture `as const` 修正保持原样。
+
+改动：生成脚本只把文案表用于展示覆写，把 v2 别名表独立生成搜索 JSON；计划及复合词使用「課表」，反馈使用「反饋」，「发布计划」按 glossary 明示示例生成「發布課表」。reps 仅使用 `scripts/i18n/reps-keys.json` 的 57 个显式 key 改成「下數／下」；训练频次、上次数值、第 N 次及次日不改。源简英 catalog 不变，生成产物保持 key、复数结构及占位符，简体特有字扫描零命中。
+
+17 个动作别名先按与搜索一致的繁→简口径生成（包括 OpenCC 的「抬／擡」等价规范），运行时只读 JSON。动作选择器和历史筛选共用 `matchesExerciseSearch`：保留原名子串匹配，再追加 canonical 匹配；名称末尾数字括号规格支持半角/全角混用，如「（2cm)」，保留 `(PIN)` 等命名变式。显示/存储原文不变；模糊的 Cable 三头及上斜窄握写法不强配。所有新增动作 fixture 为合成行，无真实教练课表。本仓没有自由文本速记解析器，AMEND-v2 第 3 条不适用，未添加速记或 Excel 导入。
+
+测试与证据（所有 npm 命令前 `export PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`）：
+
+- catalog v2 现有红测试：2 failed / 3 passed；首次生成后发现 OpenCC 把「发布」转换为「釋出」，按 glossary 示例修正后 5 passed。
+- 别名 seam：19 failed / 35 passed → 2 suites / 59 tests passed；中间两条后脚抬高别名因「抬／擡」规范不一致失败，修复后全绿。
+- 初次定向：18 suites / 276 tests passed。
+- **本轮唯一一次全量** `npm test -- --runInBand`：exit 0，184 suites / 1811 tests passed，130.832 秒，无超时；原始日志 `/tmp/094-v2-full.log`。此运行在下面的原名子串修复之前，未把它声称为最终文件状态的全量结果，未再跑第二次全量。
+- 独立 Spec 审查发现原名子串搜索退化：新增真实 picker seam 回归先红 1 failed / 54 passed；修复后最终定向（原 18 suites + history 全目录）**27 suites / 352 tests passed**，24.904 秒。精确命令及 suite 结果见 [v2-validation.txt](evidence/spec094-zh-hant/v2-validation.txt)，原始日志 `/tmp/094-v2-targeted-final.log`。
+- 最终 `npx tsc --noEmit`、`npm run lint` 均 exit 0；`node scripts/generate-zh-hant.cjs --check` 与 `git diff --check` 通过。未修改任何测试超时或测试配置；没有为超时放宽测试。
+- 按 tdd 公开 seam 完成返修，review-loop 两位独立只读 reviewer 分轴审查：Standards 初审/复审 0 findings；Spec 初审 1 个 P2，定向修复后 0 未决。主代理亲读最终增量。详见 [v2-review.txt](evidence/spec094-zh-hant/v2-review.txt)；未冒称 tracker 流程或 Opus 功能终验。
+
+边界：本轮未新增原生截图、逐屏视觉验收或后端邮件/推送联调证据，上一节未验项继续保留。按批准词表机械生成的「課表表」「有比賽課表」未擅增例外，交 Opus 后续审阅词表；这不属于本轮实现偏离。
+
+本轮 reps 覆写实际命中的全部 57 个 key（均在当前源 catalog 存在）：
+
+```text
+chat.load
+chat.attachmentReps
+coach.planning.common.reps
+coach.planning.count.rep %lld
+coach.planning.count.repPlural %lld
+coach.planning.count.setsAndReps %lld %@ %lld
+coach.planning.editor.addRepMaximum
+coach.planning.editor.removeRepMaximum
+coach.planning.editor.repMaximum
+coach.planning.progression.repDecrease
+coach.planning.progression.repIncrease
+coach.planning.step4.setRepIntensity %lld %@ %@
+coach.planning.step4.setRepsIntensity %lld %@ %@
+coach.planning.step4.setsRepIntensity %lld %@ %@
+coach.planning.step4.setsRepsIntensity %lld %@ %@
+coach.planning.validation.incompleteWeekOneSetSpecs
+coach.planning.validation.invalidWeekOneSetSpec
+coach.videoFeedback.reps
+coach.videoFeedback.repsValue %lld
+designSystem.numberPad.enterReps
+designSystem.preview.timesUnit
+designSystem.reps
+designSystem.repsUnit
+designSystem.setRow.metrics %@ %@ %@
+student.accessory.repsLabel
+student.quickLog22.reps
+student.quickLog22.invalid
+student.quickLog22.field.reps
+student.exportDataSheet.copy005
+student.feedbackVideoPresentation.copy002
+student.feedbackVideoPresentation.copy002.one
+student.feedbackVideoPresentation.copy003
+student.feedbackVideoPresentation.copy003.one
+student.growthCurveView.copy010
+student.sessionSummaryView.copy008
+student.setEntryRpe.copy001
+student.setEntryRpe.copy002
+student.setEntryRpe.copy003
+student.setEntryRpe.copy004
+student.setEntryRpe.copy005
+student.setEntryRpe.copy006
+student.setEntryRpe.copy007
+student.setEntryRpe.copy008
+student.setEntryRpe.copy009
+student.setEntryRpe.copy010
+student.setEntrySheet.copy003
+student.setEntrySheet.copy004
+student.step3StrengthSection.copy008
+student.step3StrengthSection.copy009
+student.step3StrengthSection.copy010
+student.step3StrengthSection.copy014
+student.todayWorkoutScreen.copy012
+student.todayWorkoutTypes.copy003
+student.todayWorkoutTypes.copy004
+student.workoutCompletionPresentation.copy003
+student.workoutCompletionPresentation.copy003.one
+student.e1rmSourceRTS
+```
+
+### v2.1（2026-10-22）
+
+在指定 worktree 先用临时文件确认可写后删除；保留上一轮所有 WIP，只执行 AMEND-v2 的 v2.1。生成器剥离术语源列末尾的括号说明，沿用最长词优先与占位保护：先匹配「杠杆→槓桿」，再匹配「杆→槓」。界面文案和动作名共用此转换；`npm run i18n:zh-Hant` 已重跑，更新 10 条界面文案、46 个系统动作名。示例产物为「硬舉專項槓(軟槓)」「EZ槓二頭彎舉」「坐姿槓桿臂屈伸」。简英源 catalog、自建内容和存储规则不变。
+
+新增两条生成 seam 测试均先红后绿，覆盖合成文案、两类动作名、复合词与占位符，以及界面/动作 JSON 实际产物。重生成首次触发现有动作全表搜索和两个 v2 别名测试失败：反向词表把「槓」映射到「杆」，与 canonical「杠」不一致。已仅在生成的搜索索引统一这组字形（包括复合词目标），修复后原有 1261 个动作名全表匹配与别名测试均通过，未改展示或落库名称。
+
+验证（命令均设 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`）：
+
+- 转换回归：1 failed → 1 passed；产物回归：1 failed → passed；原始红绿及搜索失败证据见 [v2.1-red.txt](evidence/spec094-zh-hant/v2.1-red.txt)、[v2.1-green.txt](evidence/spec094-zh-hant/v2.1-green.txt)、[v2.1-artifacts-red.txt](evidence/spec094-zh-hant/v2.1-artifacts-red.txt)、[v2.1-search-red.txt](evidence/spec094-zh-hant/v2.1-search-red.txt)。
+- `npm test -- --runInBand src/i18n src/features/training/__tests__/exercise-picker.test.ts`：7 suites / 88 tests 全绿；沿用 v2 最终定向范围（含 history 全目录）共 27 suites / 354 tests 全绿，11.51 秒。命令和结果见 [v2.1-validation.txt](evidence/spec094-zh-hant/v2.1-validation.txt)。Jest 输出 React act 与 Expo Go push 警告，未改测试配置或超时。本轮未重跑全仓测试。
+- `npx tsc --noEmit`、`npm run lint`、`node scripts/generate-zh-hant.cjs --check` 均 exit 0。本轮代码/产物/JOURNAL 路径的 `git diff --check` 通过；全工作区检查仍报告旧证据 surfaces-red.txt、targeted.txt、v2-changes.patch 的空白，未修改前轮证据。
+- 已删除仓根全部 24 个 `.094-*.log`，复核余数 0；`docs/evidence` 既有证据保留。本轮增量见 [v2.1-changes.patch](evidence/spec094-zh-hant/v2.1-changes.patch)。
+
+未 commit、未 push、未改 spec/glossary 或发布正典。未新增原生截图或后端联调，上一轮视觉验收边界保留。
+
+本轮按 review-loop 的改前快照做独立只读双轴审查：Standards 0 findings；Spec 0 findings。确认无新增动作繁体重名碰撞，46 个受影响动作的简繁搜索归一一致。记录见 [v2.1-review.txt](evidence/spec094-zh-hant/v2.1-review.txt)。缺 tracker 配置，使用本地审查路径，未声称 Opus 功能终验。
+
+
+### 语言头返修（2026-10-22）
+
+按更新后的 SPEC「共享契约」及 AMEND-header 客户端要求，在既有未提交改动上完成。开工先创建并删除临时文件确认可写；未 commit/push，未修改 spec、glossary 或发布正典。
+
+- API（含未登录 auth）、WebSocket 握手、更新检查、analytics config/events 共 5 处显式语言头全部改为 `X-MeetPR-Locale`，不再手动设置 `Accept-Language`，恢复平台默认行为。
+- `getAcceptLanguage` 改名为 `getLocaleHeader`，调用点同步；语言值保持 `zh-Hans | zh-Hant | en`，原有界面语言判定不变。
+- 复用现有公开网络 seam 逐处先红后绿。API：7 failed / 34 passed → 41 passed；WebSocket：5 failed / 3 passed → 8 passed；更新检查：3 failed / 23 passed → 26 passed；analytics：3 failed / 24 passed → 27 passed。测试覆盖三种语言，使用负断言或精确 headers 断言保证不再显式发送旧头。原始证据：[header-red-green.txt](evidence/spec094-zh-hant/header-red-green.txt)。
+- 最终定向测试（API/auth、WebSocket、analytics、更新检查/session、i18n）**6 suites / 129 tests passed**；`npx tsc --noEmit`、`npm run lint` 均 exit 0。命令均设置 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`。代码与 JOURNAL 定向 `git diff --check` 通过；生产代码旧头赋值与旧 helper 扫描余数 0。未重跑全仓测试。精确命令和输出：[header-validation.txt](evidence/spec094-zh-hant/header-validation.txt)。
+- review-loop 本地独立只读双轴审查一轮：Standards 0 findings；Spec 0 findings，无未决项。缺 tracker 配置，已告知需 `$setup-matt-pocock-skills`，未声称运行 tracker 流程或 Opus 终验。[审查记录](evidence/spec094-zh-hant/header-review.txt)；[本轮精确增量](evidence/spec094-zh-hant/header-changes.patch)。
+
+本轮仅客户端语言头及测试返修，未新增原生截图或后端联调；此前跨端/视觉验收边界继续保留。
+
+### v2.2（2026-10-22）
+
+指定可写根临时文件试写、删除成功；现场基线为 Opus 提交 `89b9cff`（`feat/094-zh-hant`）。开工已有 GLOSSARY 的两条修改及未跟踪 AMEND-v22，均原样保留。已读仓内规约、CONTEXT、JOURNAL 末段、094 SPEC/CARD/AMEND-v22/GLOSSARY、工程流程与 tdd，并查阅 Expo SDK 57 版本文档。本轮只执行安卓 v2.2；网页 document.title 条款不适用。
+
+沿用现有生成器读取术语表的机制，执行 `npm run i18n:zh-Hant`，更新 31 条繁体文案（发布→發布、获取→取得）和 2 条生成的反向搜索映射。生成器本身无需修改；简英源 catalog、动作名产物、用户内容处理和运行时逻辑均未修改。
+
+在既有 `zh-hant-catalog.test.js` 产物 seam 新增一条回归，独立断言「發布給學員」「已發布給 {student}」「取得驗證碼」「重新取得」：重生成前 1 failed，之后 1 passed。原始证据：[v2.2-red.txt](evidence/spec094-zh-hant/v2.2-red.txt)、[v2.2-green.txt](evidence/spec094-zh-hant/v2.2-green.txt)。
+
+验证命令均设置 `PATH=/opt/homebrew/bin:$PATH`、`EXPO_NO_DOTENV=1`：
+
+- `npm test -- --runInBand src/i18n src/features/training/__tests__/exercise-picker.test.ts`：7 suites / 89 tests passed，包含产物键/复数/占位符一致性、零简体特有字、词表覆写、生成幂等性及动作搜索回归。[输出](evidence/spec094-zh-hant/v2.2-targeted.txt)
+- `node scripts/generate-zh-hant.cjs --check`、`npx tsc --noEmit`、`npm run lint` 均 exit 0；`git diff --check` 通过。繁体文案产物「釋出 / 獲取」扫描余数 0。
+- 已亲读本轮全部 diff，自审 Standards / Spec 无未决项。本轮为 T0 术语产物微调，按全局规约免强制独立互审。
+
+未 commit、未 push、未出包；未重跑全仓测试或新增模拟器截图、后端联调，不替代 Opus 跨端及视觉终验。
 
 
 ## 2026-10-10 · T1 Training 隐藏期间换日后空白（阶段 5）

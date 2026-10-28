@@ -1,0 +1,12 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/updates/__tests__/android-update-recheck.test.tsx
+
+PASS src/features/updates/__tests__/android-update-recheck.test.tsx
+  ✓ cold startup checks once and foreground checks resume only after more than six hours (10 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.453 s, estimated 1 s
+Ran all test suites matching /src\/features\/updates\/__tests__\/android-update-recheck.test.tsx/i.

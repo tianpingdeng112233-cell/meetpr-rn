@@ -13,6 +13,8 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
+keystore.properties
 *.p8
 *.p12
 *.key
@@ -42,3 +44,6 @@ example
 /ios
 /android
 node_modules
+
+# Native module build outputs from local packaging
+modules/*/android/build/

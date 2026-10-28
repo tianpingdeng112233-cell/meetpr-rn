@@ -1,0 +1,4 @@
+src/features/coach/profile/__tests__/invite-message.test.ts(53,62): error TS2345: Argument of type '(locale: "en" | "zh", title: "王教练邀请你加入 MeetPR" | "王教练 invites you to join MeetPR") => undefined' is not assignable to parameter of type '(...args: readonly ["zh", "王教练邀请你加入 MeetPR"] | readonly ["en", "王教练 invites you to join MeetPR"]) => void | TestReturnValuePromise | TestReturnValueGenerator | undefined'.
+  Types of parameters 'locale' and 'args' are incompatible.
+    Type 'readonly ["zh", "王教练邀请你加入 MeetPR"] | readonly ["en", "王教练 invites you to join MeetPR"]' is not assignable to type '[locale: "en" | "zh", title: "王教练邀请你加入 MeetPR" | "王教练 invites you to join MeetPR"]'.
+      The type 'readonly ["zh", "王教练邀请你加入 MeetPR"]' is 'readonly' and cannot be assigned to the mutable type '[locale: "en" | "zh", title: "王教练邀请你加入 MeetPR" | "王教练 invites you to join MeetPR"]'.

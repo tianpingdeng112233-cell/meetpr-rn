@@ -2615,8 +2615,8 @@
 "zh": "退出"
 },
 "coach.profile.logoutMessage": {
-"en": "You will need to sign in again with your phone number.",
-"zh": "退出后需重新用手机号登录。"
+"en": "You'll need to sign in again.",
+"zh": "退出后需要重新登录。"
 },
 "coach.profile.logoutTitle": {
 "en": "Log out?",

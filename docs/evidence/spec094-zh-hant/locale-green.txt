@@ -1,0 +1,31 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/i18n/__tests__/t.test.ts
+
+PASS src/i18n/__tests__/t.test.ts
+  ✓ uses the device language, with English for non-Chinese locales (146 ms)
+  ✓ supports debug overrides and returning to the device language
+  ✓ formats positional placeholders using the canonical pending-bind copy (1 ms)
+  ✓ Today header joins the localized date and weekday without duplicating the Chinese prefix
+  ✓ substitutes object and positional placeholders without reprocessing parameter text (8 ms)
+  ✓ selects English one/other and the Chinese plural copy (10 ms)
+  ✓ pluralizes prescription summaries by the third parameter
+  ✓ defaults standalone plural keys to the first parameter (1 ms)
+  ✓ pluralizes coach workspace summaries by weeks after the descriptive parameters (2 ms)
+  ✓ returns an unknown runtime key without throwing, while rejecting it at compile time (2 ms)
+  ✓ plural sibling keys (<key>.one) are used for a count of exactly one in English (1 ms)
+  ✓ selects Taiwan Traditional copy for zh-Hant-TW
+  ✓ selects Taiwan Traditional copy for zh-HK (1 ms)
+  ✓ selects Taiwan Traditional copy for zh-MO
+  ✓ selects Taiwan Traditional copy for zh-TW
+  ✓ selects Taiwan Traditional copy for zh-Hant
+  ✓ recognizes native script/region metadata: {"languageTag":"zh","languageScriptCode":"Hant"} (1 ms)
+  ✓ recognizes native script/region metadata: {"languageTag":"zh","regionCode":"TW"}
+  ✓ recognizes native script/region metadata: {"languageTag":"zh","regionCode":"HK"} (1 ms)
+  ✓ recognizes native script/region metadata: {"languageTag":"zh","regionCode":"MO"} (38 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+Snapshots:   0 total
+Time:        5.935 s
+Ran all test suites matching /src\/i18n\/__tests__\/t.test.ts/i.

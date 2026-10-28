@@ -38,6 +38,7 @@ export const CoachedSetLogRequestSchema = SetLogFieldsSchema.extend({
 }).strict();
 
 export const AdhocSetLogRequestSchema = SetLogFieldsSchema.extend({
+  plan_day_id: UuidSchema.optional(),
   exercise_id: UuidSchema,
   /** Required DATE-text column for ad-hoc logs. */
   logged_date: DateTextSchema,
@@ -57,6 +58,8 @@ export const SetLogSchema = z.object({
   id: UuidSchema,
   student_id: UuidSchema,
   plan_exercise_id: UuidSchema.nullable(),
+  /** Student-added exercise owner; older backends omit this field. */
+  plan_day_id: UuidSchema.nullable().optional().default(null),
   exercise_id: UuidSchema,
   set_index: z.number().int(),
   /** Decimal wire value; kept as a string. */
@@ -88,8 +91,8 @@ export const SetLogRangeSchema = z
 
 export type SetLogUpsertRequest = z.input<typeof SetLogUpsertRequestSchema>;
 export type SetLogUpsertResponse = z.infer<typeof SetLogUpsertResponseSchema>;
-export type SetLog = z.infer<typeof SetLogSchema>;
-export type SetLogsResponse = z.infer<typeof SetLogsResponseSchema>;
+export type SetLog = Omit<z.infer<typeof SetLogSchema>, 'plan_day_id'> & { plan_day_id?: string | null };
+export type SetLogsResponse = { logs: SetLog[] };
 export type SetLogRange = z.input<typeof SetLogRangeSchema>;
 
 async function upsert(input: SetLogUpsertRequest): Promise<SetLogUpsertResponse> {
@@ -127,7 +130,15 @@ async function range(
 
 }
 
-export const setsRepository = { range, upsert };
+async function remove(setLogId: string): Promise<void> {
+  const id = UuidSchema.parse(setLogId);
+  try { await authenticatedRequest(`/sets/${id}`, { method: 'DELETE' }); }
+  catch (error) {
+    if (!(error instanceof ApiError && error.status === 404 && String(error.code) === 'SET_NOT_FOUND')) throw error;
+  }
+}
+
+export const setsRepository = { range, upsert, remove };
 
 export const setKeys = {
   all: ['set-logs'] as const,

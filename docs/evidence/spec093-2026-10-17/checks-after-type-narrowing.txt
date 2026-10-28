@@ -1,0 +1,22 @@
+npx tsc --noEmit: exit 0
+npx expo lint: exit 0
+npx jest --runInBand src/features/training/__tests__/accessory-log-card.test.tsx: exit 0
+
+PASS src/features/training/__tests__/accessory-log-card.test.tsx
+  ✓ catalog accessories render editable prescription rows, same-session history, BW and video details; other hero states stay unchanged (145 ms)
+  ✓ saving a set keeps every Last cell and unprescribed weight placeholder from the previous session (24 ms)
+  ✓ missing weight shows an error only after editing weight or being skipped by complete all (42 ms)
+  ✓ completed set 2 without recorded RPE has no coach placeholder; pending sets retain it (24 ms)
+  ✓ completed set 3 without recorded RPE has no coach placeholder; pending sets retain it (27 ms)
+  ✓ Last uses the current bodyweight flag and copies only reps in en (39 ms)
+  ✓ Last uses the current bodyweight flag and copies only reps in zh (18 ms)
+  ✓ inline completion vibrates once immediately; cancellation and disabled rows do not vibrate (15 ms)
+  ✓ student-added card records inline with a day-bound adhoc request and offers no video or complete-all (5 ms)
+  ✓ busy duplicate does not add tick vibration; batch retains button feedback without a 15ms tick and failures keep input (11 ms)
+  ✓ inline drafts survive switching cards and preserve values in both days (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.299 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i.

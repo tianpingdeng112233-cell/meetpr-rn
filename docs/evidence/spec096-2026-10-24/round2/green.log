@@ -1,0 +1,10 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --silent src/features/history/__tests__/student-added-history.test.tsx
+
+PASS src/features/history/__tests__/student-added-history.test.tsx
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.303 s, estimated 2 s

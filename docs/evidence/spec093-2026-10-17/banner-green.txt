@@ -1,0 +1,18 @@
+PASS src/navigation/__tests__/BindGate.test.tsx
+  ✓ needsOnboarding opens immediately and save-and-exit allows continuing from the interstitial (333 ms)
+  ✓ submitting a code for an incomplete profile opens onboarding immediately (31 ms)
+  ✓ invalid stashed invite returns to an empty code field with the stashed name (3 ms)
+  ✓ invalid invite clears the submitted code while prefilling the submitted name (6 ms)
+  ✓ network failure clears the submitted code while prefilling the submitted name (5 ms)
+  ✓ pasting a whole invite message into the code field keeps the code (spec 093) (4 ms)
+  ✓ Global track has no paste button (2 ms)
+  ✓ China track paste button fills the code from a copied invite message (9 ms)
+  ✓ China track paste button explains when the clipboard has no code (5 ms)
+  ✓ entering a valid typed code clears the earlier empty-clipboard notice (6 ms)
+  ✓ entering a valid native pasted invite clears the earlier empty-clipboard notice (6 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.529 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i.

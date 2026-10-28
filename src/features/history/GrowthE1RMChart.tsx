@@ -9,11 +9,11 @@ import { getLocale, t } from '@/i18n';
 
 import { growthChartGeometry, growthValueDomain, growthChartDateAxis, plotPoint } from './charts/growth-geometry';
 
-export function GrowthE1RMChart({ samples, rawEligiblePoints, onSelect, selectedPointId }: {
+export function GrowthE1RMChart({ samples, rawEligiblePoints = [], onSelect, selectedPointId }: {
   selectedPointId?: string | null;
   onSelect?: (sample: E1RMSample) => void;
-  samples: readonly E1RMSample[];
-  rawEligiblePoints: readonly E1RMSample[];
+  samples: readonly (Pick<E1RMSample, 'date' | 'valueKg'> & Partial<Pick<E1RMSample, 'sampleId'>>)[];
+  rawEligiblePoints?: readonly E1RMSample[];
 }) {
   const colors = useColors();
   const gradientId = `growth-area-${useId().replace(/:/g, '')}`;
@@ -40,7 +40,7 @@ export function GrowthE1RMChart({ samples, rawEligiblePoints, onSelect, selected
       {geometry.raw.map((point, index) => <Path key={rawEligiblePoints[index].sampleId} d={point.diamond} fill={point.origin === 'imported' ? colors.textTertiary : colors.chartLine} opacity={0.35} />)}
       {samples.slice(0, -1).map(sample => {
         const point = plotPoint(sample.date, sample.valueKg, axis, domain);
-        return <Circle key={sample.sampleId} cx={point.x} cy={point.y} r={3.2} fill={colors.surfaceCard} stroke={colors.chartLine} strokeWidth={1.2} />;
+        return <Circle key={sample.sampleId ?? sample.date.getTime()} cx={point.x} cy={point.y} r={3.2} fill={colors.surfaceCard} stroke={colors.chartLine} strokeWidth={1.2} />;
       })}
       {current ? <>
         <Path d={current.guide} stroke={colors.gold500} strokeOpacity={0.6} strokeWidth={1} strokeDasharray={[2, 3]} vectorEffect="non-scaling-stroke" />

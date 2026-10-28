@@ -2,9 +2,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
-import { font, radius, spacing, useColors } from '@/design';
+import { font, MeetPRMark, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
-import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 
 export function GrowthScreenHeader({ unreadCount, onOpenChat }: { unreadCount: number; onOpenChat: () => void }) {
   const colors = useColors();
@@ -24,6 +23,5 @@ export function GrowthScreenHeader({ unreadCount, onOpenChat }: { unreadCount: n
       </Pressable>
     </View>
     <Text style={{ ...font.display(34), color: colors.textPrimary }}>{t('student.trainingHistoryView.copy013')}</Text>
-    <Text style={{ ...font.body(12), color: colors.textFaint, marginTop: -spacing.space2 }}>{t('student.trainingHistoryView.copy014')}</Text>
   </View>;
 }

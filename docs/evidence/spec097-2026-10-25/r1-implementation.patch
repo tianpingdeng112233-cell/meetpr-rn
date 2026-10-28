@@ -1,0 +1,174 @@
+--- a/src/features/settings/SettingsPage.tsx
++++ b/src/features/settings/SettingsPage.tsx
+@@ -1,6 +1,5 @@
+ import type { PropsWithChildren } from 'react';
+-import { Modal, Platform, ScrollView, Text, View } from 'react-native';
+-import * as Application from 'expo-application';
++import { Modal, ScrollView, Text, View } from 'react-native';
+ import { MaterialCommunityIcons } from '@expo/vector-icons';
+ import { Screen, font, spacing, useColors } from '@/design';
+ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+@@ -8,8 +7,6 @@
+ 
+ export function SettingsPage({ title, busy, onClose, children }: PropsWithChildren<{ title: string; busy: boolean; onClose: () => void }>) {
+   const colors = useColors();
+-  const version = Platform.OS === 'android' && Application.nativeApplicationVersion && Application.nativeBuildVersion
+-    ? t('settings.version', [Application.nativeApplicationVersion, Application.nativeBuildVersion]) : null;
+   return <Modal visible animationType="slide" onRequestClose={busy ? () => undefined : onClose}>
+     <Screen>
+       <View style={{ minHeight: 56, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center' }}>
+@@ -19,10 +16,7 @@
+         <Text accessibilityRole="header" style={{ flex: 1, textAlign: 'center', ...font.body(16, 'bold'), color: colors.textPrimary }}>{title}</Text>
+         <View style={{ width: 44 }} />
+       </View>
+-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.base, paddingBottom: 32, gap: 20 }}>
+-        {children}
+-        {version ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{version}</Text> : null}
+-      </ScrollView>
++      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: spacing.base, paddingBottom: 32, gap: 20 }}>{children}</ScrollView>
+     </Screen>
+   </Modal>;
+ }
+--- a/src/features/settings/__tests__/settings-page.test.tsx
++++ b/src/features/settings/__tests__/settings-page.test.tsx
+@@ -1,50 +0,0 @@
+-import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+-import { Platform, ScrollView, Text } from 'react-native';
+-import * as Application from 'expo-application';
+-import { setLocaleOverride, type Locale } from '@/i18n';
+-import { SettingsPage } from '../SettingsPage';
+-
+-jest.mock('expo-application', () => ({ nativeApplicationVersion: '0.1.0', nativeBuildVersion: '4' }));
+-jest.mock('@react-native-async-storage/async-storage', () =>
+-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+-
+-let tree: ReactTestRenderer;
+-beforeEach(() => {
+-  jest.replaceProperty(Platform, 'OS', 'android');
+-  setLocaleOverride('zh');
+-});
+-afterEach(() => {
+-  act(() => tree?.unmount());
+-  jest.restoreAllMocks();
+-  setLocaleOverride(null);
+-});
+-async function renderPage() {
+-  await act(async () => {
+-    tree = create(<SettingsPage title="Settings" busy={false} onClose={() => {}}><Text>Preference</Text></SettingsPage>);
+-  });
+-}
+-
+-test.each<[Locale, string]>([
+-  ['zh', '版本 0.1.0 (4)'], ['en', 'Version 0.1.0 (4)'], ['zh-Hant', '版本 0.1.0 (4)'],
+-])('Android settings end with the localized native version (%s)', async (locale, expected) => {
+-  setLocaleOverride(locale);
+-  await renderPage();
+-  const rows = tree.root.findByType(ScrollView).findAllByType(Text);
+-  expect(rows.map(row => row.props.children)).toEqual(['Preference', expected]);
+-  expect(rows[1].props.onPress).toBeUndefined();
+-  expect(rows[1].props.style).toEqual(expect.objectContaining({ textAlign: 'center', fontSize: 12 }));
+-});
+-
+-test.each(['nativeBuildVersion', 'nativeApplicationVersion'] as const)('missing %s hides the version row', async field => {
+-  jest.replaceProperty(Application, field, null);
+-  await renderPage();
+-  expect(tree.root.findByType(ScrollView).findAllByType(Text).map(row => row.props.children)).toEqual(['Preference']);
+-});
+-
+-test('iOS settings do not show an Android version row', async () => {
+-  jest.replaceProperty(Platform, 'OS', 'ios');
+-  await renderPage();
+-  expect(tree.root.findByType(ScrollView).findAllByType(Text).map(row => row.props.children)).toEqual(['Preference']);
+-});
+--- a/src/features/profile/ProfileSettingsScreen.tsx
++++ b/src/features/profile/ProfileSettingsScreen.tsx
+@@ -1,5 +1,6 @@
+ import { useState } from 'react';
+-import { Text } from 'react-native';
++import { Platform, Text } from 'react-native';
++import * as Application from 'expo-application';
+ import { useQueryClient } from '@tanstack/react-query';
+ import { useOnboardingProfile } from '@/api/domains/onboarding';
+ import { useSessionStore } from '@/api/session';
+@@ -37,6 +38,8 @@
+   const studentId = useSessionStore(state => state.user?.id ?? '');
+   const profile = useOnboardingProfile(studentId);
+   const colors = useColors();
++  const version = Platform.OS === 'android' && Application.nativeApplicationVersion && Application.nativeBuildVersion
++    ? t('settings.version', [Application.nativeApplicationVersion, Application.nativeBuildVersion]) : null;
+   const labelStyle = { ...font.body(13), color: colors.textMuted, marginLeft: spacing.xs, marginBottom: -spacing.sm };
+   return <ProfilePage title={t('student.rn.profile.settings')}>
+     <Text style={labelStyle}>{t('student.rn.profile.preferences')}</Text>
+@@ -45,5 +48,6 @@
+     <AccountSecuritySection studentId={studentId} />
+     {profile.isError ? <ProfilePageStatus pending={false} failed retry={() => void profile.refetch()} /> : null}
+     <SignOut />
++    {version ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{version}</Text> : null}
+   </ProfilePage>;
+ }
+--- a/src/features/profile/__tests__/profile-pages.test.tsx
++++ b/src/features/profile/__tests__/profile-pages.test.tsx
+@@ -1,11 +1,12 @@
+ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+-import { Text, TextInput, Modal, StyleSheet } from 'react-native';
++import { Text, TextInput, Modal, StyleSheet, Platform, ScrollView } from 'react-native';
++import * as Application from 'expo-application';
+ import { onboardingRepository, OnboardingProfileSchema, type OnboardingProfile } from '@/api/domains/onboarding';
+ import { bindRepository } from '@/api/domains/bind';
+ import { useSessionStore } from '@/api/session';
+-import { setLocaleOverride, t } from '@/i18n';
++import { setLocaleOverride, t, type Locale } from '@/i18n';
+ import { ProfileAboutScreen } from '../ProfileAboutScreen';
+ import { ProfileHealthScreen } from '../ProfileHealthScreen';
+ import { ProfileSettingsScreen } from '../ProfileSettingsScreen';
+@@ -21,6 +22,7 @@
+ import type { ReactNode } from 'react';
+ import { ProfileEditor } from '../ProfileEditor';
+ 
++jest.mock('expo-application', () => ({ nativeApplicationVersion: '0.1.0', nativeBuildVersion: '4' }));
+ jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+ jest.mock('@react-native-community/netinfo', () => jest.requireActual('@react-native-community/netinfo/jest/netinfo-mock'));
+ const mockPush = jest.fn();
+@@ -101,6 +103,38 @@
+   act(() => renderer.unmount()); await mount(<ProfileSettingsScreen />);
+   expect(renderer.root.findAll(node => node.props.accessibilityState?.selected && typeof node.props.onPress === 'function').some(node => node.findAllByType(Text).some(text => text.props.children === 'Dark'))).toBe(true);
+ });
++test.each<[Locale, string]>([
++  ['zh', '版本 0.1.0 (4)'], ['en', 'Version 0.1.0 (4)'], ['zh-Hant', '版本 0.1.0 (4)'],
++])('Android main settings end with the localized native version (%s)', async (locale, expected) => {
++  jest.replaceProperty(Platform, 'OS', 'android');
++  setLocaleOverride(locale);
++  await mount(<ProfileSettingsScreen />);
++  const rows = renderer.root.findByType(ScrollView).findAllByType(Text);
++  const version = rows[rows.length - 1];
++  expect(version.props.children).toBe(expected);
++  expect(rows.filter(row => row.props.children === expected)).toHaveLength(1);
++  expect(version.props.onPress).toBeUndefined();
++  expect(StyleSheet.flatten(version.props.style)).toEqual(expect.objectContaining({ textAlign: 'center', fontSize: 12, color: resolveColors('light').textMuted }));
++});
++test.each(['nativeBuildVersion', 'nativeApplicationVersion'] as const)('main settings hide the version when %s is missing', async field => {
++  jest.replaceProperty(Platform, 'OS', 'android');
++  jest.replaceProperty(Application, field, null);
++  await mount(<ProfileSettingsScreen />);
++  expect(texts().some(text => typeof text === 'string' && text.startsWith('Version '))).toBe(false);
++});
++test('iOS main settings do not show an Android version row', async () => {
++  jest.replaceProperty(Platform, 'OS', 'ios');
++  await mount(<ProfileSettingsScreen />);
++  expect(texts()).not.toContain('Version 0.1.0 (4)');
++});
++test('rest timer subpage does not show the app version', async () => {
++  jest.replaceProperty(Platform, 'OS', 'android');
++  await mount(<ProfileSettingsScreen />);
++  await press('Rest between sets');
++  const subpage = renderer.root.findByType(Modal);
++  expect(subpage.findAllByType(Text).map(node => node.props.children)).toContain('Rest between sets');
++  expect(subpage.findAllByType(Text).map(node => node.props.children)).not.toContain('Version 0.1.0 (4)');
++});
+ test.each(['Change password', 'Export training data', 'Delete account'])('Settings opens the unchanged %s modal', async label => {
+   await mount(<ProfileSettingsScreen />); await press(label);
+   expect(renderer.root.findAllByType(ProfileModal)).toHaveLength(1);

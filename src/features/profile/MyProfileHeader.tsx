@@ -1,9 +1,8 @@
 import { Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { font, useColors } from '@/design';
+import { font, MeetPRMark, useColors } from '@/design';
 import { t } from '@/i18n';
-import { MeetPRMark } from '@/features/dashboard/MeetPRMark';
 
 export function MyProfileHeader({ unreadCount = 0, onOpenChat }: { unreadCount?: number; onOpenChat?: () => void }) {
   const colors = useColors();

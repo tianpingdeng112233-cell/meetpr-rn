@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { useState } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { StyleSheet, Text, TextInput, Vibration } from 'react-native';
 import { Card, colors } from '@/design';
 import { setLocaleOverride, t } from '@/i18n';
 import { day, set } from '@/domain/plan/test-fixtures';
 import type { Exercise } from '@/api/domains/exercises';
 import type { SetLog } from '@/api/domains/sets';
-import { synthesizeDrafts } from '../drafts';
+import { synthesizeDrafts, addStudentExercise } from '../drafts';
+import { AccessoryLogCard, type AccessoryEdits } from '../AccessoryLogCard';
 import { WorkoutBody } from '../WorkoutBody';
 import { createExerciseMetadataResolver } from '../exercise-metadata';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
@@ -153,4 +154,74 @@ test.each(['en', 'zh'] as const)('Last uses the current bodyweight flag and copi
     // Copying the same reps must not dirty a completed BW row with the history's weight.
     expect(button(t('student.accessory.undo', [3]))).toBeDefined();
   }
+});
+
+
+test('inline completion vibrates once immediately; cancellation and disabled rows do not vibrate', async () => {
+  const vibrate = jest.spyOn(Vibration, 'vibrate').mockImplementation(() => {}).mockClear();
+  await mount('accessory');
+  await act(async () => button('Complete set 1').props.onPress());
+  expect(vibrate).toHaveBeenCalledTimes(1);
+  expect(vibrate).toHaveBeenCalledWith(15);
+  await act(async () => button('Complete set 2').props.onPress());
+  expect(vibrate).toHaveBeenCalledTimes(1);
+  await mount('accessory', true, true, [{ ...prior(0, '80', '2026-10-14'), plan_exercise_id: 'exercise' }]);
+  await act(async () => button('Undo set 1').props.onPress());
+  expect(vibrate).toHaveBeenCalledTimes(1);
+  vibrate.mockRestore();
+});
+
+test('student-added card records inline with a day-bound adhoc request and offers no video or complete-all', async () => {
+  const save = jest.fn(async () => {});
+  const draft = addStudentExercise(planDay, 'curl', [])!;
+  await act(async () => { renderer = create(<WorkoutBody exercises={[]} drafts={[draft]} editable recording startLoading={false} onStart={() => {}}
+    suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[]} onAccessorySave={save}
+    studentId="student" onRecord={onRecord} onVideo={() => {}} onToggleComplete={() => {}} resolveExerciseMetadata={() => ({ name: 'Curl', rawFamily: null, competitionFamily: null, exerciseType: 'accessory' })} />); });
+  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain('Added by you');
+  expect(button('Set 1 details')?.props.disabled).toBe(true);
+  await act(async () => input('Set 1 weight').props.onChangeText('12.5'));
+  await act(async () => input('Set 1 reps').props.onChangeText('12'));
+  await act(async () => button('Complete set 1').props.onPress());
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ kind: 'added' }), expect.objectContaining({ exercise_id: 'curl', plan_day_id: 'day', logged_date: expect.any(String), weight_kg: '12.5', reps: 12, completed: true }), 'single');
+  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain('Complete all as planned');
+});
+
+
+test('busy duplicate does not add tick vibration; batch retains button feedback without a 15ms tick and failures keep input', async () => {
+  const vibrate = jest.spyOn(Vibration, 'vibrate').mockImplementation(() => {}).mockClear();
+  let reject!: (reason: Error) => void;
+  const save = jest.fn(() => new Promise<void>((_resolve, rejectSave) => { reject = rejectSave; }));
+  await act(async () => { renderer = create(<AccessoryLogCard drafts={synthesizeDrafts(planDay, [])} previousLogs={[]} unit="kg" studentId="student" onRecord={() => {}} onSave={save} />); });
+  await act(async () => input('Set 1 weight').props.onChangeText('95'));
+  await act(async () => { button('Complete set 1').props.onPress(); button('Complete set 1').props.onPress(); });
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(vibrate).toHaveBeenCalledTimes(1);
+  await act(async () => reject(new Error('Offline')));
+  expect(input('Set 1 weight').props.value).toBe('95');
+  save.mockImplementation(async () => {});
+  const batch = renderer.root.findAll(node => node.props.accessibilityLabel === 'Complete all as planned' && typeof node.props.onPress === 'function').at(-1)!;
+  vibrate.mockClear();
+  await act(async () => batch.props.onPress());
+  expect(vibrate).not.toHaveBeenCalledWith(15);
+  expect(vibrate).toHaveBeenCalledTimes(1);
+  expect(vibrate).toHaveBeenCalledWith(10);
+  vibrate.mockRestore();
+});
+
+test('inline drafts survive switching cards and preserve values in both days', async () => {
+  let switchDay!: (day: string) => void;
+  function Cards() {
+    const [selected, select] = useState('a'); switchDay = select;
+    const [values, setValues] = useState<AccessoryEdits>({});
+    const draft = addStudentExercise(day(selected), 'curl', [])!;
+    return <AccessoryLogCard key={selected} drafts={[draft]} previousLogs={[]} unit="kg" studentId="student" onRecord={() => {}} inlineEdits={{ values, onChange: (id, value) => setValues(current => ({ ...current, [id]: value })) }} />;
+  }
+  await act(async () => { renderer = create(<Cards />); });
+  await act(async () => input('Set 1 weight').props.onChangeText('12.5'));
+  await act(async () => switchDay('b'));
+  await act(async () => input('Set 1 weight').props.onChangeText('20'));
+  await act(async () => switchDay('a'));
+  expect(input('Set 1 weight').props.value).toBe('12.5');
+  await act(async () => switchDay('b'));
+  expect(input('Set 1 weight').props.value).toBe('20');
 });
