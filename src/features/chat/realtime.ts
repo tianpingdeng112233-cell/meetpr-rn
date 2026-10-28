@@ -1,3 +1,4 @@
+import { isDemoMode } from '@/demo/mode';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { API_BASE_URL } from '@/api/client';
@@ -29,6 +30,7 @@ export const chatRealtime = {
   observe(listener: () => void) { observers.add(listener); return () => { observers.delete(listener); }; },
   subscribe(listener: (event: RealtimeEvent) => void) { events.add(listener); return () => { events.delete(listener); }; },
   start() {
+    if (isDemoMode()) { teardown(); return () => {}; }
     let foreground = AppState.currentState === 'active';
     function update() {
       const session = useSessionStore.getState();

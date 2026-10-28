@@ -1,3 +1,4 @@
+import { isDemoMode } from '@/demo/mode';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { UploadCompleteRequest } from '@/api/domains/uploads';
@@ -45,6 +46,10 @@ export async function uploadFileParts(
   partUrls: readonly { part_number: number; url: string }[],
   options: MultipartOptions,
 ): Promise<UploadCompleteRequest['parts']> {
+  if (isDemoMode()) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require('@/demo/backend') as typeof import('@/demo/backend')).uploadDemoParts(fileUri, partUrls, options);
+  }
   const file = new File(fileUri);
   const totalBytes = file.size;
   if (totalBytes <= 0) throw new Error('Video file is empty');

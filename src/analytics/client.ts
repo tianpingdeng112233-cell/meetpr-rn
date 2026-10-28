@@ -1,3 +1,4 @@
+import { isDemoMode } from '@/demo/mode';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import Constants from 'expo-constants';
@@ -100,6 +101,11 @@ export async function configure(
   runtime?.flusher.stop();
   runtime?.appStateSubscription.remove();
   runtime?.networkSubscription();
+
+  if (isDemoMode()) {
+    runtime = null;
+    return { anonId: 'demo', privacyNoticeConfirmed: true, enabled: false };
+  }
 
   const storage = options.storage ?? AsyncStorage;
   const uuidFactory = options.uuidFactory ?? createUUID;
