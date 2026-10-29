@@ -21,11 +21,36 @@ const numeric = (
   value == null || value === '' || !Number.isFinite(Number(value))
     ? undefined
     : Number(value);
+/** Explicit wire modes take precedence over the legacy note marker. */
+export function effectiveLoadMode(set: PlanSet): PlanSet['load_mode'] {
+  return set.load_mode ?? (/自重|bodyweight/i.test(set.coach_note ?? '') ? 'bodyweight' : undefined);
+}
+
+export function withoutBodyweightMarker(note: string | null | undefined): string | null {
+  return note?.replace(/自重|bodyweight/gi, '').trim() || null;
+}
+
 export function decodePrescription(set: PlanSet): Prescription {
   const result: Prescription = {
     reps: set.target_reps,
     repsMax: set.target_reps_max ?? undefined,
   };
+  const mode = effectiveLoadMode(set);
+  if (mode === 'bodyweight' || mode === 'free_weight') {
+    result.loadMode = mode;
+    for (const [kind, raw] of [['rpe', set.target_rpe], ['rir', set.rir_target], ['pct', set.target_pct]] as const) {
+      const value = numeric(raw);
+      if (value !== undefined) { result.intensity = { kind, value }; break; }
+    }
+    // intensity_mode/target_value are old-client projections, never targets for these modes.
+    const low = numeric(set.rpe_low);
+    const high = numeric(set.rpe_high);
+    if (!result.intensity && low !== undefined && high !== undefined)
+      result.intensity = { kind: 'rpeRange', low, high };
+    if (result.intensity?.kind === 'pct') result.percentageAnchor =
+      set.pct_anchor === 'e1rm' || set.pct_anchor === 'top_set' ? set.pct_anchor : 'registered_1rm';
+    return result;
+  }
   if (set.load_mode == null) {
     const value = numeric(set.target_value);
     if (set.intensity_mode === 'weight') result.weightKg = value;
@@ -112,6 +137,8 @@ export function prescribed(
     p.repsMax == null
       ? `${p.reps}`
       : `${p.reps}${p.loadMode ? '–' : '-'}${p.repsMax}`;
+  if (p.loadMode === 'free_weight' || p.loadMode === 'bodyweight')
+    return `${reps}${p.intensity ? ` · ${intensityText(p.intensity)}` : ''} · ${t(p.loadMode === 'bodyweight' ? 'loadTypes.bodyweight' : 'loadTypes.freeWeight')}`;
   if (!p.loadMode && p.weightKg !== undefined)
     return `${p.weightKg}kg x ${reps}`;
   if (p.intensity?.kind === 'weightRange')

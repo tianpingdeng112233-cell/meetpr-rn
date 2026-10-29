@@ -1,3 +1,5 @@
+import { actualWeightText } from './set-log-input';
+import { LoadTypeSummary } from './LoadTypeSummary';
 import { CoachedSetLogRequestSchema } from '@/api/domains/sets';
 import { gymDayText, formatWeight, normalizeDecimalInput, parseFiniteDecimal, plateLoadout } from './policy';
 import { VideoAttachmentControls } from './video-upload/VideoAttachmentControls';
@@ -48,7 +50,9 @@ type Props = {
   }) => Promise<void>;
 };
 
-function Stepper({ label, onChange, stepLabel, value, unit, onOpenPad, automatic = false, editable }: {
+function Stepper({ label, onChange, stepLabel, value, unit, onOpenPad, automatic = false, editable, invalid = false, placeholder }: {
+  invalid?: boolean;
+  placeholder?: string;
   label: string;
   onChange: (delta: number) => void;
   stepLabel: string;
@@ -70,13 +74,13 @@ function Stepper({ label, onChange, stepLabel, value, unit, onOpenPad, automatic
   return (
     <View style={styles.stepper}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionLabel, styles.compactSectionLabel]}>{label}</Text>
+        <Text style={[styles.sectionLabel, styles.compactSectionLabel, invalid && { color: colors.danger }]}>{label}</Text>
         <Text style={[styles.stepLabel, styles.compactStepLabel]}>{stepLabel}</Text>
       </View>
       <View style={styles.stepperRow}>
         {button(-1)}
         <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{ text: `${value} ${unit}` }}
-          disabled={!editable} onPress={onOpenPad} onLayout={event => setWidth(event.nativeEvent.layout.width)} style={styles.valueBox}>
+          disabled={!editable} onPress={onOpenPad} onLayout={event => setWidth(event.nativeEvent.layout.width)} style={[styles.valueBox, invalid && { borderWidth: 1, borderColor: colors.danger }]}>
           {automatic && width > 0 ? (
             <View pointerEvents="none" style={StyleSheet.absoluteFill}>
               <Svg width={width} height={spacing.xxl}>
@@ -86,7 +90,7 @@ function Stepper({ label, onChange, stepLabel, value, unit, onOpenPad, automatic
             </View>
           ) : null}
           <View style={styles.valueContents}>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[styles.stepperValue, automatic && { color: colors.textSecondary }]}>{value || t('coach.videoFeedback.missingValue')}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={[styles.stepperValue, automatic && { color: colors.textSecondary }]}>{value || placeholder || t('coach.videoFeedback.missingValue')}</Text>
             <Text style={styles.stepperUnit}>{unit}</Text>
           </View>
           {automatic ? <Text style={styles.automaticBadge}>{t('student.todayWorkoutTypes.copy027')}</Text> : null}
@@ -117,8 +121,11 @@ export function SetEntrySheet({
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const prescription = decodePrescription(draft.planSet);
+  const bodyweight = prescription.loadMode === 'bodyweight';
+  const freeWeight = prescription.loadMode === 'free_weight';
+  const [attempted, setAttempted] = useState(false);
   const allowedSuggestion =
-    !draft.kind && (!prescription.loadMode || prescription.intensity?.kind === 'pct')
+    !draft.kind && !bodyweight && !freeWeight && (!prescription.loadMode || prescription.intensity?.kind === 'pct')
       ? suggestion
       : null;
   const seed = draft.kind ? draft.weightText : entryPrefill(
@@ -155,13 +162,12 @@ export function SetEntrySheet({
     });
   }, [allowedSuggestion]);
 
-  const validWeight =
-    parseFiniteDecimal(weightText) !== null &&
-    (parseFiniteDecimal(weightText) ?? -1) >= 0;
+  const storedWeight = actualWeightText(weightText, draft.planSet);
+  const validWeight = parseFiniteDecimal(storedWeight) !== null && (parseFiniteDecimal(storedWeight) ?? -1) >= 0;
   const parsedWeight = parseFiniteDecimal(weightText) ?? 0;
   const loadout = plateLoadout(parsedWeight, collarOn);
   const rpe = parseFiniteDecimal(rpeText) ?? 8;
-  const weightFloor = draft.exercise.is_main_lift ? 20 : 0;
+  const weightFloor = draft.exercise.is_main_lift && !bodyweight && !freeWeight ? 20 : 0;
   const isAutomatic = Boolean(activeSuggestion?.percentage) && !weightEntry.userEdited;
   const caption = draft.kind ? null : suggestion?.percentage ? suggestion.label : suggestionReason
     ? prescription.intensity?.kind === 'pct' ? suggestionReason : t('student.setEntrySheet.copy002', [suggestionReason])
@@ -175,13 +181,15 @@ export function SetEntrySheet({
     dispatchWeightEntry({ type: 'userChanged', value: next });
   };
   const save = async (failed: boolean) => {
-    if (!editable || savingRef.current || !validWeight) return;
+    if (!editable || savingRef.current) return;
+    setAttempted(true);
+    if (!validWeight) return;
     savingRef.current = true;
     setSaving(true);
     try {
       await onSave({
         stableSetId: draft.stableSetId,
-        weightText: normalizeDecimalInput(weightText),
+        weightText: normalizeDecimalInput(storedWeight),
         repsText: repsText.trim(),
         rpeText: normalizeDecimalInput(rpeText),
         failed,
@@ -226,7 +234,7 @@ export function SetEntrySheet({
                   scrolledToVideo.current = true;
                 }
               }}>
-              {draft.exercise.is_main_lift ? (
+              {draft.exercise.is_main_lift && !bodyweight ? (
                 <View style={styles.plateSection}>
                   <PlateVisual totalKg={parsedWeight} hasCollar={collarOn} height={108} />
                   <View style={styles.plateTop}>
@@ -241,8 +249,9 @@ export function SetEntrySheet({
                 </View>
               ) : null}
               <View style={styles.controls}>
+                <LoadTypeSummary sets={[draft.planSet]} />
                 <View style={{ gap: spacing.space2 }}>
-                  <Stepper label={t('student.setEntrySheet.copy001')} stepLabel="± 2.5" unit="KG" value={weightText}
+                  <Stepper label={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg']) : t('student.setEntrySheet.copy001')} invalid={attempted && !validWeight} placeholder={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalPlaceholder' : 'loadTypes.requiredPlaceholder') : undefined} stepLabel="± 2.5" unit="KG" value={weightText}
                     editable={editable} automatic={isAutomatic} onOpenPad={() => setNumberPad('weight')}
                     onChange={direction => updateWeight(String(direction < 0 ? Math.max(weightFloor, parsedWeight - TRAINING_LIMITS.weightStepKg) : parsedWeight + TRAINING_LIMITS.weightStepKg))} />
                   {caption ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.caption}>{caption}</Text> : null}
@@ -276,7 +285,7 @@ export function SetEntrySheet({
                       plan_exercise_id: draft.exercise.id,
                       logged_date: gymDayText(new Date()),
                       set_index: draft.setIndex,
-                      weight_kg: weightText.trim(),
+                      weight_kg: storedWeight.trim(),
                       reps: Number(repsText),
                       rpe: rpeText.trim() || null,
                       completed: draft.status === 'complete',
@@ -286,7 +295,7 @@ export function SetEntrySheet({
                   ensureSetLog={() =>
                     ensureSetLog({
                       stableSetId: draft.stableSetId,
-                      weightText: normalizeDecimalInput(weightText),
+                      weightText: normalizeDecimalInput(storedWeight),
                       repsText,
                       rpeText: normalizeDecimalInput(rpeText),
                       failed: draft.status === 'failed',
@@ -296,12 +305,13 @@ export function SetEntrySheet({
               </View>
             </Animated.ScrollView>
             <View style={styles.footer}>
-              <Pressable accessibilityRole="button" disabled={!editable || saving || !validWeight} accessibilityState={{ busy: saving, disabled: !editable || saving || !validWeight }} onPress={() => void save(false)}
+              {attempted && freeWeight && !weightText.trim() ? <Text accessibilityLiveRegion="polite" style={{ color: colors.danger, ...font.body(fontMetrics.size12) }}>{t('loadTypes.missingWeight', [draft.setIndex + 1])}</Text> : null}
+              <Pressable accessibilityRole="button" disabled={!editable || saving || (!validWeight && !freeWeight)} accessibilityState={{ busy: saving, disabled: !editable || saving || (!validWeight && !freeWeight) }} onPress={() => void save(false)}
                 style={({ pressed }) => [styles.completeButton, pressed && styles.footerPressed, !validWeight && styles.footerDisabled]}>
                 {saving ? <ActivityIndicator color={colors.ctaText} /> : <MaterialCommunityIcons color={colors.ctaText} name="check" size={20} />}
                 <Text style={styles.completeText}>{t('student.setEntrySheet.copy012')}</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" disabled={!editable || saving || !validWeight} accessibilityState={{ busy: saving, disabled: !editable || saving || !validWeight }} onPress={() => void save(true)}
+              <Pressable accessibilityRole="button" disabled={!editable || saving || (!validWeight && !freeWeight)} accessibilityState={{ busy: saving, disabled: !editable || saving || (!validWeight && !freeWeight) }} onPress={() => void save(true)}
                 style={({ pressed }) => [styles.failedButton, pressed && styles.footerPressed]}>
                 <MaterialCommunityIcons color={colors.textMuted} name="close" size={14} />
                 <Text style={styles.failedText}>{t('student.setEntrySheet.copy009')}</Text>

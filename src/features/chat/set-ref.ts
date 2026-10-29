@@ -1,5 +1,6 @@
 import { t } from '@/i18n';
 import { ChatSetRefSchema, type ChatMessage, type ChatSetRef } from '@/api/domains/chat';
+import { decodePrescription } from '@/domain/plan/prescription';
 
 // Frozen cross-client message wire copy. Never translate this protocol constant.
 const CANONICAL = { logged: '[训练分享]', planned: '[训练计划]', ordinal: '第', set: '组', plannedMarker: ' 计划' };
@@ -75,10 +76,13 @@ export function buildCandidates({ planDay, drafts, dayDate, exerciseNames, video
   for (const exercise of [...planDay.exercises].sort((a, b) => a.sort_order - b.sort_order)) {
     for (const set of [...exercise.sets].sort((a, b) => a.set_number - b.set_number)) {
       if (recorded.has(`${exercise.id}:${set.set_number - 1}`)) continue;
+      const prescription = decodePrescription(set);
+      const independentLoad = prescription.loadMode === 'free_weight' || prescription.loadMode === 'bodyweight';
       const source: SetRefSource = { source: 'planned', exerciseName: exerciseNames.get(exercise.exercise_id) ?? t('student.todayWorkoutView.copy011'),
         setNumber: set.set_number, setTotal: exercise.sets.length,
-        weightKg: set.load_mode == null ? (set.intensity_mode === 'weight' ? set.target_value : null) : set.target_weight ?? null,
-        rpe: set.load_mode == null ? (set.intensity_mode === 'rpe' ? set.target_value : null) : set.load_mode === 'rpe' ? set.target_rpe ?? null : null,
+        weightKg: independentLoad ? null : set.load_mode == null ? (set.intensity_mode === 'weight' ? set.target_value : null) : set.target_weight ?? null,
+        rpe: independentLoad ? prescription.intensity?.kind === 'rpe' ? String(prescription.intensity.value) : null
+          : set.load_mode == null ? (set.intensity_mode === 'rpe' ? set.target_value : null) : set.load_mode === 'rpe' ? set.target_rpe ?? null : null,
         reps: set.target_reps, repsMax: set.target_reps_max, dayDate, setLogId: null, planSetId: set.id };
       try { normalizeSetRef(source); candidates.push({ id: set.id, exerciseId: exercise.id, source }); } catch { /* iOS excludes invalid prescriptions. */ }
     }

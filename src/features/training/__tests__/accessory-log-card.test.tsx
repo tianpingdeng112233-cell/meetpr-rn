@@ -40,7 +40,7 @@ const input = (label: string) => renderer.root.findAllByType(TextInput).find(nod
 const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0];
 const heroText = () => renderer.root.findAllByType(Card)[0].findAllByType(Text).map(n => n.props.children);
 
-test('catalog accessories render editable prescription rows, same-session history, BW and video details; other hero states stay unchanged', async () => {
+test('catalog accessories render editable prescription rows, same-session history, explicit RIR and video details; other hero states stay unchanged', async () => {
   useVideoUploadStore.setState({ records: { 'student:one': { ...EMPTY_VIDEO_UPLOAD, status: 'uploading', localUri: 'file:///synthetic.mp4' } } });
   await mount('accessory');
   expect(input('Set 1 weight').props.value).toBe('80');
@@ -49,7 +49,7 @@ test('catalog accessories render editable prescription rows, same-session histor
   expect(input('Set 2 RPE').props.placeholder).toBe('8');
   expect(input('Set 2 RPE').props.value).toBe('');
   expect(button('Complete set 2').props.disabled).toBe(true);
-  expect(heroText()).toContain('BW');
+  expect(input('Set 3 weight').props.value).toBe('');
   expect(input('Set 3 RPE').props.placeholder).toBe('RIR 2');
   expect(button('Use last time for set 3').props.disabled).toBe(true);
   expect(button('Set 1 details').findAll(n => n.props.name === 'video-outline').length).toBeGreaterThan(0);
@@ -87,11 +87,11 @@ test('saving a set keeps every Last cell and unprescribed weight placeholder fro
   }
   await act(async () => { renderer = create(<TrainingSession />); });
   const lastText = () => [1, 2, 3].map(index => button(`Use last time for set ${index}`).findByType(Text).props.children);
-  expect(lastText()).toEqual(['70 × 10', '60 × 10', 'BW × 10']);
+  expect(lastText()).toEqual(['70 × 10', '60 × 10', '50 × 10']);
   expect(input('Set 2 weight').props.placeholder).toBe('60');
   await act(async () => button('Complete set 1').props.onPress());
   expect(button('Undo set 1')).toBeDefined();
-  expect(lastText()).toEqual(['70 × 10', '60 × 10', 'BW × 10']);
+  expect(lastText()).toEqual(['70 × 10', '60 × 10', '50 × 10']);
   expect(input('Set 2 weight').props.placeholder).toBe('60');
 });
 
@@ -133,16 +133,16 @@ test.each([2, 3])('completed set %s without recorded RPE has no coach placeholde
 });
 
 
-test.each(['en', 'zh'] as const)('Last uses the current bodyweight flag and copies only reps in %s', async locale => {
+test.each(['en', 'zh'] as const)('explicit RIR takes precedence over the legacy marker and Last copies weight in %s', async locale => {
   setLocaleOverride(locale);
   for (const historicalWeight of ['0', '90']) {
     const history = [{ ...prior(2, historicalWeight, '2026-09-01'), reps: 8 }, { ...prior(0, '0', '2026-09-01'), reps: 8 }];
     await mount('accessory', true, true, [], history);
-    const bodyweightLast = () => button(t('student.accessory.useLast', [3]));
-    expect(bodyweightLast().findByType(Text).props.children).toBe(locale === 'en' ? 'BW × 8' : '自重 × 8');
-    await act(async () => bodyweightLast().props.onPress());
+    const rirLast = () => button(t('student.accessory.useLast', [3]));
+    expect(rirLast().findByType(Text).props.children).toBe(`${historicalWeight} × 8`);
+    await act(async () => rirLast().props.onPress());
     expect(input(t('student.accessory.repsLabel', [3])).props.value).toBe('8');
-    expect(input(t('student.accessory.weightLabel', [3]))).toBeUndefined();
+    expect(input(t('student.accessory.weightLabel', [3])).props.value).toBe(historicalWeight);
     const weightedLast = button(t('student.accessory.useLast', [1]));
     expect(weightedLast.findByType(Text).props.children).toBe('0 × 8');
     await act(async () => weightedLast.props.onPress());
@@ -150,9 +150,9 @@ test.each(['en', 'zh'] as const)('Last uses the current bodyweight flag and copi
     expect(input(t('student.accessory.repsLabel', [1])).props.value).toBe('8');
     const saved = { ...prior(2, '0', '2026-10-10'), plan_exercise_id: 'exercise', reps: 8, rpe: null };
     await mount('accessory', true, true, [saved], history);
-    await act(async () => bodyweightLast().props.onPress());
-    // Copying the same reps must not dirty a completed BW row with the history's weight.
-    expect(button(t('student.accessory.undo', [3]))).toBeDefined();
+    await act(async () => rirLast().props.onPress());
+    // A different actual weight edits the saved row instead of cancelling it.
+    expect(button(t(historicalWeight === '0' ? 'student.accessory.undo' : 'student.accessory.complete', [3]))).toBeDefined();
   }
 });
 

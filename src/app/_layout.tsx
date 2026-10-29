@@ -1,3 +1,4 @@
+import { MinimumVersionGate } from '@/features/updates/MinimumVersionGate';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -188,5 +189,5 @@ export default function RootLayout() {
   }, [loaded, error]);
   // A failed font load falls back to the platform font instead of stranding startup.
   if (!loaded && !error) return null;
-  return <ThemeProvider><ThemedRoot /></ThemeProvider>;
+  return <ThemeProvider><MinimumVersionGate><ThemedRoot /></MinimumVersionGate></ThemeProvider>;
 }

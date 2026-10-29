@@ -7,6 +7,7 @@ import { showToast } from '@/design/Toast';
 import { append, type NumberPadField } from '@/design/number-pad';
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { t } from '@/i18n';
+import { effectiveLoadMode } from '@/domain/plan/prescription';
 import { accessoryLogRequest, accessoryRows, accessoryRowWritable, rowsToCompleteAll } from './accessory-quick-log';
 import type { SetLogInput } from './set-log-input';
 import type { WorkoutSetDraft } from './model';
@@ -43,6 +44,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
   const batch = useRef(false);
   const [batchBusy, setBatchBusy] = useState(false);
   const [showSkipped, setShowSkipped] = useState(false);
+  const [attempted, setAttempted] = useState<ReadonlySet<string>>(new Set());
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const saving = useRef(new Set<string>());
   const [busyRows, setBusyRows] = useState<ReadonlySet<string>>(new Set());
@@ -63,7 +65,9 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
   const isCancel = (index: number) => rows[index].status === 'complete' && fields.every(([field]) => inputFor(index)[field] === rows[index][field]);
   const saveRow = async (index: number) => {
     const row = rows[index];
-    if (readOnly || !onSave || batch.current || saving.current.has(row.stableSetId) || (!isCancel(index) && !accessoryRowWritable(row, inputFor(index)).writable)) return;
+    if (readOnly || !onSave || batch.current || saving.current.has(row.stableSetId)) return;
+    setAttempted(current => new Set(current).add(row.stableSetId));
+    if (!isCancel(index) && !accessoryRowWritable(row, inputFor(index)).writable) return;
     if (isCancel(index) && row.hasVideo) { showToast(t('student.accessory.videoWarning')); return; }
     if (!isCancel(index)) Vibration.vibrate(15);
     saving.current.add(row.stableSetId);
@@ -89,10 +93,10 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
   };
   const skippedCount = showSkipped ? rowsToCompleteAll(rows, Object.fromEntries(rows.map((row, index) => [row.stableSetId, inputFor(index)]))).skipped.length : 0;
   return <View style={{ gap: spacing.point6 }}>
-    <View style={{ flexDirection: 'row', gap: spacing.point6 }}>
+    {rows.some((_, index) => !['free_weight', 'bodyweight'].includes(effectiveLoadMode(drafts[index].planSet) ?? '')) ? <View style={{ flexDirection: 'row', gap: spacing.point6 }}>
       {[t('student.accessory.set'), t('student.accessory.last'), unit.toUpperCase(), t('student.setEntrySheet.copy003'), t('chat.rpeMetric'), t('student.workoutCompletionFlowView.copy003')].map((label, index) =>
         <Text key={index} style={{ ...column(index), ...font.mono(fontMetrics.size10), color: colors.textMuted, textAlign: 'center' }}>{label}</Text>)}
-    </View>
+    </View> : null}
     {rows.map((row, index) => {
       const input = inputFor(index);
       const validation = accessoryRowWritable(row, input);
@@ -100,6 +104,43 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
       const weightEdited = edits[row.stableSetId]?.revision === revision(index) && edits[row.stableSetId].weightEdited;
       const invalidFields = validation.invalidFields.filter(field => field !== 'weightText' || input.weightText !== '' || weightEdited || (showSkipped && row.status === 'pending'));
       const canAct = isCancel(index) || validation.writable;
+      const loadMode = effectiveLoadMode(drafts[index].planSet);
+      if (loadMode === 'free_weight' || loadMode === 'bodyweight') {
+        const weightError = validation.invalidFields.includes('weightText') && (attempted.has(row.stableSetId) || showSkipped || weightEdited);
+        const disabled = readOnly || batchBusy || busyRows.has(row.stableSetId);
+        const weightLabel = t(loadMode === 'bodyweight' ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', [unit]);
+        return <View key={row.stableSetId} style={{ gap: spacing.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.details', [row.setIndex + 1])} disabled={disabled} onPress={() => onRecord(drafts[index])} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
+              <Text style={{ ...font.body(fontMetrics.size12), color: colors.textPrimary }}>{t('loadTypes.set', [row.setIndex + 1])}</Text>
+            </Pressable>
+            <View style={{ flex: 2, gap: spacing.xs }}>
+              <Text style={{ ...font.body(fontMetrics.size11), color: weightError ? colors.danger : colors.textMuted }}>{weightLabel}</Text>
+              <TextInput ref={node => { inputs.current[`${row.stableSetId}:weightText`] = node; }}
+                onFocus={() => { setFocusedInput(`${row.stableSetId}:weightText`); onInputFocus?.(inputs.current[`${row.stableSetId}:weightText`]); }}
+                onBlur={() => { setFocusedInput(null); onInputFocus?.(null); }} accessibilityLabel={weightLabel} value={input.weightText}
+                placeholder={t(loadMode === 'bodyweight' ? 'loadTypes.optionalPlaceholder' : 'loadTypes.requiredPlaceholder')}
+                placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" editable={!disabled}
+                onChangeText={value => change(index, { weightText: filter(value, 'weight') })}
+                style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.sm, ...font.mono(fontMetrics.size13), color: colors.textPrimary, backgroundColor: colors.surfaceCard, borderWidth: 1, borderRadius: radius.inset, borderColor: weightError ? colors.danger : colors.borderStrong }} />
+            </View>
+            <View style={{ flex: 1, gap: spacing.xs }}>
+              <Text style={{ ...font.body(fontMetrics.size11), color: colors.textMuted }}>{t('student.setEntrySheet.copy004')}</Text>
+              <TextInput ref={node => { inputs.current[`${row.stableSetId}:repsText`] = node; }}
+                onFocus={() => { setFocusedInput(`${row.stableSetId}:repsText`); onInputFocus?.(inputs.current[`${row.stableSetId}:repsText`]); }}
+                onBlur={() => { setFocusedInput(null); onInputFocus?.(null); }} accessibilityLabel={t('student.accessory.repsLabel', [row.setIndex + 1])} value={input.repsText}
+                keyboardType="number-pad" editable={!disabled} onChangeText={value => change(index, { repsText: filter(value, 'reps') })}
+                style={{ minHeight: spacing.minimumHitTarget, textAlign: 'center', ...font.mono(fontMetrics.size13), color: colors.textPrimary, backgroundColor: colors.surfaceCard, borderWidth: 1, borderRadius: radius.inset, borderColor: attempted.has(row.stableSetId) && validation.invalidFields.includes('repsText') ? colors.danger : colors.borderStrong }} />
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel={t(isCancel(index) ? 'student.accessory.undo' : 'student.accessory.complete', [row.setIndex + 1])} disabled={disabled}
+              onPress={() => void saveRow(index)} style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.sm, justifyContent: 'center', borderRadius: radius.inset, backgroundColor: complete ? colors.success : colors.ctaFill }}>
+              {busyRows.has(row.stableSetId) ? <ActivityIndicator color={colors.inkOnCTAFill} /> : <Text style={{ ...font.body(fontMetrics.size12, 'bold'), color: colors.inkOnCTAFill }}>{complete ? '✓' : t('loadTypes.complete')}</Text>}
+            </Pressable>
+          </View>
+          {row.extraNote ? <Text style={{ ...font.body(fontMetrics.size12), color: colors.textMuted }}>{row.extraNote}</Text> : null}
+          {weightError && loadMode === 'free_weight' && !input.weightText.trim() ? <Text accessibilityLiveRegion="polite" style={{ ...font.body(fontMetrics.size12), color: colors.danger }}>{t('loadTypes.missingWeight', [row.setIndex + 1])}</Text> : null}
+        </View>;
+      }
       return <View key={row.stableSetId} style={{ gap: spacing.xs }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point6, paddingVertical: spacing.xs, borderRadius: radius.inset, backgroundColor: complete ? colors.successTint : colors.bgInset }}>
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.details', [row.setIndex + 1])} disabled={readOnly || added || batchBusy || busyRows.has(row.stableSetId)} onPress={() => onRecord(drafts[index])}

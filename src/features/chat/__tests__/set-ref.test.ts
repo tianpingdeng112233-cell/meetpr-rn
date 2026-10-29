@@ -107,3 +107,21 @@ test('an invalid recorded snapshot cannot enable sending or crash picker present
   expect(picker.canSend).toBe(false);
   expect(picker.selectedReference).toBeNull();
 });
+
+
+test.each([
+  { load_mode: 'bodyweight' as const },
+  { load_mode: 'free_weight' as const },
+  { coach_note: '自重' },
+  { load_mode: 'free_weight' as const, target_rpe: '8' },
+])('056 planned sharing ignores projections and keeps independent RPE: %j', fields => {
+  const planSet = set({ id, intensity_mode: 'rpe', target_value: '10.00', ...fields });
+  const planDay = day('day', { exercises: [{ id: 'exercise', exercise_id: 'squat', plan_day_id: 'day', sort_order: 0, is_main_lift: true, notes: null, sets: [planSet] }] });
+  const candidates = buildCandidates({ planDay, drafts: [], dayDate: '2026-09-05', exerciseNames: new Map(), videos: {} });
+  expect(candidates).toHaveLength(1);
+  expect(candidates[0].source.rpe).toBe('target_rpe' in fields ? '8' : null);
+  expect(candidates[0].source.weightKg).toBeNull();
+  const copy = displayFirstLine(normalizeSetRef(candidates[0].source));
+  expect(copy).not.toContain('RPE10');
+  if ('target_rpe' in fields) expect(copy).toContain('RPE8');
+});

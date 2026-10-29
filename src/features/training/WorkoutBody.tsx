@@ -1,3 +1,4 @@
+import { LoadTypeSummary } from './LoadTypeSummary';
 import { metricDisplay, POUNDS_PER_KG } from '@/domain/measurement';
 import type { ComponentProps } from 'react';
 import { AccessoryLogCard } from './AccessoryLogCard';
@@ -18,6 +19,8 @@ import type { SetLog } from '@/api/domains/sets';
 import { AppButton, Card, GradientFill, font, fontMetrics, motion, radius, spacing, useTheme } from '@/design';
 import {
   decodePrescription,
+  effectiveLoadMode,
+  withoutBodyweightMarker,
   intensityText,
   percentageAnchorText,
   prescribed,
@@ -159,13 +162,14 @@ export function WorkoutBody({
     });
     onExerciseCompleted?.(newlyCompleted[newlyCompleted.length - 1].exercise.id);
   }, [completedKey, onExerciseCompleted, progress.completed, progressFlow, reducedMotion]);
-  const accessory = recording && editable && !preview && active && isAccessoryExercise(resolveExerciseMetadata(active.exercise.exercise_id)?.exerciseType);
+  const loadTypeRows = active?.exercise.sets.some(set => ['free_weight', 'bodyweight'].includes(effectiveLoadMode(set) ?? ''));
+  const accessory = recording && editable && !preview && active && (loadTypeRows || isAccessoryExercise(resolveExerciseMetadata(active.exercise.exercise_id)?.exerciseType));
   const accessoryDrafts = accessory ? drafts.filter(draft => draft.exercise.id === active.exercise.id) : [];
   const relevantHistory = accessory ? historyLogs.filter(log => log.exercise_id === active.exercise.exercise_id && log.plan_exercise_id !== active.exercise.id && log.completed && !log.failed && !log.assumed) : [];
   const lastHistory = [...relevantHistory].sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
   const previousLogs = lastHistory ? relevantHistory.filter(log => log.logged_date === lastHistory.logged_date && log.plan_exercise_id === lastHistory.plan_exercise_id) : [];
   const p = active ? decodePrescription(active.planSet) : null;
-  const coachNotes = workoutCoachNotes(active?.planSet.coach_note, active?.exercise.notes);
+  const coachNotes = workoutCoachNotes(active && effectiveLoadMode(active.planSet) === 'bodyweight' ? withoutBodyweightMarker(active?.planSet.coach_note) : active?.planSet.coach_note, active?.exercise.notes);
   const lowerNote = coachNotes.setNote ?? (editable ? null : coachNotes.exerciseNote);
   const outcome = active ? suggestionForDraft(active) : null;
   const actualWeight =
@@ -187,8 +191,8 @@ export function WorkoutBody({
     const last = [...relevant].sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
     return last ? relevant.filter(log => log.logged_date === last.logged_date && log.plan_exercise_id === last.plan_exercise_id) : [];
   };
-  const inlineCard = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <AccessoryLogCard drafts={rows} previousLogs={previousFor(exercise)} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} readOnly={!editable}
-    onAddSet={editable && onAddSet ? () => onAddSet(exercise) : undefined} onRemoveSet={onRemoveSet} />;
+  const inlineCard = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}><LoadTypeSummary sets={exercise.sets} /><AccessoryLogCard drafts={rows} previousLogs={previousFor(exercise)} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} readOnly={!editable}
+    onAddSet={editable && onAddSet ? () => onAddSet(exercise) : undefined} onRemoveSet={onRemoveSet} /></View>;
   const extrasFor = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}>
     {rows.filter(row => row.kind === 'extra').map(draft => <View key={draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: spacing.point1, borderColor: colors.borderStrong, borderRadius: radius.inset, backgroundColor: isDraftTerminal(draft) ? colors.successTint : colors.surfaceCard }}>
       <Text style={{ ...font.body(fontMetrics.size11), color: colors.textMuted }}>{t('student.added.extra')}</Text>
@@ -239,7 +243,7 @@ export function WorkoutBody({
           {t('student.todayWorkoutScreen.copy014')} · {exercise.notes}
         </Text>
       ) : null}
-        {editable && !collapsed[exercise.id] && isAccessoryExercise(resolveExerciseMetadata(exercise.exercise_id)?.exerciseType) && exercise.id !== active?.exercise.id ? inlineCard(exercise, rows) : <>
+        {editable && !collapsed[exercise.id] && (isAccessoryExercise(resolveExerciseMetadata(exercise.exercise_id)?.exerciseType) || exercise.sets.some(set => ['free_weight', 'bodyweight'].includes(effectiveLoadMode(set) ?? ''))) && exercise.id !== active?.exercise.id ? inlineCard(exercise, rows) : <>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {[
               '#',
@@ -469,12 +473,12 @@ export function WorkoutBody({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           {accessory ? <View style={{ flex: 1, gap: spacing.xs }}>
             <Text style={{ color: colors.textPrimary, ...font.display(22) }}>{exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id))}</Text>
-            <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textMuted, ...font.mono(fontMetrics.size12) }}>{[
+            {loadTypeRows ? <LoadTypeSummary sets={active.exercise.sets} /> : <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: colors.textMuted, ...font.mono(fontMetrics.size12) }}>{[
               t('student.accessory.accessory'),
               accessoryRows({ drafts: accessoryDrafts, previousLogs, unit }).every(row => row.isBodyweight) ? t('student.accessory.bodyweight') : null,
               prescriptionSummary(accessoryDrafts.filter(draft => !draft.kind).map(draft => ({ prescription: decodePrescription(draft.planSet), resolution: suggestionForDraft(draft).percentage }))),
               t('student.todayWorkoutPresentation.copy003', [active.exerciseOrdinal + 1, groups.length]),
-            ].filter(Boolean).join(' · ')}</Text>
+            ].filter(Boolean).join(' · ')}</Text>}
           </View> : <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{preview?.title ?? (recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017'))}</Text>}
           {editable && active && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
             <View style={{ minHeight: 36, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard }}>
