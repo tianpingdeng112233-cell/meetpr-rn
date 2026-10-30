@@ -43,20 +43,20 @@ export function NumberPad({ field, initialValue, minimumWeight = 20, contextText
         </View> : null}
         <View style={{ flexDirection: 'row', alignItems: 'baseline' , paddingTop: 2, paddingHorizontal: 4, paddingBottom: 12 }}>
           <Text style={{ ...font.mono(12), letterSpacing: 0.72, color: colors.textMuted, flex: 1 }}>
-            {field === 'rpe' ? 'RPE' : t(field === 'weight' ? 'designSystem.numberPad.enterWeight' : 'designSystem.numberPad.enterReps')}
+            {field === 'rir' ? 'RIR' : field === 'rpe' ? 'RPE' : t(field === 'weight' ? 'designSystem.numberPad.enterWeight' : 'designSystem.numberPad.enterReps')}
           </Text>
           <Text style={{ ...font.mono(30, 'bold'), color: text ? colors.textPrimary : colors.textFaint, textAlign: 'right', minWidth: 80 }}>
             {text || initialValue}
           </Text>
           <Text style={{ ...font.mono(13, 'bold'), color: colors.textMuted, marginLeft: 5 }}>
-            {field === 'weight' ? 'KG' : field === 'rpe' ? '' : t('designSystem.repsUnit')}
+            {field === 'weight' ? 'KG' : field === 'rpe' || field === 'rir' ? '' : t('designSystem.repsUnit')}
           </Text>
         </View>
         <View style={{ gap: spacing.space2 }}>
           {keys.map((row, i) => (
             <View key={i} style={{ flexDirection: 'row', gap: spacing.space2 }}>
               {row.map(ch => {
-                const disabled = ch === '.' && field === 'reps';
+                const disabled = ch === '.' && (field === 'reps' || field === 'rir');
                 return (
                   <Pressable haptic="selection" key={ch} accessibilityRole="button" disabled={disabled}
                     accessibilityLabel={ch === '.' ? t('designSystem.numberPad.decimalPoint') : ch === '⌫' ? t('designSystem.numberPad.backspace') : ch}

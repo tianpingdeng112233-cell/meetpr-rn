@@ -1,3 +1,5 @@
+import { EffortToggleLabel } from './EffortToggleLabel';
+import { effortFields, effortKindFor, type EffortKind } from './actual-effort';
 import { actualWeightText } from './set-log-input';
 import { LoadTypeSummary } from './LoadTypeSummary';
 import { CoachedSetLogRequestSchema } from '@/api/domains/sets';
@@ -26,11 +28,13 @@ import { createWeightEntryState, weightEntryReducer } from './set-entry-weight';
 type Props = {
   studentId: string;
   initialCamera?: boolean;
+  allowsRIR?: boolean;
   ensureSetLog: (input: {
     stableSetId: string;
     weightText: string;
     repsText: string;
     rpeText: string;
+    effortKind?: EffortKind;
     failed: boolean;
   }) => Promise<string>;
   collarOn: boolean;
@@ -46,6 +50,7 @@ type Props = {
     weightText: string;
     repsText: string;
     rpeText: string;
+    effortKind?: EffortKind;
     failed: boolean;
   }) => Promise<void>;
 };
@@ -104,6 +109,7 @@ function Stepper({ label, onChange, stepLabel, value, unit, onOpenPad, automatic
 export function SetEntrySheet({
   studentId,
   initialCamera,
+  allowsRIR = false,
   ensureSetLog,
   collarOn,
   draft,
@@ -138,13 +144,14 @@ export function SetEntrySheet({
     draft.weightText,
     allowedSuggestion,
   );
-  initialWeight.weightText = seed;
+  initialWeight.weightText = seed || (bodyweight ? '0' : '');
   const [weightEntry, dispatchWeightEntry] = useReducer(
     weightEntryReducer,
     initialWeight,
   );
   const [repsText, setRepsText] = useState(draft.repsText);
-  const [rpeText, setRpeText] = useState(draft.rpeText || (draft.kind ? '' : '8'));
+  const [effortKind, setEffortKind] = useState(effortKindFor(draft, allowsRIR));
+  const [rpeText, setRpeText] = useState(draft.sourceLog?.actual_rir != null ? String(draft.sourceLog.actual_rir) : allowsRIR && !draft.sourceLog ? '' : draft.rpeText || (draft.kind || draft.sourceLog ? '' : '8'));
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [presented, setPresented] = useState(false);
@@ -183,7 +190,7 @@ export function SetEntrySheet({
   const save = async (failed: boolean) => {
     if (!editable || savingRef.current) return;
     setAttempted(true);
-    if (!validWeight) return;
+    if (!validWeight || (effortKind === 'rir' && rpeText !== '' && (!Number.isInteger(Number(rpeText)) || Number(rpeText) < 0 || Number(rpeText) > 9))) return;
     savingRef.current = true;
     setSaving(true);
     try {
@@ -192,6 +199,7 @@ export function SetEntrySheet({
         weightText: normalizeDecimalInput(storedWeight),
         repsText: repsText.trim(),
         rpeText: normalizeDecimalInput(rpeText),
+        effortKind,
         failed,
       });
     } catch {
@@ -251,7 +259,7 @@ export function SetEntrySheet({
               <View style={styles.controls}>
                 <LoadTypeSummary sets={[draft.planSet]} />
                 <View style={{ gap: spacing.space2 }}>
-                  <Stepper label={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg']) : t('student.setEntrySheet.copy001')} invalid={attempted && !validWeight} placeholder={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalPlaceholder' : 'loadTypes.requiredPlaceholder') : undefined} stepLabel="± 2.5" unit="KG" value={weightText}
+                  <Stepper label={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg']) : t('student.setEntrySheet.copy001')} invalid={attempted && !validWeight} placeholder={bodyweight || freeWeight ? bodyweight ? '0' : t('loadTypes.requiredPlaceholder') : undefined} stepLabel="± 2.5" unit="KG" value={weightText}
                     editable={editable} automatic={isAutomatic} onOpenPad={() => setNumberPad('weight')}
                     onChange={direction => updateWeight(String(direction < 0 ? Math.max(weightFloor, parsedWeight - TRAINING_LIMITS.weightStepKg) : parsedWeight + TRAINING_LIMITS.weightStepKg))} />
                   {caption ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.caption}>{caption}</Text> : null}
@@ -261,18 +269,18 @@ export function SetEntrySheet({
                   onChange={direction => setRepsText(String(Math.max(0, (Number(repsText) || 0) + direction * TRAINING_LIMITS.repsStep)))} />
                 <View style={{ gap: spacing.space2 }}>
                   <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionLabel}>{t('chat.rpeMetric')}</Text>
-                    <Text style={styles.stepLabel}>5–10 · 0.5</Text>
+                    {allowsRIR && !draft.sourceLog ? <Pressable style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} disabled={!editable} onPress={() => { setEffortKind(kind => kind === 'rpe' ? 'rir' : 'rpe'); setRpeText(''); setShowsRPEPlaceholder(true); }}><EffortToggleLabel label={effortKind.toUpperCase()} /></Pressable> : <Text style={styles.sectionLabel}>{effortKind.toUpperCase()}</Text>}
+                    <Text style={styles.stepLabel}>{effortKind === 'rir' ? '0–9 · 1' : '5–10 · 0.5'}</Text>
                   </View>
-                  <SetEntryRPEScale value={rpe} onChange={changeRPE} onGestureActive={setRpeGestureActive}
-                    placeholder={showsRPEPlaceholder ? t('student.todayWorkoutTypes.copy028') : undefined} />
+                  {effortKind === 'rir' ? <Stepper label="RIR" stepLabel="± 1" value={rpeText} unit="" editable={editable} onOpenPad={() => setNumberPad('rpe')} onChange={direction => setRpeText(String(Math.min(9, Math.max(0, (Number(rpeText) || 0) + direction))))} /> : <SetEntryRPEScale value={rpe} onChange={changeRPE} onGestureActive={setRpeGestureActive}
+                    placeholder={showsRPEPlaceholder || !rpeText ? t('student.todayWorkoutTypes.copy028') : undefined} />}
                 </View>
                 <VideoAttachmentControls
                   badge={{
                     exerciseName,
                     weightKg: parseFiniteDecimal(weightText),
                     reps: /^\d+$/.test(repsText.trim()) ? parseFiniteDecimal(repsText) : null,
-                    rpe: parseFiniteDecimal(rpeText),
+                    rpe: effortKind === 'rpe' ? parseFiniteDecimal(rpeText) : null,
                     setOrdinal: draft.setIndex + 1,
                     coachName: null,
                   }}
@@ -287,7 +295,7 @@ export function SetEntrySheet({
                       set_index: draft.setIndex,
                       weight_kg: storedWeight.trim(),
                       reps: Number(repsText),
-                      rpe: rpeText.trim() || null,
+                      ...effortFields(effortKind, rpeText),
                       completed: draft.status === 'complete',
                       failed: draft.status === 'failed',
                     })
@@ -298,6 +306,7 @@ export function SetEntrySheet({
                       weightText: normalizeDecimalInput(storedWeight),
                       repsText,
                       rpeText: normalizeDecimalInput(rpeText),
+                      effortKind,
                       failed: draft.status === 'failed',
                     })
                   }
@@ -318,9 +327,10 @@ export function SetEntrySheet({
               </Pressable>
             </View>
           </View>
-          {numberPad ? <NumberPad key={numberPad} field={numberPad} initialValue={numberPad === 'weight' ? weightText : repsText}
+          {numberPad ? <NumberPad key={numberPad} field={numberPad === 'rpe' && effortKind === 'rir' ? 'rir' : numberPad} initialValue={numberPad === 'weight' ? weightText : numberPad === 'rpe' ? rpeText : repsText}
             minimumWeight={weightFloor} onCancel={() => setNumberPad(null)} onCommit={value => {
               if (numberPad === 'weight') updateWeight(String(value));
+              else if (numberPad === 'rpe') setRpeText(String(value));
               else {
                 setRepsText(String(value));
                 updateWeight(weightText);

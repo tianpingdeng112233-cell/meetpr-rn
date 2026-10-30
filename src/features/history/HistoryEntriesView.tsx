@@ -167,7 +167,7 @@ function HistoryDayCard({ day }: { day: HistoryDay }) {
 
 /** iOS `StudentFormatting.result`: "142.5kg × 5 @ RPE 7.5". */
 function recordedSetText(row: SetLog): string {
-  return `${formatKg(Number(row.weight_kg))}kg × ${row.reps}${row.rpe === null ? '' : ` @ RPE ${formatKg(Number(row.rpe))}`}`;
+  return `${formatKg(Number(row.weight_kg))}kg × ${row.reps}${row.actual_rir != null ? ` @ RIR ${row.actual_rir}` : row.rpe === null ? '' : ` @ RPE ${formatKg(Number(row.rpe))}`}`;
 }
 
 /** iOS `HistorySetRow`: one row shape for prescribed, extra and student-added sets. */

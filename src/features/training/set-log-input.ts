@@ -1,7 +1,7 @@
 import type { PlanSet } from '@/api/domains/plans';
 import { effectiveLoadMode } from '@/domain/plan/prescription';
 
-export type SetLogInput = { weightText: string; repsText: string; rpeText: string };
+export type SetLogInput = { weightText: string; repsText: string; rpeText: string; effortKind?: 'rpe' | 'rir' };
 export type SetLogValidation = { writable: boolean; invalidFields: (keyof SetLogInput)[] };
 
 /** Shared with QuickLogAttempt; preserve its Number-based parsing exactly. */
@@ -13,7 +13,7 @@ export function validateSetLogInput(input: SetLogInput): SetLogValidation {
   if (!Number.isInteger(Number(input.repsText)) || Number(input.repsText) < 1 || Number(input.repsText) > 99) {
     invalidFields.push('repsText');
   }
-  if (input.rpeText !== '' && (!Number.isFinite(Number(input.rpeText)) || Number(input.rpeText) < 0 || Number(input.rpeText) > 10)) {
+  if (input.rpeText !== '' && (!Number.isFinite(Number(input.rpeText)) || Number(input.rpeText) < 0 || (input.effortKind === 'rir' ? !Number.isInteger(Number(input.rpeText)) || Number(input.rpeText) > 9 : Number(input.rpeText) > 10))) {
     invalidFields.push('rpeText');
   }
   return { writable: invalidFields.length === 0, invalidFields };

@@ -27,7 +27,7 @@ export function LoadTypeSummary({ sets }: { sets: readonly PlanSet[] }) {
         <Text style={{ ...font.body(fontMetrics.size13), color: colors.textSecondary }}>{`${count} × ${reps}${p.intensity ? ` · ${t('loadTypes.target', [intensityText(p.intensity)])}` : ''}`}</Text>
         <Text style={{ ...font.body(fontMetrics.size12, 'semibold'), paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.inset, backgroundColor: bodyweight ? colors.surfaceRaised : colors.goldSoft, color: bodyweight ? colors.textSecondary : colors.goldText }}>{t(bodyweight ? 'loadTypes.bodyweight' : 'loadTypes.freeWeight')}</Text>
       </View>
-      <Text style={{ ...font.body(fontMetrics.size13), color: colors.textSecondary }}>{t(bodyweight ? 'loadTypes.bodyweightHelp' : 'loadTypes.freeWeightHelp')}</Text>
+      {!bodyweight ? <Text style={{ ...font.body(fontMetrics.size13), color: colors.textSecondary }}>{t('loadTypes.freeWeightHelp')}</Text> : null}
     </View>;
   })}</>;
 }

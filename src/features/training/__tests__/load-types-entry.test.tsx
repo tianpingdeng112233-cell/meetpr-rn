@@ -4,6 +4,7 @@ import { StyleSheet, Text, TextInput } from 'react-native';
 import { colors } from '@/design';
 import { setLocaleOverride } from '@/i18n';
 import { day, set } from '@/domain/plan/test-fixtures';
+import type { SetLog } from '@/api/domains/sets';
 import type { PlanSet } from '@/api/domains/plans';
 import { synthesizeDrafts } from '../drafts';
 import { AccessoryLogCard } from '../AccessoryLogCard';
@@ -21,11 +22,11 @@ afterEach(() => { act(() => renderer?.unmount()); setLocaleOverride(null); });
 const input = (label: string) => renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === label)!;
 const complete = () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === '完成第 1 组')[0];
 const text = () => renderer.root.findAllByType(Text).map(node => node.props.children).join(' ');
-async function mount(prescription: Partial<PlanSet>, onInputFocus?: (input: TextInput | null) => void) {
+async function mount(prescription: Partial<PlanSet>, onInputFocus?: (input: TextInput | null) => void, previousLogs: SetLog[] = [], allowsRIR = false) {
   const drafts = synthesizeDrafts(day('day', { exercises: [{ id: 'exercise', exercise_id: 'row', plan_day_id: 'day', is_main_lift: false, sort_order: 0, notes: null,
     sets: [set({ intensity_mode: null, target_value: null, ...prescription })] }] }), []);
   const save = jest.fn(async () => {});
-  await act(async () => { renderer = create(<AccessoryLogCard studentId="student" drafts={drafts} previousLogs={[]} unit="kg" onRecord={() => {}} onSave={save} onInputFocus={onInputFocus} />); });
+  await act(async () => { renderer = create(<AccessoryLogCard allowsRIR={allowsRIR} studentId="student" drafts={drafts} previousLogs={previousLogs} unit="kg" onRecord={() => {}} onSave={save} onInputFocus={onInputFocus} />); });
   return save;
 }
 
@@ -44,11 +45,12 @@ test('056 tapping complete with no chosen weight marks the input and gives the e
 
 test.each([{ load_mode: 'bodyweight' as const }, { intensity_mode: 'rpe' as const, target_value: '10.00', coach_note: '自重 Slow down' }])('056 bodyweight shows an optional editable weight and retains other notes: %j', async prescription => {
   const save = await mount(prescription);
-  expect(input('额外负重 kg · 选填').props.placeholder).toBe('不加就空着');
-  expect(input('额外负重 kg · 选填').props.value).toBe('');
+  expect(input('第 1 组重量').props.value).toBe('0');
+  expect(save).not.toHaveBeenCalled();
+  expect(text()).not.toContain('不加就空着');
   await act(async () => complete().props.onPress());
   expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ weight_kg: '0', completed: true }), 'single');
-  await act(async () => input('额外负重 kg · 选填').props.onChangeText('10'));
+  await act(async () => input('第 1 组重量').props.onChangeText('10'));
   await act(async () => complete().props.onPress());
   expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ weight_kg: '10' }), 'single');
   expect(text()).not.toContain('自重 Slow down');
@@ -64,15 +66,20 @@ test.each(['free_weight', 'bodyweight'] as const)('056 workout shows approved %s
     resolveExerciseMetadata={createExerciseMetadataResolver([], null)} />); });
   expect(text()).toContain(load_mode === 'free_weight' ? '3 × 15 · 目标 RPE 8' : '3 × 力竭');
   expect(text()).toContain(load_mode === 'free_weight' ? '自选重量' : '自重');
-  expect(text()).toContain(load_mode === 'free_weight' ? '教练没定重量，按今天状态自己选，记下实际用了多少。' : '不加负重做到力竭；挂了片就把额外重量填上。');
-  expect(renderer.root.findAllByType(TextInput)).toHaveLength(6);
+  if (load_mode === 'free_weight') expect(text()).toContain('教练没定重量，按今天状态自己选，记下实际用了多少。');
+  else {
+    expect(text()).not.toContain('不加负重做到力竭');
+    expect(renderer.root.findAllByType(Text).filter(node => node.props.children === '额外负重 kg')).toHaveLength(1);
+    expect(input('第 1 组重量').props.value).toBe('0');
+  }
+  expect(renderer.root.findAllByType(TextInput)).toHaveLength(load_mode === 'bodyweight' ? 9 : 6);
 });
 
 
 test('056 load-type fields retain the keyboard avoidance focus/blur contract', async () => {
   const focus = jest.fn();
   await mount({ load_mode: 'bodyweight' }, focus);
-  for (const label of ['额外负重 kg · 选填', '第 1 组次数']) {
+  for (const label of ['第 1 组重量', '第 1 组次数']) {
     await act(async () => input(label).props.onFocus());
     expect(focus).toHaveBeenCalledTimes(1);
     await act(async () => input(label).props.onBlur());
@@ -89,7 +96,7 @@ test('056 expanded non-current accessories retain their load mode, explanation a
     suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[]} onAccessorySave={async () => {}} studentId="student" onRecord={() => {}} onVideo={() => {}} onToggleComplete={() => {}}
     resolveExerciseMetadata={() => ({ name: 'Accessory', exerciseType: 'accessory', rawFamily: null, competitionFamily: null })} />); });
   expect(text()).toContain('目标 RIR 2');
-  expect(text()).toContain('不加负重做到力竭；挂了片就把额外重量填上。');
+  expect(text()).toContain('额外负重 kg');
 });
 
 
@@ -131,4 +138,53 @@ test('056 an independent free-weight target still renders 目标 RPE 8 despite t
   await mountProjectedWorkout('free_weight', 'header', '8');
   expect(text()).toContain('1 × 1 · 目标 RPE 8');
   expect(text()).not.toContain('RPE 10');
+});
+
+test('056 bodyweight previous weight stays visible and copies the displayed value', async () => {
+  const previous: SetLog = { id: 'previous', student_id: 'student', plan_exercise_id: 'exercise', exercise_id: 'row', set_index: 0,
+    weight_kg: '20', reps: 10, rpe: null, completed: true, failed: false, assumed: false, adhoc: false,
+    logged_date: '2026-10-08', logged_at: '2026-10-08T12:00:00Z' };
+  const save = await mount({ load_mode: 'bodyweight' }, undefined, [previous]);
+  expect(text()).toContain('20 × 10');
+  const useLast = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === '第 1 组填入上次数值')[0];
+  await act(async () => useLast.props.onPress());
+  expect(input('第 1 组重量').props.value).toBe('20');
+  expect(save).not.toHaveBeenCalled();
+  await act(async () => complete().props.onPress());
+  expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ weight_kg: '20' }), 'single');
+});
+
+test('auxiliary effort follows RIR target and switching clears only unsaved effort', async () => {
+  const save = await mount({ load_mode: 'bodyweight', rir_target: 2 }, undefined, [], true);
+  const effort = () => renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === '第 1 组 RIR')!;
+  expect(effort()).toBeDefined();
+  expect(effort().props.value).toBe('');
+  expect(effort().props.placeholder).toBe('2');
+  await act(async () => input('第 1 组重量').props.onChangeText('20'));
+  await act(async () => effort().props.onChangeText('2'));
+  await act(async () => complete().props.onPress());
+  expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ rpe: null, actual_rir: 2 }), 'single');
+  const toggle = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === '切换 RPE / RIR')[0];
+  await act(async () => toggle.props.onPress());
+  expect(input('第 1 组 RPE').props.value).toBe('');
+  expect(input('第 1 组重量').props.value).toBe('20');
+});
+
+test('main-lift load-type card never offers effort switching or shows RIR inside RPE', async () => {
+  await mount({ load_mode: 'bodyweight', rir_target: 2 });
+  expect(input('第 1 组 RPE').props.placeholder).toBe('');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === '切换 RPE / RIR')).toHaveLength(0);
+});
+
+test('completed day summary keeps saved RIR instead of labelling it RPE', async () => {
+  const planDay = projectedSet('bodyweight');
+  const log: SetLog = { id: 'log', student_id: 'student', plan_exercise_id: 'exercise', exercise_id: 'row', set_index: 0, weight_kg: '0', reps: 10, rpe: null, actual_rir: 2, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-30', logged_at: '2026-10-30T12:00:00Z' };
+  await act(async () => { renderer = create(<WorkoutBody exercises={planDay.exercises} drafts={synthesizeDrafts(planDay, [log])}
+    editable={false} recording startLoading={false} onStart={() => {}} completedDay={{ canUndo: false, undoing: false, onUndo: () => {} }}
+    suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[]} studentId="student" onRecord={() => {}} onVideo={() => {}} onToggleComplete={() => {}}
+    resolveExerciseMetadata={() => ({ name: 'Row', exerciseType: 'accessory', rawFamily: null, competitionFamily: null })} />); });
+  const expand = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false)[0];
+  await act(async () => expand.props.onPress());
+  expect(text()).toContain('RIR 2');
+  expect(text()).not.toContain('RPE 2');
 });

@@ -1,3 +1,4 @@
+import { effortFields, effortKindFor, type EffortKind } from './actual-effort';
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { metricDisplay, metricStored, POUNDS_PER_KG } from '@/domain/measurement';
 import { decodePrescription, withoutBodyweightMarker } from '@/domain/plan/prescription';
@@ -21,18 +22,20 @@ export type AccessoryRow = {
   weightPlaceholder: string;
   repsText: string;
   rpeText: string;
+  effortKind: EffortKind;
   rpePlaceholder: string | { kind: 'rir'; value: number };
   isBodyweight: boolean;
   previous: { weightText: string; reps: number } | null;
   extraNote: string | null;
-  recorded: Pick<SetLog, 'weight_kg' | 'reps' | 'rpe'> | null;
+  recorded: Pick<SetLog, 'weight_kg' | 'reps' | 'rpe' | 'actual_rir'> | null;
 };
 
 /** previousLogs is already scoped to this exercise in its previous session. */
-export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
+export function accessoryRows({ drafts, previousLogs, unit, videoById = {}, allowsRIR = false }: {
   drafts: readonly WorkoutSetDraft[];
   previousLogs: readonly SetLog[];
   unit: 'kg' | 'lb';
+  allowsRIR?: boolean;
   videoById?: Readonly<Record<string, boolean>>;
 }): AccessoryRow[] {
   const weightText = (kg: number) => unit === 'lb' && kg !== 0
@@ -53,22 +56,24 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
       hasVideo: videoById[draft.stableSetId] ?? false,
       unit,
       weightText: draft.kind ? (draft.weightText === '' ? '' : weightText(Number(draft.weightText))) : source ? weightText(Number(source.weight_kg))
-        : prescription.weightKg == null ? '' : weightText(prescription.weightKg),
+        : isBodyweight ? '0' : prescription.weightKg == null ? '' : weightText(prescription.weightKg),
       weightPlaceholder: previous?.weightText ?? '',
       repsText: draft.kind ? draft.repsText : String(source?.reps ?? prescription.reps),
-      rpeText: source?.rpe == null ? '' : formatWeight(Number(source.rpe)),
-      rpePlaceholder: draft.kind ? '' : intensity?.kind === 'rir' ? { kind: 'rir' as const, value: intensity.value }
+      rpeText: source?.actual_rir != null ? String(source.actual_rir) : source?.rpe == null ? '' : formatWeight(Number(source.rpe)),
+      effortKind: effortKindFor(draft, allowsRIR),
+      rpePlaceholder: draft.kind ? '' : intensity?.kind === 'rir' ? (effortKindFor(draft, allowsRIR) === 'rir' ? String(intensity.value) : '')
         : intensity?.kind === 'rpe' ? formatWeight(intensity.value) : '',
       isBodyweight,
       previous,
       extraNote: isBodyweight ? withoutBodyweightMarker(note) : note?.trim() ? note : null,
-      recorded: source ? { weight_kg: source.weight_kg, reps: source.reps, rpe: source.rpe } : null,
+      recorded: source ? { weight_kg: source.weight_kg, reps: source.reps, rpe: source.rpe, actual_rir: source.actual_rir } : null,
     };
   });
 }
 
 export function accessoryRowWritable(row: AccessoryRow, edited: SetLogInput): SetLogValidation {
-  return validateSetLogInput(row.isBodyweight && !edited.weightText.trim() ? { ...edited, weightText: '0' } : edited);
+  const input = { ...edited, effortKind: edited.effortKind ?? row.effortKind };
+  return validateSetLogInput(row.isBodyweight && !input.weightText.trim() ? { ...input, weightText: '0' } : input);
 }
 
 export type AccessoryLogOptions = { planExerciseId: string; loggedDate?: string; action?: 'complete' | 'cancel' };
@@ -90,7 +95,7 @@ export function accessoryLogRequest(row: AccessoryRow, edited: SetLogInput, opti
     set_index: row.setIndex,
     weight_kg: recorded?.weight_kg ?? weightKg,
     reps: recorded?.reps ?? Number(edited.repsText),
-    rpe: recorded ? recorded.rpe : edited.rpeText === '' ? null : String(Number(edited.rpeText)),
+    ...(recorded ? { rpe: recorded.rpe, actual_rir: recorded.actual_rir ?? null } : effortFields(edited.effortKind ?? row.effortKind, edited.rpeText)),
     completed: !cancel,
     failed: false,
   };

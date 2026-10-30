@@ -37,7 +37,7 @@ test.each(['free_weight', 'bodyweight'] as const)('056 single-set entry enforces
   await act(async () => { renderer = create(<SetEntrySheet studentId="student" draft={synthesizeDrafts(inputDay, [])[0]} collarOn={false} editable exerciseName="Squat" suggestion={null} suggestionReason={null} ensureSetLog={async () => 'log'} onChangeCollar={() => {}} onClose={() => {}} onSave={onSave} />); });
   const label = load_mode === 'free_weight' ? '重量 kg · 必填' : '额外负重 kg · 选填';
   const field = () => renderer.root.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === label)!;
-  expect(field().props.accessibilityValue.text).toBe(' KG');
+  expect(field().props.accessibilityValue.text).toBe(load_mode === 'bodyweight' ? '0 KG' : ' KG');
   const complete = renderer.root.findAllByType(FeedbackPressable).find(node => node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))!;
   expect(complete.props.disabled).toBe(false);
   await act(async () => complete.props.onPress());

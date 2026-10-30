@@ -350,7 +350,7 @@ test.each<[number | undefined, number | null, number]>([[undefined, null, 60], [
   expect(accessoryButton('Complete set 2').props.disabled).toBe(true);
   expect(renderer.root.findAllByType(ActivityIndicator).length).toBeGreaterThan(0);
   await act(async () => { release(); });
-  expect(setBodies()).toEqual([{ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, completed: true, failed: false }]);
+  expect(setBodies()).toEqual([{ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, actual_rir: null, completed: true, failed: false }]);
   expect(accessoryButton('Undo set 2')).toBeDefined();
   expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(seconds);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));

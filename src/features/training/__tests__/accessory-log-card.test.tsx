@@ -50,7 +50,7 @@ test('catalog accessories render editable prescription rows, same-session histor
   expect(input('Set 2 RPE').props.value).toBe('');
   expect(button('Complete set 2').props.disabled).toBe(true);
   expect(input('Set 3 weight').props.value).toBe('');
-  expect(input('Set 3 RPE').props.placeholder).toBe('RIR 2');
+  expect(input('Set 3 RIR').props.placeholder).toBe('2');
   expect(button('Use last time for set 3').props.disabled).toBe(true);
   expect(button('Set 1 details').findAll(n => n.props.name === 'video-outline').length).toBeGreaterThan(0);
   expect(heroText()).toContain('Tap a set number to record video or mark it failed');
@@ -127,7 +127,7 @@ test.each([2, 3])('completed set %s without recorded RPE has no coach placeholde
   expect(input(`Set ${index} RPE`).props.value).toBe('');
   expect(input(`Set ${index} RPE`).props.placeholder).toBe('');
   await mount('accessory', true, true, [{ ...saved, completed: false }]);
-  expect(input(`Set ${index} RPE`).props.placeholder).toBe(index === 2 ? '8' : 'RIR 2');
+  expect(input(`Set ${index} RPE`).props.placeholder).toBe(index === 2 ? '8' : '');
   await mount('accessory', true, true, [{ ...saved, rpe: '7.5' }]);
   expect(input(`Set ${index} RPE`).props.value).toBe('7.5');
 });

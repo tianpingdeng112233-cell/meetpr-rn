@@ -1,3 +1,4 @@
+import { EffortToggleLabel } from './EffortToggleLabel';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Text, TextInput, View, Vibration, type ViewStyle } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -26,7 +27,8 @@ const fields = [
 
 export type AccessoryEdits = Record<string, { revision: string; input: SetLogInput; weightEdited: boolean }>;
 
-export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onRecord, onSave, onInputFocus, onAddSet, onRemoveSet, inlineEdits, readOnly = false }: {
+export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onRecord, onSave, onInputFocus, onAddSet, onRemoveSet, inlineEdits, readOnly = false, allowsRIR = false }: {
+  allowsRIR?: boolean;
   onAddSet?: () => void;
   onRemoveSet?: (draft: WorkoutSetDraft) => void;
   inlineEdits?: { values: AccessoryEdits; onChange: (id: string, edit: AccessoryEdits[string]) => void };
@@ -49,12 +51,13 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
   const saving = useRef(new Set<string>());
   const [busyRows, setBusyRows] = useState<ReadonlySet<string>>(new Set());
   const videos = useVideoUploadStore(state => state.records);
-  const rows = accessoryRows({ drafts, previousLogs, unit, videoById: Object.fromEntries(drafts.map(draft => [draft.stableSetId, (videos[`${studentId}:${draft.stableSetId}`]?.status ?? 'none') !== 'none'])) });
+  const rows = accessoryRows({ drafts, previousLogs, unit, allowsRIR, videoById: Object.fromEntries(drafts.map(draft => [draft.stableSetId, (videos[`${studentId}:${draft.stableSetId}`]?.status ?? 'none') !== 'none'])) });
+  const [effortOverride, setEffortOverride] = useState<SetLogInput['effortKind']>();
   const [localEdits, setLocalEdits] = useState<AccessoryEdits>({});
   const edits = inlineEdits?.values ?? localEdits;
   const added = drafts[0]?.kind === 'added';
   const revision = (index: number) => JSON.stringify([drafts[index].sourceLog, rows[index].status, unit]);
-  const inputFor = (index: number) => edits[rows[index].stableSetId]?.revision === revision(index) ? edits[rows[index].stableSetId].input : rows[index];
+  const inputFor = (index: number) => edits[rows[index].stableSetId]?.revision === revision(index) ? edits[rows[index].stableSetId].input : !drafts[index].sourceLog && effortOverride ? { ...rows[index], effortKind: effortOverride, rpeText: '' } : rows[index];
   const change = (index: number, patch: Partial<SetLogInput>) => {
     const id = rows[index].stableSetId;
     const next = { revision: revision(index), input: { ...inputFor(index), ...patch }, weightEdited: patch.weightText !== undefined || (edits[id]?.revision === revision(index) && edits[id].weightEdited) };
@@ -91,24 +94,32 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     } catch { /* Stop at the first failure. Successful rows remain in the page's saved drafts. */ }
     finally { batch.current = false; setBatchBusy(false); }
   };
+  const firstPending = rows.findIndex((_, index) => !drafts[index].sourceLog);
+  const headerKind = inputFor(firstPending < 0 ? 0 : firstPending)?.effortKind ?? 'rpe';
+  const switchEffort = () => {
+    const effortKind = headerKind === 'rpe' ? 'rir' : 'rpe';
+    setEffortOverride(effortKind);
+    rows.forEach((_, index) => { if (!drafts[index].sourceLog) change(index, { effortKind, rpeText: '' }); });
+  };
   const skippedCount = showSkipped ? rowsToCompleteAll(rows, Object.fromEntries(rows.map((row, index) => [row.stableSetId, inputFor(index)]))).skipped.length : 0;
   return <View style={{ gap: spacing.point6 }}>
-    {rows.some((_, index) => !['free_weight', 'bodyweight'].includes(effectiveLoadMode(drafts[index].planSet) ?? '')) ? <View style={{ flexDirection: 'row', gap: spacing.point6 }}>
-      {[t('student.accessory.set'), t('student.accessory.last'), unit.toUpperCase(), t('student.setEntrySheet.copy003'), t('chat.rpeMetric'), t('student.workoutCompletionFlowView.copy003')].map((label, index) =>
-        <Text key={index} style={{ ...column(index), ...font.mono(fontMetrics.size10), color: colors.textMuted, textAlign: 'center' }}>{label}</Text>)}
+    {rows.some(row => row.isBodyweight) ? <Text style={{ ...font.body(fontMetrics.size12), color: colors.textSecondary }}>{t('loadTypes.extraWeight', [unit])}</Text> : null}
+    {rows.some((_, index) => allowsRIR || effectiveLoadMode(drafts[index].planSet) !== 'free_weight') ? <View style={{ flexDirection: 'row', gap: spacing.point6 }}>
+      {[t('student.accessory.set'), t('student.accessory.last'), unit.toUpperCase(), t('student.setEntrySheet.copy003'), headerKind.toUpperCase(), t('student.workoutCompletionFlowView.copy003')].map((label, index) =>
+        index === 4 && allowsRIR ? <Pressable key={index} accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} accessibilityValue={{ text: label }} disabled={readOnly || batchBusy || busyRows.size > 0 || firstPending < 0} onPress={switchEffort} style={{ ...column(index), minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}><EffortToggleLabel label={label} /></Pressable> : <Text key={index} style={{ ...column(index), ...font.mono(fontMetrics.size10), color: colors.textMuted, textAlign: 'center', alignSelf: 'center' }}>{label}</Text>)}
     </View> : null}
     {rows.map((row, index) => {
       const input = inputFor(index);
       const validation = accessoryRowWritable(row, input);
       const complete = row.status === 'complete';
       const weightEdited = edits[row.stableSetId]?.revision === revision(index) && edits[row.stableSetId].weightEdited;
-      const invalidFields = validation.invalidFields.filter(field => field !== 'weightText' || input.weightText !== '' || weightEdited || (showSkipped && row.status === 'pending'));
+      const invalidFields = validation.invalidFields.filter(field => field !== 'weightText' || input.weightText !== '' || weightEdited || ((showSkipped || attempted.has(row.stableSetId)) && row.status === 'pending'));
       const canAct = isCancel(index) || validation.writable;
       const loadMode = effectiveLoadMode(drafts[index].planSet);
-      if (loadMode === 'free_weight' || loadMode === 'bodyweight') {
+      if (loadMode === 'free_weight' && !allowsRIR) {
         const weightError = validation.invalidFields.includes('weightText') && (attempted.has(row.stableSetId) || showSkipped || weightEdited);
         const disabled = readOnly || batchBusy || busyRows.has(row.stableSetId);
-        const weightLabel = t(loadMode === 'bodyweight' ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', [unit]);
+        const weightLabel = t('loadTypes.requiredWeight', [unit]);
         return <View key={row.stableSetId} style={{ gap: spacing.xs }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.details', [row.setIndex + 1])} disabled={disabled} onPress={() => onRecord(drafts[index])} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
@@ -119,7 +130,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
               <TextInput ref={node => { inputs.current[`${row.stableSetId}:weightText`] = node; }}
                 onFocus={() => { setFocusedInput(`${row.stableSetId}:weightText`); onInputFocus?.(inputs.current[`${row.stableSetId}:weightText`]); }}
                 onBlur={() => { setFocusedInput(null); onInputFocus?.(null); }} accessibilityLabel={weightLabel} value={input.weightText}
-                placeholder={t(loadMode === 'bodyweight' ? 'loadTypes.optionalPlaceholder' : 'loadTypes.requiredPlaceholder')}
+                placeholder={t('loadTypes.requiredPlaceholder')}
                 placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" editable={!disabled}
                 onChangeText={value => change(index, { weightText: filter(value, 'weight') })}
                 style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.sm, ...font.mono(fontMetrics.size13), color: colors.textPrimary, backgroundColor: colors.surfaceCard, borderWidth: 1, borderRadius: radius.inset, borderColor: weightError ? colors.danger : colors.borderStrong }} />
@@ -142,6 +153,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
         </View>;
       }
       return <View key={row.stableSetId} style={{ gap: spacing.xs }}>
+        {input.effortKind !== headerKind ? <Text style={{ ...font.mono(fontMetrics.size10), color: colors.textSecondary }}>{drafts[index].sourceLog ? t('training.effort.saved', [row.setIndex + 1, input.effortKind?.toUpperCase() ?? 'RPE']) : input.effortKind?.toUpperCase()}</Text> : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point6, paddingVertical: spacing.xs, borderRadius: radius.inset, backgroundColor: complete ? colors.successTint : colors.bgInset }}>
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.details', [row.setIndex + 1])} disabled={readOnly || added || batchBusy || busyRows.has(row.stableSetId)} onPress={() => onRecord(drafts[index])}
             style={{ ...column(0), minHeight: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceRaised, borderRadius: radius.inset }}>
@@ -149,18 +161,16 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
             {row.hasVideo ? <MaterialCommunityIcons name="video-outline" size={spacing.point14} color={colors.goldText} /> : null}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.useLast', [row.setIndex + 1])} disabled={readOnly || !row.previous || batchBusy || busyRows.has(row.stableSetId)}
-            onPress={() => row.previous && change(index, { ...(row.isBodyweight ? {} : { weightText: row.previous.weightText }), repsText: String(row.previous.reps) })}
+            onPress={() => row.previous && change(index, { weightText: row.previous.weightText, repsText: String(row.previous.reps) })}
             style={{ ...column(1), minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={{ ...font.mono(fontMetrics.size11), color: colors.textMuted, textAlign: 'center' }}>{row.previous ? `${row.isBodyweight ? t('student.accessory.bw') : row.previous.weightText} × ${row.previous.reps}` : '—'}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={{ ...font.mono(fontMetrics.size11), color: colors.textMuted, textAlign: 'center' }}>{row.previous ? `${row.previous.weightText} × ${row.previous.reps}` : '—'}</Text>
           </Pressable>
-          {fields.map(([field, kind, label], offset) => row.isBodyweight && field === 'weightText'
-            ? <Text key={field} style={{ ...column(2), ...font.mono(fontMetrics.size15, 'bold'), color: colors.textMuted, textAlign: 'center' }}>{t('student.accessory.bw')}</Text>
-            : <TextInput key={field} ref={node => { inputs.current[`${row.stableSetId}:${field}`] = node; }}
+          {fields.map(([field, kind, label], offset) => <TextInput key={field} ref={node => { inputs.current[`${row.stableSetId}:${field}`] = node; }}
               onFocus={() => { setFocusedInput(`${row.stableSetId}:${field}`); onInputFocus?.(inputs.current[`${row.stableSetId}:${field}`]); }}
-              onBlur={() => { setFocusedInput(current => current === `${row.stableSetId}:${field}` ? null : current); onInputFocus?.(null); }} accessibilityLabel={t(label, [row.setIndex + 1])} value={input[field]}
-              placeholder={field === 'weightText' ? row.weightPlaceholder : field === 'rpeText' && !complete ? typeof row.rpePlaceholder === 'string' ? row.rpePlaceholder : t('student.accessory.rir', [row.rpePlaceholder.value]) : ''}
-              placeholderTextColor={colors.textMuted} keyboardType={kind === 'reps' ? 'number-pad' : 'decimal-pad'}
-              editable={!readOnly && !batchBusy && !busyRows.has(row.stableSetId)} onChangeText={value => change(index, { [field]: filter(value, kind) })}
+              onBlur={() => { setFocusedInput(current => current === `${row.stableSetId}:${field}` ? null : current); onInputFocus?.(null); }} accessibilityLabel={field === 'rpeText' && input.effortKind === 'rir' ? t('training.effort.rirLabel', [row.setIndex + 1]) : t(label, [row.setIndex + 1])} value={input[field]}
+              placeholder={field === 'weightText' ? row.weightPlaceholder : field === 'rpeText' && !complete && input.effortKind === row.effortKind ? typeof row.rpePlaceholder === 'string' ? row.rpePlaceholder : t('student.accessory.rir', [row.rpePlaceholder.value]) : ''}
+              placeholderTextColor={colors.textMuted} keyboardType={kind === 'reps' || (field === 'rpeText' && input.effortKind === 'rir') ? 'number-pad' : 'decimal-pad'}
+              editable={!readOnly && !batchBusy && !busyRows.has(row.stableSetId)} onChangeText={value => change(index, { [field]: filter(value, field === 'rpeText' && input.effortKind === 'rir' ? 'rir' : kind) })}
               style={{ ...column(offset + 2), minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.zero, paddingVertical: spacing.xs, textAlign: 'center', ...font.mono(field === 'rpeText' && !input[field] && typeof row.rpePlaceholder !== 'string' ? fontMetrics.size11 : fontMetrics.size15, input[field] ? 'bold' : 'regular'), color: colors.textPrimary, backgroundColor: complete ? undefined : colors.surfaceCard, borderRadius: radius.inset, borderWidth: complete && !invalidFields.includes(field) && focusedInput !== `${row.stableSetId}:${field}` ? 0 : spacing.point1, borderColor: invalidFields.includes(field) ? colors.danger : focusedInput === `${row.stableSetId}:${field}` ? colors.textPrimary : colors.borderStrong }} />)}
           <Pressable accessibilityRole="button" accessibilityLabel={t(isCancel(index) ? 'student.accessory.undo' : 'student.accessory.complete', [row.setIndex + 1])}
             accessibilityHint={!canAct ? t('student.accessory.needsWeightOne') : undefined} disabled={readOnly || batchBusy || !canAct || busyRows.has(row.stableSetId)} onPress={() => void saveRow(index)}

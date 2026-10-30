@@ -1,3 +1,4 @@
+import { effortFields, type EffortKind } from './actual-effort';
 import { actualWeightText } from './set-log-input';
 import { StudentExercisePicker } from './StudentExercisePicker';
 import type { AccessoryEdits } from './AccessoryLogCard';
@@ -643,6 +644,7 @@ export function TodayWorkoutView() {
     weightText: string;
     repsText: string;
     rpeText: string;
+    effortKind?: EffortKind;
     failed: boolean;
     completed?: boolean;
     attachmentOnly?: boolean;
@@ -681,14 +683,17 @@ export function TodayWorkoutView() {
       const completed = input.completed ?? true;
       const weight = parseFiniteDecimal(actualWeightText(input.weightText, draft.planSet));
       const reps = Number(input.repsText);
-      const rpe = input.rpeText ? parseFiniteDecimal(input.rpeText) : null;
+      const actualEffort = input.accessory?.request ?? effortFields(input.effortKind ?? 'rpe', input.rpeText);
+      const rpe = actualEffort.rpe == null ? null : Number(actualEffort.rpe);
+      const actualRIR = actualEffort.actual_rir ?? null;
       if (
         weight === null ||
         weight < 0 ||
         !Number.isInteger(reps) ||
         reps < 0 ||
         reps > 99 ||
-        (rpe !== null && (rpe < 0 || rpe > 10))
+        (rpe !== null && (rpe < 0 || rpe > 10)) ||
+        (actualRIR !== null && (!Number.isInteger(actualRIR) || actualRIR < 0 || actualRIR > 9))
       ) {
         if (!input.attachmentOnly && !input.quickLogDate) Alert.alert(
           t('student.setEntrySheet.copy010'),
@@ -706,6 +711,7 @@ export function TodayWorkoutView() {
           weight_kg: String(weight),
           reps,
           rpe: rpe === null ? null : String(rpe),
+          actual_rir: actualRIR,
           completed: completed && !input.failed,
           failed: input.failed,
         });
@@ -722,7 +728,8 @@ export function TodayWorkoutView() {
                 status: nextStatus,
                 weightText: input.weightText,
                 repsText: input.repsText,
-                rpeText: input.rpeText,
+                rpeText: actualRIR == null ? input.rpeText : String(actualRIR),
+                effortKind: actualRIR == null ? 'rpe' : 'rir',
                 sourceLog: {
                   id: response.id,
                   student_id: studentId,
@@ -733,6 +740,7 @@ export function TodayWorkoutView() {
                   weight_kg: String(weight),
                   reps,
                   rpe: rpe === null ? null : String(rpe),
+                  actual_rir: actualRIR,
                   completed: completed && !input.failed,
                   failed: input.failed,
                   assumed: false,
@@ -865,7 +873,7 @@ export function TodayWorkoutView() {
     setQuickLogContext({ dayCode: dayCode(planDay, orderedDays), subtitle: dayName(planDay, resolveExerciseMetadata) });
     quickLogAttempt.current = new QuickLogAttempt({
       persist: async (row, date) => {
-        const id = await commit({ stableSetId: row.draft.stableSetId, weightText: row.draft.weightText, repsText: row.draft.repsText, rpeText: row.draft.rpeText, failed: false, quickLogDate: date });
+        const id = await commit({ stableSetId: row.draft.stableSetId, weightText: row.draft.weightText, repsText: row.draft.repsText, rpeText: row.draft.rpeText, effortKind: row.draft.effortKind, failed: false, quickLogDate: date });
         if (!id) throw new Error('Set unavailable');
       },
       complete: async dayId => {
@@ -1178,7 +1186,7 @@ export function TodayWorkoutView() {
           borderTopColor: colors.borderDefault, backgroundColor: colors.bgBase }}>
         <HoldToCompleteButton disabled={completion.isPending || upsert.isPending} onComplete={() => void completeDay()} />
       </View> : null}
-      {quickLogPlan ? <QuickLogSheet initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
+      {quickLogPlan ? <QuickLogSheet isAccessory={id => isAccessoryExercise(resolveExerciseMetadata(id)?.exerciseType)} initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
         const outcome = await quickLogAttempt.current!.submit(input);
         if (outcome.kind === 'completed') {
           const completed = plan?.days.find(day => day.id === input.dayId);
@@ -1202,6 +1210,7 @@ export function TodayWorkoutView() {
           key={selectedDraft.stableSetId}
           studentId={studentId}
           initialCamera={initialCamera}
+          allowsRIR={isAccessoryExercise(resolveExerciseMetadata(selectedDraft.exercise.exercise_id)?.exerciseType)}
           ensureSetLog={async (input) => {
             const id = await commit({ ...input, completed: selectedDraft.status === 'complete', attachmentOnly: true });
             if (!id) throw new Error('Set log unavailable');

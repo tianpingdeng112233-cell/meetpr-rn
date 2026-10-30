@@ -29,6 +29,7 @@ export type WorkoutSetDraft = {
   weightText: string;
   repsText: string;
   rpeText: string;
+  effortKind?: 'rpe' | 'rir';
   sourceLog: SetLog | null;
 };
 
