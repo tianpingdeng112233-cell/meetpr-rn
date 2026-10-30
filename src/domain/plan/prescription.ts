@@ -21,9 +21,15 @@ const numeric = (
   value == null || value === '' || !Number.isFinite(Number(value))
     ? undefined
     : Number(value);
-/** Explicit wire modes take precedence over the legacy note marker. */
+/** The backend's legacy bodyweight projection has all four fields together. */
+export function isLegacyBodyweightProjection(set: PlanSet): boolean {
+  return set.load_mode == null && set.intensity_mode === 'rpe' &&
+    Number(set.target_value) === 10 && /自重|bodyweight/i.test(set.coach_note ?? '');
+}
+
+/** Explicit wire modes take precedence over the legacy projection. */
 export function effectiveLoadMode(set: PlanSet): PlanSet['load_mode'] {
-  return set.load_mode ?? (/自重|bodyweight/i.test(set.coach_note ?? '') ? 'bodyweight' : undefined);
+  return set.load_mode ?? (isLegacyBodyweightProjection(set) ? 'bodyweight' : undefined);
 }
 
 export function withoutBodyweightMarker(note: string | null | undefined): string | null {

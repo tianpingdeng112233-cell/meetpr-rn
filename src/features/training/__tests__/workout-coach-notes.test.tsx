@@ -6,7 +6,7 @@ import { setLocaleOverride } from '@/i18n';
 import { day, set } from '@/domain/plan/test-fixtures';
 import { synthesizeDrafts } from '../drafts';
 import { WorkoutBody } from '../WorkoutBody';
-import type { PlanDay } from '@/api/domains/plans';
+import type { PlanDay, PlanSet } from '@/api/domains/plans';
 import type { WorkoutSetDraft } from '../model';
 
 jest.mock('react-native-compressor', () => ({}));
@@ -19,8 +19,8 @@ let renderer: ReactTestRenderer | undefined;
 beforeEach(() => { renderer = undefined; setLocaleOverride('en'); });
 afterEach(() => { act(() => renderer?.unmount()); setLocaleOverride(null); });
 
-async function renderNotes(exerciseNote: string | null, setNote: string | null, editable = true) {
-  const planDay = day('day', { exercises: [{ id: 'exercise', plan_day_id: 'day', exercise_id: 'squat', sort_order: 0, is_main_lift: true, notes: exerciseNote, sets: [set({ coach_note: setNote, target_value: '80' })] }] });
+async function renderNotes(exerciseNote: string | null, setNote: string | null, editable = true, prescription: Partial<PlanSet> = {}) {
+  const planDay = day('day', { exercises: [{ id: 'exercise', plan_day_id: 'day', exercise_id: 'squat', sort_order: 0, is_main_lift: true, notes: exerciseNote, sets: [set({ coach_note: setNote, target_value: '80', ...prescription })] }] });
   await renderWorkout(planDay, synthesizeDrafts(planDay, []), editable);
 }
 async function renderWorkout(planDay: PlanDay, drafts: WorkoutSetDraft[], editable = true) {
@@ -106,7 +106,7 @@ test('advancing sets keeps the exercise note until the next exercise and changes
 
 
 test.each([true, false])('056 old bodyweight marker is a mode, never a visible coach note (editable=%s)', async editable => {
-  await renderNotes(null, 'Bodyweight Keep control', editable);
+  await renderNotes(null, 'Bodyweight Keep control', editable, { intensity_mode: 'rpe', target_value: '10.00' });
   const copy = heroCopy();
   expect(copy).not.toContain('Bodyweight Keep control');
   expect(copy).toContain('Keep control');

@@ -102,3 +102,29 @@ test('056 legacy bodyweight markers cannot reintroduce the projected RPE 10', ()
   expect(p.loadMode).toBe('bodyweight');
   expect(p.intensity).toBeUndefined();
 });
+
+test('056 a legacy weight prescription keeps 135 kg despite a bodyweight note', () => {
+  const p = decodePrescription(set({ load_mode: null, intensity_mode: 'weight', target_value: '135.00', coach_note: '自重' }));
+  expect(p.weightKg).toBe(135);
+  expect(p.loadMode).toBeUndefined();
+});
+
+test('056 a legacy RPE prescription keeps RPE 8 despite a bodyweight note', () => {
+  const p = decodePrescription(set({ load_mode: null, intensity_mode: 'rpe', target_value: '8', coach_note: '自重' }));
+  expect(p.intensity).toEqual({ kind: 'rpe', value: 8 });
+  expect(p.loadMode).toBeUndefined();
+});
+
+test.each(['自重', 'BODYWEIGHT'])('056 only the exact legacy RPE 10 projection decodes %s as bodyweight', coach_note => {
+  const p = decodePrescription(set({ load_mode: null, intensity_mode: 'rpe', target_value: '10.00', coach_note }));
+  expect(p.loadMode).toBe('bodyweight');
+  expect(p.intensity).toBeUndefined();
+  expect(p.weightKg).toBeUndefined();
+});
+
+test('056 explicit bodyweight does not require a legacy projection or marker', () => {
+  const p = decodePrescription(set({ load_mode: 'bodyweight', intensity_mode: null, target_value: null, coach_note: null }));
+  expect(p.loadMode).toBe('bodyweight');
+  expect(p.intensity).toBeUndefined();
+  expect(p.weightKg).toBeUndefined();
+});
