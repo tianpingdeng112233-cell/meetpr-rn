@@ -15,7 +15,7 @@ function ReadOnlySet({ log }: { log: SetLog }) {
   const metrics = [
     { title: t('coach.videoFeedback.weight'), value: `${number(log.weight_kg)} kg` },
     { title: t('coach.videoFeedback.reps'), value: String(log.reps) },
-    { title: t('coach.videoFeedback.rpe'), value: log.rpe == null ? t('coach.profile.notProvided') : number(log.rpe) },
+    { title: log.actual_rir != null ? 'RIR' : t('coach.videoFeedback.rpe'), value: log.actual_rir != null ? String(log.actual_rir) : log.rpe == null ? t('coach.profile.notProvided') : number(log.rpe) },
   ];
   return <View accessible style={[styles.row, { padding: 10, borderRadius: radius.inset, backgroundColor: colors.bgStack }]}>
     <Copy mono size={12} tone="textTertiary" style={{ width: 32 }}>{`#${log.set_index + 1}`}</Copy>

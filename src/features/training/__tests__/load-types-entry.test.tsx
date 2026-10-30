@@ -22,11 +22,11 @@ afterEach(() => { act(() => renderer?.unmount()); setLocaleOverride(null); });
 const input = (label: string) => renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === label)!;
 const complete = () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === '完成第 1 组')[0];
 const text = () => renderer.root.findAllByType(Text).map(node => node.props.children).join(' ');
-async function mount(prescription: Partial<PlanSet>, onInputFocus?: (input: TextInput | null) => void, previousLogs: SetLog[] = []) {
+async function mount(prescription: Partial<PlanSet>, onInputFocus?: (input: TextInput | null) => void, previousLogs: SetLog[] = [], allowsRIR = false) {
   const drafts = synthesizeDrafts(day('day', { exercises: [{ id: 'exercise', exercise_id: 'row', plan_day_id: 'day', is_main_lift: false, sort_order: 0, notes: null,
     sets: [set({ intensity_mode: null, target_value: null, ...prescription })] }] }), []);
   const save = jest.fn(async () => {});
-  await act(async () => { renderer = create(<AccessoryLogCard studentId="student" drafts={drafts} previousLogs={previousLogs} unit="kg" onRecord={() => {}} onSave={save} onInputFocus={onInputFocus} />); });
+  await act(async () => { renderer = create(<AccessoryLogCard allowsRIR={allowsRIR} studentId="student" drafts={drafts} previousLogs={previousLogs} unit="kg" onRecord={() => {}} onSave={save} onInputFocus={onInputFocus} />); });
   return save;
 }
 
@@ -152,4 +152,39 @@ test('056 bodyweight previous weight stays visible and copies the displayed valu
   expect(save).not.toHaveBeenCalled();
   await act(async () => complete().props.onPress());
   expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ weight_kg: '20' }), 'single');
+});
+
+test('auxiliary effort follows RIR target and switching clears only unsaved effort', async () => {
+  const save = await mount({ load_mode: 'bodyweight', rir_target: 2 }, undefined, [], true);
+  const effort = () => renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === '第 1 组 RIR')!;
+  expect(effort()).toBeDefined();
+  expect(effort().props.value).toBe('');
+  expect(effort().props.placeholder).toBe('2');
+  await act(async () => input('第 1 组重量').props.onChangeText('20'));
+  await act(async () => effort().props.onChangeText('2'));
+  await act(async () => complete().props.onPress());
+  expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ rpe: null, actual_rir: 2 }), 'single');
+  const toggle = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === '切换 RPE / RIR')[0];
+  await act(async () => toggle.props.onPress());
+  expect(input('第 1 组 RPE').props.value).toBe('');
+  expect(input('第 1 组重量').props.value).toBe('20');
+});
+
+test('main-lift load-type card never offers effort switching or shows RIR inside RPE', async () => {
+  await mount({ load_mode: 'bodyweight', rir_target: 2 });
+  expect(input('第 1 组 RPE').props.placeholder).toBe('');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === '切换 RPE / RIR')).toHaveLength(0);
+});
+
+test('completed day summary keeps saved RIR instead of labelling it RPE', async () => {
+  const planDay = projectedSet('bodyweight');
+  const log: SetLog = { id: 'log', student_id: 'student', plan_exercise_id: 'exercise', exercise_id: 'row', set_index: 0, weight_kg: '0', reps: 10, rpe: null, actual_rir: 2, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-30', logged_at: '2026-10-30T12:00:00Z' };
+  await act(async () => { renderer = create(<WorkoutBody exercises={planDay.exercises} drafts={synthesizeDrafts(planDay, [log])}
+    editable={false} recording startLoading={false} onStart={() => {}} completedDay={{ canUndo: false, undoing: false, onUndo: () => {} }}
+    suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[]} studentId="student" onRecord={() => {}} onVideo={() => {}} onToggleComplete={() => {}}
+    resolveExerciseMetadata={() => ({ name: 'Row', exerciseType: 'accessory', rawFamily: null, competitionFamily: null })} />); });
+  const expand = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false)[0];
+  await act(async () => expand.props.onPress());
+  expect(text()).toContain('RIR 2');
+  expect(text()).not.toContain('RPE 2');
 });

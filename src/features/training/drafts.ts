@@ -41,10 +41,11 @@ export function synthesizeDrafts(
                   ? ''
                   : formatWeight(prescription.weightKg),
             repsText: String(log?.reps ?? prescription.reps),
+            effortKind: log?.actual_rir != null ? 'rir' : 'rpe',
             rpeText:
-              log?.rpe != null
+              log?.actual_rir != null ? String(log.actual_rir) : log?.rpe != null
                 ? formatWeight(Number(log.rpe))
-                : prescription.rpe === null
+                : log || prescription.rpe === null
                   ? ''
                   : formatWeight(prescription.rpe),
             sourceLog: log ?? null,
@@ -70,7 +71,7 @@ function unprescribedDraft(exercise: PlanExercise, setIndex: number, kind: 'extr
   return { stableSetId, kind, exercise, planSet, exerciseOrdinal, setIndex, sourceLog,
     status: sourceLog?.failed ? 'failed' : sourceLog?.completed ? 'complete' : 'pending',
     weightText: sourceLog ? formatWeight(Number(sourceLog.weight_kg)) : '',
-    repsText: sourceLog ? String(sourceLog.reps) : '', rpeText: sourceLog?.rpe == null ? '' : formatWeight(Number(sourceLog.rpe)) };
+    repsText: sourceLog ? String(sourceLog.reps) : '', effortKind: sourceLog?.actual_rir != null ? 'rir' : 'rpe', rpeText: sourceLog?.actual_rir != null ? String(sourceLog.actual_rir) : sourceLog?.rpe == null ? '' : formatWeight(Number(sourceLog.rpe)) };
 }
 
 export function addExtraDraft(exercise: PlanExercise, drafts: readonly WorkoutSetDraft[]): WorkoutSetDraft | null {

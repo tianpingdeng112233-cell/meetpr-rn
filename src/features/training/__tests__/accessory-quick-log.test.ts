@@ -39,7 +39,7 @@ test('RPE, RIR and range prescriptions leave weight empty and match previous log
     { load_mode: 'weight_range', weight_low: '20', weight_high: '30' },
   ]), previousLogs: [log({ set_index: 1, weight_kg: '35', reps: 8 }), log()], unit: 'kg' });
   expect(rows[0]).toMatchObject({ weightText: '', weightPlaceholder: '30', rpeText: '', rpePlaceholder: '8', previous: { weightText: '30', reps: 10 } });
-  expect(rows[1]).toMatchObject({ weightText: '', weightPlaceholder: '35', rpeText: '', rpePlaceholder: { kind: 'rir', value: 2 }, previous: { weightText: '35', reps: 8 } });
+  expect(rows[1]).toMatchObject({ weightText: '', weightPlaceholder: '35', rpeText: '', rpePlaceholder: '', previous: { weightText: '35', reps: 8 } });
   expect(rows[2]).toMatchObject({ weightText: '', weightPlaceholder: '', rpePlaceholder: '', previous: null });
 });
 
@@ -105,14 +105,14 @@ test('bodyweight allows blank weight but validates entered external load and rep
 test.each<[string, string | null]>([['', null], ['8.5', '8.5'], ['0', '0']])('complete request uses edited values and RPE %s, like set-save', (rpeText, rpe) => {
   const [row] = accessoryRows({ drafts: drafts([{}]), previousLogs: [], unit: 'kg' });
   expect(accessoryLogRequest(row, { weightText: '27.50', repsText: '9', rpeText }, { planExerciseId: 'exercise', loggedDate: '2026-10-09' }))
-    .toEqual({ plan_exercise_id: 'exercise', set_index: 0, logged_date: '2026-10-09', weight_kg: '27.5', reps: 9, rpe, completed: true, failed: false });
+    .toEqual({ plan_exercise_id: 'exercise', set_index: 0, logged_date: '2026-10-09', weight_kg: '27.5', reps: 9, rpe, actual_rir: null, completed: true, failed: false });
   expect(accessoryLogRequest(row, validEdit, { planExerciseId: 'exercise' })).not.toHaveProperty('logged_date');
 });
 
 test('cancel preserves exact stored kg/reps/RPE even when the displayed lb values were rounded or edited', () => {
   const [row] = accessoryRows({ drafts: drafts([{}], [log({ weight_kg: '32.25' })]), previousLogs: [], unit: 'lb' });
   expect(accessoryLogRequest(row, { ...validEdit, weightText: '99', repsText: '99' }, { planExerciseId: 'exercise', action: 'cancel' }))
-    .toEqual({ plan_exercise_id: 'exercise', set_index: 0, weight_kg: '32.25', reps: 10, rpe: '7.5', completed: false, failed: false });
+    .toEqual({ plan_exercise_id: 'exercise', set_index: 0, weight_kg: '32.25', reps: 10, rpe: '7.5', actual_rir: null, completed: false, failed: false });
   expect(accessoryLogRequest(row, validEdit, { planExerciseId: 'exercise' })).toMatchObject({ completed: true, failed: false });
   expect(() => accessoryLogRequest({ ...row, hasVideo: true }, validEdit, { planExerciseId: 'exercise', action: 'cancel' }))
     .toThrow('Cannot cancel this set');
@@ -160,7 +160,7 @@ test.each(['free_weight', 'bodyweight'] as const)('056 %s keeps independent inte
   for (const target of [{ target_rpe: '8' }, { rir_target: 2 }, { target_pct: '75' }]) {
     const [row] = accessoryRows({ drafts: drafts([{ load_mode, intensity_mode: null, target_value: null, ...target }]), previousLogs: [], unit: 'kg' });
     expect(row.weightText).toBe(load_mode === 'bodyweight' ? '0' : '');
-    expect(row.rpePlaceholder).toEqual('target_rpe' in target ? '8' : 'rir_target' in target ? { kind: 'rir', value: 2 } : '');
+    expect(row.rpePlaceholder).toEqual('target_rpe' in target ? '8' : '');
     expect(accessoryRowWritable(row, { ...validEdit, weightText: '' }).writable).toBe(load_mode === 'bodyweight');
     expect(accessoryLogRequest(row, validEdit, { planExerciseId: 'exercise' }).weight_kg).toBe('25');
   }

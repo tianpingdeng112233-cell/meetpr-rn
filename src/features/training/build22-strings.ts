@@ -35,5 +35,5 @@ export const training22 = {
   field: (field: 'weight' | 'reps' | 'rpe') => t(key(`field.${field}`)),
   cell: (exercise: string, set: number, field: 'weight' | 'reps' | 'rpe', value: string) =>
     t(key('cell'), [exercise, set, t(key(`field.${field}`)), value]),
-  padContext: (set: number, field: 'weight' | 'reps' | 'rpe') => t(key('padContext'), [set, t(key(`field.${field}`))]),
+  padContext: (set: number, field: 'weight' | 'reps' | 'rpe' | 'rir') => t(key('padContext'), [set, field === 'rir' ? 'RIR' : t(key(`field.${field}`))]),
 };

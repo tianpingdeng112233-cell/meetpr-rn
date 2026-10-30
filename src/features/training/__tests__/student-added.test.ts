@@ -44,7 +44,7 @@ test('student-added cards hydrate by training day and pin every group to the fir
   const second = addStudentSet(rows[0].exercise, rows)!;
   const row = accessoryRows({ drafts: [second], previousLogs: [log(1)], unit: 'kg' })[0];
   expect(studentAddedLogRequest(second, row, { weightText: '12.5', repsText: '12', rpeText: '' }, 'complete', '2026-10-15'))
-    .toEqual({ exercise_id: 'squat', plan_day_id: 'day', logged_date: '2026-10-14', set_index: 1, weight_kg: '12.5', reps: 12, rpe: null, completed: true, failed: false });
+    .toEqual({ exercise_id: 'squat', plan_day_id: 'day', logged_date: '2026-10-14', set_index: 1, weight_kg: '12.5', reps: 12, rpe: null, actual_rir: null, completed: true, failed: false });
   expect(studentAddedLogRequest(rows[0], accessoryRows({ drafts: rows, previousLogs: [], unit: 'kg' })[0], rows[0], 'cancel', '2026-10-15'))
     .toMatchObject({ completed: false, logged_date: '2026-10-14', weight_kg: '130' });
   expect(studentAddedDrafts('other', logs)).toHaveLength(1);

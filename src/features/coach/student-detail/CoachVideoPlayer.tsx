@@ -19,7 +19,7 @@ export function CoachVideoPlayer({ video, log, title, coachName, onClose }: { vi
     <VideoPlayback localUri={null} attachmentId={video.id} onClose={onClose} />
     <View pointerEvents="none" style={{ position: 'absolute', left: 16, right: 16, top: insets.top + 88, borderRadius: radius.inset, padding: 12, gap: 4, backgroundColor: colors.surfaceFocus }}>
       <Copy bold tone="inkOnCTAFill">{title}</Copy>
-      <Copy mono size={12} tone="inkOnCTAFill">{weight == null ? missing : Number(weight)} kg · {reps == null ? missing : t('coach.videoFeedback.repsValue %lld', [reps])} · {t('coach.videoFeedback.rpe')} {log?.rpe == null ? missing : Number(log.rpe)}</Copy>
+      <Copy mono size={12} tone="inkOnCTAFill">{weight == null ? missing : Number(weight)} kg · {reps == null ? missing : t('coach.videoFeedback.repsValue %lld', [reps])} · {log?.actual_rir != null ? `RIR ${log.actual_rir}` : `${t('coach.videoFeedback.rpe')} ${log?.rpe == null ? missing : Number(log.rpe)}`}</Copy>
       <Copy size={12} tone="inkOnCTAFill">{index == null ? missing : t('coach.videoFeedback.setNumber %lld', [index + 1])} · {coachName}</Copy>
     </View>
   </View>;

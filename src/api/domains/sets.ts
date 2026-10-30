@@ -27,6 +27,7 @@ const SetLogFieldsSchema = z.object({
   reps: z.number().int().min(0).max(99),
   /** Decimal request value; sent as a precision-preserving string. */
   rpe: decimalRequestInRange(0, 10).nullish(),
+  actual_rir: z.number().int().min(0).max(9).nullish(),
   completed: z.boolean(),
   failed: z.boolean().optional().default(false),
 });
@@ -67,6 +68,7 @@ export const SetLogSchema = z.object({
   reps: z.number().int(),
   /** Nullable Decimal wire value; kept as a string when present. */
   rpe: DecimalStringSchema.nullable(),
+  actual_rir: z.number().int().min(0).max(9).nullish(),
   coach_rpe: DecimalStringSchema.nullish(),
   completed: z.boolean(),
   failed: z.boolean(),

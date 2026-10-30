@@ -191,12 +191,12 @@ export function WorkoutBody({
     const last = [...relevant].sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
     return last ? relevant.filter(log => log.logged_date === last.logged_date && log.plan_exercise_id === last.plan_exercise_id) : [];
   };
-  const inlineCard = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}><LoadTypeSummary sets={exercise.sets} /><AccessoryLogCard drafts={rows} previousLogs={previousFor(exercise)} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} readOnly={!editable}
+  const inlineCard = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}><LoadTypeSummary sets={exercise.sets} /><AccessoryLogCard allowsRIR={isAccessoryExercise(resolveExerciseMetadata(exercise.exercise_id)?.exerciseType)} drafts={rows} previousLogs={previousFor(exercise)} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} readOnly={!editable}
     onAddSet={editable && onAddSet ? () => onAddSet(exercise) : undefined} onRemoveSet={onRemoveSet} /></View>;
   const extrasFor = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}>
     {rows.filter(row => row.kind === 'extra').map(draft => <View key={draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: spacing.point1, borderColor: colors.borderStrong, borderRadius: radius.inset, backgroundColor: isDraftTerminal(draft) ? colors.successTint : colors.surfaceCard }}>
       <Text style={{ ...font.body(fontMetrics.size11), color: colors.textMuted }}>{t('student.added.extra')}</Text>
-      <Text style={{ flex: 1, ...font.mono(fontMetrics.size13), color: colors.textPrimary }}>{draft.weightText ? unit === 'lb' ? metricDisplay(draft.weightText, POUNDS_PER_KG) : draft.weightText : '—'} {unit} × {draft.repsText || '—'}{draft.rpeText ? ` · RPE ${draft.rpeText}` : ''}</Text>
+      <Text style={{ flex: 1, ...font.mono(fontMetrics.size13), color: colors.textPrimary }}>{draft.weightText ? unit === 'lb' ? metricDisplay(draft.weightText, POUNDS_PER_KG) : draft.weightText : '—'} {unit} × {draft.repsText || '—'}{draft.rpeText ? ` · ${draft.sourceLog?.actual_rir != null ? 'RIR' : 'RPE'} ${draft.rpeText}` : ''}</Text>
       {editable ? <>
         <AppButton variant="link" label={t('student.todayWorkoutScreen.copy015')} onPress={() => onRecord(draft)} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet?.(draft)} style={{ minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: colors.textMuted }}>×</Text></Pressable>
@@ -249,7 +249,7 @@ export function WorkoutBody({
               '#',
               t('student.setEntrySheet.copy001'),
               t('student.setEntrySheet.copy003'),
-              'RPE',
+              rows.some(row => row.sourceLog?.actual_rir != null) ? 'RPE / RIR' : 'RPE',
               '',
             ].map((label, i) => (
               <Text
@@ -296,7 +296,7 @@ export function WorkoutBody({
                 {[
                   draft.weightText || '—',
                   draft.repsText || '—',
-                  draft.rpeText || '—',
+                  draft.sourceLog?.actual_rir != null ? `RIR ${draft.sourceLog.actual_rir}` : draft.rpeText || '—',
                 ].map((value, i) => (
                   <Text
                     key={i}
@@ -431,7 +431,7 @@ export function WorkoutBody({
                 return <View key={draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <Text style={{ width: 36, color: colors.textMuted, ...font.mono(12) }}>{draft.kind === 'extra' ? t('student.added.extra') : draft.setIndex + 1}</Text>
                   <Text style={{ flex: 1, color: !terminal ? colors.textMuted : draft.status === 'failed' ? colors.danger : colors.textPrimary, ...font.mono(13) }}>
-                    {terminal ? `${weight} ${unit} × ${draft.repsText || '—'}${draft.rpeText ? ` · RPE ${draft.rpeText}` : ''}` : '—'}
+                    {terminal ? `${weight} ${unit} × ${draft.repsText || '—'}${draft.rpeText ? ` · ${draft.sourceLog?.actual_rir != null ? 'RIR' : 'RPE'} ${draft.rpeText}` : ''}` : '—'}
                   </Text>
                   <CompletedSetVideo setLogId={draft.sourceLog?.id ?? null} stableSetId={draft.stableSetId} badge={{ exerciseName: title, setOrdinal: draft.setIndex + 1, weightKg: draft.sourceLog ? Number(draft.sourceLog.weight_kg) : null, reps: draft.sourceLog?.reps ?? null, rpe: draft.sourceLog?.rpe != null ? Number(draft.sourceLog.rpe) : null }} />
                 </View>;
@@ -534,7 +534,7 @@ export function WorkoutBody({
               </View>
               <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size15, 'medium'), lineHeight: fontMetrics.size21 }}>{coachNotes.exerciseNote}</Text>
             </View> : null}
-            {accessory ? <AccessoryLogCard key={active.exercise.id} drafts={accessoryDrafts} previousLogs={previousLogs} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} onAddSet={onAddSet ? () => onAddSet(active.exercise) : undefined} onRemoveSet={onRemoveSet} /> : <>
+            {accessory ? <AccessoryLogCard allowsRIR={isAccessoryExercise(resolveExerciseMetadata(active.exercise.exercise_id)?.exerciseType)} key={active.exercise.id} drafts={accessoryDrafts} previousLogs={previousLogs} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} onAddSet={onAddSet ? () => onAddSet(active.exercise) : undefined} onRemoveSet={onRemoveSet} /> : <>
             <View
               style={{
                 flexDirection: 'row',

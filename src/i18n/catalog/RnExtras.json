@@ -462,5 +462,8 @@
 "student.firstRun.plan.summary": {"en": "W1 – W{0} · {1} sessions", "zh": "W1 – W{0} · 共 {1} 节"},
 "student.firstRun.plan.start": {"en": "Start W1D1", "zh": "开始 W1D1"},
 "student.firstRun.plan.close": {"en": "Dismiss first plan", "zh": "关闭第一份计划提示"},
-"student.firstRun.saveError": {"en": "Could not save. Please try again.", "zh": "保存失败，请重试"}
+"student.firstRun.saveError": {"en": "Could not save. Please try again.", "zh": "保存失败，请重试"},
+"training.effort.switch": {"en": "Switch RPE / RIR", "zh": "切换 RPE / RIR"},
+"training.effort.rirLabel": {"en": "Set %@ RIR", "zh": "第 %@ 组 RIR"},
+"training.effort.saved": {"en": "Set %@ recorded as %@", "zh": "第 %@ 组已记录 %@"}
 }

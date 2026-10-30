@@ -2445,5 +2445,8 @@
   "student.firstRun.plan.summary": "W1 – W{0} · 共 {1} 節",
   "student.firstRun.plan.start": "開始 W1D1",
   "student.firstRun.plan.close": "關閉第一份課表提示",
-  "student.firstRun.saveError": "儲存失敗，請重試"
+  "student.firstRun.saveError": "儲存失敗，請重試",
+  "training.effort.switch": "切換 RPE / RIR",
+  "training.effort.rirLabel": "第 %@ 組 RIR",
+  "training.effort.saved": "第 %@ 組已記錄 %@"
 }
