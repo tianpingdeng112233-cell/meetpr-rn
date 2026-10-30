@@ -138,7 +138,7 @@ export function SetEntrySheet({
     draft.weightText,
     allowedSuggestion,
   );
-  initialWeight.weightText = seed;
+  initialWeight.weightText = seed || (bodyweight ? '0' : '');
   const [weightEntry, dispatchWeightEntry] = useReducer(
     weightEntryReducer,
     initialWeight,
@@ -251,7 +251,7 @@ export function SetEntrySheet({
               <View style={styles.controls}>
                 <LoadTypeSummary sets={[draft.planSet]} />
                 <View style={{ gap: spacing.space2 }}>
-                  <Stepper label={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg']) : t('student.setEntrySheet.copy001')} invalid={attempted && !validWeight} placeholder={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalPlaceholder' : 'loadTypes.requiredPlaceholder') : undefined} stepLabel="± 2.5" unit="KG" value={weightText}
+                  <Stepper label={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg']) : t('student.setEntrySheet.copy001')} invalid={attempted && !validWeight} placeholder={bodyweight || freeWeight ? bodyweight ? '0' : t('loadTypes.requiredPlaceholder') : undefined} stepLabel="± 2.5" unit="KG" value={weightText}
                     editable={editable} automatic={isAutomatic} onOpenPad={() => setNumberPad('weight')}
                     onChange={direction => updateWeight(String(direction < 0 ? Math.max(weightFloor, parsedWeight - TRAINING_LIMITS.weightStepKg) : parsedWeight + TRAINING_LIMITS.weightStepKg))} />
                   {caption ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.caption}>{caption}</Text> : null}

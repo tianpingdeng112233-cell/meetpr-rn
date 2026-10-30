@@ -65,8 +65,8 @@ test.each<[string | null, boolean, string | null]>([
 test.each<[Partial<PlanSet>, boolean, string, string, string | null]>([
   [{ intensity_mode: 'weight', target_value: '135.00' }, false, '135', '', '自重'],
   [{ intensity_mode: 'rpe', target_value: '8' }, false, '', '8', '自重'],
-  [{ intensity_mode: 'rpe', target_value: '10.00' }, true, '', '', null],
-  [{ load_mode: 'bodyweight', intensity_mode: null, target_value: null }, true, '', '', null],
+  [{ intensity_mode: 'rpe', target_value: '10.00' }, true, '0', '', null],
+  [{ load_mode: 'bodyweight', intensity_mode: null, target_value: null }, true, '0', '', null],
 ])('056 preserves real targets and strips notes only for effective bodyweight: %j', (fields, isBodyweight, weightText, rpePlaceholder, extraNote) => {
   const [row] = accessoryRows({ drafts: drafts([{ load_mode: null, coach_note: '自重', ...fields }]), previousLogs: [], unit: 'kg' });
   expect(row).toMatchObject({ isBodyweight, weightText, rpePlaceholder, extraNote });
@@ -149,7 +149,7 @@ test('small finite lb inputs never become a different weight through exponent te
 
 test('056 bodyweight accepts empty external load and preserves an entered external load', () => {
   const [row] = accessoryRows({ drafts: drafts([{ load_mode: 'bodyweight', intensity_mode: null, target_value: null }]), previousLogs: [], unit: 'kg' });
-  expect(row).toMatchObject({ isBodyweight: true, weightText: '' });
+  expect(row).toMatchObject({ isBodyweight: true, weightText: '0' });
   expect(accessoryRowWritable(row, { ...validEdit, weightText: '' }).writable).toBe(true);
   expect(accessoryLogRequest(row, { ...validEdit, weightText: '' }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');
   expect(accessoryLogRequest(row, { ...validEdit, weightText: '12.5' }, { planExerciseId: 'exercise' }).weight_kg).toBe('12.5');
@@ -159,7 +159,7 @@ test('056 bodyweight accepts empty external load and preserves an entered extern
 test.each(['free_weight', 'bodyweight'] as const)('056 %s keeps independent intensity targets and never invents load', load_mode => {
   for (const target of [{ target_rpe: '8' }, { rir_target: 2 }, { target_pct: '75' }]) {
     const [row] = accessoryRows({ drafts: drafts([{ load_mode, intensity_mode: null, target_value: null, ...target }]), previousLogs: [], unit: 'kg' });
-    expect(row.weightText).toBe('');
+    expect(row.weightText).toBe(load_mode === 'bodyweight' ? '0' : '');
     expect(row.rpePlaceholder).toEqual('target_rpe' in target ? '8' : 'rir_target' in target ? { kind: 'rir', value: 2 } : '');
     expect(accessoryRowWritable(row, { ...validEdit, weightText: '' }).writable).toBe(load_mode === 'bodyweight');
     expect(accessoryLogRequest(row, validEdit, { planExerciseId: 'exercise' }).weight_kg).toBe('25');

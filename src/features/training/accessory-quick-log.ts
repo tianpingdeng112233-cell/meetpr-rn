@@ -53,7 +53,7 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
       hasVideo: videoById[draft.stableSetId] ?? false,
       unit,
       weightText: draft.kind ? (draft.weightText === '' ? '' : weightText(Number(draft.weightText))) : source ? weightText(Number(source.weight_kg))
-        : prescription.weightKg == null ? '' : weightText(prescription.weightKg),
+        : isBodyweight ? '0' : prescription.weightKg == null ? '' : weightText(prescription.weightKg),
       weightPlaceholder: previous?.weightText ?? '',
       repsText: draft.kind ? draft.repsText : String(source?.reps ?? prescription.reps),
       rpeText: source?.rpe == null ? '' : formatWeight(Number(source.rpe)),

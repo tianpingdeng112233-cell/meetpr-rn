@@ -203,9 +203,9 @@ test.each(['free_weight', 'bodyweight'] as const)('056 quick-log UI communicates
   await press(training22.entry);
   expect(copy()).not.toContain('10');
   expect(copy().join(' ')).not.toContain('目标 RPE 10');
-  const label = load_mode === 'bodyweight' ? '额外负重 kg · 选填' : '重量 kg · 必填';
+  const label = load_mode === 'bodyweight' ? '额外负重 kg' : '重量 kg · 必填';
   expect(copy()).toContain(label);
-  expect(copy()).toContain(load_mode === 'bodyweight' ? '不加就空着' : '填实际重量');
+  expect(copy()).toContain(load_mode === 'bodyweight' ? '0' : '填实际重量');
   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: training22.hold })[0].props.onAccessibilityAction(); });
   if (load_mode === 'bodyweight') {
     expect(storedLogs).toEqual([expect.objectContaining({ weight_kg: '0', completed: true })]);
