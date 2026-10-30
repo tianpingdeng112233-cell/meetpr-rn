@@ -57,9 +57,19 @@ test('existing complete, failed and cancelled logs override prescriptions and ca
 test.each<[string | null, boolean, string | null]>([
   ['自重', true, null], ['  BODYWEIGHT tempo 3-1-1  ', true, 'tempo 3-1-1'],
   ['  tempo 3-1-1  ', false, '  tempo 3-1-1  '], ['  ', false, null], [null, false, null],
-])('group note %s controls bodyweight and the extra note', (coach_note, isBodyweight, extraNote) => {
-  const [row] = accessoryRows({ drafts: drafts([{ coach_note }], [log()]), previousLogs: [], unit: 'kg' });
+])('legacy projection note %s controls bodyweight and the extra note', (coach_note, isBodyweight, extraNote) => {
+  const [row] = accessoryRows({ drafts: drafts([{ intensity_mode: 'rpe', target_value: '10.00', coach_note }], [log()]), previousLogs: [], unit: 'kg' });
   expect(row).toMatchObject({ isBodyweight, extraNote, weightText: '30' });
+});
+
+test.each<[Partial<PlanSet>, boolean, string, string, string | null]>([
+  [{ intensity_mode: 'weight', target_value: '135.00' }, false, '135', '', '自重'],
+  [{ intensity_mode: 'rpe', target_value: '8' }, false, '', '8', '自重'],
+  [{ intensity_mode: 'rpe', target_value: '10.00' }, true, '', '', null],
+  [{ load_mode: 'bodyweight', intensity_mode: null, target_value: null }, true, '', '', null],
+])('056 preserves real targets and strips notes only for effective bodyweight: %j', (fields, isBodyweight, weightText, rpePlaceholder, extraNote) => {
+  const [row] = accessoryRows({ drafts: drafts([{ load_mode: null, coach_note: '自重', ...fields }]), previousLogs: [], unit: 'kg' });
+  expect(row).toMatchObject({ isBodyweight, weightText, rpePlaceholder, extraNote });
 });
 
 test('lb rows convert prescriptions, saved weights and previous weights with existing metric formatting', () => {
@@ -86,7 +96,7 @@ test.each<[keyof typeof validEdit, string, boolean]>([
 });
 
 test('bodyweight allows blank weight but validates entered external load and reps/RPE', () => {
-  const [row] = accessoryRows({ drafts: drafts([{ coach_note: 'bodyweight' }]), previousLogs: [], unit: 'kg' });
+  const [row] = accessoryRows({ drafts: drafts([{ intensity_mode: 'rpe', target_value: '10.00', coach_note: 'bodyweight' }]), previousLogs: [], unit: 'kg' });
   expect(accessoryRowWritable(row, { ...validEdit, weightText: '' })).toEqual({ writable: true, invalidFields: [] });
   expect(accessoryRowWritable(row, { weightText: 'invalid', repsText: '0', rpeText: '11' }))
     .toEqual({ writable: false, invalidFields: ['weightText', 'repsText', 'rpeText'] });
@@ -109,7 +119,7 @@ test('cancel preserves exact stored kg/reps/RPE even when the displayed lb value
 });
 
 test('requests write bodyweight as zero and convert lb to kg using the existing rounded metric conversion', () => {
-  const [bodyweight, weighted] = accessoryRows({ drafts: drafts([{ coach_note: '自重' }, {}]), previousLogs: [], unit: 'lb' });
+  const [bodyweight, weighted] = accessoryRows({ drafts: drafts([{ intensity_mode: 'rpe', target_value: '10.00', coach_note: '自重' }, {}]), previousLogs: [], unit: 'lb' });
   expect(accessoryLogRequest(bodyweight, { ...validEdit, weightText: '' }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');
   expect(accessoryLogRequest(weighted, { ...validEdit, weightText: '55.1' }, { planExerciseId: 'exercise' }).weight_kg).toBe('25');
   expect(accessoryLogRequest(weighted, { ...validEdit, weightText: '0' }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');

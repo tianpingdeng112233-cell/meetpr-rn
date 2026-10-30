@@ -42,7 +42,7 @@ test('056 tapping complete with no chosen weight marks the input and gives the e
   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ weight_kg: '22.5', completed: true }), 'single');
 });
 
-test.each([{ load_mode: 'bodyweight' as const }, { coach_note: '自重 Slow down' }])('056 bodyweight shows an optional editable weight and retains other notes: %j', async prescription => {
+test.each([{ load_mode: 'bodyweight' as const }, { intensity_mode: 'rpe' as const, target_value: '10.00', coach_note: '自重 Slow down' }])('056 bodyweight shows an optional editable weight and retains other notes: %j', async prescription => {
   const save = await mount(prescription);
   expect(input('额外负重 kg · 选填').props.placeholder).toBe('不加就空着');
   expect(input('额外负重 kg · 选填').props.value).toBe('');
