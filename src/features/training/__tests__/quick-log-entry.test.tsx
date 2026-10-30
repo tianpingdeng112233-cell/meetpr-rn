@@ -195,3 +195,34 @@ test('Chinese training history text and accessibility label open the existing hi
   expect(mockPush).toHaveBeenCalledWith('/training-history');
   expect(training22.history).toBe('训练历史');
 });
+
+test.each(['free_weight', 'bodyweight'] as const)('056 quick-log UI communicates %s and reports missing chosen weight', async load_mode => {
+  setLocaleOverride('zh');
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: exercise.sets.map(set => ({ ...set, load_mode, intensity_mode: 'rpe', target_value: '10.00' })) })) })) };
+  await mount();
+  await press(training22.entry);
+  expect(copy()).not.toContain('10');
+  expect(copy().join(' ')).not.toContain('目标 RPE 10');
+  const label = load_mode === 'bodyweight' ? '额外负重 kg · 选填' : '重量 kg · 必填';
+  expect(copy()).toContain(label);
+  expect(copy()).toContain(load_mode === 'bodyweight' ? '不加就空着' : '填实际重量');
+  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: training22.hold })[0].props.onAccessibilityAction(); });
+  if (load_mode === 'bodyweight') {
+    expect(storedLogs).toEqual([expect.objectContaining({ weight_kg: '0', completed: true })]);
+  } else {
+    expect(writes).toBe(0);
+    expect(copy()).toContain('第 1 组还没填重量——自选重量的组要填实际用的重量才能完成。');
+  }
+});
+
+test('056 mixed-mode quick log retains the percentage and RPE-range targets of older rows', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [
+    { ...exercise.sets[0], load_mode: 'free_weight', intensity_mode: null, target_value: null },
+    { ...exercise.sets[0], id: 'pct', set_number: 2, load_mode: 'pct', target_pct: '75' },
+    { ...exercise.sets[0], id: 'range', set_number: 3, load_mode: 'rpe_range', rpe_low: '7', rpe_high: '8' },
+  ] })) })) };
+  await mount();
+  await press(training22.entry);
+  expect(copy().join(' ')).toContain('75%');
+  expect(copy().join(' ')).toContain('RPE 7–8');
+});

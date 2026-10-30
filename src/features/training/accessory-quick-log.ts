@@ -1,6 +1,6 @@
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { metricDisplay, metricStored, POUNDS_PER_KG } from '@/domain/measurement';
-import { decodePrescription } from '@/domain/plan/prescription';
+import { decodePrescription, withoutBodyweightMarker } from '@/domain/plan/prescription';
 import type { DraftStatus, WorkoutSetDraft } from './model';
 import { formatWeight } from './policy';
 import { validateSetLogInput, type SetLogInput, type SetLogValidation } from './set-log-input';
@@ -44,7 +44,7 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
     const intensity = prescription.intensity;
     const source = draft.sourceLog;
     const note = draft.planSet.coach_note;
-    const isBodyweight = /自重|bodyweight/i.test(note ?? '');
+    const isBodyweight = prescription.loadMode === 'bodyweight';
     return {
       kind: draft.kind,
       stableSetId: draft.stableSetId,
@@ -52,7 +52,7 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
       status: draft.status,
       hasVideo: videoById[draft.stableSetId] ?? false,
       unit,
-      weightText: draft.kind ? (draft.weightText === '' ? '' : weightText(Number(draft.weightText))) : isBodyweight ? 'BW' : source ? weightText(Number(source.weight_kg))
+      weightText: draft.kind ? (draft.weightText === '' ? '' : weightText(Number(draft.weightText))) : source ? weightText(Number(source.weight_kg))
         : prescription.weightKg == null ? '' : weightText(prescription.weightKg),
       weightPlaceholder: previous?.weightText ?? '',
       repsText: draft.kind ? draft.repsText : String(source?.reps ?? prescription.reps),
@@ -61,14 +61,14 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {} }: {
         : intensity?.kind === 'rpe' ? formatWeight(intensity.value) : '',
       isBodyweight,
       previous,
-      extraNote: !isBodyweight && note?.trim() ? note : null,
+      extraNote: isBodyweight ? withoutBodyweightMarker(note) : note?.trim() ? note : null,
       recorded: source ? { weight_kg: source.weight_kg, reps: source.reps, rpe: source.rpe } : null,
     };
   });
 }
 
 export function accessoryRowWritable(row: AccessoryRow, edited: SetLogInput): SetLogValidation {
-  return validateSetLogInput(row.isBodyweight ? { ...edited, weightText: '0' } : edited);
+  return validateSetLogInput(row.isBodyweight && !edited.weightText.trim() ? { ...edited, weightText: '0' } : edited);
 }
 
 export type AccessoryLogOptions = { planExerciseId: string; loggedDate?: string; action?: 'complete' | 'cancel' };
@@ -81,7 +81,7 @@ export function accessoryLogRequest(row: AccessoryRow, edited: SetLogInput, opti
   }
   if (!cancel && !accessoryRowWritable(row, edited).writable) throw new Error('Invalid set input');
   const recorded = cancel ? row.recorded : null;
-  const weight = row.isBodyweight ? 0 : Number(edited.weightText);
+  const weight = Number(edited.weightText);
   const weightKg = row.unit === 'lb' && weight !== 0
     ? metricStored(weight, POUNDS_PER_KG) : String(weight);
   return {

@@ -46,17 +46,17 @@ test.each<['en' | 'zh', string]>([['en', 'Coach note'], ['zh', '教练备注']])
 });
 
 test.each([true, false])('set text stays below the prescription; only read-only heroes fall back to exercise notes (editable=%s)', async editable => {
-  await renderNotes('Pause on every rep.', ' Bodyweight ', editable);
+  await renderNotes('Pause on every rep.', ' Tempo 3-1-1 ', editable);
   let copy = heroCopy();
-  expect(copy).toContain('Bodyweight');
-  expect(copy.indexOf('Bodyweight')).toBeGreaterThan(copy.indexOf('80kg x 5'));
+  expect(copy).toContain('Tempo 3-1-1');
+  expect(copy.indexOf('Tempo 3-1-1')).toBeGreaterThan(copy.indexOf('80kg x 5'));
   expect(copy.includes('Pause on every rep.')).toBe(editable);
-  if (editable) expect(copy.indexOf('Bodyweight')).toBeLessThan(copy.indexOf('Log this set'));
+  if (editable) expect(copy.indexOf('Tempo 3-1-1')).toBeLessThan(copy.indexOf('Log this set'));
 
   for (const empty of [null, '', ' \n\t ']) {
     await renderNotes(' Pause on every rep. \n', empty, editable);
     copy = heroCopy();
-    expect(copy).not.toContain('Bodyweight');
+    expect(copy).not.toContain('Tempo 3-1-1');
     expect(copy.filter(text => text === 'Coach note')).toHaveLength(1);
     expect(copy).toContain('Pause on every rep.');
     if (!editable) {
@@ -73,11 +73,11 @@ test.each([true, false])('set text stays below the prescription; only read-only 
 });
 
 test.each([null, '', ' \n\t '])('without an exercise note (%p), only the lower set note is shown', async exerciseNote => {
-  await renderNotes(exerciseNote, 'Bodyweight');
+  await renderNotes(exerciseNote, 'Tempo 3-1-1');
   const copy = heroCopy();
   expect(copy.filter(text => text === 'Coach note')).toHaveLength(1);
   expect(copy.indexOf('Coach note')).toBeGreaterThan(copy.indexOf('80kg x 5'));
-  expect(copy).toContain('Bodyweight');
+  expect(copy).toContain('Tempo 3-1-1');
   await renderNotes(exerciseNote, null);
   expect(heroCopy()).not.toContain('Coach note');
 });
@@ -102,4 +102,13 @@ test('advancing sets keeps the exercise note until the next exercise and changes
   expect(heroCopy()).not.toContain('Pause in the hole.');
   expect(heroCopy()).not.toContain('Second system note');
   expect(heroCopy().filter(text => text === 'Coach note')).toHaveLength(1);
+});
+
+
+test.each([true, false])('056 old bodyweight marker is a mode, never a visible coach note (editable=%s)', async editable => {
+  await renderNotes(null, 'Bodyweight Keep control', editable);
+  const copy = heroCopy();
+  expect(copy).not.toContain('Bodyweight Keep control');
+  expect(copy).toContain('Keep control');
+  expect(copy.join(' ')).toContain('Bodyweight');
 });

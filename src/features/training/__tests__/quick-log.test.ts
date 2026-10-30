@@ -64,3 +64,13 @@ test('existing extra sets remain visible but cannot be selected or written by qu
   expect(await attempt.submit({ ...model, rows: model.rows.map(row => ({ ...row, included: true })) })).toEqual({ kind: 'completed' });
   expect(persist).toHaveBeenCalledTimes(2);
 });
+
+
+test.each(['free_weight', 'bodyweight'] as const)('056 quick log only allows blank load for bodyweight (%s)', async load_mode => {
+  const input = make();
+  input.rows = input.rows.slice(0, 1).map(row => ({ ...row, draft: { ...row.draft, weightText: '', planSet: { ...row.draft.planSet, load_mode, intensity_mode: null, target_value: null } } }));
+  const persist = jest.fn(async () => {});
+  const attempt = new QuickLogAttempt({ persist, complete: async () => {} });
+  expect(await attempt.submit(input)).toEqual({ kind: load_mode === 'bodyweight' ? 'completed' : 'invalid' });
+  expect(persist).toHaveBeenCalledTimes(load_mode === 'bodyweight' ? 1 : 0);
+});

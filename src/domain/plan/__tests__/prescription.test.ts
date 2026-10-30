@@ -70,3 +70,35 @@ test('action summaries name a uniform prescription and never misrepresent mixed 
     prescriptionSummary([{ prescription: first }, { prescription: second }]),
   ).toBe('2 sets');
 });
+
+
+test.each(['bodyweight', 'free_weight'] as const)('056 %s ignores the old-client RPE 10 projection in formatting and rest targets', load_mode => {
+  setLocaleOverride('zh');
+  const planSet = set({ load_mode, target_reps: 1, intensity_mode: 'rpe', target_value: '10.00' });
+  const prescription = decodePrescription(planSet);
+  expect(prescription.intensity).toBeUndefined();
+  expect(prescribed(prescription)).toBe(load_mode === 'bodyweight' ? '1 · 自重' : '1 · 自选重量');
+  expect(prescriptionRestRPE(planSet)).toBeNull();
+});
+
+
+test.each(['bodyweight', 'free_weight'] as const)('056 %s preserves independent RPE, RIR, percent and RPE-range targets despite projection', load_mode => {
+  for (const [fields, expected] of [
+    [{ target_rpe: '8' }, 'RPE 8'],
+    [{ rir_target: 2 }, 'RIR 2'],
+    [{ target_pct: '75', pct_anchor: 'e1rm' }, '75%'],
+    [{ rpe_low: '7', rpe_high: '8' }, 'RPE 7–8'],
+  ] as const) {
+    const p = decodePrescription(set({ load_mode, intensity_mode: 'rpe', target_value: '10.00', ...fields }));
+    expect(prescribed(p)).toContain(expected);
+    expect(prescribed(p)).not.toContain('RPE 10');
+    if ('target_pct' in fields) expect(p.percentageAnchor).toBe('e1rm');
+  }
+  expect(decodePrescription(set({ load_mode, rpe_low: '7', intensity_mode: 'rpe', target_value: '10.00' })).intensity).toBeUndefined();
+});
+
+test('056 legacy bodyweight markers cannot reintroduce the projected RPE 10', () => {
+  const p = decodePrescription(set({ coach_note: '自重', intensity_mode: 'rpe', target_value: '10.00' }));
+  expect(p.loadMode).toBe('bodyweight');
+  expect(p.intensity).toBeUndefined();
+});

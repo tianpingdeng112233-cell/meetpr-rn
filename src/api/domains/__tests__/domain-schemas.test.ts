@@ -14,6 +14,7 @@ import {
 } from '../onboarding';
 import {
   PlanDetailSchema,
+  PlanSetSchema,
   PlansResponseSchema,
 } from '../plans';
 import {
@@ -466,4 +467,15 @@ test('wire ids accept synthetic non-RFC GUIDs used by the exercise catalog', () 
   expect(UuidSchema.safeParse('00000000-0000-0000-ca70-0000000000c1').success).toBe(true);
   expect(UuidSchema.safeParse('28efff49-6273-4aea-8c1b-f9a570f1f732').success).toBe(true);
   expect(UuidSchema.safeParse('not-a-guid').success).toBe(false);
+});
+
+
+test.each(['free_weight', 'bodyweight'])('056 decodes %s with nullable legacy intensity fields', load_mode => {
+  const parsed = PlanSetSchema.parse({
+    id: SET_ID, plan_exercise_id: PLAN_EXERCISE_ID, set_number: 1,
+    target_reps: 15, target_reps_max: null, load_mode,
+    intensity_mode: null, target_value: null, target_rpe: '8',
+    set_type: 'working', rest_seconds: null, coach_note: null, created_at: NOW,
+  });
+  expect(parsed).toMatchObject({ load_mode, intensity_mode: null, target_value: null, target_rpe: '8' });
 });

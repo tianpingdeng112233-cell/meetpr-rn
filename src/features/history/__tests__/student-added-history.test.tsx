@@ -133,3 +133,18 @@ test.each([
     expect(StyleSheet.flatten(row.props.style)).toEqual({ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', minHeight: 32 });
   });
 });
+
+
+test.each(['bodyweight', 'free_weight'] as const)('056 history uses %s independent intensity, never the legacy projection', async load_mode => {
+  setLocaleOverride('zh');
+  const projected = { ...cycle, days: cycle.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise,
+    sets: exercise.sets.map(set => ({ ...set, load_mode, intensity_mode: 'rpe' as const, target_value: '10.00' })),
+  })) })) };
+  jest.mocked(plansRepository.list).mockResolvedValue({ plans: [projected] });
+  jest.spyOn(plansRepository, 'detail').mockResolvedValue(projected);
+  jest.mocked(setsRepository.range).mockResolvedValue({ logs: [prescribedLog] });
+  await render(<TrainingHistoryScreen />);
+  expect(texts()).toContain('80kg × 5'); // Actual records still win over a prescription.
+  expect(texts().join(' ')).not.toContain('RPE 10');
+  expect(texts()).toContain(load_mode === 'bodyweight' ? '5 · 自重' : '5 · 自选重量');
+});

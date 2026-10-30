@@ -30,6 +30,7 @@ export function weightSuggestionOutcome(
 ): SuggestionOutcome {
   const p = decodePrescription(input.planSet);
   const empty = { suggestion: null, reason: null };
+  if (p.loadMode === 'free_weight' || p.loadMode === 'bodyweight') return empty;
   if (p.weightKg !== undefined) return empty;
   if (p.intensity?.kind === 'pct') {
     const percentage = resolvePctAnchor({
@@ -119,6 +120,7 @@ export function entryPrefill(
     );
   }
   if (actualWeight !== null && actualWeight !== '') return actualWeight;
+  if (p.loadMode === 'free_weight' || p.loadMode === 'bodyweight') return '';
   if (p.weightKg !== undefined) return formatWeight(p.weightKg);
   return p.intensity?.kind === 'pct' && suggestion
     ? formatWeight(suggestion.weightKg)

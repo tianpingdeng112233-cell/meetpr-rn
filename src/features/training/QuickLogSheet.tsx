@@ -1,3 +1,4 @@
+import { LoadTypeSummary } from './LoadTypeSummary';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, Text, View } from 'react-native';
@@ -5,12 +6,12 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { Card, font, Screen, useColors } from '@/design';
 import { NumberPad } from '@/design/NumberPad';
 import type { NumberPadField } from '@/design/number-pad';
-import { decodePrescription, prescriptionSummary } from '@/domain/plan/prescription';
+import { decodePrescription, effectiveLoadMode, prescriptionSummary } from '@/domain/plan/prescription';
 import { localDateText } from '@/domain/plan/workout-date-policy';
 import { getLocale, t } from '@/i18n';
 import { training22 as copy } from './build22-strings';
 import { HoldToCompleteButton } from './HoldToCompleteButton';
-import { localNoon, type QuickLogOutcome, type QuickLogPlan } from './quick-log';
+import { localNoon, type QuickLogOutcome, type QuickLogPlan, type QuickLogRow } from './quick-log';
 
 type Cell = { id: string; field: NumberPadField };
 const fieldKey = { weight: 'weightText', reps: 'repsText', rpe: 'rpeText' } as const;
@@ -25,6 +26,9 @@ export function QuickLogSheet({ initialPlan, dayCode, subtitle, exerciseName, on
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const modeFor = (row: QuickLogRow) => effectiveLoadMode(row.draft.planSet);
+  const missingWeight = (row: QuickLogRow) => row.included && !row.readOnly && modeFor(row) === 'free_weight' && !row.draft.weightText.trim();
   const inFlight = useRef(false);
   const [locked, setLocked] = useState(false);
   const groups = [...new Set(plan.rows.map(row => row.draft.exercise.id))].map(id => ({ id, rows: plan.rows.filter(row => row.draft.exercise.id === id) }));
@@ -46,12 +50,12 @@ export function QuickLogSheet({ initialPlan, dayCode, subtitle, exerciseName, on
   };
   const submit = async () => {
     if (inFlight.current) return;
-    inFlight.current = true; setBusy(true); setCell(null);
+    inFlight.current = true; setBusy(true); setCell(null); setAttempted(true);
     try {
       const outcome = await onSubmit(plan);
       if (outcome.kind === 'partialFailure') { setLocked(outcome.written > 0); Alert.alert(copy.title(dayCode), copy.partial(outcome.written, outcome.remaining)); }
       else if (outcome.kind === 'completionFailed') { setLocked(true); Alert.alert(copy.title(dayCode), copy.completionFailed); }
-      else if (outcome.kind === 'invalid') Alert.alert(copy.title(dayCode), copy.invalid);
+      else if (outcome.kind === 'invalid' && !included.some(missingWeight)) Alert.alert(copy.title(dayCode), copy.invalid);
     } finally { inFlight.current = false; setBusy(false); }
   };
   const close = () => { if (!inFlight.current) onClose(); };
@@ -74,19 +78,21 @@ export function QuickLogSheet({ initialPlan, dayCode, subtitle, exerciseName, on
           return <Card key={group.id} style={{ padding: 14, gap: 8 }}>
             <Pressable accessibilityRole="button" accessibilityLabel={exerciseName(group.rows[0].draft.exercise.exercise_id)} onPress={() => setExpanded(previous => ({ ...previous, [group.id]: !previous[group.id] }))} style={{ minHeight: 48, justifyContent: 'center', gap: 4 }}>
               <Text style={{ ...font.body(15, 'bold'), color: colors.textPrimary }}>{ordinal + 1} · {exerciseName(group.rows[0].draft.exercise.exercise_id)}</Text>
-              <Text style={{ ...font.mono(11), color: colors.textSecondary }}>{prescriptionSummary(group.rows.filter(row => !row.readOnly).map(row => ({ prescription: decodePrescription(row.draft.planSet) })))}</Text>
+              {group.rows.some(row => ['free_weight', 'bodyweight'].includes(modeFor(row) ?? '')) ? <LoadTypeSummary sets={group.rows.filter(row => !row.readOnly).map(row => row.draft.planSet)} /> : <Text style={{ ...font.mono(11), color: colors.textSecondary }}>{prescriptionSummary(group.rows.filter(row => !row.readOnly).map(row => ({ prescription: decodePrescription(row.draft.planSet) })))}</Text>}
               <Text style={{ ...font.mono(11), color: colors.textMuted }}>{copy.count(count, group.rows.filter(row => !row.readOnly).length)}{count === 0 ? ` · ${copy.skipped}` : ''}</Text>
             </Pressable>
             {visible ? <>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>{['#', copy.weight, copy.reps, 'RPE', copy.include].map((label, index) => <Text key={label} style={{ flex: index === 0 ? 0.45 : 1, textAlign: 'center', ...font.mono(10), color: colors.textMuted }}>{label}</Text>)}</View>
               {group.rows.map(row => <View key={row.draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                 <Text style={{ flex: 0.45, textAlign: 'center', ...font.mono(12), color: colors.textMuted }}>{row.readOnly ? t('student.added.extra') : row.draft.setIndex + 1}</Text>
-                {(['weight', 'reps', 'rpe'] as NumberPadField[]).map(field => <Pressable key={field} accessibilityRole="button" accessibilityLabel={copy.cell(exerciseName(row.draft.exercise.exercise_id), row.draft.setIndex + 1, field, row.draft[fieldKey[field]] || '—')} disabled={busy || locked || !row.included} onPress={() => setCell({ id: row.draft.stableSetId, field })} style={({ pressed }) => ({ flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: cell?.id === row.draft.stableSetId && cell.field === field ? colors.gold500 : 'transparent', opacity: row.included || row.readOnly ? pressed ? 0.85 : 1 : 0.35 })}>
-                  <Text style={{ ...font.mono(15, 'semibold'), color: colors.textPrimary, textDecorationLine: row.included || row.readOnly ? 'none' : 'line-through' }}>{row.draft[fieldKey[field]] || '—'}</Text>
+                {(['weight', 'reps', 'rpe'] as NumberPadField[]).map(field => <Pressable key={field} accessibilityRole="button" accessibilityLabel={copy.cell(exerciseName(row.draft.exercise.exercise_id), row.draft.setIndex + 1, field, row.draft[fieldKey[field]] || '—')} disabled={busy || locked || !row.included} onPress={() => setCell({ id: row.draft.stableSetId, field })} style={({ pressed }) => ({ flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: field === 'weight' && attempted && missingWeight(row) ? colors.danger : cell?.id === row.draft.stableSetId && cell.field === field ? colors.gold500 : 'transparent', opacity: row.included || row.readOnly ? pressed ? 0.85 : 1 : 0.35 })}>
+                  {field === 'weight' && ['free_weight', 'bodyweight'].includes(modeFor(row) ?? '') ? <Text style={{ ...font.body(10), color: attempted && missingWeight(row) ? colors.danger : colors.textMuted, textAlign: 'center' }}>{t(modeFor(row) === 'bodyweight' ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg'])}</Text> : null}
+                  <Text style={{ ...font.mono(15, 'semibold'), color: colors.textPrimary, textDecorationLine: row.included || row.readOnly ? 'none' : 'line-through' }}>{row.draft[fieldKey[field]] || (field === 'weight' && ['free_weight', 'bodyweight'].includes(modeFor(row) ?? '') ? t(modeFor(row) === 'bodyweight' ? 'loadTypes.optionalPlaceholder' : 'loadTypes.requiredPlaceholder') : '—')}</Text>
                   {field === 'weight' && row.automaticWeight ? <Text style={{ ...font.body(9), color: colors.textMuted }}>{copy.auto}</Text> : null}
                 </Pressable>)}
                 <Pressable accessibilityRole="checkbox" accessibilityLabel={copy.includeSet(row.draft.setIndex + 1)} accessibilityState={{ checked: row.included, disabled: busy || locked || row.readOnly }} disabled={busy || locked || row.readOnly} onPress={() => setPlan(previous => ({ ...previous, rows: previous.rows.map(item => item === row ? { ...item, included: !item.included } : item) }))} style={{ flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name={row.included ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'} color={row.included ? colors.success : colors.textMuted} size={24} /></Pressable>
               </View>)}
+              {attempted ? group.rows.filter(missingWeight).map(row => <Text key={row.draft.stableSetId} accessibilityLiveRegion="polite" style={{ ...font.body(12), color: colors.danger }}>{t('loadTypes.missingWeight', [row.draft.setIndex + 1])}</Text>) : null}
               {count === 0 ? <Pressable disabled={busy || locked} accessibilityRole="button" onPress={() => setPlan(previous => ({ ...previous, rows: previous.rows.map(row => row.draft.exercise.id === group.id && !row.readOnly ? { ...row, included: true } : row) }))} style={pressed}><Text style={{ color: colors.goldText, ...font.body(13) }}>{copy.restore}</Text></Pressable> : null}
             </> : null}
           </Card>;

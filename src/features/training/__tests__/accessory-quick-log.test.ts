@@ -55,11 +55,11 @@ test('existing complete, failed and cancelled logs override prescriptions and ca
 });
 
 test.each<[string | null, boolean, string | null]>([
-  ['自重', true, null], ['  BODYWEIGHT tempo 3-1-1  ', true, null],
+  ['自重', true, null], ['  BODYWEIGHT tempo 3-1-1  ', true, 'tempo 3-1-1'],
   ['  tempo 3-1-1  ', false, '  tempo 3-1-1  '], ['  ', false, null], [null, false, null],
 ])('group note %s controls bodyweight and the extra note', (coach_note, isBodyweight, extraNote) => {
   const [row] = accessoryRows({ drafts: drafts([{ coach_note }], [log()]), previousLogs: [], unit: 'kg' });
-  expect(row).toMatchObject({ isBodyweight, extraNote, weightText: isBodyweight ? 'BW' : '30' });
+  expect(row).toMatchObject({ isBodyweight, extraNote, weightText: '30' });
 });
 
 test('lb rows convert prescriptions, saved weights and previous weights with existing metric formatting', () => {
@@ -85,11 +85,11 @@ test.each<[keyof typeof validEdit, string, boolean]>([
   expect(accessoryRowWritable(row, { ...validEdit, [field]: value })).toEqual({ writable, invalidFields: writable ? [] : [field] });
 });
 
-test('bodyweight ignores weight validation but reports every invalid reps/RPE field', () => {
+test('bodyweight allows blank weight but validates entered external load and reps/RPE', () => {
   const [row] = accessoryRows({ drafts: drafts([{ coach_note: 'bodyweight' }]), previousLogs: [], unit: 'kg' });
-  expect(accessoryRowWritable(row, { ...validEdit, weightText: 'BW' })).toEqual({ writable: true, invalidFields: [] });
+  expect(accessoryRowWritable(row, { ...validEdit, weightText: '' })).toEqual({ writable: true, invalidFields: [] });
   expect(accessoryRowWritable(row, { weightText: 'invalid', repsText: '0', rpeText: '11' }))
-    .toEqual({ writable: false, invalidFields: ['repsText', 'rpeText'] });
+    .toEqual({ writable: false, invalidFields: ['weightText', 'repsText', 'rpeText'] });
 });
 
 test.each<[string, string | null]>([['', null], ['8.5', '8.5'], ['0', '0']])('complete request uses edited values and RPE %s, like set-save', (rpeText, rpe) => {
@@ -110,7 +110,7 @@ test('cancel preserves exact stored kg/reps/RPE even when the displayed lb value
 
 test('requests write bodyweight as zero and convert lb to kg using the existing rounded metric conversion', () => {
   const [bodyweight, weighted] = accessoryRows({ drafts: drafts([{ coach_note: '自重' }, {}]), previousLogs: [], unit: 'lb' });
-  expect(accessoryLogRequest(bodyweight, { ...validEdit, weightText: 'BW' }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');
+  expect(accessoryLogRequest(bodyweight, { ...validEdit, weightText: '' }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');
   expect(accessoryLogRequest(weighted, { ...validEdit, weightText: '55.1' }, { planExerciseId: 'exercise' }).weight_kg).toBe('25');
   expect(accessoryLogRequest(weighted, { ...validEdit, weightText: '0' }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');
   expect(accessoryLogRequest(weighted, { ...validEdit, weightText: '1e2' }, { planExerciseId: 'exercise' }).weight_kg).toBe('45.4');
@@ -134,5 +134,24 @@ test('small finite lb inputs never become a different weight through exponent te
   for (const weightText of ['0.0000001', '1e-7']) {
     expect(accessoryRowWritable(row, { ...validEdit, weightText }).writable).toBe(true);
     expect(accessoryLogRequest(row, { ...validEdit, weightText }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');
+  }
+});
+
+test('056 bodyweight accepts empty external load and preserves an entered external load', () => {
+  const [row] = accessoryRows({ drafts: drafts([{ load_mode: 'bodyweight', intensity_mode: null, target_value: null }]), previousLogs: [], unit: 'kg' });
+  expect(row).toMatchObject({ isBodyweight: true, weightText: '' });
+  expect(accessoryRowWritable(row, { ...validEdit, weightText: '' }).writable).toBe(true);
+  expect(accessoryLogRequest(row, { ...validEdit, weightText: '' }, { planExerciseId: 'exercise' }).weight_kg).toBe('0');
+  expect(accessoryLogRequest(row, { ...validEdit, weightText: '12.5' }, { planExerciseId: 'exercise' }).weight_kg).toBe('12.5');
+  expect(accessoryRowWritable(row, { ...validEdit, weightText: '-1' }).writable).toBe(false);
+});
+
+test.each(['free_weight', 'bodyweight'] as const)('056 %s keeps independent intensity targets and never invents load', load_mode => {
+  for (const target of [{ target_rpe: '8' }, { rir_target: 2 }, { target_pct: '75' }]) {
+    const [row] = accessoryRows({ drafts: drafts([{ load_mode, intensity_mode: null, target_value: null, ...target }]), previousLogs: [], unit: 'kg' });
+    expect(row.weightText).toBe('');
+    expect(row.rpePlaceholder).toEqual('target_rpe' in target ? '8' : 'rir_target' in target ? { kind: 'rir', value: 2 } : '');
+    expect(accessoryRowWritable(row, { ...validEdit, weightText: '' }).writable).toBe(load_mode === 'bodyweight');
+    expect(accessoryLogRequest(row, validEdit, { planExerciseId: 'exercise' }).weight_kg).toBe('25');
   }
 });

@@ -1,3 +1,6 @@
+import type { PlanSet } from '@/api/domains/plans';
+import { effectiveLoadMode } from '@/domain/plan/prescription';
+
 export type SetLogInput = { weightText: string; repsText: string; rpeText: string };
 export type SetLogValidation = { writable: boolean; invalidFields: (keyof SetLogInput)[] };
 
@@ -14,4 +17,10 @@ export function validateSetLogInput(input: SetLogInput): SetLogValidation {
     invalidFields.push('rpeText');
   }
   return { writable: invalidFields.length === 0, invalidFields };
+}
+
+
+/** Blank bodyweight means no external load; every other mode still requires input. */
+export function actualWeightText(weightText: string, planSet: PlanSet): string {
+  return effectiveLoadMode(planSet) === 'bodyweight' && !weightText.trim() ? '0' : weightText;
 }

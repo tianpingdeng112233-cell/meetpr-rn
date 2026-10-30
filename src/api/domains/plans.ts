@@ -39,7 +39,7 @@ export const PlanSetSchema = z.object({
   target_reps: z.number().int(),
   target_reps_max: z.number().int().nullable(),
   load_mode: z
-    .enum(['pct', 'rpe', 'rir', 'weight_range', 'rpe_range', 'fixed_weight'])
+    .enum(['pct', 'rpe', 'rir', 'weight_range', 'rpe_range', 'fixed_weight', 'free_weight', 'bodyweight'])
     .nullable()
     .optional(),
   // Backend 0063 uses one_rm; normalize only in the domain decoder.
@@ -55,9 +55,9 @@ export const PlanSetSchema = z.object({
   weight_low: DecimalStringSchema.nullable().optional(),
   weight_high: DecimalStringSchema.nullable().optional(),
   target_weight: DecimalStringSchema.nullable().optional(),
-  intensity_mode: z.enum(['weight', 'rpe']),
+  intensity_mode: z.enum(['weight', 'rpe']).nullable(),
   /** Decimal wire value; kept as a string. */
-  target_value: DecimalStringSchema,
+  target_value: DecimalStringSchema.nullable(),
   set_type: z.enum(['warmup', 'working', 'failed', 'amrap', 'backoff']),
   rest_seconds: z.number().int().nullable(),
   coach_note: z.string().nullable(),

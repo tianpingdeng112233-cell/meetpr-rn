@@ -1,3 +1,4 @@
+import { actualWeightText } from './set-log-input';
 import { StudentExercisePicker } from './StudentExercisePicker';
 import type { AccessoryEdits } from './AccessoryLogCard';
 import { useVideoUploadStore } from './video-upload/store';
@@ -678,7 +679,7 @@ export function TodayWorkoutView() {
         : input.quickLogDate ?? gymDayText(new Date());
       if (draft.kind === 'added') pinnedDates.current.set(draft.exercise.id, logDate);
       const completed = input.completed ?? true;
-      const weight = parseFiniteDecimal(input.weightText);
+      const weight = parseFiniteDecimal(actualWeightText(input.weightText, draft.planSet));
       const reps = Number(input.repsText);
       const rpe = input.rpeText ? parseFiniteDecimal(input.rpeText) : null;
       if (
