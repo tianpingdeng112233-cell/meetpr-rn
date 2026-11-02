@@ -98,7 +98,7 @@ export function buildDemoSeed(today: string) {
     }
   }
   const binding: BindRequest = { id: id(), student_id: user.id, coach_id: coach.id, coach_display_name: coach.name!, invite_code_id: null,
-    status: 'accepted', submitted_at: timestamp, responded_at: timestamp, expired_at: `${offsetDate(today, 60)}T12:00:00Z`, skip_evaluation: true, skip_reason: null };
+    status: 'accepted', submitted_at: timestamp, responded_at: timestamp, expired_at: `${offsetDate(today, 60)}T12:00:00Z`, skip_evaluation: true, skip_reason: null, ended_at: null };
   const feedback: FeedbackItem[] = ['Your squat depth looks consistent. Keep the same setup.', 'Good control on the bench press. Keep your feet steady.', 'Strong work this week. Take your time with the warm-up.'].map((text, index) => ({
     id: id(), coach_id: coach.id, student_id: user.id, day_date: offsetDate(today, -6 + index * 2), plan_exercise_id: null, video_id: null,
     text, posted_at: `${offsetDate(today, -6 + index * 2)}T16:00:00Z`, read_at: index < 2 ? `${offsetDate(today, -5 + index * 2)}T12:00:00Z` : null,

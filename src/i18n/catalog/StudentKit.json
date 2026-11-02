@@ -167,6 +167,18 @@
 "en": "Sign out",
 "zh": "退出登录"
 },
+"student.bindGateViewModel.unlinkedNamed": {
+"en": "{0} has unlinked you",
+"zh": "{0}已与你解绑"
+},
+"student.bindGateViewModel.unlinkedHistory": {
+"en": "Your training history is kept. Enter an invite code to link again.",
+"zh": "训练记录都还在，输入邀请码可重新绑定"
+},
+"student.bindGateViewModel.unlinkedFallback": {
+"en": "Your coach has unlinked you",
+"zh": "教练已与你解绑"
+},
 "student.bindGateViewModel.copy001": {
 "en": "This coach is not accepting new athletes. Enter another invite code or try again later",
 "zh": "教练当前不接收新学员,请输入新邀请码或稍后再试"
