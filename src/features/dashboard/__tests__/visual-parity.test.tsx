@@ -77,7 +77,7 @@ const waitUntil = async (condition: () => boolean) => {
 
 beforeEach(async () => {
   await AsyncStorage.clear();
-  servedBinding = { id: '90000000-0000-4000-8000-000000000000', student_id: studentId, coach_id: '20000000-0000-4000-8000-000000000000', coach_display_name: 'Alex', status: 'accepted', responded_at: null, submitted_at: '2026-09-01T00:00:00Z', expired_at: '2026-09-08T00:00:00Z', invite_code_id: null, skip_evaluation: true, skip_reason: null };
+  servedBinding = { id: '90000000-0000-4000-8000-000000000000', student_id: studentId, coach_id: '20000000-0000-4000-8000-000000000000', coach_display_name: 'Alex', status: 'accepted', responded_at: null, submitted_at: '2026-09-01T00:00:00Z', expired_at: '2026-09-08T00:00:00Z', invite_code_id: null, skip_evaluation: true, skip_reason: null, ended_at: null };
   mockNavigate.mockClear();
   mockSetParams.mockClear();
   mockProfileParams = {};

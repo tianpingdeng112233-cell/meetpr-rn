@@ -36,6 +36,7 @@ export const BindRequestSchema = z.object({
   status: BindRequestStatusSchema,
   submitted_at: TimestampSchema,
   responded_at: TimestampSchema.nullable(),
+  ended_at: z.string().nullable().default(null),
   expired_at: TimestampSchema,
   skip_evaluation: z.boolean(),
   skip_reason: z.string().nullable(),

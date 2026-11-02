@@ -314,6 +314,26 @@ describe('videos snake_case schemas', () => {
 });
 
 describe('bind snake_case schemas', () => {
+  test('defaults ended_at to null for an older backend response', () => {
+    const parsed = BindRequestSchema.parse({
+      id: SET_ID, student_id: STUDENT_ID, coach_id: COACH_ID,
+      coach_display_name: null, invite_code_id: null, status: 'cancelled',
+      submitted_at: NOW, responded_at: NOW, expired_at: NOW,
+      skip_evaluation: true, skip_reason: null,
+    });
+    expect(parsed.ended_at).toBeNull();
+  });
+
+  test('preserves ended_at when a coach unlinks the student', () => {
+    const parsed = BindRequestSchema.parse({
+      id: SET_ID, student_id: STUDENT_ID, coach_id: COACH_ID,
+      coach_display_name: 'Alex', invite_code_id: null, status: 'cancelled',
+      submitted_at: NOW, responded_at: NOW, expired_at: NOW,
+      skip_evaluation: true, skip_reason: null, ended_at: NOW,
+    });
+    expect(parsed).toMatchObject({ ended_at: NOW });
+  });
+
   test.each([undefined, null, {
     binding_plan_count: 1, has_settled_day: true,
     first_plan: { id: PLAN_ID, published_at: NOW, plan_weeks: 4, day_count: 12, has_settled_day: true },

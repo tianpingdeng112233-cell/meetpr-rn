@@ -175,7 +175,7 @@ const pendingRequest: BindRequest = {
   id: '10000000-0000-4000-8000-000000000001', student_id: STUDENT_ID,
   coach_id: '10000000-0000-4000-8000-000000000002', coach_display_name: 'Alex',
   status: 'pending', submitted_at: '2026-10-26T10:00:00Z', responded_at: null,
-  expired_at: '2026-11-02T10:00:00Z', invite_code_id: null, skip_evaluation: true, skip_reason: null,
+  expired_at: '2026-11-02T10:00:00Z', invite_code_id: null, skip_evaluation: true, skip_reason: null, ended_at: null,
 };
 test('foreground pending page polls at 30 seconds, accepted opens welcome, Continue persists across remount', async () => {
   jest.useFakeTimers();
