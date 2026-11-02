@@ -1,0 +1,68 @@
+FAIL src/features/onboarding/__tests__/model.test.ts (10.039 s)
+  ✕ trimmed wizard validates only basics, background, lifts and extras, and resumes old drafts at extras (4 ms)
+  ○ skipped completion 422 highlights fields and jumps to the earliest missing step
+  ○ skipped estimateOneRepMax rounds the shared RTS engine result to 0.5 kg
+  ○ skipped canonical profile and full patch pass the tightened API schemas
+  ○ skipped API upsert rejects obsolete tokens: {"unit_preference":"metric"}
+  ○ skipped API upsert rejects obsolete tokens: {"unit_preference":"imperial"}
+  ○ skipped API upsert rejects obsolete tokens: {"gym_tier":"home"}
+  ○ skipped API upsert rejects obsolete tokens: {"gym_tier":"powerlifting"}
+  ○ skipped API upsert rejects obsolete tokens: {"training_days":[1,3,5]}
+  ○ skipped API upsert rejects obsolete tokens: {"muscle_groups_to_strengthen":["背"]}
+  ○ skipped API upsert rejects obsolete tokens: {"injury_areas":["腰"]}
+  ○ skipped lb and every weekday round-trip through the server mapping
+  ○ skipped the conservative estimate applies 90% before rounding the shared engine result
+  ○ skipped legacy equipment parses, survives form mapping and is written back verbatim (iOS parity)
+  ○ skipped unknown profile enums parse and map to unset form values
+  ○ skipped tomorrow birthday and yesterday competition date are invalid in steps 1 and 7
+  ○ skipped step 7 can stay collapsed and clears stale meet fields while preserving the note
+  ○ skipped expanded step 7 requires a recognized federation and class and saves exactly the meet plus existing extras
+  server ⊕ local draft merge
+    ○ skipped fresh local data wins over the server base
+    ○ skipped a draft outside the 60 second skew window cannot overwrite server data
+  per-step patch semantics
+    ○ skipped 1RM fields are structurally present only in step 3
+    ○ skipped step 4 omits an invalid training-day selection and empty text becomes null
+  invite-code formatting
+    ○ skipped normalizes and groups a valid code
+    ○ skipped rejects IO01ABCD23
+    ○ skipped rejects ABCDEFGHIJ
+    ○ skipped rejects XK7MPQ2RV
+  extractInviteCode (spec 093)
+    ○ skipped finds the code in a bare code
+    ○ skipped finds the code in a grouped code
+    ○ skipped finds the code in a invite link
+    ○ skipped finds the code in a zh invite message
+    ○ skipped finds the code in a en invite message
+    ○ skipped finds the code in a message without link
+    ○ skipped finds the code in a dashed code in text
+    ○ skipped returns null for empty
+    ○ skipped returns null for unrelated text
+    ○ skipped returns null for link with an invalid code
+    ○ skipped returns null for short code
+  Appendix B wire values
+    ○ skipped fullOnboardingPatch serializes a filled form with canonical tokens
+    ○ skipped formFromServer restores canonical tokens and numeric training days
+
+  ● trimmed wizard validates only basics, background, lifts and extras, and resumes old drafts at extras
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 4
+    Received: 7
+
+      329 |
+      330 | test('trimmed wizard validates only basics, background, lifts and extras, and resumes old drafts at extras', () => {
+    > 331 |   expect(ONBOARDING_STEP_COUNT).toBe(4);
+          |                                 ^
+      332 |   expect(Object.keys(STEP_FIELDS)).toEqual(['1', '2', '3', '4']);
+      333 |   expect(STEP_FIELDS[4]).toEqual(['injuryNotes', 'injuryAreas', 'isCompeting', 'competitionDate', 'targetWeightClass', 'noteToCoach']);
+      334 |   const form = { ...completeForm(), trainingDays: [], gymTier: null, dailyLifeIntensity: null,
+
+      at Object.toBe (src/features/onboarding/__tests__/model.test.ts:331:33)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 38 skipped, 39 total
+Snapshots:   0 total
+Time:        12.159 s
+Ran all test suites matching /src\/features\/onboarding\/__tests__\/model.test.ts/i with tests matching "trimmed wizard".

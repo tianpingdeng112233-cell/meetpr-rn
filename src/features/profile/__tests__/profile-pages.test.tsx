@@ -12,7 +12,6 @@ import { ProfileHealthScreen } from '../ProfileHealthScreen';
 import { ProfileSettingsScreen } from '../ProfileSettingsScreen';
 import { MyProfileScreen } from '../MyProfileScreen';
 import { readinessRepository } from '@/api/domains/readiness';
-import { ReadinessSheet } from '@/features/training/ReadinessSheet';
 import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
 import { TrainingReminderSettingsScreen } from '@/features/settings/TrainingReminderSettingsScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -58,12 +57,14 @@ async function press(label: string) {
   await act(async () => { node!.props.onPress(); });
 }
 
-test('About me preserves four ordered rows and opens each existing editor', async () => {
+test('About me preserves two retained rows with historical data and opens each existing editor', async () => {
+  Object.assign(profile, { gym_tier: 'professional', equipment_overrides: ['heavy_dumbbells'], muscle_groups_to_strengthen: ['quad'] });
   await mount(<ProfileAboutScreen />);
-  const titles = ['Basic information', 'Training background', 'Training environment', 'Muscles to improve'];
+  const titles = ['Basic information', 'Training background'];
+  for (const removed of ['Training environment', 'Muscles to improve', 'heavy_dumbbells']) expect(texts()).not.toContain(removed);
   expect(texts().filter(text => titles.includes(text))).toEqual(titles);
   expect(texts()).toContain('178 cm · 83.50 kg');
-  for (const [index, section] of ['basics', 'background', 'environment', 'muscles'].entries()) {
+  for (const [index, section] of ['basics', 'background'].entries()) {
     await press(titles[index]); expect(renderer.root.findByType(ProfileEditor).props.section).toBe(section);
     await press(t('student.accountSecuritySheets.copy013'));
     expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
@@ -80,15 +81,14 @@ test('saving basics updates About me and the mounted home through the shared cac
   expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
   expect(texts().filter(text => text === '178 cm · 84.00 kg')).toHaveLength(2);
 });
-test.each(['today', 'onboarding', 'empty'])('Health uses %s recovery and opens the existing sheets', async mode => {
+test.each(['today', 'onboarding', 'empty'])('Health hides recovery summaries and editors even with %s data', async mode => {
   if (mode === 'today') jest.mocked(readinessRepository.get).mockResolvedValue({ checkin: { sleep_quality: 4, mood: 3, stress: 2 } } as never);
   if (mode === 'onboarding') { profile.daily_life_intensity = 3; profile.life_stress = 2; profile.recovery_speed = 4; }
   await mount(<ProfileHealthScreen />);
-  expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Recovery assessment', 'Injury history']);
-  expect(texts()).toContain(mode === 'today' ? 'Sleep 4/5 · Readiness 3/5 · Stress 2/5' : mode === 'empty' ? 'Not provided' : 'Medium Intensity · Low Stress · About 1 day Recovery');
+  expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Injury history']);
+  expect(texts()).not.toContain('Sleep 4/5 · Readiness 3/5 · Stress 2/5');
+  expect(texts()).not.toContain('Medium Intensity · Low Stress · About 1 day Recovery');
   expect(texts()).not.toContain('Notify coach');
-  await press('Recovery assessment'); expect(renderer.root.findAllByType(ReadinessSheet)).toHaveLength(1);
-  act(() => renderer.root.findByType(ReadinessSheet).props.onSkip());
   await press('Injury history'); expect(renderer.root.findByType(ProfileEditor).props.section).toBe('injuries');
 });
 test('Settings switches appearance persistently and opens both existing preference screens', async () => {

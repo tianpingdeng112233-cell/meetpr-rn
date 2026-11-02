@@ -1,14 +1,14 @@
-import { t } from '@/i18n';
+import { setLocaleOverride, t } from '@/i18n';
 
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
-import { onboardingRepository } from '@/api/domains/onboarding';
+import { onboardingRepository, OnboardingProfileSchema, type OnboardingProfile } from '@/api/domains/onboarding';
 
-import { equipmentLabel, GYM_TIER_LABELS, prefillEquipment, UNIT_LABELS } from '../catalog';
+import { UNIT_LABELS } from '../catalog';
 import { DateWheel, DiscreteSlider, sliderValueAt } from '../controls';
 import { createEmptyOnboardingForm, type OnboardingForm } from '../model';
 import { OnboardingStepContent } from '../OnboardingSteps';
@@ -33,6 +33,7 @@ beforeEach(async () => {
 afterEach(() => {
   act(() => renderer?.unmount());
   jest.restoreAllMocks();
+  setLocaleOverride(null);
 });
 
 function press(label: string) {
@@ -92,28 +93,7 @@ test('Android estimator back closes the estimator without changing the lift', ()
   expect(update).not.toHaveBeenCalled();
 });
 
-test('equipment sections show the full catalog and dumbbell limits are mutually exclusive', () => {
-  let selected: OnboardingForm;
-  function Environment() {
-    const [form, setForm] = useState<OnboardingForm>({
-      ...createEmptyOnboardingForm(), gymTier: 'home_with_rack',
-      equipmentOverrides: prefillEquipment('home_with_rack'),
-    });
-    selected = form;
-    return <OnboardingStepContent errorFields={new Set()} form={form} step={4} update={(patch) => setForm((current) => ({ ...current, ...patch }))} />;
-  }
-  act(() => { renderer = create(<Environment />); });
-  const copy = renderer.root.findAllByType(Text).map((node) => node.props.children);
-  expect(copy).toEqual(expect.arrayContaining([t('student.step4EnvironmentSection.copy014'), t('student.step4EnvironmentSection.copy015'), t('student.step4EnvironmentSection.copy017'), t('student.step4EnvironmentSection.copy018'), t('student.equipmentCatalog.copy004'), t('student.equipmentCatalog.copy006')]));
-  // iOS shows every catalog item in each group; tiers only drive the prefill.
-  expect(copy).toContain(t('student.equipmentCatalog.copy005'));
-  expect(copy).toContain(equipmentLabel('smith_machine'));
-  expect(copy).toContain(equipmentLabel('deadlift_bar'));
-  act(() => press(t('student.equipmentCatalog.copy006')));
-  expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_40_plus']);
-  act(() => press(t('student.equipmentCatalog.copy004')));
-  expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_20']);
-});
+
 
 
 test('canonical drafts round-trip while obsolete units and gym tiers read as null', async () => {
@@ -173,36 +153,9 @@ test('imperial weight input preserves raw text until blur or a unit change', () 
   expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('0.99');
 });
 
-test('pressing the selected gym preserves customized equipment without an alert or update', () => {
-  const alert = jest.spyOn(Alert, 'alert');
-  const update = jest.fn();
-  const form: OnboardingForm = { ...createEmptyOnboardingForm(), gymTier: 'home_with_rack', equipmentOverrides: ['barbell_dumbbell', 'db_max_40_plus'] };
-  act(() => { renderer = create(<OnboardingStepContent errorFields={new Set()} form={form} step={4} update={update} />); });
-  act(() => press(GYM_TIER_LABELS.home_with_rack));
-  expect(update).not.toHaveBeenCalled();
-  expect(form.equipmentOverrides).toEqual(['barbell_dumbbell', 'db_max_40_plus']);
-  expect(alert).not.toHaveBeenCalled();
-});
 
-test('legacy equipment survives drafts and displays its raw token until deselected', async () => {
-  const draft = {
-    form: { ...createEmptyOnboardingForm(), gymTier: 'home_with_rack' as const, equipmentOverrides: ['heavy_dumbbells', 'barbell_dumbbell'] },
-    savedAt: '2026-09-04T10:00:00Z',
-  };
-  // Read through storage as well as the visible form: resuming must not lose old equipment.
-  await AsyncStorage.setItem(`meetpr.onboarding.draft.v1.${STUDENT_ID}`, JSON.stringify(draft));
-  const restored = await onboardingDraftStorage.read(STUDENT_ID);
-  expect(restored).toEqual(draft);
-  let selected: OnboardingForm;
-  function Environment() {
-    const [form, setForm] = useState(restored!.form);
-    selected = form;
-    return <OnboardingStepContent errorFields={new Set()} form={form} step={4} update={(patch) => setForm((current) => ({ ...current, ...patch }))} />;
-  }
-  act(() => { renderer = create(<Environment />); });
-  act(() => press('heavy_dumbbells'));
-  expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell']);
-});
+
+
 
 test.each([
   ['2026-09-04', '2026-09-04', [4]],
@@ -276,4 +229,57 @@ test('tapping or dragging across the slider updates the value as the finger move
   act(() => track().props.onResponderMove(touch(70, 80)));
   act(() => track().props.onResponderMove(touch(70, 140)));
   expect(onChange.mock.calls.map(([value]) => value)).toEqual([3, 7, 10]);
+});
+
+
+const retainedForm = (): OnboardingForm => ({ ...createEmptyOnboardingForm(), gender: 'male', heightCm: '180', weightKg: '80',
+  squatStance: 'high_bar', deadliftStyle: 'conventional', squat1RMKg: '180', bench1RMKg: '100', deadlift1RMKg: '220' });
+const completedProfile = () => OnboardingProfileSchema.parse({
+  ...Object.fromEntries(Object.keys(OnboardingProfileSchema.shape).map(key => [key, null])),
+  user_id: STUDENT_ID, created_at: '2026-11-02T00:00:00Z', updated_at: '2026-11-02T00:00:00Z', upload_attachment_ids: [],
+});
+const copy = () => renderer.root.findAllByType(Text).map(node => node.props.children);
+const fill = (patch: Partial<OnboardingForm>) => act(() => renderer.root.findByType(OnboardingStepContent).props.update(patch));
+
+test('four-step wizard submits basics, background, lifts and extras with no removed screens', async () => {
+  setLocaleOverride('en');
+  const upsert = jest.spyOn(onboardingRepository, 'upsert').mockResolvedValue(completedProfile());
+  const completed = { ...completedProfile(), completed_at: '2026-11-02T00:00:00Z' };
+  jest.spyOn(onboardingRepository, 'complete').mockResolvedValue(completed);
+  const onCompleted = jest.fn();
+  await act(async () => { renderer = create(<OnboardingWizard onCompleted={onCompleted} onExit={jest.fn()} profile={null} studentId={STUDENT_ID} visible />); });
+  for (const step of [1, 2, 3, 4]) {
+    expect(copy()).toContain(`Step ${step} of 4`);
+    expect(renderer.root.findByType(OnboardingStepContent).props.step).toBe(step);
+    for (const key of ['007', '008', '009']) expect(copy()).not.toContain(t(`student.onboardingWizardView.copy${key}` as Parameters<typeof t>[0]));
+    if (step === 1) fill({ gender: 'male', heightCm: '180', weightKg: '80' });
+    if (step === 2) fill({ squatStance: 'high_bar', deadliftStyle: 'conventional' });
+    if (step === 3) fill({ squat1RMKg: '180', bench1RMKg: '100', deadlift1RMKg: '220' });
+    await act(async () => press(t(step === 4 ? 'student.onboardingWizardView.copy013' : 'student.onboardingWizardView.copy014')));
+  }
+  expect(onCompleted).toHaveBeenCalledWith(completed);
+  expect(upsert).toHaveBeenCalledTimes(4);
+  expect(upsert.mock.calls[3][0]).toMatchObject({ squat_1rm_kg: '180', is_competing: false });
+  expect(await onboardingDraftStorage.read(STUDENT_ID)).toBeNull();
+});
+
+test.each([4, 5, 6, 7])('old draft at former step %s resumes at extras and preserves server history on submit', async oldStep => {
+  const history = { training_days: ['mon', 'wed'], gym_tier: 'professional', equipment_overrides: ['heavy_dumbbells'],
+    daily_life_intensity: 2, life_stress: 3, recovery_speed: 4, sleep_hours: 3, muscle_groups_to_strengthen: ['back'] };
+  let stored: OnboardingProfile = { ...completedProfile(), ...history };
+  const form = { ...retainedForm(), ...(oldStep > 4 ? { trainingDays: [1, 3], gymTier: 'commercial' as const, equipmentOverrides: ['barbell_dumbbell'] } : {}),
+    ...(oldStep > 5 ? { dailyLifeIntensity: 1, lifeStress: 1, recoverySpeed: 1, sleepHours: 1 } : {}),
+    ...(oldStep > 6 ? { muscleGroupsToStrengthen: ['quad' as const] } : {}), noteToCoach: 'Preserve my note' };
+  // This is the shipped v1 shape: no persisted step number.
+  await AsyncStorage.setItem(`meetpr.onboarding.draft.v1.${STUDENT_ID}`, JSON.stringify({ form, savedAt: '2026-11-02T00:01:00Z' }));
+  const upsert = jest.spyOn(onboardingRepository, 'upsert').mockImplementation(async patch => { stored = { ...stored, ...patch }; return stored; });
+  jest.spyOn(onboardingRepository, 'complete').mockImplementation(async () => ({ ...stored, completed_at: '2026-11-02T00:02:00Z' }));
+  const onCompleted = jest.fn();
+  await act(async () => { renderer = create(<OnboardingWizard onCompleted={onCompleted} onExit={jest.fn()} profile={stored} studentId={STUDENT_ID} visible />); });
+  expect(renderer.root.findByType(OnboardingStepContent).props.step).toBe(4);
+  expect(copy()).toContain(t('student.onboardingWizardView.copy010'));
+  await act(async () => press(t('student.onboardingWizardView.copy013')));
+  expect(onCompleted).toHaveBeenCalledTimes(1);
+  expect(stored).toMatchObject({ ...history, note_to_coach: 'Preserve my note' });
+  for (const key of Object.keys(history)) expect(upsert.mock.calls[0][0]).not.toHaveProperty(key);
 });

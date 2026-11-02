@@ -5,7 +5,7 @@ import { Alert, Text, TextInput } from 'react-native';
 import { onboardingRepository, type OnboardingProfile } from '@/api/domains/onboarding';
 import { setLocaleOverride, t } from '@/i18n';
 import { GENDER_LABELS, UNIT_LABELS } from '@/features/onboarding/catalog';
-import { ProfileEditor } from '../ProfileEditor';
+import { ProfileEditor, profileTitles } from '../ProfileEditor';
 import type { ProfileSection } from '../model';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -242,4 +242,14 @@ test.each(['injuries', 'basics', 'background', 'competition', 'note', 'weight'] 
     expect(notice).toBeGreaterThanOrEqual(0);
     expect(notice).toBeLessThan(copy.indexOf(t('student.profileCardsSection.copy013')));
   } else expect(notice).toBe(-1);
+});
+
+
+test('profile editor registry excludes environment, recovery and materials', async () => {
+  expect(Object.keys(profileTitles).sort()).toEqual(['background', 'basics', 'competition', 'injuries', 'note', 'weight']);
+  await mount('basics');
+  const copy = renderer.root.findAllByType(Text).map(node => node.props.children);
+  for (const title of ['Training environment', 'Recovery capacity', 'Training materials', 'Muscles to improve']) expect(copy).not.toContain(title);
+  await save();
+  expect(storedProfile).toMatchObject({ training_days: ['mon', 'wed'], gym_tier: 'commercial', daily_life_intensity: 3, life_stress: 2, recovery_speed: 4, sleep_hours: 8 });
 });

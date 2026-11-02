@@ -4,25 +4,22 @@ import { useUpsertOnboarding, type OnboardingProfile } from '@/api/domains/onboa
 import { ApiError } from '@/api/client';
 import { AppButton, font, spacing, typography, useColors } from '@/design';
 import { FeedbackPressable } from '@/design/FeedbackPressable';
-import { NoteSection, WeightSection, BackgroundStep, BasicStep, CompetitionSection, EnvironmentStep, InjuriesSection, MusclesSection, RecoveryStep } from '@/features/onboarding/OnboardingSteps';
+import { NoteSection, WeightSection, BackgroundStep, BasicStep, CompetitionSection, InjuriesSection } from '@/features/onboarding/OnboardingSteps';
 import { formFromServer, invalidFieldsForStep, type OnboardingErrorField } from '@/features/onboarding/model';
 import { removeMeetPatch } from '@/features/onboarding/meet';
 import { t, type TranslationKey } from '@/i18n';
 import { ProfileModal, ProfileText } from './components';
 import { profilePatch, profileSteps, type ProfileSection } from './model';
-export const profileTitles: Record<ProfileSection, TranslationKey> = { weight: 'student.dashboardProfileMetricsView.copy001', note: 'student.rn.profile.note', basics: 'student.myProfileView.copy009', background: 'student.myProfileView.copy011', environment: 'student.myProfileView.copy012', recovery: 'student.myProfileView.copy004', muscles: 'student.myProfileView.copy007', injuries: 'student.myProfileView.copy005', competition: 'student.rn.meet.title' };
+export const profileTitles: Record<ProfileSection, TranslationKey> = { weight: 'student.dashboardProfileMetricsView.copy001', note: 'student.rn.profile.note', basics: 'student.myProfileView.copy009', background: 'student.myProfileView.copy011', injuries: 'student.myProfileView.copy005', competition: 'student.rn.meet.title' };
 const profileEditorTitles: Record<ProfileSection, TranslationKey> = {
   weight: 'student.dashboardProfileMetricsView.copy001',
   note: 'student.rn.profile.note',
   basics: 'student.profileCardsSection.copy002',
   background: 'student.profileCardsSection.copy003',
-  environment: 'student.profileCardsSection.copy004',
-  recovery: 'student.profileCardsSection.copy005',
-  muscles: 'student.profileCardsSection.copy006',
   competition: 'student.rn.meet.title',
   injuries: 'student.profileCardsSection.copy008',
 };
-const sections = { weight: WeightSection, note: NoteSection, basics: BasicStep, background: BackgroundStep, environment: EnvironmentStep, recovery: RecoveryStep, muscles: MusclesSection, injuries: InjuriesSection, competition: CompetitionSection };
+const sections = { weight: WeightSection, note: NoteSection, basics: BasicStep, background: BackgroundStep, injuries: InjuriesSection, competition: CompetitionSection };
 export function ProfileEditor({ section, profile, onClose }: { section: ProfileSection; profile: OnboardingProfile | null; onClose: () => void }) {
   const colors = useColors();
   const [form, setForm] = useState(() => {

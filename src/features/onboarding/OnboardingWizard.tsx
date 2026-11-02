@@ -35,9 +35,6 @@ const STEP_ANALYTICS_NAMES = [
   'goal',
   'experience',
   'lifts',
-  'schedule',
-  'competition',
-  'equipment',
   'review',
 ] as const;
 
@@ -212,11 +209,11 @@ export function OnboardingWizard({
               <Pressable disabled={editing} onPress={() => void saveAndExit()}>
                 <Text style={[styles.exit, editing && styles.disabled]}>{t('student.onboardingWizardView.copy011')}</Text>
               </Pressable>
-              <Text style={styles.stepLabel}>Step {step} of 7</Text>
+              <Text style={styles.stepLabel}>{t('student.rn.onboarding.stepProgress', [step, ONBOARDING_STEP_COUNT])}</Text>
               <View style={styles.navSpacer} />
             </View>
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${(step / 7) * 100}%` }]} />
+              <View style={[styles.progressFill, { width: `${(step / ONBOARDING_STEP_COUNT) * 100}%` }]} />
             </View>
             <ScrollView
               contentContainerStyle={styles.content}
@@ -245,7 +242,7 @@ export function OnboardingWizard({
                 label={
                   editing
                     ? t('student.progression.saving')
-                    : step === 7
+                    : step === ONBOARDING_STEP_COUNT
                       ? t('student.onboardingWizardView.copy013')
                       : t('student.onboardingWizardView.copy014')
                 }

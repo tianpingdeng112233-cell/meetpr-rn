@@ -11,19 +11,16 @@ import { t } from '@/i18n';
 import { INJURY_AREAS, MUSCLE_GROUPS, TRAINING_DAYS, type GymTier, type InjuryArea, type MuscleGroup } from './catalog';
 import { invalidMeetFields, meetPatch, removeMeetPatch } from './meet';
 
-export const ONBOARDING_STEP_COUNT = 7 as const;
+export const ONBOARDING_STEP_COUNT = 4 as const;
 
 export const getOnboardingStepTitles = () => [
   t('student.onboardingWizardView.copy004'),
   t('student.onboardingWizardView.copy005'),
   t('student.onboardingWizardView.copy006'),
-  t('student.onboardingWizardView.copy007'),
-  t('student.onboardingWizardView.copy008'),
-  t('student.onboardingWizardView.copy009'),
   t('student.onboardingWizardView.copy010'),
 ] as const;
 
-export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type OnboardingStep = 1 | 2 | 3 | 4;
 
 export type OnboardingForm = {
   unitPreference: 'kg' | 'lb' | null;
@@ -71,10 +68,7 @@ export const STEP_FIELDS: Record<OnboardingStep, readonly (keyof OnboardingForm)
   1: ['unitPreference', 'gender', 'birthDate', 'heightCm', 'weightKg'],
   2: ['trainingYears', 'squatStance', 'deadliftStyle', 'benchGrip'],
   3: ['squat1RMKg', 'bench1RMKg', 'deadlift1RMKg'],
-  4: ['trainingDays', 'gymTier', 'equipmentOverrides'],
-  5: ['dailyLifeIntensity', 'lifeStress', 'recoverySpeed', 'sleepHours'],
-  6: ['muscleGroupsToStrengthen'],
-  7: [
+  4: [
     'injuryNotes',
     'injuryAreas',
     'isCompeting',
@@ -97,20 +91,12 @@ const MISSING_FIELD_STEPS: Record<string, OnboardingStep> = {
   squat_1rm_kg: 3,
   bench_1rm_kg: 3,
   deadlift_1rm_kg: 3,
-  training_days: 4,
-  gym_tier: 4,
-  equipment_overrides: 4,
-  daily_life_intensity: 5,
-  life_stress: 5,
-  recovery_speed: 5,
-  sleep_hours: 5,
-  muscle_groups_to_strengthen: 6,
-  injury_notes: 7,
-  injury_areas: 7,
-  is_competing: 7,
-  competition_date: 7,
-  target_weight_class: 7,
-  note_to_coach: 7,
+  injury_notes: 4,
+  injury_areas: 4,
+  is_competing: 4,
+  competition_date: 4,
+  target_weight_class: 4,
+  note_to_coach: 4,
 };
 
 const WIRE_TO_FORM: Record<string, keyof OnboardingForm> = {
@@ -295,22 +281,6 @@ export function invalidFieldsForStep(
         ...(positive(form.deadlift1RMKg) ? [] : (['deadlift1RMKg'] as const)),
       ];
     case 4:
-      return [
-        ...(form.trainingDays.length >= 2 && form.trainingDays.length <= 6
-          ? []
-          : (['trainingDays'] as const)),
-        ...(form.gymTier ? [] : (['gymTier'] as const)),
-      ];
-    case 5:
-      return [
-        ...(form.dailyLifeIntensity ? [] : (['dailyLifeIntensity'] as const)),
-        ...(form.lifeStress ? [] : (['lifeStress'] as const)),
-        ...(form.recoverySpeed ? [] : (['recoverySpeed'] as const)),
-        ...(form.sleepHours ? [] : (['sleepHours'] as const)),
-      ];
-    case 6:
-      return [];
-    case 7:
       return form.isCompeting ? invalidMeetFields({ competitionDate: form.competitionDate, ...parseMeetClass(form.targetWeightClass) }) : [];
   }
 }
@@ -323,7 +293,7 @@ export function resumeStep(form: OnboardingForm): OnboardingStep {
   for (let step = 1 as OnboardingStep; step <= ONBOARDING_STEP_COUNT; step += 1) {
     if (!canAdvance(form, step)) return step;
   }
-  return 7;
+  return ONBOARDING_STEP_COUNT;
 }
 
 function trimmedOrNull(value: string): string | null {
@@ -356,24 +326,6 @@ function assignStep(
     if (positive(form.deadlift1RMKg)) patch.deadlift_1rm_kg = form.deadlift1RMKg;
   }
   if (step === 4) {
-    if (form.trainingDays.length >= 2) patch.training_days = form.trainingDays.map((day) => TRAINING_DAYS[day - 1]);
-    if (form.gymTier) patch.gym_tier = form.gymTier;
-    patch.equipment_overrides = form.equipmentOverrides.length
-      ? [...form.equipmentOverrides]
-      : null;
-  }
-  if (step === 5) {
-    if (form.dailyLifeIntensity) patch.daily_life_intensity = form.dailyLifeIntensity;
-    if (form.lifeStress) patch.life_stress = form.lifeStress;
-    if (form.recoverySpeed) patch.recovery_speed = form.recoverySpeed;
-    if (form.sleepHours) patch.sleep_hours = form.sleepHours;
-  }
-  if (step === 6) {
-    patch.muscle_groups_to_strengthen = form.muscleGroupsToStrengthen.length
-      ? [...form.muscleGroupsToStrengthen]
-      : null;
-  }
-  if (step === 7) {
     patch.injury_notes = trimmedOrNull(form.injuryNotes);
     patch.injury_areas = form.injuryAreas.length ? [...form.injuryAreas] : null;
     const meet = parseMeetClass(form.targetWeightClass);
@@ -402,8 +354,8 @@ export function fullOnboardingPatch(form: OnboardingForm): OnboardingUpsertInput
 
 export function earliestMissingStep(missingFields: readonly string[]): OnboardingStep {
   return missingFields.reduce<OnboardingStep>(
-    (earliest, field) => Math.min(earliest, MISSING_FIELD_STEPS[field] ?? 7) as OnboardingStep,
-    7,
+    (earliest, field) => Math.min(earliest, MISSING_FIELD_STEPS[field] ?? ONBOARDING_STEP_COUNT) as OnboardingStep,
+    ONBOARDING_STEP_COUNT,
   );
 }
 
