@@ -1,0 +1,86 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/rir-stepper-copy.test.ts
+
+FAIL src/features/training/__tests__/rir-stepper-copy.test.ts
+  ✕ RIR  has exact hints including empty and singular (3 ms)
+  ✕ RIR 0 has exact hints including empty and singular
+  ✕ RIR 1 has exact hints including empty and singular (1 ms)
+  ✕ RIR 2 has exact hints including empty and singular
+  ✕ RIR 9 has exact hints including empty and singular
+
+  ● RIR  has exact hints including empty and singular
+
+    TypeError: (0 , _effortExplainer.rirStepperCopy) is not a function
+
+      12 | ] as const)('RIR %s has exact hints including empty and singular', (value, zh, en) => {
+      13 |   setLocaleOverride('zh');
+    > 14 |   expect(rirStepperCopy(value)).toBe(zh);
+         |                        ^
+      15 |   setLocaleOverride('en');
+      16 |   expect(rirStepperCopy(value)).toBe(en);
+      17 | });
+
+      at src/features/training/__tests__/rir-stepper-copy.test.ts:14:24
+
+  ● RIR 0 has exact hints including empty and singular
+
+    TypeError: (0 , _effortExplainer.rirStepperCopy) is not a function
+
+      12 | ] as const)('RIR %s has exact hints including empty and singular', (value, zh, en) => {
+      13 |   setLocaleOverride('zh');
+    > 14 |   expect(rirStepperCopy(value)).toBe(zh);
+         |                        ^
+      15 |   setLocaleOverride('en');
+      16 |   expect(rirStepperCopy(value)).toBe(en);
+      17 | });
+
+      at src/features/training/__tests__/rir-stepper-copy.test.ts:14:24
+
+  ● RIR 1 has exact hints including empty and singular
+
+    TypeError: (0 , _effortExplainer.rirStepperCopy) is not a function
+
+      12 | ] as const)('RIR %s has exact hints including empty and singular', (value, zh, en) => {
+      13 |   setLocaleOverride('zh');
+    > 14 |   expect(rirStepperCopy(value)).toBe(zh);
+         |                        ^
+      15 |   setLocaleOverride('en');
+      16 |   expect(rirStepperCopy(value)).toBe(en);
+      17 | });
+
+      at src/features/training/__tests__/rir-stepper-copy.test.ts:14:24
+
+  ● RIR 2 has exact hints including empty and singular
+
+    TypeError: (0 , _effortExplainer.rirStepperCopy) is not a function
+
+      12 | ] as const)('RIR %s has exact hints including empty and singular', (value, zh, en) => {
+      13 |   setLocaleOverride('zh');
+    > 14 |   expect(rirStepperCopy(value)).toBe(zh);
+         |                        ^
+      15 |   setLocaleOverride('en');
+      16 |   expect(rirStepperCopy(value)).toBe(en);
+      17 | });
+
+      at src/features/training/__tests__/rir-stepper-copy.test.ts:14:24
+
+  ● RIR 9 has exact hints including empty and singular
+
+    TypeError: (0 , _effortExplainer.rirStepperCopy) is not a function
+
+      12 | ] as const)('RIR %s has exact hints including empty and singular', (value, zh, en) => {
+      13 |   setLocaleOverride('zh');
+    > 14 |   expect(rirStepperCopy(value)).toBe(zh);
+         |                        ^
+      15 |   setLocaleOverride('en');
+      16 |   expect(rirStepperCopy(value)).toBe(en);
+      17 | });
+
+      at src/features/training/__tests__/rir-stepper-copy.test.ts:14:24
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 5 total
+Snapshots:   0 total
+Time:        4.089 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rir-stepper-copy.test.ts/i.

@@ -1,0 +1,16 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/rir-stepper-copy.test.ts
+
+PASS src/features/training/__tests__/rir-stepper-copy.test.ts
+  ✓ RIR  has exact hints including empty and singular (2 ms)
+  ✓ RIR 0 has exact hints including empty and singular (1 ms)
+  ✓ RIR 1 has exact hints including empty and singular (1 ms)
+  ✓ RIR 2 has exact hints including empty and singular (1 ms)
+  ✓ RIR 9 has exact hints including empty and singular
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        4.082 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rir-stepper-copy.test.ts/i.

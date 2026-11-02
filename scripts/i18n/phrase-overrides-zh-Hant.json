@@ -1,5 +1,8 @@
 {
   "student.firstRun.waiting.meetDetail": {
     "比赛计划": "比賽計畫"
+  },
+  "training.explainer.rpe.footer": {
+    "估不准": "估不準"
   }
 }

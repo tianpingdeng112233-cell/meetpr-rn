@@ -1,3 +1,5 @@
+import { EffortHelpButton } from './EffortHelpButton';
+import { rirStepperCopy } from './effort-explainer';
 import { EffortToggleLabel } from './EffortToggleLabel';
 import { effortFields, effortKindFor, type EffortKind } from './actual-effort';
 import { actualWeightText } from './set-log-input';
@@ -174,6 +176,7 @@ export function SetEntrySheet({
   const parsedWeight = parseFiniteDecimal(weightText) ?? 0;
   const loadout = plateLoadout(parsedWeight, collarOn);
   const rpe = parseFiniteDecimal(rpeText) ?? 8;
+  const rirHint = rirStepperCopy(rpeText);
   const weightFloor = draft.exercise.is_main_lift && !bodyweight && !freeWeight ? 20 : 0;
   const isAutomatic = Boolean(activeSuggestion?.percentage) && !weightEntry.userEdited;
   const caption = draft.kind ? null : suggestion?.percentage ? suggestion.label : suggestionReason
@@ -269,10 +272,15 @@ export function SetEntrySheet({
                   onChange={direction => setRepsText(String(Math.max(0, (Number(repsText) || 0) + direction * TRAINING_LIMITS.repsStep)))} />
                 <View style={{ gap: spacing.space2 }}>
                   <View style={styles.sectionHeader}>
-                    {allowsRIR && !draft.sourceLog ? <Pressable style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} disabled={!editable} onPress={() => { setEffortKind(kind => kind === 'rpe' ? 'rir' : 'rpe'); setRpeText(''); setShowsRPEPlaceholder(true); }}><EffortToggleLabel label={effortKind.toUpperCase()} /></Pressable> : <Text style={styles.sectionLabel}>{effortKind.toUpperCase()}</Text>}
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {allowsRIR && !draft.sourceLog ? <Pressable style={{ minWidth: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} disabled={!editable} onPress={() => { setEffortKind(kind => kind === 'rpe' ? 'rir' : 'rpe'); setRpeText(''); setShowsRPEPlaceholder(true); }}><EffortToggleLabel label={effortKind.toUpperCase()} /></Pressable> : <Text style={styles.sectionLabel}>{effortKind.toUpperCase()}</Text>}
+                      <EffortHelpButton kind={effortKind} />
+                    </View>
                     <Text style={styles.stepLabel}>{effortKind === 'rir' ? '0–9 · 1' : '5–10 · 0.5'}</Text>
                   </View>
-                  {effortKind === 'rir' ? <Stepper label="RIR" stepLabel="± 1" value={rpeText} unit="" editable={editable} onOpenPad={() => setNumberPad('rpe')} onChange={direction => setRpeText(String(Math.min(9, Math.max(0, (Number(rpeText) || 0) + direction))))} /> : <SetEntryRPEScale value={rpe} onChange={changeRPE} onGestureActive={setRpeGestureActive}
+                  {effortKind === 'rir' ? <View style={{ gap: spacing.space2 }}><Stepper label="RIR" stepLabel="± 1" value={rpeText} unit="" editable={editable} onOpenPad={() => setNumberPad('rpe')} onChange={direction => setRpeText(String(Math.min(9, Math.max(0, (Number(rpeText) || 0) + direction))))} />
+                    {rirHint !== null ? <Text style={{ ...font.body(13), color: colors.textSecondary, textAlign: 'center' }}>{rirHint}</Text> : null}
+                    </View> : <SetEntryRPEScale value={rpe} onChange={changeRPE} onGestureActive={setRpeGestureActive}
                     placeholder={showsRPEPlaceholder || !rpeText ? t('student.todayWorkoutTypes.copy028') : undefined} />}
                 </View>
                 <VideoAttachmentControls
