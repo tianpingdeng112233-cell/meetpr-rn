@@ -1,0 +1,241 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/training-policy.test.ts
+
+FAIL src/features/training/__tests__/training-policy.test.ts (14.701 s)
+  ✓ cycle-wide draft synthesis chooses the newest real log for a stable set
+  ✓ plate loadout uses aggregated copy and canonical empty branches (1 ms)
+  ✓ accessory rest uses prescribed seconds before its independent preference and legacy default
+  plan × log draft synthesis
+    ✓ joins by plan exercise and zero-based set index while preserving stable plan set id (6 ms)
+  suggested-weight selector
+    ✓ main lift prefers a completed same-prescription prior set (1 ms)
+    ✓ main lift otherwise reverses e1RM and rounds down to 2.5 kg (1 ms)
+    ✓ accessory prefers same-day recent log, then the 84-day history input (1 ms)
+    ✓ does not suggest when the prescription is not RPE-based (1 ms)
+  rest, gym-day, and RIR policies
+    ✓ rest priority is prescription, preference, then RestDefaults
+    ✓ 04:00 is the local gym-day boundary (1 ms)
+    ✕ maps RPE 5 to the exact RIR copy (4 ms)
+    ✕ maps RPE 5.5 to the exact RIR copy (1 ms)
+    ✕ maps RPE 6 to the exact RIR copy (1 ms)
+    ✕ maps RPE 6.5 to the exact RIR copy (1 ms)
+    ✕ maps RPE 7 to the exact RIR copy
+    ✕ maps RPE 7.5 to the exact RIR copy
+    ✕ maps RPE 8 to the exact RIR copy (1 ms)
+    ✕ maps RPE 8.5 to the exact RIR copy
+    ✕ maps RPE 9 to the exact RIR copy (1 ms)
+    ✕ maps RPE 9.5 to the exact RIR copy (1 ms)
+    ✕ maps RPE 10 to the exact RIR copy (1 ms)
+    ✕ snaps RIR copy to the nearest half step
+    ✓ includes the exact 84-day history boundary (1 ms)
+
+  ● rest, gym-day, and RIR policies › maps RPE 5 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 4–6 次"
+    Received: "还能多做 5 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 5.5 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 4–6 次"
+    Received: "还能多做 4-5 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 6 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 4–6 次"
+    Received: "还能多做 4 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 6.5 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 3–4 次"
+    Received: "还能多做 3-4 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 7 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 3 次"
+    Received: "还能多做 3 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 7.5 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 2–3 次"
+    Received: "还能多做 2-3 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 8 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 2 次"
+    Received: "还能多做 2 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 8.5 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 1–2 次"
+    Received: "还能多做 1-2 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 9 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 1 次"
+    Received: "还能多做 1 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 9.5 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "做不了下一次，但能再加点重"
+    Received: "或许还能多做 1 次"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › maps RPE 10 to the exact RIR copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "做不动了"
+    Received: "力竭，无保留"
+
+      189 |     [10, '做不动了'],
+      190 |   ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
+    > 191 |     expect(rirCopy(rpe)).toBe(copy);
+          |                          ^
+      192 |   });
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+
+      at toBe (src/features/training/__tests__/training-policy.test.ts:191:26)
+
+  ● rest, gym-day, and RIR policies › snaps RIR copy to the nearest half step
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "还剩 2 次"
+    Received: "还能多做 2 次"
+
+      193 |
+      194 |   test('snaps RIR copy to the nearest half step', () => {
+    > 195 |     expect(rirCopy(7.8)).toBe('还剩 2 次');
+          |                          ^
+      196 |   });
+      197 |
+      198 |   test('includes the exact 84-day history boundary', () => {
+
+      at Object.toBe (src/features/training/__tests__/training-policy.test.ts:195:26)
+
+Test Suites: 1 failed, 1 total
+Tests:       12 failed, 11 passed, 23 total
+Snapshots:   0 total
+Time:        17.98 s
+Ran all test suites matching /src\/features\/training\/__tests__\/training-policy.test.ts/i.

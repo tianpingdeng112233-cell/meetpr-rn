@@ -1,0 +1,9 @@
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    thrown: "Exceeded timeout of 5000 ms for a test.
+Test Suites: 2 failed, 195 passed, 197 total
+Tests:       39 failed, 1998 passed, 2037 total
+Snapshots:   0 total
+Time:        499.165 s
+Ran all test suites.

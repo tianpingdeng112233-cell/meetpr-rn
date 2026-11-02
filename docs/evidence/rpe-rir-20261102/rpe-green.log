@@ -1,0 +1,37 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/training-policy.test.ts
+
+PASS src/features/training/__tests__/training-policy.test.ts
+  ✓ cycle-wide draft synthesis chooses the newest real log for a stable set
+  ✓ plate loadout uses aggregated copy and canonical empty branches (1 ms)
+  ✓ accessory rest uses prescribed seconds before its independent preference and legacy default
+  plan × log draft synthesis
+    ✓ joins by plan exercise and zero-based set index while preserving stable plan set id (5 ms)
+  suggested-weight selector
+    ✓ main lift prefers a completed same-prescription prior set (8 ms)
+    ✓ main lift otherwise reverses e1RM and rounds down to 2.5 kg (1 ms)
+    ✓ accessory prefers same-day recent log, then the 84-day history input (1 ms)
+    ✓ does not suggest when the prescription is not RPE-based
+  rest, gym-day, and RIR policies
+    ✓ rest priority is prescription, preference, then RestDefaults (1 ms)
+    ✓ 04:00 is the local gym-day boundary (1 ms)
+    ✓ maps RPE 5 to the exact RIR copy
+    ✓ maps RPE 5.5 to the exact RIR copy
+    ✓ maps RPE 6 to the exact RIR copy (1 ms)
+    ✓ maps RPE 6.5 to the exact RIR copy
+    ✓ maps RPE 7 to the exact RIR copy
+    ✓ maps RPE 7.5 to the exact RIR copy
+    ✓ maps RPE 8 to the exact RIR copy
+    ✓ maps RPE 8.5 to the exact RIR copy
+    ✓ maps RPE 9 to the exact RIR copy
+    ✓ maps RPE 9.5 to the exact RIR copy
+    ✓ maps RPE 10 to the exact RIR copy
+    ✓ snaps RIR copy to the nearest half step
+    ✓ includes the exact 84-day history boundary
+
+Test Suites: 1 passed, 1 total
+Tests:       23 passed, 23 total
+Snapshots:   0 total
+Time:        3.721 s, estimated 15 s
+Ran all test suites matching /src\/features\/training\/__tests__\/training-policy.test.ts/i.

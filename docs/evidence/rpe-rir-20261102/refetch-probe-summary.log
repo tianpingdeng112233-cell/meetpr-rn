@@ -1,0 +1,5 @@
+Test Suites: 1 passed, 1 total
+Tests:       38 skipped, 1 passed, 39 total
+Snapshots:   0 total
+Time:        10.453 s
+Ran all test suites matching /src\/features\/training\/__tests__\/set-save.test.tsx/i with tests matching "a rate-limited background refetch".

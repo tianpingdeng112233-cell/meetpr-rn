@@ -1,0 +1,15 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/effort-explainer.test.ts
+
+PASS src/features/training/__tests__/effort-explainer.test.ts
+  ✓ RPE card has exactly the approved zh copy and eight rows (4 ms)
+  ✓ RPE card has exactly the approved en copy and eight rows (1 ms)
+  ✓ RIR card has the approved zh copy without an RPE conversion (3 ms)
+  ✓ RIR card has the approved en copy without an RPE conversion (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        4.345 s
+Ran all test suites matching /src\/features\/training\/__tests__\/effort-explainer.test.ts/i.

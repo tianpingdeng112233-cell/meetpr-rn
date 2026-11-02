@@ -465,5 +465,17 @@
 "student.firstRun.saveError": {"en": "Could not save. Please try again.", "zh": "保存失败，请重试"},
 "training.effort.switch": {"en": "Switch RPE / RIR", "zh": "切换 RPE / RIR"},
 "training.effort.rirLabel": {"en": "Set %@ RIR", "zh": "第 %@ 组 RIR"},
-"training.effort.saved": {"en": "Set %@ recorded as %@", "zh": "第 %@ 组已记录 %@"}
+"training.effort.saved": {"en": "Set %@ recorded as %@", "zh": "第 %@ 组已记录 %@"},
+"training.explainer.rpe.title": {"en": "RPE · How hard was that set", "zh": "RPE · 这组有多吃力"},
+"training.explainer.rpe.subtitle": {"en": "Out of 10. Higher means harder.", "zh": "满分 10，越高越吃力"},
+"training.explainer.rpe.footer": {"en": "Not sure? Pick the closest one.", "zh": "估不准没关系，选最接近的就行"},
+"training.explainer.rpe.help": {"en": "What is RPE", "zh": "RPE 是什么"},
+"training.explainer.rir.title": {"en": "RIR · Reps left in the tank", "zh": "RIR · 还能再做几次"},
+"training.explainer.rir.subtitle": {"en": "After the set, how many more reps could you do with the same weight? Enter that number.", "zh": "这组做完，同样的重量还能再做几次，就填几"},
+"training.explainer.rir.example": {"en": "Example: you did 6 and could have done 8", "zh": "例：做了 6 次，觉得最多能做 8 次"},
+"training.explainer.rir.answer": {"en": "enter 2", "zh": "填 2"},
+"training.explainer.rir.footer": {"en": "Couldn't do another rep? Enter 0.", "zh": "一次也做不动了就填 0"},
+"training.explainer.rir.help": {"en": "What is RIR", "zh": "RIR 是什么"},
+"training.explainer.close": {"en": "Close", "zh": "关闭"},
+"training.explainer.rir.remaining": {"en": {"one": "%@ rep left", "other": "%@ reps left"}, "zh": "还剩 %@ 次"}
 }
