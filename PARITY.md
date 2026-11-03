@@ -176,4 +176,4 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 
 ## 2026-11-02 098 被教练解绑提示
 
-与 iOS 同批（meetpr#388）。最近一条申请为 `cancelled` 且带 `ended_at` 时，邀请码页顶部显示两行解绑提示（三语 + 空名兜底）；学员自己撤回的 cancelled 不提示。依赖 backend 057（#356，已部署国内 staging）。195 suites / 2039 tests、tsc、lint 通过（set-save 并发超时单跑 39/39）。iOS 在本机后端（同一 057 代码）上 iPhone 17e 亲验带名与空名两种文案；**安卓模拟器端到端未完成**——独立包名 `com.meetpr.app.v098` 已装上 emulator-5556，但机器高负载致 ANR，改在下次出 CN 包验收时补看第 1、3 条。见 [JOURNAL](docs/journal/2026-11-02-098-card-a.md)。
+与 iOS 同批（meetpr#388）。最近一条申请为 `cancelled` 且带 `ended_at` 时，邀请码页顶部显示两行解绑提示（三语 + 空名兜底）；学员自己撤回的 cancelled 不提示。依赖 backend 057（#356，已部署国内 staging）。195 suites / 2039 tests、tsc、lint 通过（set-save 并发超时单跑 39/39）。iOS 在本机后端（同一 057 代码）上 iPhone 17e 亲验带名与空名两种文案；安卓模拟器端到端 2026-11-03 补验通过（AVD `meetpr`，独立包名 `com.meetpr.app.v098`，本机后端同一 057 代码，经 `adb reverse` 连 127.0.0.1:3057）：被解绑学员登录停在邀请码页、英文提示「王教练 has unlinked you / Your training history is kept…」；已填问卷的学员输入原教练邀请码直接进入等待接受、不走问卷；教练接受后进入「You're now training with 王教练」，教练侧备注名保留。截图见 [docs/evidence/098-2026-11-03](docs/evidence/098-2026-11-03/)。注：模拟器经 `10.0.2.2` 连本机端口不通，验收包需把后端地址设为 127.0.0.1 并配 `adb reverse`。见 [JOURNAL](docs/journal/2026-11-02-098-card-a.md)。
