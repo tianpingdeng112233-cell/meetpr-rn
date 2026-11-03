@@ -20,6 +20,7 @@ import { writeReminderPreference } from '@/features/settings/storage';
 import { ProfileModal } from '../components';
 import type { ReactNode } from 'react';
 import { ProfileEditor } from '../ProfileEditor';
+import { ProgressPageHeader } from '@/features/history/ProgressPageHeader';
 
 jest.mock('expo-application', () => ({ nativeApplicationVersion: '0.1.0', nativeBuildVersion: '4' }));
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -81,11 +82,21 @@ test('saving basics updates About me and the mounted home through the shared cac
   expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
   expect(texts().filter(text => text === '178 cm · 84.00 kg')).toHaveLength(2);
 });
+test.each<[Locale, string]>([
+  ['zh', '伤病记录'], ['en', 'Injury history'], ['zh-Hant', '傷病記錄'],
+])('injury history titles match on the profile home and detail page (%s)', async (locale, title) => {
+  setLocaleOverride(locale);
+  await mount(<><MyProfileScreen /><ProfileHealthScreen /></>);
+  const homeTexts = renderer.root.findByType(MyProfileScreen).findAllByType(Text).map(node => node.props.children);
+  const detailTitleTexts = renderer.root.findByType(ProfileHealthScreen).findByType(ProgressPageHeader).findAllByType(Text).map(node => node.props.children);
+  expect(homeTexts).toContain(title);
+  expect(detailTitleTexts).toContain(title);
+});
 test.each(['today', 'onboarding', 'empty'])('Health hides recovery summaries and editors even with %s data', async mode => {
   if (mode === 'today') jest.mocked(readinessRepository.get).mockResolvedValue({ checkin: { sleep_quality: 4, mood: 3, stress: 2 } } as never);
   if (mode === 'onboarding') { profile.daily_life_intensity = 3; profile.life_stress = 2; profile.recovery_speed = 4; }
   await mount(<ProfileHealthScreen />);
-  expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Injury history']);
+  expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Injury history', 'Injury history']);
   expect(texts()).not.toContain('Sleep 4/5 · Readiness 3/5 · Stress 2/5');
   expect(texts()).not.toContain('Medium Intensity · Low Stress · About 1 day Recovery');
   expect(texts()).not.toContain('Notify coach');

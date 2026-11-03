@@ -146,7 +146,7 @@
 
 "student.rn.profile.noInjuries": { "en": "No injuries", "zh": "无伤病" },
 "student.rn.profile.about": {"en": "About me", "zh": "关于我"},
-"student.rn.profile.health": {"en": "Health & recovery", "zh": "健康与恢复"},
+"student.rn.profile.health": {"en": "Injury history", "zh": "伤病记录"},
 "student.rn.profile.settings": {"en": "Settings", "zh": "设置"},
 "student.rn.profile.coach": {"en": "Coach · {0}", "zh": "教练 · {0}"},
 "student.rn.profile.bench": {"en": "Bench", "zh": "卧推"},
