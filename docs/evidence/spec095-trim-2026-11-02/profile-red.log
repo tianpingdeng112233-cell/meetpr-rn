@@ -1,0 +1,153 @@
+FAIL src/features/profile/__tests__/profile-pages.test.tsx (6.638 s)
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      3 | import { BrandSwitch } from '@/design/BrandSwitch';
+      4 | import { useQueryClient } from '@tanstack/react-query';
+    > 5 | import * as Notifications from 'expo-notifications';
+        | ^
+      6 | import { AppButton, font, useColors } from '@/design';
+      7 | import { t } from '@/i18n';
+      8 | import { NumberWheel } from '@/features/onboarding/controls';
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/settings/TrainingReminderSettingsScreen.tsx:5:1)
+      at Object.require (src/features/profile/ProfileSettingsScreen.tsx:11:1)
+      at Object.require (src/features/profile/__tests__/profile-pages.test.tsx:12:1)
+
+  ● About me preserves two retained rows with historical data and opens each existing editor
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected value: not "Training environment"
+    Received array:     [["󰁍", undefined], "About me", "Basic information", "178 cm · 83.50 kg", ["󰅂", undefined], "Training background", "Not provided", ["󰅂", undefined], "Training environment", "Powerlifting gym · heavy_dumbbells", ["󰅂", undefined], "Muscles to improve", "Quads", ["󰅂", undefined]]
+
+      62 |   await mount(<ProfileAboutScreen />);
+      63 |   const titles = ['Basic information', 'Training background'];
+    > 64 |   for (const removed of ['Training environment', 'Muscles to improve', 'heavy_dumbbells']) expect(texts()).not.toContain(removed);
+         |                                                                                                                ^
+      65 |   expect(texts().filter(text => titles.includes(text))).toEqual(titles);
+      66 |   expect(texts()).toContain('178 cm · 83.50 kg');
+      67 |   for (const [index, section] of ['basics', 'background'].entries()) {
+
+      at Object.toContain (src/features/profile/__tests__/profile-pages.test.tsx:64:112)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Health hides recovery summaries and editors even with today data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+    +   "Recovery assessment",
+        "Injury history",
+      ]
+
+      86 |   if (mode === 'onboarding') { profile.daily_life_intensity = 3; profile.life_stress = 2; profile.recovery_speed = 4; }
+      87 |   await mount(<ProfileHealthScreen />);
+    > 88 |   expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Injury history']);
+         |                                                                                            ^
+      89 |   expect(texts()).not.toContain('Sleep 4/5 · Readiness 3/5 · Stress 2/5');
+      90 |   expect(texts()).not.toContain('Medium Intensity · Low Stress · About 1 day Recovery');
+      91 |   expect(texts()).not.toContain('Notify coach');
+
+      at toEqual (src/features/profile/__tests__/profile-pages.test.tsx:88:92)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Health hides recovery summaries and editors even with onboarding data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+    +   "Recovery assessment",
+        "Injury history",
+      ]
+
+      86 |   if (mode === 'onboarding') { profile.daily_life_intensity = 3; profile.life_stress = 2; profile.recovery_speed = 4; }
+      87 |   await mount(<ProfileHealthScreen />);
+    > 88 |   expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Injury history']);
+         |                                                                                            ^
+      89 |   expect(texts()).not.toContain('Sleep 4/5 · Readiness 3/5 · Stress 2/5');
+      90 |   expect(texts()).not.toContain('Medium Intensity · Low Stress · About 1 day Recovery');
+      91 |   expect(texts()).not.toContain('Notify coach');
+
+      at toEqual (src/features/profile/__tests__/profile-pages.test.tsx:88:92)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Health hides recovery summaries and editors even with empty data
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+    +   "Recovery assessment",
+        "Injury history",
+      ]
+
+      86 |   if (mode === 'onboarding') { profile.daily_life_intensity = 3; profile.life_stress = 2; profile.recovery_speed = 4; }
+      87 |   await mount(<ProfileHealthScreen />);
+    > 88 |   expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Injury history']);
+         |                                                                                            ^
+      89 |   expect(texts()).not.toContain('Sleep 4/5 · Readiness 3/5 · Stress 2/5');
+      90 |   expect(texts()).not.toContain('Medium Intensity · Low Stress · About 1 day Recovery');
+      91 |   expect(texts()).not.toContain('Notify coach');
+
+      at toEqual (src/features/profile/__tests__/profile-pages.test.tsx:88:92)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/profile/__tests__/editor.test.tsx
+  ● profile editor registry excludes environment, recovery and materials
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 3
+
+      Array [
+        "background",
+        "basics",
+        "competition",
+    +   "environment",
+        "injuries",
+    +   "muscles",
+        "note",
+    +   "recovery",
+        "weight",
+      ]
+
+      247 |
+      248 | test('profile editor registry excludes environment, recovery and materials', async () => {
+    > 249 |   expect(Object.keys(profileTitles).sort()).toEqual(['background', 'basics', 'competition', 'injuries', 'note', 'weight']);
+          |                                             ^
+      250 |   await mount('basics');
+      251 |   const copy = renderer.root.findAllByType(Text).map(node => node.props.children);
+      252 |   for (const title of ['Training environment', 'Recovery capacity', 'Training materials', 'Muscles to improve']) expect(copy).not.toContain(title);
+
+      at Object.toEqual (src/features/profile/__tests__/editor.test.tsx:249:45)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+Test Suites: 2 failed, 2 total
+Tests:       5 failed, 50 skipped, 55 total
+Snapshots:   0 total
+Time:        7.566 s
+Ran all test suites matching /src\/features\/profile\/__tests__\/profile-pages.test.tsx|src\/features\/profile\/__tests__\/editor.test.tsx/i with tests matching "About me preserves|Health hides|registry excludes".

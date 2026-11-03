@@ -43,12 +43,12 @@ async function press(label: string) {
 }
 test('home shows identity and exactly five ordered entries without old groups or sign out', async () => {
   await mount();
-  const titles = ['About me', 'Health & recovery', 'Meet', 'Note to coach', 'Settings'];
+  const titles = ['About me', 'Injury history', 'Meet', 'Note to coach', 'Settings'];
   expect(texts().filter(text => titles.includes(text))).toEqual(titles);
   expect(texts()).toEqual(expect.arrayContaining(['student@example.test', 'S', '302.5', '115', '225', '642.5', '178 cm · 83.50 kg', '1 injury', 'Added']));
   for (const key of ['copy003', 'copy006', 'copy010', 'copy014', 'copy017', 'copy018', 'copy021', 'copy022', 'copy023', 'copy013'] as const) expect(texts()).not.toContain(t(`student.myProfileView.${key}`));
 });
-test.each([['About me', '/profile/about'], ['Health & recovery', '/profile/health'], ['Settings', '/profile/settings']])('%s opens its full-screen route', async (label, path) => {
+test.each([['About me', '/profile/about'], ['Injury history', '/profile/health'], ['Settings', '/profile/settings']])('%s opens its full-screen route', async (label, path) => {
   await mount(); await press(label); expect(mockPush).toHaveBeenCalledWith(path);
 });
 test.each([['Meet', 'competition'], ['Note to coach', 'note']])('%s opens the existing editor', async (label, section) => {

@@ -1,0 +1,269 @@
+FAIL src/navigation/__tests__/BindGate.test.tsx (5.578 s)
+  ✕ pending page formats zh coach null and basic profile (642 ms)
+  ✕ pending page formats zh coach "   " and basic profile (8 ms)
+  ✕ pending page formats zh coach " 王教练 " and basic profile (11 ms)
+  ✕ pending page formats zh coach "王磊" and basic profile (140 ms)
+  ✕ pending page formats zh-Hant coach null and basic profile (24 ms)
+  ✕ pending page formats zh-Hant coach "王教練" and basic profile (15 ms)
+  ✕ pending page formats zh-Hant coach "王磊" and basic profile (13 ms)
+  ✕ pending page formats en coach null and basic profile (12 ms)
+  ✕ pending page formats en coach "Coach Alex" and basic profile (13 ms)
+  ✕ pending page formats en coach "coach Alex" and basic profile (11 ms)
+  ✕ pending page formats en coach "Alex" and basic profile (9 ms)
+  ✕ pending page formats en coach "Coachman" and basic profile (10 ms)
+  ○ skipped needsOnboarding opens immediately and save-and-exit allows continuing from the interstitial
+  ○ skipped submitting a code for an incomplete profile opens onboarding immediately
+  ○ skipped invalid stashed invite returns to an empty code field with the stashed name
+  ○ skipped invalid invite clears the submitted code while prefilling the submitted name
+  ○ skipped network failure clears the submitted code while prefilling the submitted name
+  ○ skipped pasting a whole invite message into the code field keeps the code (spec 093)
+  ○ skipped Global track has no paste button
+  ○ skipped China track paste button fills the code from a copied invite message
+  ○ skipped China track paste button explains when the clipboard has no code
+  ○ skipped entering a valid typed code clears the earlier empty-clipboard notice
+  ○ skipped entering a valid native pasted invite clears the earlier empty-clipboard notice
+  ○ skipped foreground pending page polls at 30 seconds, accepted opens welcome, Continue persists across remount
+  ○ skipped pending polling stops in background, refreshes on foreground, survives a transient failure and stops on unmount
+  ○ skipped already delivered first plan welcomes in zh with coach 王磊
+  ○ skipped already delivered first plan welcomes in zh with coach 王教练
+  ○ skipped already delivered first plan welcomes in zh with coach null
+  ○ skipped already delivered first plan welcomes in zh-Hant with coach 王教練
+  ○ skipped already delivered first plan welcomes in en with coach null
+  ○ skipped completed-plan students skip welcome without reading plans and persist a binding terminal marker
+  ○ skipped first_run undefined keeps existing access unmarked and can welcome after the backend supplies it
+  ○ skipped first_run null keeps existing access unmarked and can welcome after the backend supplies it
+  ○ skipped failed terminal storage does not block an accepted settled student
+
+  ● pending page formats zh coach null and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats zh coach "   " and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats zh coach " 王教练 " and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats zh coach "王磊" and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      310 |   await renderGate();
+      311 |   expect(hasText(subtitle)).toBe(true);
+    > 312 |   expect(hasText(basicProfile)).toBe(true);
+          |                                 ^
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+      315 |   expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.pendingBindView.copy001'))).toBe(true);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:312:33)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats zh-Hant coach null and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats zh-Hant coach "王教練" and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats zh-Hant coach "王磊" and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      310 |   await renderGate();
+      311 |   expect(hasText(subtitle)).toBe(true);
+    > 312 |   expect(hasText(basicProfile)).toBe(true);
+          |                                 ^
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+      315 |   expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.pendingBindView.copy001'))).toBe(true);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:312:33)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats en coach null and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats en coach "Coach Alex" and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats en coach "coach Alex" and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      309 |   jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+      310 |   await renderGate();
+    > 311 |   expect(hasText(subtitle)).toBe(true);
+          |                             ^
+      312 |   expect(hasText(basicProfile)).toBe(true);
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:311:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats en coach "Alex" and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      310 |   await renderGate();
+      311 |   expect(hasText(subtitle)).toBe(true);
+    > 312 |   expect(hasText(basicProfile)).toBe(true);
+          |                                 ^
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+      315 |   expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.pendingBindView.copy001'))).toBe(true);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:312:33)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● pending page formats en coach "Coachman" and basic profile
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      310 |   await renderGate();
+      311 |   expect(hasText(subtitle)).toBe(true);
+    > 312 |   expect(hasText(basicProfile)).toBe(true);
+          |                                 ^
+      313 |   expect(hasText('Complete onboarding profile')).toBe(false);
+      314 |   const scroll = renderer.root.findByType(ScrollView);
+      315 |   expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.pendingBindView.copy001'))).toBe(true);
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:312:33)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       12 failed, 22 skipped, 34 total
+Snapshots:   0 total
+Time:        5.991 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i with tests matching "pending page formats".

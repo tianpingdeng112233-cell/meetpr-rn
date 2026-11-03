@@ -1,0 +1,1087 @@
+diff --git a/src/features/onboarding/OnboardingSteps.tsx b/src/features/onboarding/OnboardingSteps.tsx
+index c45febc..2910410 100644
+--- a/src/features/onboarding/OnboardingSteps.tsx
++++ b/src/features/onboarding/OnboardingSteps.tsx
+@@ -1,6 +1,6 @@
+ import { decimalInput, metricDisplay, metricStored } from '@/domain/measurement';
+ import { useState, useMemo } from 'react';
+-import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
++import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+ import { SafeAreaView } from 'react-native-safe-area-context';
+ 
+@@ -11,11 +11,8 @@ import { t, type TranslationKey } from '@/i18n';
+ 
+ import {
+   BENCH_GRIPS, BENCH_GRIP_LABELS, DEADLIFT_STYLES, DEADLIFT_STYLE_LABELS,
+-  EQUIPMENT_CATALOG, EQUIPMENT_GROUPS, EQUIPMENT_GROUP_LABELS, equipmentLabel,
+-  GENDERS, GENDER_LABELS, GYM_TIERS, GYM_TIER_LABELS, GYM_TIER_SUBTITLES,
+-  INJURY_AREAS, INJURY_AREA_LABELS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS,
+-  prefillEquipment, SQUAT_STANCES, SQUAT_STANCE_LABELS, TRAINING_DAYS,
+-  TRAINING_DAY_LABELS, UNIT_PREFERENCES, UNIT_LABELS,
++  GENDERS, GENDER_LABELS, INJURY_AREAS, INJURY_AREA_LABELS,
++  SQUAT_STANCES, SQUAT_STANCE_LABELS, UNIT_PREFERENCES, UNIT_LABELS,
+ } from './catalog';
+ import {
+   ChoiceGroup,
+@@ -24,7 +21,6 @@ import {
+   FieldLabel,
+   FormInput,
+   MultiChoice,
+-  Scale,
+ } from './controls';
+ import {
+   estimateOneRepMax,
+@@ -276,133 +272,6 @@ function LiftsStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+   );
+ }
+ 
+-export function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+-  const colors = useColors();
+-  const styles = useMemo(() => createStyles(colors), [colors]);
+-  const legacyEquipment = form.equipmentOverrides.filter((token) => !EQUIPMENT_CATALOG.some((item) => item.token === token));
+-  const chooseGym = (gymTier: NonNullable<OnboardingForm['gymTier']>) => {
+-    if (gymTier === form.gymTier) return;
+-    const apply = () => update({ gymTier, equipmentOverrides: prefillEquipment(gymTier) });
+-    if (form.gymTier) {
+-      Alert.alert(t('student.step4EnvironmentSection.copy002'), undefined, [
+-        { text: t('student.step4EnvironmentSection.copy004'), style: 'cancel' },
+-        { text: t('student.step4EnvironmentSection.copy003'), onPress: apply },
+-      ]);
+-    } else apply();
+-  };
+-  return (
+-    <View style={styles.section}>
+-      <FieldLabel>{t('student.step4EnvironmentSection.copy001')}</FieldLabel>
+-      <MultiChoice
+-        choices={TRAINING_DAYS.map((day, index) => ({ label: TRAINING_DAY_LABELS[day], value: String(index + 1) }))}
+-        error={errorFields.has('trainingDays')}
+-        max={6}
+-        onChange={(days) => update({ trainingDays: days.map(Number).sort() })}
+-        selected={form.trainingDays.map(String)}
+-      />
+-      {form.trainingDays.length < 2 ? (
+-        <Text style={styles.error}>{t(form.trainingDays.length === 1 ? 'student.step4EnvironmentSection.copy006.one' : 'student.step4EnvironmentSection.copy006', [form.trainingDays.length])}</Text>
+-      ) : (
+-        <Text style={styles.help}>{t('student.step4EnvironmentSection.copy007', [form.trainingDays.length])}</Text>
+-      )}
+-      <FieldLabel>{t('student.step4EnvironmentSection.copy008')}</FieldLabel>
+-      <ChoiceGroup error={errorFields.has('gymTier')} choices={GYM_TIERS.map((value) => ({ value, label: GYM_TIER_LABELS[value], subtitle: GYM_TIER_SUBTITLES[value] }))} onChange={chooseGym} selected={form.gymTier} />
+-      {form.gymTier ? (
+-        <Card style={styles.equipmentCard}>
+-          <FieldLabel>{t('student.step4EnvironmentSection.copy012')}</FieldLabel>
+-          {EQUIPMENT_GROUPS.map((group) => {
+-            const items = EQUIPMENT_CATALOG.filter((item) => item.group === group);
+-            const choices = items
+-              .map(({ token }) => ({ value: token, label: equipmentLabel(token) }));
+-            const selected = form.equipmentOverrides.filter((token) =>
+-              items.some((item) => item.token === token),
+-            );
+-            const otherGroups = form.equipmentOverrides.filter((token) =>
+-              !items.some((item) => item.token === token),
+-            );
+-            return (
+-              <View key={group} style={styles.section}>
+-                <FieldLabel>{EQUIPMENT_GROUP_LABELS[group]}</FieldLabel>
+-                {group === 'dumbbellMax' ? (
+-                  <ChoiceGroup
+-                    choices={choices}
+-                    onChange={(token) => update({ equipmentOverrides: [...otherGroups, token] })}
+-                    selected={selected[0] ?? null}
+-                  />
+-                ) : (
+-                  <MultiChoice
+-                    choices={choices}
+-                    max={items.length}
+-                    onChange={(tokens) => update({ equipmentOverrides: [...otherGroups, ...tokens] })}
+-                    selected={selected}
+-                  />
+-                )}
+-              </View>
+-            );
+-          })}
+-          <MultiChoice
+-            choices={legacyEquipment.map((token) => ({ value: token, label: equipmentLabel(token) }))}
+-            max={legacyEquipment.length}
+-            onChange={(tokens) => update({ equipmentOverrides: form.equipmentOverrides.filter((token) => !legacyEquipment.includes(token) || tokens.includes(token)) })}
+-            selected={legacyEquipment}
+-          />
+-        </Card>
+-      ) : null}
+-    </View>
+-  );
+-}
+-
+-export function RecoveryStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+-  const colors = useColors();
+-  const styles = useMemo(() => createStyles(colors), [colors]);
+-  return (
+-    <View style={styles.section}>
+-      <Scale
+-        error={errorFields.has('dailyLifeIntensity')}
+-        footnote={t('student.step5RecoverySection.copy002')}
+-        labels={[t('student.onboardingLabels.copy048'), t('student.onboardingLabels.copy052')]}
+-        onChange={(dailyLifeIntensity) => update({ dailyLifeIntensity })}
+-        title={t('student.step5RecoverySection.copy001')}
+-        value={form.dailyLifeIntensity}
+-      />
+-      <Scale error={errorFields.has('lifeStress')} labels={[t('student.onboardingLabels.copy048'), t('student.onboardingLabels.copy052')]} onChange={(lifeStress) => update({ lifeStress })} title={t('student.step5RecoverySection.copy003')} value={form.lifeStress} />
+-      <Scale
+-        error={errorFields.has('recoverySpeed')}
+-        footnote={t('student.step5RecoverySection.copy005')}
+-        labels={[t('student.onboardingLabels.copy054'), t('student.onboardingLabels.copy058')]}
+-        onChange={(recoverySpeed) => update({ recoverySpeed })}
+-        title={t('student.step5RecoverySection.copy004')}
+-        value={form.recoverySpeed}
+-      />
+-      <Scale error={errorFields.has('sleepHours')} labels={['≤5h', '9h+']} onChange={(sleepHours) => update({ sleepHours })} title={t('student.step5RecoverySection.copy006')} value={form.sleepHours} />
+-    </View>
+-  );
+-}
+-
+-function MaterialsStep({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
+-  const colors = useColors();
+-  const styles = useMemo(() => createStyles(colors), [colors]);
+-  return (
+-    <View style={styles.section}>
+-      {/* iOS step 6 shows the plan-upload and big-three-video cards as coming soon. */}
+-      {[t('student.step6MaterialsSection.copy001'), t('student.step6MaterialsSection.copy002')].map((title) => (
+-        <Card key={title} style={styles.disabledUpload}>
+-          <Text style={styles.uploadTitle}>{title}</Text>
+-          <Text style={styles.disabledText}>{t('student.step6MaterialsSection.copy005')}</Text>
+-        </Card>
+-      ))}
+-      <MusclesSection form={form} update={update} />
+-    </View>
+-  );
+-}
+-
+-export function MusclesSection({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
+-  return <>
+-      <FieldLabel>{t('student.step6MaterialsSection.copy004')}</FieldLabel>
+-      <MultiChoice choices={MUSCLE_GROUPS.map((value) => ({ value, label: MUSCLE_GROUP_LABELS[value] }))} max={3} onChange={(muscleGroupsToStrengthen) => update({ muscleGroupsToStrengthen })} selected={form.muscleGroupsToStrengthen} />
+-  </>;
+-}
+-
+ function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
+   const colors = useColors();
+   const styles = useMemo(() => createStyles(colors), [colors]);
+@@ -491,12 +360,6 @@ export function OnboardingStepContent(props: Props) {
+     case 3:
+       return <LiftsStep {...props} />;
+     case 4:
+-      return <EnvironmentStep {...props} />;
+-    case 5:
+-      return <RecoveryStep {...props} />;
+-    case 6:
+-      return <MaterialsStep {...props} />;
+-    case 7:
+       return <AdditionalStep {...props} />;
+   }
+ }
+@@ -526,10 +389,6 @@ const createStyles = (colors: Colors) => StyleSheet.create({
+   modalTitle: { color: colors.textPrimary, ...typography.headline },
+   modalContent: { gap: spacing.md, padding: spacing.base },
+   estimate: { color: colors.textPrimary, paddingVertical: spacing.lg, textAlign: 'center', ...typography.title2 },
+-  equipmentCard: { gap: spacing.md, padding: spacing.base },
+-  disabledUpload: { gap: spacing.sm, opacity: 0.55, padding: spacing.base },
+-  uploadTitle: { color: colors.textSecondary, ...typography.bodyEmphasis },
+-  disabledText: { color: colors.textTertiary, ...typography.footnote },
+   textArea: { minHeight: 104, textAlignVertical: 'top' },
+   dateError: { borderColor: colors.danger, borderRadius: radius.md, borderWidth: 1 },
+ });
+diff --git a/src/features/onboarding/OnboardingWizard.tsx b/src/features/onboarding/OnboardingWizard.tsx
+index 01fbb70..84ca71a 100644
+--- a/src/features/onboarding/OnboardingWizard.tsx
++++ b/src/features/onboarding/OnboardingWizard.tsx
+@@ -35,9 +35,6 @@ const STEP_ANALYTICS_NAMES = [
+   'goal',
+   'experience',
+   'lifts',
+-  'schedule',
+-  'competition',
+-  'equipment',
+   'review',
+ ] as const;
+ 
+@@ -212,11 +209,11 @@ export function OnboardingWizard({
+               <Pressable disabled={editing} onPress={() => void saveAndExit()}>
+                 <Text style={[styles.exit, editing && styles.disabled]}>{t('student.onboardingWizardView.copy011')}</Text>
+               </Pressable>
+-              <Text style={styles.stepLabel}>Step {step} of 7</Text>
++              <Text style={styles.stepLabel}>{t('student.rn.onboarding.stepProgress', [step, ONBOARDING_STEP_COUNT])}</Text>
+               <View style={styles.navSpacer} />
+             </View>
+             <View style={styles.progressTrack}>
+-              <View style={[styles.progressFill, { width: `${(step / 7) * 100}%` }]} />
++              <View style={[styles.progressFill, { width: `${(step / ONBOARDING_STEP_COUNT) * 100}%` }]} />
+             </View>
+             <ScrollView
+               contentContainerStyle={styles.content}
+@@ -245,7 +242,7 @@ export function OnboardingWizard({
+                 label={
+                   editing
+                     ? t('student.progression.saving')
+-                    : step === 7
++                    : step === ONBOARDING_STEP_COUNT
+                       ? t('student.onboardingWizardView.copy013')
+                       : t('student.onboardingWizardView.copy014')
+                 }
+diff --git a/src/features/onboarding/__tests__/model.test.ts b/src/features/onboarding/__tests__/model.test.ts
+index 2664faf..03f9d29 100644
+--- a/src/features/onboarding/__tests__/model.test.ts
++++ b/src/features/onboarding/__tests__/model.test.ts
+@@ -5,6 +5,10 @@ import { OnboardingProfileSchema, OnboardingUpsertRequestSchema, type Onboarding
+ import { calculateE1RM } from '@/domain/e1rm';
+ 
+ import {
++  ONBOARDING_STEP_COUNT,
++  STEP_FIELDS,
++  resumeStep,
++  earliestMissingStep,
+   completionValidationResult,
+   createEmptyOnboardingForm,
+   estimateOneRepMax,
+@@ -108,7 +112,7 @@ describe('server ⊕ local draft merge', () => {
+ describe('per-step patch semantics', () => {
+   test('1RM fields are structurally present only in step 3', () => {
+     const form = completeForm();
+-    for (const step of [1, 2, 4, 5, 6, 7] as const) {
++    for (const step of [1, 2, 4] as const) {
+       expect(onboardingPatchForStep(form, step)).not.toHaveProperty('squat_1rm_kg');
+       expect(onboardingPatchForStep(form, step)).not.toHaveProperty('bench_1rm_kg');
+       expect(onboardingPatchForStep(form, step)).not.toHaveProperty('deadlift_1rm_kg');
+@@ -120,12 +124,12 @@ describe('per-step patch semantics', () => {
+     });
+   });
+ 
+-  test('step 4 omits an invalid training-day selection and empty text becomes null', () => {
++  test('extras omit legacy training days and empty text becomes null', () => {
+     const form = completeForm();
+     form.trainingDays = [1];
+     form.noteToCoach = '   ';
+     expect(onboardingPatchForStep(form, 4)).not.toHaveProperty('training_days');
+-    expect(onboardingPatchForStep(form, 7).note_to_coach).toBeNull();
++    expect(onboardingPatchForStep(form, 4).note_to_coach).toBeNull();
+   });
+ });
+ 
+@@ -196,10 +200,6 @@ describe('Appendix B wire values', () => {
+     };
+     expect(fullOnboardingPatch(form)).toMatchObject({
+       unit_preference: 'kg',
+-      gym_tier: 'home_with_rack',
+-      training_days: ['mon', 'wed', 'fri'],
+-      equipment_overrides: ['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_20'],
+-      muscle_groups_to_strengthen: ['quad', 'hamstring', 'glute'],
+       injury_areas: ['shoulder', 'lower_back', 'knee'],
+     });
+   });
+@@ -245,16 +245,16 @@ test.each([
+   expect(OnboardingUpsertRequestSchema.safeParse(invalid).success).toBe(false);
+ });
+ 
+-test('lb and every weekday round-trip through the server mapping', () => {
++test('lb and every weekday restore through server mapping, but training days are not re-uploaded', () => {
+   const form = formFromServer(serverProfile({
+     unit_preference: 'lb', training_days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+   }));
+   expect(form.unitPreference).toBe('lb');
+   expect(form.trainingDays).toEqual([1, 2, 3, 4, 5, 6, 7]);
+-  // The UI permits up to six selected days; exercise both ends of the wire mapping.
++  // Legacy training days remain readable but are never included in a new submission.
+   form.trainingDays = [2, 4, 6, 7];
+   expect(fullOnboardingPatch(form)).toMatchObject({
+-    unit_preference: 'lb', training_days: ['tue', 'thu', 'sat', 'sun'],
++    unit_preference: 'lb',
+   });
+ });
+ 
+@@ -269,7 +269,7 @@ afterEach(() => {
+   jest.useRealTimers();
+ });
+ 
+-test('legacy equipment parses, survives form mapping and is written back verbatim (iOS parity)', () => {
++test('legacy equipment parses and survives form mapping without being re-uploaded', () => {
+   const equipment = ['heavy_dumbbells', 'barbell_dumbbell'];
+   const profile = OnboardingProfileSchema.parse({ ...serverProfile(), equipment_overrides: equipment });
+   const form = formFromServer(profile);
+@@ -293,31 +293,60 @@ test('unknown profile enums parse and map to unset form values', () => {
+   expect(OnboardingProfileSchema.safeParse({ ...serverProfile(), training_days: [1] }).success).toBe(false);
+ });
+ 
+-test('tomorrow birthday and yesterday competition date are invalid in steps 1 and 7', () => {
++test('tomorrow birthday and yesterday competition date are invalid in steps 1 and 4', () => {
+   jest.useFakeTimers().setSystemTime(new Date(2026, 8, 4, 12));
+   const form = { ...completeForm(), birthDate: '2026-09-05', isCompeting: true, targetWeightClass: 'IPF · 83 kg', competitionDate: '2026-09-03' };
+   expect(invalidFieldsForStep(form, 1)).toEqual(['birthDate']);
+-  expect(invalidFieldsForStep(form, 7)).toEqual(['competitionDate']);
++  expect(invalidFieldsForStep(form, 4)).toEqual(['competitionDate']);
+   expect(invalidFieldsForStep({ ...form, birthDate: '2026-09-04' }, 1)).toEqual([]);
+-  expect(invalidFieldsForStep({ ...form, competitionDate: '2026-09-04' }, 7)).toEqual([]);
++  expect(invalidFieldsForStep({ ...form, competitionDate: '2026-09-04' }, 4)).toEqual([]);
+   expect(invalidFieldsForStep({ ...form, birthDate: '1929-12-31' }, 1)).toEqual(['birthDate']);
+-  expect(invalidFieldsForStep({ ...form, competitionDate: '2036-09-05' }, 7)).toEqual(['competitionDate']);
++  expect(invalidFieldsForStep({ ...form, competitionDate: '2036-09-05' }, 4)).toEqual(['competitionDate']);
+ });
+ 
+ 
+-test('step 7 can stay collapsed and clears stale meet fields while preserving the note', () => {
++test('step 4 can stay collapsed and clears stale meet fields while preserving the note', () => {
+   const form = { ...createEmptyOnboardingForm(), targetWeightClass: '83kg', noteToCoach: 'Keep this note' };
+-  expect(invalidFieldsForStep(form, 7)).toEqual([]);
+-  expect(onboardingPatchForStep(form, 7)).toEqual({ injury_notes: null, injury_areas: null,
++  expect(invalidFieldsForStep(form, 4)).toEqual([]);
++  expect(onboardingPatchForStep(form, 4)).toEqual({ injury_notes: null, injury_areas: null,
+     is_competing: false, competition_date: null, target_weight_class: null, note_to_coach: 'Keep this note' });
+ });
+ 
+-test('expanded step 7 requires a recognized federation and class and saves exactly the meet plus existing extras', () => {
++test('expanded step 4 requires a recognized federation and class and saves exactly the meet plus existing extras', () => {
+   const form = { ...createEmptyOnboardingForm(), isCompeting: true, noteToCoach: 'Ready' };
+-  expect(invalidFieldsForStep(form, 7)).toEqual(['federation', 'weightClass']);
+-  expect(invalidFieldsForStep({ ...form, targetWeightClass: '83kg' }, 7)).toEqual(['federation', 'weightClass']);
++  expect(invalidFieldsForStep(form, 4)).toEqual(['federation', 'weightClass']);
++  expect(invalidFieldsForStep({ ...form, targetWeightClass: '83kg' }, 4)).toEqual(['federation', 'weightClass']);
+   const complete = { ...form, targetWeightClass: 'IPF · 83 kg' };
+-  expect(invalidFieldsForStep(complete, 7)).toEqual([]);
+-  expect(onboardingPatchForStep(complete, 7)).toEqual({ injury_notes: null, injury_areas: null,
++  expect(invalidFieldsForStep(complete, 4)).toEqual([]);
++  expect(onboardingPatchForStep(complete, 4)).toEqual({ injury_notes: null, injury_areas: null,
+     is_competing: true, competition_date: form.competitionDate, target_weight_class: 'IPF · 83 kg', note_to_coach: 'Ready' });
+ });
++
++
++test('trimmed wizard validates only basics, background, lifts and extras, and resumes old drafts at extras', () => {
++  expect(ONBOARDING_STEP_COUNT).toBe(4);
++  expect(Object.keys(STEP_FIELDS)).toEqual(['1', '2', '3', '4']);
++  expect(STEP_FIELDS[4]).toEqual(['injuryNotes', 'injuryAreas', 'isCompeting', 'competitionDate', 'targetWeightClass', 'noteToCoach']);
++  const form = { ...completeForm(), trainingDays: [], gymTier: null, dailyLifeIntensity: null,
++    lifeStress: null, recoverySpeed: null, sleepHours: null };
++  expect(invalidFieldsForStep(form, 4)).toEqual([]);
++  expect(resumeStep(form)).toBe(4);
++  expect(resumeStep({ ...form, squat1RMKg: '' })).toBe(3);
++  expect(resumeStep({ ...form, squatStance: null })).toBe(2);
++  expect(resumeStep({ ...form, gender: null })).toBe(1);
++  expect(earliestMissingStep(['competition_date', 'target_weight_class'])).toBe(4);
++  expect(earliestMissingStep(['sleep_hours', 'squat_1rm_kg'])).toBe(3);
++});
++
++test('trimmed submission omits removed fields even in a full old draft and never clears server history', () => {
++  const server = serverProfile();
++  const form = mergeServerAndDraft(server, { form: { ...completeForm(), muscleGroupsToStrengthen: ['quad'], noteToCoach: ' Keep me ' }, savedAt: '2026-07-20T10:01:00Z' });
++  const patch = fullOnboardingPatch(form);
++  const removed = ['training_days', 'gym_tier', 'equipment_overrides', 'daily_life_intensity', 'life_stress', 'recovery_speed', 'sleep_hours', 'muscle_groups_to_strengthen'] as const;
++  for (const key of removed) {
++    expect(patch).not.toHaveProperty(key);
++    for (const step of [1, 2, 3, 4] as const) expect(onboardingPatchForStep(form, step)).not.toHaveProperty(key);
++    expect({ ...server, ...patch }[key]).toEqual(server[key]);
++  }
++  expect(patch).toMatchObject({ note_to_coach: 'Keep me', is_competing: false, squat_1rm_kg: '140' });
++});
+diff --git a/src/features/onboarding/__tests__/wizard.test.tsx b/src/features/onboarding/__tests__/wizard.test.tsx
+index 99bf38d..a2e3500 100644
+--- a/src/features/onboarding/__tests__/wizard.test.tsx
++++ b/src/features/onboarding/__tests__/wizard.test.tsx
+@@ -1,14 +1,14 @@
+-import { t } from '@/i18n';
++import { setLocaleOverride, t } from '@/i18n';
+ 
+ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+ import { useState } from 'react';
+-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
++import { ActivityIndicator, KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+ 
+-import { onboardingRepository } from '@/api/domains/onboarding';
++import { onboardingRepository, OnboardingProfileSchema, type OnboardingProfile } from '@/api/domains/onboarding';
+ 
+-import { equipmentLabel, GYM_TIER_LABELS, prefillEquipment, UNIT_LABELS } from '../catalog';
++import { UNIT_LABELS } from '../catalog';
+ import { DateWheel, DiscreteSlider, sliderValueAt } from '../controls';
+ import { createEmptyOnboardingForm, type OnboardingForm } from '../model';
+ import { OnboardingStepContent } from '../OnboardingSteps';
+@@ -33,6 +33,7 @@ beforeEach(async () => {
+ afterEach(() => {
+   act(() => renderer?.unmount());
+   jest.restoreAllMocks();
++  setLocaleOverride(null);
+ });
+ 
+ function press(label: string) {
+@@ -92,28 +93,7 @@ test('Android estimator back closes the estimator without changing the lift', ()
+   expect(update).not.toHaveBeenCalled();
+ });
+ 
+-test('equipment sections show the full catalog and dumbbell limits are mutually exclusive', () => {
+-  let selected: OnboardingForm;
+-  function Environment() {
+-    const [form, setForm] = useState<OnboardingForm>({
+-      ...createEmptyOnboardingForm(), gymTier: 'home_with_rack',
+-      equipmentOverrides: prefillEquipment('home_with_rack'),
+-    });
+-    selected = form;
+-    return <OnboardingStepContent errorFields={new Set()} form={form} step={4} update={(patch) => setForm((current) => ({ ...current, ...patch }))} />;
+-  }
+-  act(() => { renderer = create(<Environment />); });
+-  const copy = renderer.root.findAllByType(Text).map((node) => node.props.children);
+-  expect(copy).toEqual(expect.arrayContaining([t('student.step4EnvironmentSection.copy014'), t('student.step4EnvironmentSection.copy015'), t('student.step4EnvironmentSection.copy017'), t('student.step4EnvironmentSection.copy018'), t('student.equipmentCatalog.copy004'), t('student.equipmentCatalog.copy006')]));
+-  // iOS shows every catalog item in each group; tiers only drive the prefill.
+-  expect(copy).toContain(t('student.equipmentCatalog.copy005'));
+-  expect(copy).toContain(equipmentLabel('smith_machine'));
+-  expect(copy).toContain(equipmentLabel('deadlift_bar'));
+-  act(() => press(t('student.equipmentCatalog.copy006')));
+-  expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_40_plus']);
+-  act(() => press(t('student.equipmentCatalog.copy004')));
+-  expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_20']);
+-});
++
+ 
+ 
+ test('canonical drafts round-trip while obsolete units and gym tiers read as null', async () => {
+@@ -173,36 +153,9 @@ test('imperial weight input preserves raw text until blur or a unit change', ()
+   expect(renderer.root.findAllByType(TextInput)[1].props.value).toBe('0.99');
+ });
+ 
+-test('pressing the selected gym preserves customized equipment without an alert or update', () => {
+-  const alert = jest.spyOn(Alert, 'alert');
+-  const update = jest.fn();
+-  const form: OnboardingForm = { ...createEmptyOnboardingForm(), gymTier: 'home_with_rack', equipmentOverrides: ['barbell_dumbbell', 'db_max_40_plus'] };
+-  act(() => { renderer = create(<OnboardingStepContent errorFields={new Set()} form={form} step={4} update={update} />); });
+-  act(() => press(GYM_TIER_LABELS.home_with_rack));
+-  expect(update).not.toHaveBeenCalled();
+-  expect(form.equipmentOverrides).toEqual(['barbell_dumbbell', 'db_max_40_plus']);
+-  expect(alert).not.toHaveBeenCalled();
+-});
+ 
+-test('legacy equipment survives drafts and displays its raw token until deselected', async () => {
+-  const draft = {
+-    form: { ...createEmptyOnboardingForm(), gymTier: 'home_with_rack' as const, equipmentOverrides: ['heavy_dumbbells', 'barbell_dumbbell'] },
+-    savedAt: '2026-09-04T10:00:00Z',
+-  };
+-  // Read through storage as well as the visible form: resuming must not lose old equipment.
+-  await AsyncStorage.setItem(`meetpr.onboarding.draft.v1.${STUDENT_ID}`, JSON.stringify(draft));
+-  const restored = await onboardingDraftStorage.read(STUDENT_ID);
+-  expect(restored).toEqual(draft);
+-  let selected: OnboardingForm;
+-  function Environment() {
+-    const [form, setForm] = useState(restored!.form);
+-    selected = form;
+-    return <OnboardingStepContent errorFields={new Set()} form={form} step={4} update={(patch) => setForm((current) => ({ ...current, ...patch }))} />;
+-  }
+-  act(() => { renderer = create(<Environment />); });
+-  act(() => press('heavy_dumbbells'));
+-  expect(selected!.equipmentOverrides).toEqual(['barbell_dumbbell']);
+-});
++
++
+ 
+ test.each([
+   ['2026-09-04', '2026-09-04', [4]],
+@@ -277,3 +230,56 @@ test('tapping or dragging across the slider updates the value as the finger move
+   act(() => track().props.onResponderMove(touch(70, 140)));
+   expect(onChange.mock.calls.map(([value]) => value)).toEqual([3, 7, 10]);
+ });
++
++
++const retainedForm = (): OnboardingForm => ({ ...createEmptyOnboardingForm(), gender: 'male', heightCm: '180', weightKg: '80',
++  squatStance: 'high_bar', deadliftStyle: 'conventional', squat1RMKg: '180', bench1RMKg: '100', deadlift1RMKg: '220' });
++const completedProfile = () => OnboardingProfileSchema.parse({
++  ...Object.fromEntries(Object.keys(OnboardingProfileSchema.shape).map(key => [key, null])),
++  user_id: STUDENT_ID, created_at: '2026-11-02T00:00:00Z', updated_at: '2026-11-02T00:00:00Z', upload_attachment_ids: [],
++});
++const copy = () => renderer.root.findAllByType(Text).map(node => node.props.children);
++const fill = (patch: Partial<OnboardingForm>) => act(() => renderer.root.findByType(OnboardingStepContent).props.update(patch));
++
++test('four-step wizard submits basics, background, lifts and extras with no removed screens', async () => {
++  setLocaleOverride('en');
++  const upsert = jest.spyOn(onboardingRepository, 'upsert').mockResolvedValue(completedProfile());
++  const completed = { ...completedProfile(), completed_at: '2026-11-02T00:00:00Z' };
++  jest.spyOn(onboardingRepository, 'complete').mockResolvedValue(completed);
++  const onCompleted = jest.fn();
++  await act(async () => { renderer = create(<OnboardingWizard onCompleted={onCompleted} onExit={jest.fn()} profile={null} studentId={STUDENT_ID} visible />); });
++  for (const step of [1, 2, 3, 4]) {
++    expect(copy()).toContain(`Step ${step} of 4`);
++    expect(renderer.root.findByType(OnboardingStepContent).props.step).toBe(step);
++    for (const key of ['007', '008', '009']) expect(copy()).not.toContain(t(`student.onboardingWizardView.copy${key}` as Parameters<typeof t>[0]));
++    if (step === 1) fill({ gender: 'male', heightCm: '180', weightKg: '80' });
++    if (step === 2) fill({ squatStance: 'high_bar', deadliftStyle: 'conventional' });
++    if (step === 3) fill({ squat1RMKg: '180', bench1RMKg: '100', deadlift1RMKg: '220' });
++    await act(async () => press(t(step === 4 ? 'student.onboardingWizardView.copy013' : 'student.onboardingWizardView.copy014')));
++  }
++  expect(onCompleted).toHaveBeenCalledWith(completed);
++  expect(upsert).toHaveBeenCalledTimes(4);
++  expect(upsert.mock.calls[3][0]).toMatchObject({ squat_1rm_kg: '180', is_competing: false });
++  expect(await onboardingDraftStorage.read(STUDENT_ID)).toBeNull();
++});
++
++test.each([4, 5, 6, 7])('old draft at former step %s resumes at extras and preserves server history on submit', async oldStep => {
++  const history = { training_days: ['mon', 'wed'], gym_tier: 'professional', equipment_overrides: ['heavy_dumbbells'],
++    daily_life_intensity: 2, life_stress: 3, recovery_speed: 4, sleep_hours: 3, muscle_groups_to_strengthen: ['back'] };
++  let stored: OnboardingProfile = { ...completedProfile(), ...history };
++  const form = { ...retainedForm(), ...(oldStep > 4 ? { trainingDays: [1, 3], gymTier: 'commercial' as const, equipmentOverrides: ['barbell_dumbbell'] } : {}),
++    ...(oldStep > 5 ? { dailyLifeIntensity: 1, lifeStress: 1, recoverySpeed: 1, sleepHours: 1 } : {}),
++    ...(oldStep > 6 ? { muscleGroupsToStrengthen: ['quad' as const] } : {}), noteToCoach: 'Preserve my note' };
++  // This is the shipped v1 shape: no persisted step number.
++  await AsyncStorage.setItem(`meetpr.onboarding.draft.v1.${STUDENT_ID}`, JSON.stringify({ form, savedAt: '2026-11-02T00:01:00Z' }));
++  const upsert = jest.spyOn(onboardingRepository, 'upsert').mockImplementation(async patch => { stored = { ...stored, ...patch }; return stored; });
++  jest.spyOn(onboardingRepository, 'complete').mockImplementation(async () => ({ ...stored, completed_at: '2026-11-02T00:02:00Z' }));
++  const onCompleted = jest.fn();
++  await act(async () => { renderer = create(<OnboardingWizard onCompleted={onCompleted} onExit={jest.fn()} profile={stored} studentId={STUDENT_ID} visible />); });
++  expect(renderer.root.findByType(OnboardingStepContent).props.step).toBe(4);
++  expect(copy()).toContain(t('student.onboardingWizardView.copy010'));
++  await act(async () => press(t('student.onboardingWizardView.copy013')));
++  expect(onCompleted).toHaveBeenCalledTimes(1);
++  expect(stored).toMatchObject({ ...history, note_to_coach: 'Preserve my note' });
++  for (const key of Object.keys(history)) expect(upsert.mock.calls[0][0]).not.toHaveProperty(key);
++});
+diff --git a/src/features/onboarding/model.ts b/src/features/onboarding/model.ts
+index 0e05e03..810aac1 100644
+--- a/src/features/onboarding/model.ts
++++ b/src/features/onboarding/model.ts
+@@ -11,19 +11,16 @@ import { t } from '@/i18n';
+ import { INJURY_AREAS, MUSCLE_GROUPS, TRAINING_DAYS, type GymTier, type InjuryArea, type MuscleGroup } from './catalog';
+ import { invalidMeetFields, meetPatch, removeMeetPatch } from './meet';
+ 
+-export const ONBOARDING_STEP_COUNT = 7 as const;
++export const ONBOARDING_STEP_COUNT = 4 as const;
+ 
+ export const getOnboardingStepTitles = () => [
+   t('student.onboardingWizardView.copy004'),
+   t('student.onboardingWizardView.copy005'),
+   t('student.onboardingWizardView.copy006'),
+-  t('student.onboardingWizardView.copy007'),
+-  t('student.onboardingWizardView.copy008'),
+-  t('student.onboardingWizardView.copy009'),
+   t('student.onboardingWizardView.copy010'),
+ ] as const;
+ 
+-export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
++export type OnboardingStep = 1 | 2 | 3 | 4;
+ 
+ export type OnboardingForm = {
+   unitPreference: 'kg' | 'lb' | null;
+@@ -71,10 +68,7 @@ export const STEP_FIELDS: Record<OnboardingStep, readonly (keyof OnboardingForm)
+   1: ['unitPreference', 'gender', 'birthDate', 'heightCm', 'weightKg'],
+   2: ['trainingYears', 'squatStance', 'deadliftStyle', 'benchGrip'],
+   3: ['squat1RMKg', 'bench1RMKg', 'deadlift1RMKg'],
+-  4: ['trainingDays', 'gymTier', 'equipmentOverrides'],
+-  5: ['dailyLifeIntensity', 'lifeStress', 'recoverySpeed', 'sleepHours'],
+-  6: ['muscleGroupsToStrengthen'],
+-  7: [
++  4: [
+     'injuryNotes',
+     'injuryAreas',
+     'isCompeting',
+@@ -97,20 +91,12 @@ const MISSING_FIELD_STEPS: Record<string, OnboardingStep> = {
+   squat_1rm_kg: 3,
+   bench_1rm_kg: 3,
+   deadlift_1rm_kg: 3,
+-  training_days: 4,
+-  gym_tier: 4,
+-  equipment_overrides: 4,
+-  daily_life_intensity: 5,
+-  life_stress: 5,
+-  recovery_speed: 5,
+-  sleep_hours: 5,
+-  muscle_groups_to_strengthen: 6,
+-  injury_notes: 7,
+-  injury_areas: 7,
+-  is_competing: 7,
+-  competition_date: 7,
+-  target_weight_class: 7,
+-  note_to_coach: 7,
++  injury_notes: 4,
++  injury_areas: 4,
++  is_competing: 4,
++  competition_date: 4,
++  target_weight_class: 4,
++  note_to_coach: 4,
+ };
+ 
+ const WIRE_TO_FORM: Record<string, keyof OnboardingForm> = {
+@@ -295,22 +281,6 @@ export function invalidFieldsForStep(
+         ...(positive(form.deadlift1RMKg) ? [] : (['deadlift1RMKg'] as const)),
+       ];
+     case 4:
+-      return [
+-        ...(form.trainingDays.length >= 2 && form.trainingDays.length <= 6
+-          ? []
+-          : (['trainingDays'] as const)),
+-        ...(form.gymTier ? [] : (['gymTier'] as const)),
+-      ];
+-    case 5:
+-      return [
+-        ...(form.dailyLifeIntensity ? [] : (['dailyLifeIntensity'] as const)),
+-        ...(form.lifeStress ? [] : (['lifeStress'] as const)),
+-        ...(form.recoverySpeed ? [] : (['recoverySpeed'] as const)),
+-        ...(form.sleepHours ? [] : (['sleepHours'] as const)),
+-      ];
+-    case 6:
+-      return [];
+-    case 7:
+       return form.isCompeting ? invalidMeetFields({ competitionDate: form.competitionDate, ...parseMeetClass(form.targetWeightClass) }) : [];
+   }
+ }
+@@ -323,7 +293,7 @@ export function resumeStep(form: OnboardingForm): OnboardingStep {
+   for (let step = 1 as OnboardingStep; step <= ONBOARDING_STEP_COUNT; step += 1) {
+     if (!canAdvance(form, step)) return step;
+   }
+-  return 7;
++  return ONBOARDING_STEP_COUNT;
+ }
+ 
+ function trimmedOrNull(value: string): string | null {
+@@ -356,24 +326,6 @@ function assignStep(
+     if (positive(form.deadlift1RMKg)) patch.deadlift_1rm_kg = form.deadlift1RMKg;
+   }
+   if (step === 4) {
+-    if (form.trainingDays.length >= 2) patch.training_days = form.trainingDays.map((day) => TRAINING_DAYS[day - 1]);
+-    if (form.gymTier) patch.gym_tier = form.gymTier;
+-    patch.equipment_overrides = form.equipmentOverrides.length
+-      ? [...form.equipmentOverrides]
+-      : null;
+-  }
+-  if (step === 5) {
+-    if (form.dailyLifeIntensity) patch.daily_life_intensity = form.dailyLifeIntensity;
+-    if (form.lifeStress) patch.life_stress = form.lifeStress;
+-    if (form.recoverySpeed) patch.recovery_speed = form.recoverySpeed;
+-    if (form.sleepHours) patch.sleep_hours = form.sleepHours;
+-  }
+-  if (step === 6) {
+-    patch.muscle_groups_to_strengthen = form.muscleGroupsToStrengthen.length
+-      ? [...form.muscleGroupsToStrengthen]
+-      : null;
+-  }
+-  if (step === 7) {
+     patch.injury_notes = trimmedOrNull(form.injuryNotes);
+     patch.injury_areas = form.injuryAreas.length ? [...form.injuryAreas] : null;
+     const meet = parseMeetClass(form.targetWeightClass);
+@@ -402,8 +354,8 @@ export function fullOnboardingPatch(form: OnboardingForm): OnboardingUpsertInput
+ 
+ export function earliestMissingStep(missingFields: readonly string[]): OnboardingStep {
+   return missingFields.reduce<OnboardingStep>(
+-    (earliest, field) => Math.min(earliest, MISSING_FIELD_STEPS[field] ?? 7) as OnboardingStep,
+-    7,
++    (earliest, field) => Math.min(earliest, MISSING_FIELD_STEPS[field] ?? ONBOARDING_STEP_COUNT) as OnboardingStep,
++    ONBOARDING_STEP_COUNT,
+   );
+ }
+ 
+diff --git a/src/features/profile/ProfileAboutScreen.tsx b/src/features/profile/ProfileAboutScreen.tsx
+index 9fe23d8..b1f87c1 100644
+--- a/src/features/profile/ProfileAboutScreen.tsx
++++ b/src/features/profile/ProfileAboutScreen.tsx
+@@ -14,7 +14,7 @@ export function ProfileAboutScreen() {
+   const values = profile.data ? profileRowValues(profile.data) : null;
+   return <ProfilePage title={t('student.rn.profile.about')}>
+     {values ? <MyProfileGroupCard>
+-      {(['basics', 'background', 'environment', 'muscles'] as const).map((section, index) => <Fragment key={section}>
++      {(['basics', 'background'] as const).map((section, index) => <Fragment key={section}>
+         {index ? <MyProfileDivider inset /> : null}
+         <ProfilePageRow title={t(section === 'basics' ? 'student.profileCardsSection.copy002' : profileTitles[section])} value={values[section]} onPress={() => setEdit(section)} />
+       </Fragment>)}
+diff --git a/src/features/profile/ProfileEditor.tsx b/src/features/profile/ProfileEditor.tsx
+index 0a89233..deef2df 100644
+--- a/src/features/profile/ProfileEditor.tsx
++++ b/src/features/profile/ProfileEditor.tsx
+@@ -4,25 +4,22 @@ import { useUpsertOnboarding, type OnboardingProfile } from '@/api/domains/onboa
+ import { ApiError } from '@/api/client';
+ import { AppButton, font, spacing, typography, useColors } from '@/design';
+ import { FeedbackPressable } from '@/design/FeedbackPressable';
+-import { NoteSection, WeightSection, BackgroundStep, BasicStep, CompetitionSection, EnvironmentStep, InjuriesSection, MusclesSection, RecoveryStep } from '@/features/onboarding/OnboardingSteps';
++import { NoteSection, WeightSection, BackgroundStep, BasicStep, CompetitionSection, InjuriesSection } from '@/features/onboarding/OnboardingSteps';
+ import { formFromServer, invalidFieldsForStep, type OnboardingErrorField } from '@/features/onboarding/model';
+ import { removeMeetPatch } from '@/features/onboarding/meet';
+ import { t, type TranslationKey } from '@/i18n';
+ import { ProfileModal, ProfileText } from './components';
+ import { profilePatch, profileSteps, type ProfileSection } from './model';
+-export const profileTitles: Record<ProfileSection, TranslationKey> = { weight: 'student.dashboardProfileMetricsView.copy001', note: 'student.rn.profile.note', basics: 'student.myProfileView.copy009', background: 'student.myProfileView.copy011', environment: 'student.myProfileView.copy012', recovery: 'student.myProfileView.copy004', muscles: 'student.myProfileView.copy007', injuries: 'student.myProfileView.copy005', competition: 'student.rn.meet.title' };
++export const profileTitles: Record<ProfileSection, TranslationKey> = { weight: 'student.dashboardProfileMetricsView.copy001', note: 'student.rn.profile.note', basics: 'student.myProfileView.copy009', background: 'student.myProfileView.copy011', injuries: 'student.myProfileView.copy005', competition: 'student.rn.meet.title' };
+ const profileEditorTitles: Record<ProfileSection, TranslationKey> = {
+   weight: 'student.dashboardProfileMetricsView.copy001',
+   note: 'student.rn.profile.note',
+   basics: 'student.profileCardsSection.copy002',
+   background: 'student.profileCardsSection.copy003',
+-  environment: 'student.profileCardsSection.copy004',
+-  recovery: 'student.profileCardsSection.copy005',
+-  muscles: 'student.profileCardsSection.copy006',
+   competition: 'student.rn.meet.title',
+   injuries: 'student.profileCardsSection.copy008',
+ };
+-const sections = { weight: WeightSection, note: NoteSection, basics: BasicStep, background: BackgroundStep, environment: EnvironmentStep, recovery: RecoveryStep, muscles: MusclesSection, injuries: InjuriesSection, competition: CompetitionSection };
++const sections = { weight: WeightSection, note: NoteSection, basics: BasicStep, background: BackgroundStep, injuries: InjuriesSection, competition: CompetitionSection };
+ export function ProfileEditor({ section, profile, onClose }: { section: ProfileSection; profile: OnboardingProfile | null; onClose: () => void }) {
+   const colors = useColors();
+   const [form, setForm] = useState(() => {
+diff --git a/src/features/profile/ProfileHealthScreen.tsx b/src/features/profile/ProfileHealthScreen.tsx
+index 5a622a2..8c73bbf 100644
+--- a/src/features/profile/ProfileHealthScreen.tsx
++++ b/src/features/profile/ProfileHealthScreen.tsx
+@@ -1,29 +1,21 @@
+ import { useState } from 'react';
+ import { useOnboardingProfile } from '@/api/domains/onboarding';
+-import { useReadiness } from '@/api/domains/readiness';
+ import { useSessionStore } from '@/api/session';
+-import { ReadinessSheet } from '@/features/training/ReadinessSheet';
+-import { gymDayText } from '@/features/training/policy';
+ import { t } from '@/i18n';
+-import { MyProfileDivider, MyProfileGroupCard } from './components';
++import { MyProfileGroupCard } from './components';
+ import { ProfilePage, ProfilePageRow, ProfilePageStatus } from './ProfilePage';
+-import { injuryChips, readinessSummary, recoverySummary, rowValue } from './model';
++import { injuryChips } from './model';
+ import { ProfileEditor } from './ProfileEditor';
+ 
+ export function ProfileHealthScreen() {
+   const studentId = useSessionStore(state => state.user?.id ?? '');
+   const profile = useOnboardingProfile(studentId);
+-  const date = gymDayText();
+-  const readiness = useReadiness(studentId, date);
+-  const [edit, setEdit] = useState<'recovery' | 'injuries' | null>(null);
++  const [edit, setEdit] = useState<'injuries' | null>(null);
+   return <ProfilePage title={t('student.rn.profile.health')}>
+     {profile.data ? <MyProfileGroupCard>
+-      <ProfilePageRow title={t('student.myProfileView.copy004')} value={rowValue(readiness.data?.checkin ? readinessSummary(readiness.data.checkin) : recoverySummary(profile.data))} onPress={() => setEdit('recovery')} />
+-      <MyProfileDivider inset />
+       <ProfilePageRow title={t('student.myProfileView.copy005')} value={injuryChips(profile.data.injury_areas).join(' · ')} onPress={() => setEdit('injuries')} />
+     </MyProfileGroupCard> : <ProfilePageStatus pending={profile.isPending} failed={profile.isError} retry={() => void profile.refetch()} />}
+     {profile.data && profile.isError ? <ProfilePageStatus pending={false} failed retry={() => void profile.refetch()} /> : null}
+     {edit === 'injuries' ? <ProfileEditor section="injuries" profile={profile.data ?? null} onClose={() => setEdit(null)} /> : null}
+-    {edit === 'recovery' ? <ReadinessSheet studentId={studentId} date={date} onComplete={() => setEdit(null)} onSkip={() => setEdit(null)} /> : null}
+   </ProfilePage>;
+ }
+diff --git a/src/features/profile/__tests__/editor.test.tsx b/src/features/profile/__tests__/editor.test.tsx
+index 96555dc..e88371f 100644
+--- a/src/features/profile/__tests__/editor.test.tsx
++++ b/src/features/profile/__tests__/editor.test.tsx
+@@ -5,7 +5,7 @@ import { Alert, Text, TextInput } from 'react-native';
+ import { onboardingRepository, type OnboardingProfile } from '@/api/domains/onboarding';
+ import { setLocaleOverride, t } from '@/i18n';
+ import { GENDER_LABELS, UNIT_LABELS } from '@/features/onboarding/catalog';
+-import { ProfileEditor } from '../ProfileEditor';
++import { ProfileEditor, profileTitles } from '../ProfileEditor';
+ import type { ProfileSection } from '../model';
+ 
+ jest.mock('@react-native-async-storage/async-storage', () =>
+@@ -243,3 +243,13 @@ test.each(['injuries', 'basics', 'background', 'competition', 'note', 'weight']
+     expect(notice).toBeLessThan(copy.indexOf(t('student.profileCardsSection.copy013')));
+   } else expect(notice).toBe(-1);
+ });
++
++
++test('profile editor registry excludes environment, recovery and materials', async () => {
++  expect(Object.keys(profileTitles).sort()).toEqual(['background', 'basics', 'competition', 'injuries', 'note', 'weight']);
++  await mount('basics');
++  const copy = renderer.root.findAllByType(Text).map(node => node.props.children);
++  for (const title of ['Training environment', 'Recovery capacity', 'Training materials', 'Muscles to improve']) expect(copy).not.toContain(title);
++  await save();
++  expect(storedProfile).toMatchObject({ training_days: ['mon', 'wed'], gym_tier: 'commercial', daily_life_intensity: 3, life_stress: 2, recovery_speed: 4, sleep_hours: 8 });
++});
+diff --git a/src/features/profile/__tests__/model.test.ts b/src/features/profile/__tests__/model.test.ts
+index 0fd9380..9ba7d88 100644
+--- a/src/features/profile/__tests__/model.test.ts
++++ b/src/features/profile/__tests__/model.test.ts
+@@ -2,7 +2,7 @@ import { OnboardingProfileSchema } from '@/api/domains/onboarding';
+ import { expect, test, beforeEach, afterEach } from '@jest/globals';
+ import { setLocaleOverride, t } from '@/i18n';
+ import { createEmptyOnboardingForm, type OnboardingStep } from '@/features/onboarding/model';
+-import { profileInitials, profileIdentity, profileCoachName, profileMenuValues, profileRowValues, injuryChips, injurySummary, oneRMValues, profilePatch, profileSteps, type ProfileSection, readinessSummary, recoverySummary, rowValue } from '../model';
++import { profileInitials, profileIdentity, profileCoachName, profileMenuValues, profileRowValues, injuryChips, injurySummary, oneRMValues, profilePatch, profileSteps, type ProfileSection, rowValue } from '../model';
+ 
+ beforeEach(() => setLocaleOverride('zh'));
+ afterEach(() => setLocaleOverride(null));
+@@ -17,11 +17,7 @@ test('injury chips name each area and preserve other and empty fallbacks', () =>
+   expect(injuryChips(null)).toEqual([t('student.myProfileV3Presentation.copy007')]);
+ });
+ 
+-test('readiness summarizes sleep, mood and stress out of five', () => {
+-  expect(readinessSummary({ sleep_quality: 4, mood: 3, stress: 2 })).toEqual([t('student.myProfileV3Presentation.copy001', [4]), t('student.myProfileV3Presentation.copy002', [3]), t('student.myProfileV3Presentation.copy003', [2])]);
+-});
+-test('assessment summary and missing row values use canonical copy', () => {
+-  expect(recoverySummary({ daily_life_intensity: 3, life_stress: 2, recovery_speed: 4 })).toEqual([t('student.onboardingLabels.copy050') + t('student.myProfileV3Presentation.copy004'), t('student.onboardingLabels.copy049') + t('student.myProfileV3Presentation.copy005'), t('student.onboardingLabels.copy057') + t('student.myProfileV3Presentation.copy006')]);
++test('missing row values use canonical copy', () => {
+   expect(rowValue([])).toBe(t('student.myProfileV3Presentation.copy010'));
+   expect(rowValue(null)).toBe(t('student.myProfileV3Presentation.copy010'));
+   expect(rowValue(['A', 'B'])).toBe('A · B');
+@@ -35,13 +31,13 @@ test('1RM total requires all three lifts and missing values display an em dash',
+   expect(oneRMValues({ squat_1rm_kg: '150.5', bench_1rm_kg: '100', deadlift_1rm_kg: '200' })).toEqual({ lifts: ['150.5', '100', '200'], total: '450.5' });
+   expect(oneRMValues({ squat_1rm_kg: null, bench_1rm_kg: '100', deadlift_1rm_kg: null })).toEqual({ lifts: ['—', '100', '—'], total: '—' });
+ });
+-test.each<OnboardingStep>([1, 2, 3, 4, 5, 6, 7])('profilePatch step %s cannot transmit any 1RM field', (step) => {
++test.each<OnboardingStep>([1, 2, 3, 4])('profilePatch step %s cannot transmit any 1RM field', (step) => {
+   const patch = profilePatch(step, { ...createEmptyOnboardingForm(), squat1RMKg: '200', bench1RMKg: '150', deadlift1RMKg: '250' });
+   for (const field of ['squat_1rm_kg', 'bench_1rm_kg', 'deadlift_1rm_kg']) expect(patch).not.toHaveProperty(field);
+ });
+-test('row patches cannot clear fields belonging to another step7 section', () => {
++test('row patches cannot clear fields belonging to another extras section', () => {
+   const form = { ...createEmptyOnboardingForm(), injuryNotes: 'knee', isCompeting: true, competitionDate: '2027-01-01' };
+-  expect(profilePatch(7, form, 'injuries')).toEqual({ injury_notes: 'knee', injury_areas: null });
++  expect(profilePatch(4, form, 'injuries')).toEqual({ injury_notes: 'knee', injury_areas: null });
+ });
+ 
+ const editedForm = {
+@@ -60,9 +56,6 @@ test.each<[ProfileSection, object]>([
+   ['note', { note_to_coach: 'Meet goal\nKeep it steady' }],
+   ['basics', { unit_preference: 'lb', gender: 'female', birth_date: '1995-06-15', height_cm: '180', weight_kg: '80.00' }],
+   ['background', { training_years: 3, squat_stance: 'high_bar', deadlift_style: 'conventional', bench_grip: 'standard' }],
+-  ['environment', { training_days: ['mon', 'wed'], gym_tier: 'commercial', equipment_overrides: ['barbell_dumbbell'] }],
+-  ['recovery', { daily_life_intensity: 3, life_stress: 2, recovery_speed: 4, sleep_hours: 8 }],
+-  ['muscles', { muscle_groups_to_strengthen: ['quad'] }],
+   ['injuries', { injury_notes: 'Existing injury', injury_areas: ['knee'] }],
+   ['competition', { is_competing: true, competition_date: '2027-01-01', target_weight_class: 'IPF · 83 kg' }],
+ ])('%s submits only its own fields and never any 1RM', (section, expected) => {
+diff --git a/src/features/profile/__tests__/profile-pages.test.tsx b/src/features/profile/__tests__/profile-pages.test.tsx
+index 1aec242..b1b8f5f 100644
+--- a/src/features/profile/__tests__/profile-pages.test.tsx
++++ b/src/features/profile/__tests__/profile-pages.test.tsx
+@@ -12,7 +12,6 @@ import { ProfileHealthScreen } from '../ProfileHealthScreen';
+ import { ProfileSettingsScreen } from '../ProfileSettingsScreen';
+ import { MyProfileScreen } from '../MyProfileScreen';
+ import { readinessRepository } from '@/api/domains/readiness';
+-import { ReadinessSheet } from '@/features/training/ReadinessSheet';
+ import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
+ import { TrainingReminderSettingsScreen } from '@/features/settings/TrainingReminderSettingsScreen';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+@@ -58,12 +57,14 @@ async function press(label: string) {
+   await act(async () => { node!.props.onPress(); });
+ }
+ 
+-test('About me preserves four ordered rows and opens each existing editor', async () => {
++test('About me preserves two retained rows with historical data and opens each existing editor', async () => {
++  Object.assign(profile, { gym_tier: 'professional', equipment_overrides: ['heavy_dumbbells'], muscle_groups_to_strengthen: ['quad'] });
+   await mount(<ProfileAboutScreen />);
+-  const titles = ['Basic information', 'Training background', 'Training environment', 'Muscles to improve'];
++  const titles = ['Basic information', 'Training background'];
++  for (const removed of ['Training environment', 'Muscles to improve', 'heavy_dumbbells']) expect(texts()).not.toContain(removed);
+   expect(texts().filter(text => titles.includes(text))).toEqual(titles);
+   expect(texts()).toContain('178 cm · 83.50 kg');
+-  for (const [index, section] of ['basics', 'background', 'environment', 'muscles'].entries()) {
++  for (const [index, section] of ['basics', 'background'].entries()) {
+     await press(titles[index]); expect(renderer.root.findByType(ProfileEditor).props.section).toBe(section);
+     await press(t('student.accountSecuritySheets.copy013'));
+     expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
+@@ -80,15 +81,14 @@ test('saving basics updates About me and the mounted home through the shared cac
+   expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
+   expect(texts().filter(text => text === '178 cm · 84.00 kg')).toHaveLength(2);
+ });
+-test.each(['today', 'onboarding', 'empty'])('Health uses %s recovery and opens the existing sheets', async mode => {
++test.each(['today', 'onboarding', 'empty'])('Health hides recovery summaries and editors even with %s data', async mode => {
+   if (mode === 'today') jest.mocked(readinessRepository.get).mockResolvedValue({ checkin: { sleep_quality: 4, mood: 3, stress: 2 } } as never);
+   if (mode === 'onboarding') { profile.daily_life_intensity = 3; profile.life_stress = 2; profile.recovery_speed = 4; }
+   await mount(<ProfileHealthScreen />);
+-  expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Recovery assessment', 'Injury history']);
+-  expect(texts()).toContain(mode === 'today' ? 'Sleep 4/5 · Readiness 3/5 · Stress 2/5' : mode === 'empty' ? 'Not provided' : 'Medium Intensity · Low Stress · About 1 day Recovery');
++  expect(texts().filter(text => ['Recovery assessment', 'Injury history'].includes(text))).toEqual(['Injury history']);
++  expect(texts()).not.toContain('Sleep 4/5 · Readiness 3/5 · Stress 2/5');
++  expect(texts()).not.toContain('Medium Intensity · Low Stress · About 1 day Recovery');
+   expect(texts()).not.toContain('Notify coach');
+-  await press('Recovery assessment'); expect(renderer.root.findAllByType(ReadinessSheet)).toHaveLength(1);
+-  act(() => renderer.root.findByType(ReadinessSheet).props.onSkip());
+   await press('Injury history'); expect(renderer.root.findByType(ProfileEditor).props.section).toBe('injuries');
+ });
+ test('Settings switches appearance persistently and opens both existing preference screens', async () => {
+diff --git a/src/features/profile/model.ts b/src/features/profile/model.ts
+index 2f73264..2087c4f 100644
+--- a/src/features/profile/model.ts
++++ b/src/features/profile/model.ts
+@@ -1,12 +1,11 @@
+ import type { OnboardingProfile, OnboardingUpsertInput } from '@/api/domains/onboarding';
+-import type { ReadinessCheckin } from '@/api/domains/readiness';
+ import { formatBodyWeightKg } from '@/domain/profile/body-weight';
+ import { onboardingPatchForStep, type OnboardingForm, type OnboardingStep } from '@/features/onboarding/model';
+-import { BENCH_GRIP_LABELS, DEADLIFT_STYLE_LABELS, GYM_TIER_LABELS, INJURY_AREA_LABELS, MUSCLE_GROUP_LABELS, SQUAT_STANCE_LABELS, equipmentLabel } from '@/features/onboarding/catalog';
+-import { getLocale, t, type TranslationKey } from '@/i18n';
++import { BENCH_GRIP_LABELS, DEADLIFT_STYLE_LABELS, INJURY_AREA_LABELS, SQUAT_STANCE_LABELS } from '@/features/onboarding/catalog';
++import { t } from '@/i18n';
+ 
+-export type ProfileSection = 'basics' | 'background' | 'environment' | 'recovery' | 'muscles' | 'injuries' | 'competition' | 'weight' | 'note';
+-export const profileSteps = { weight: 1, note: 7, basics: 1, background: 2, environment: 4, recovery: 5, muscles: 6, injuries: 7, competition: 7 } as const;
++export type ProfileSection = 'basics' | 'background' | 'injuries' | 'competition' | 'weight' | 'note';
++export const profileSteps = { weight: 1, note: 4, basics: 1, background: 2, injuries: 4, competition: 4 } as const;
+ type ProfilePatch = Omit<OnboardingUpsertInput, 'squat_1rm_kg' | 'bench_1rm_kg' | 'deadlift_1rm_kg'>;
+ 
+ /** Never call onboarding's lift step; the outbound allowlist also protects future changes. */
+@@ -16,26 +15,13 @@ export function profilePatch(step: OnboardingStep, form: OnboardingForm, section
+   const allowed = section === 'weight' ? ['weight_kg'] : section === 'note' ? ['note_to_coach'] : section === 'basics' ? ['unit_preference', 'gender', 'birth_date', 'height_cm', 'weight_kg']
+     : section === 'injuries' ? ['injury_notes', 'injury_areas']
+     : section === 'competition' ? ['is_competing', 'competition_date', 'target_weight_class']
+-    : ['unit_preference', 'gender', 'birth_date', 'height_cm', 'weight_kg', 'training_years', 'squat_stance', 'deadlift_style', 'bench_grip', 'training_days', 'gym_tier', 'equipment_overrides', 'daily_life_intensity', 'life_stress', 'recovery_speed', 'sleep_hours', 'muscle_groups_to_strengthen', 'injury_notes', 'injury_areas', 'is_competing', 'competition_date', 'target_weight_class', 'note_to_coach'];
++    : ['unit_preference', 'gender', 'birth_date', 'height_cm', 'weight_kg', 'training_years', 'squat_stance', 'deadlift_style', 'bench_grip', 'injury_notes', 'injury_areas', 'is_competing', 'competition_date', 'target_weight_class', 'note_to_coach'];
+   return Object.fromEntries(Object.entries(patch).filter(([key]) => allowed.includes(key)));
+ }
+ export function rowValue(value: string | readonly string[] | null | undefined): string {
+   const text = Array.isArray(value) ? value.filter(Boolean).join(' · ') : value;
+   return typeof text === 'string' && text.trim() ? text : t('student.myProfileV3Presentation.copy010');
+ }
+-export function readinessSummary(readiness: Pick<ReadinessCheckin, 'sleep_quality' | 'mood' | 'stress'>): string[] {
+-  return [t('student.myProfileV3Presentation.copy001', [readiness.sleep_quality]), t('student.myProfileV3Presentation.copy002', [readiness.mood]), t('student.myProfileV3Presentation.copy003', [readiness.stress])];
+-}
+-const intensity: TranslationKey[] = ['student.onboardingLabels.copy048', 'student.onboardingLabels.copy049', 'student.onboardingLabels.copy050', 'student.onboardingLabels.copy051', 'student.onboardingLabels.copy052'];
+-const stress: TranslationKey[] = ['student.onboardingLabels.copy053', ...intensity.slice(1)];
+-const recovery: TranslationKey[] = ['student.onboardingLabels.copy054', 'student.onboardingLabels.copy055', 'student.onboardingLabels.copy056', 'student.onboardingLabels.copy057', 'student.onboardingLabels.copy058'];
+-export function recoverySummary(profile: Pick<OnboardingProfile, 'daily_life_intensity' | 'life_stress' | 'recovery_speed'>): string[] {
+-  return ([
+-    [profile.daily_life_intensity, intensity, 'student.myProfileV3Presentation.copy004'],
+-    [profile.life_stress, stress, 'student.myProfileV3Presentation.copy005'],
+-    [profile.recovery_speed, recovery, 'student.myProfileV3Presentation.copy006'],
+-  ] as const).flatMap(([n, labels, suffix]) => n && labels[n - 1] ? [`${t(labels[n - 1])}${getLocale() === 'en' ? ' ' : ''}${t(suffix)}`] : []);
+-}
+ export function injurySummary(areas: readonly string[] | null): string {
+   const count = areas?.filter((area) => area !== 'other').length ?? 0;
+   return count ? t(count === 1 ? 'student.myProfileV3Presentation.copy009.one' : 'student.myProfileV3Presentation.copy009', [count])
+@@ -55,14 +41,12 @@ function label(labels: Record<string, string>, token: string | null): string {
+ }
+ export function profileRowValues(profile: OnboardingProfile): Record<ProfileSection, string> {
+   return {
+-    recovery: rowValue(recoverySummary(profile)), injuries: injurySummary(profile.injury_areas),
+-    muscles: rowValue((profile.muscle_groups_to_strengthen ?? []).map((token) => label(MUSCLE_GROUP_LABELS, token))),
++    injuries: injurySummary(profile.injury_areas),
+     competition: rowValue(profile.is_competing && profile.competition_date ? [profile.competition_date, profile.target_weight_class ?? ''] : null),
+     note: rowValue(profile.note_to_coach?.split(/\r?\n/)[0]),
+     weight: rowValue(profile.weight_kg ? `${formatBodyWeightKg(profile.weight_kg)} kg` : null),
+     basics: rowValue([profile.height_cm ? `${Number(profile.height_cm)} cm` : '', profile.weight_kg ? `${formatBodyWeightKg(profile.weight_kg)} kg` : '']),
+     background: rowValue([profile.training_years === null ? '' : profile.training_years < 1 ? t('student.onboardingLabels.copy045') : profile.training_years >= 10 ? t('student.onboardingLabels.copy046') : t(profile.training_years === 1 ? 'student.onboardingLabels.copy047.one' : 'student.onboardingLabels.copy047', [profile.training_years]), label(SQUAT_STANCE_LABELS, profile.squat_stance), label(DEADLIFT_STYLE_LABELS, profile.deadlift_style), label(BENCH_GRIP_LABELS, profile.bench_grip)]),
+-    environment: rowValue([label(GYM_TIER_LABELS, profile.gym_tier), ...(profile.equipment_overrides ?? []).map(equipmentLabel)]),
+   };
+ }
+ 
+diff --git a/src/i18n/catalog/RnExtras.json b/src/i18n/catalog/RnExtras.json
+index 27b5e80..156c6c5 100644
+--- a/src/i18n/catalog/RnExtras.json
++++ b/src/i18n/catalog/RnExtras.json
+@@ -1,4 +1,7 @@
+ {
++"student.rn.pendingBind.withoutName": { "en": "Waiting for your coach to accept", "zh": "等待教练接收" },
++"student.rn.pendingBind.namedCoach": { "en": "Waiting for {0} to accept", "zh": "等待{0}接收" },
++"student.rn.onboarding.stepProgress": { "en": "Step {0} of {1}", "zh": "第 {0} 步 / 共 {1} 步" },
+ "minimumVersion.title": {"en": "Update MeetPR\nto keep training", "zh": "需要更新 MeetPR\n才能继续使用"},
+ "minimumVersion.body": {"en": "Your coach’s plan uses new content (such as “Choose your weight”) that this version cannot display. Update to the latest version. Your training records and plans will stay safe.", "zh": "教练的计划用到了新内容（比如「自选重量」），这个版本显示不了。更新到最新版后，训练记录和计划都在，不会丢。"},
+ "minimumVersion.current": {"en": "Current version", "zh": "当前版本"},
+diff --git a/src/i18n/catalog/StudentKit.json b/src/i18n/catalog/StudentKit.json
+index a032d9f..e618d64 100644
+--- a/src/i18n/catalog/StudentKit.json
++++ b/src/i18n/catalog/StudentKit.json
+@@ -2036,8 +2036,8 @@
+ "zh": "你已提交给教练的资料"
+ },
+ "student.pendingBindView.copy011": {
+-"en": "Complete onboarding profile",
+-"zh": "onboarding 完整资料"
++"en": "Basic profile",
++"zh": "基础资料"
+ },
+ "student.pendingBindView.copy012": {
+ "en": "{0} uploaded items",
+diff --git a/src/i18n/generated/zh-Hant.json b/src/i18n/generated/zh-Hant.json
+index 3890732..6ec4eda 100644
+--- a/src/i18n/generated/zh-Hant.json
++++ b/src/i18n/generated/zh-Hant.json
+@@ -1581,7 +1581,7 @@
+   "student.pendingBindView.copy008": "等待時長",
+   "student.pendingBindView.copy009": "已等待: {0}",
+   "student.pendingBindView.copy010": "你已提交給教練的資料",
+-  "student.pendingBindView.copy011": "onboarding 完整資料",
++  "student.pendingBindView.copy011": "基礎資料",
+   "student.pendingBindView.copy012": "{0} 份上傳資料",
+   "student.pendingBindView.copy012.one": "{0} 份上傳資料",
+   "student.pendingBindViewModel.copy001": "取消失敗,請重試",
+@@ -2118,6 +2118,9 @@
+   "student.e1rmSourceStudentRPE": "學員 RPE",
+   "student.e1rmSourceTitle": "e1RM 來源",
+   "student.e1rmSourceUnavailable": "原始計算明細不可完整還原，展示已儲存的估算值。",
++  "student.rn.pendingBind.withoutName": "等待教練接收",
++  "student.rn.pendingBind.namedCoach": "等待{0}接收",
++  "student.rn.onboarding.stepProgress": "第 {0} 步 / 共 {1} 步",
+   "minimumVersion.title": "需要更新 MeetPR\n才能繼續使用",
+   "minimumVersion.body": "教練的課表用到了新內容（比如「自選重量」），這個版本顯示不了。更新到最新版後，訓練記錄和課表都在，不會丟。",
+   "minimumVersion.current": "當前版本",
+diff --git a/src/navigation/BindGate.tsx b/src/navigation/BindGate.tsx
+index 3a8db59..e68eef9 100644
+--- a/src/navigation/BindGate.tsx
++++ b/src/navigation/BindGate.tsx
+@@ -474,19 +474,22 @@ function PendingBindView({
+     }
+   };
+ 
+-  const coachName = request?.coach_display_name || t('student.bindGateView.copy004');
++  const coachName = request?.coach_display_name?.trim() ?? '';
++  const subtitle = !coachName
++    ? t('student.rn.pendingBind.withoutName')
++    : t(/教练|教練|\bcoach\b/i.test(coachName) ? 'student.rn.pendingBind.namedCoach' : 'student.pendingBindView.copy002', [coachName]);
+   const uploads = profile?.upload_attachment_ids.length ?? 0;
+   return (
+     <Screen>
+-      <View style={styles.topBar}>
++      <View testID="pending-bind-header" style={[styles.topBar, styles.pendingHeader]}>
+         <View style={styles.topSpacer} />
+-        <AppButton accessibilityLabel={t('student.bindGateView.copy007')} label={t('student.bindGateView.copy006')} onPress={onLogout} variant="link" />
++        <AppButton accessibilityLabel={t('student.bindGateView.copy007')} label={t('student.bindGateView.copy006')} onPress={onLogout} style={styles.pendingLogout} variant="link" />
+       </View>
+       <ScrollView
+         contentContainerStyle={styles.pendingContent}
+         refreshControl={<RefreshControl onRefresh={refresh} refreshing={refreshing} tintColor={colors.gold500} />}>
+         <Text style={styles.gateTitle}>{t('student.pendingBindView.copy001')}</Text>
+-        <Text style={styles.detail}>{t('student.pendingBindView.copy002', [coachName])}</Text>
++        <Text style={styles.detail}>{subtitle}</Text>
+         {request ? (
+           <Card style={styles.waitCard}>
+             <Text style={styles.clock}>◷</Text>
+@@ -576,6 +579,8 @@ function GateFrame({
+ const createStyles = (colors: Colors) => StyleSheet.create({
+   topBar: { alignItems: 'center', flexDirection: 'row', minHeight: 52, paddingHorizontal: spacing.base },
+   topSpacer: { flex: 1 },
++  pendingHeader: { flexShrink: 0 },
++  pendingLogout: { minHeight: 48 },
+   content: { flex: 1, justifyContent: 'center', padding: spacing.base },
+   pendingContent: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xl },
+   card: { gap: spacing.base, padding: spacing.lg },
+diff --git a/src/navigation/__tests__/BindGate.test.tsx b/src/navigation/__tests__/BindGate.test.tsx
+index 054ed19..dd92f08 100644
+--- a/src/navigation/__tests__/BindGate.test.tsx
++++ b/src/navigation/__tests__/BindGate.test.tsx
+@@ -5,7 +5,7 @@ import * as analytics from '@/analytics/client';
+ import { AnalyticsEvent } from '@/analytics/types';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+ import * as Clipboard from 'expo-clipboard';
+-import { AppState, Modal, Text, TextInput } from 'react-native';
++import { AppState, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+ 
+ import { ApiError } from '@/api/client';
+@@ -288,3 +288,34 @@ test('failed terminal storage does not block an accepted settled student', async
+   await renderGate();
+   expect(hasText('tabs')).toBe(true);
+ });
++
++
++test.each<[Locale, string | null, string, string]>([
++  ['zh', null, '等待教练接收', '基础资料'],
++  ['zh', '   ', '等待教练接收', '基础资料'],
++  ['zh', ' 王教练 ', '等待王教练接收', '基础资料'],
++  ['zh', '王磊', '等待教练 王磊 接收', '基础资料'],
++  ['zh-Hant', null, '等待教練接收', '基礎資料'],
++  ['zh-Hant', '王教練', '等待王教練接收', '基礎資料'],
++  ['zh-Hant', '王磊', '等待教練 王磊 接收', '基礎資料'],
++  ['en', null, 'Waiting for your coach to accept', 'Basic profile'],
++  ['en', 'Coach Alex', 'Waiting for Coach Alex to accept', 'Basic profile'],
++  ['en', 'coach Alex', 'Waiting for coach Alex to accept', 'Basic profile'],
++  ['en', 'Alex', 'Waiting for coach Alex to accept', 'Basic profile'],
++  ['en', 'Coachman', 'Waiting for coach Coachman to accept', 'Basic profile'],
++])('pending page formats %s coach %j and basic profile', async (locale, coachName, subtitle, basicProfile) => {
++  setLocaleOverride(locale);
++  jest.mocked(bindRepository.mine).mockResolvedValue({ bind_request: { ...pendingRequest, coach_display_name: coachName } });
++  jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
++  await renderGate();
++  expect(hasText(subtitle)).toBe(true);
++  expect(hasText(basicProfile)).toBe(true);
++  expect(hasText('Complete onboarding profile')).toBe(false);
++  const scroll = renderer.root.findByType(ScrollView);
++  expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.pendingBindView.copy001'))).toBe(true);
++  expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.bindGateView.copy006'))).toBe(false);
++  const header = renderer.root.findAllByType(View).find(node => node.props.testID === 'pending-bind-header')!;
++  expect(header).toBeDefined();
++  expect(StyleSheet.flatten(header.props.style)).toMatchObject({ flexShrink: 0 });
++  expect(StyleSheet.flatten(header.props.style).position).not.toBe('absolute');
++});

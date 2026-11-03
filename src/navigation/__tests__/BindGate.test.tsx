@@ -5,7 +5,7 @@ import * as analytics from '@/analytics/client';
 import { AnalyticsEvent } from '@/analytics/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
-import { AppState, Modal, Text, TextInput } from 'react-native';
+import { AppState, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { ApiError } from '@/api/client';
@@ -287,4 +287,35 @@ test('failed terminal storage does not block an accepted settled student', async
   jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('disk unavailable'));
   await renderGate();
   expect(hasText('tabs')).toBe(true);
+});
+
+
+test.each<[Locale, string | null, string, string]>([
+  ['zh', null, '等待教练接收', '基础资料'],
+  ['zh', '   ', '等待教练接收', '基础资料'],
+  ['zh', ' 王教练 ', '等待王教练接收', '基础资料'],
+  ['zh', '王磊', '等待教练 王磊 接收', '基础资料'],
+  ['zh-Hant', null, '等待教練接收', '基礎資料'],
+  ['zh-Hant', '王教練', '等待王教練接收', '基礎資料'],
+  ['zh-Hant', '王磊', '等待教練 王磊 接收', '基礎資料'],
+  ['en', null, 'Waiting for your coach to accept', 'Basic profile'],
+  ['en', 'Coach Alex', 'Waiting for Coach Alex to accept', 'Basic profile'],
+  ['en', 'coach Alex', 'Waiting for coach Alex to accept', 'Basic profile'],
+  ['en', 'Alex', 'Waiting for coach Alex to accept', 'Basic profile'],
+  ['en', 'Coachman', 'Waiting for coach Coachman to accept', 'Basic profile'],
+])('pending page formats %s coach %j and basic profile', async (locale, coachName, subtitle, basicProfile) => {
+  setLocaleOverride(locale);
+  jest.mocked(bindRepository.mine).mockResolvedValue({ bind_request: { ...pendingRequest, coach_display_name: coachName } });
+  jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+  await renderGate();
+  expect(hasText(subtitle)).toBe(true);
+  expect(hasText(basicProfile)).toBe(true);
+  expect(hasText('Complete onboarding profile')).toBe(false);
+  const scroll = renderer.root.findByType(ScrollView);
+  expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.pendingBindView.copy001'))).toBe(true);
+  expect(scroll.findAllByType(Text).some(node => node.props.children === t('student.bindGateView.copy006'))).toBe(false);
+  const header = renderer.root.findAllByType(View).find(node => node.props.testID === 'pending-bind-header')!;
+  expect(header).toBeDefined();
+  expect(StyleSheet.flatten(header.props.style)).toMatchObject({ flexShrink: 0 });
+  expect(StyleSheet.flatten(header.props.style).position).not.toBe('absolute');
 });

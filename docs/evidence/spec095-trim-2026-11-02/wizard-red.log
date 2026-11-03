@@ -1,0 +1,144 @@
+FAIL src/features/onboarding/__tests__/wizard.test.tsx (16.474 s)
+  ✕ four-step wizard submits basics, background, lifts and extras with no removed screens (6811 ms)
+  ✕ old draft at former step 4 resumes at extras and preserves server history on submit (41 ms)
+  ✕ old draft at former step 5 resumes at extras and preserves server history on submit (89 ms)
+  ✕ old draft at former step 6 resumes at extras and preserves server history on submit (133 ms)
+  ✕ old draft at former step 7 resumes at extras and preserves server history on submit (37 ms)
+  ○ skipped reopening the wizard hides the old form until the draft is loaded
+  ○ skipped Android wizard back saves the draft and exits only after the save completes
+  ○ skipped Android estimator back closes the estimator without changing the lift
+  ○ skipped equipment sections show the full catalog and dumbbell limits are mutually exclusive
+  ○ skipped canonical drafts round-trip while obsolete units and gym tiers read as null
+  ○ skipped imperial height input preserves each keystroke while storing centimeters
+  ○ skipped imperial weight input preserves raw text until blur or a unit change
+  ○ skipped pressing the selected gym preserves customized equipment without an alert or update
+  ○ skipped legacy equipment survives drafts and displays its raw token until deselected
+  ○ skipped DateWheel clips same-month options from 2026-09-04 to 2026-09-04
+  ○ skipped DateWheel clips same-month options from 2026-09-04 to 2026-09-06
+  ○ skipped DateWheel automatically clamps out-of-range value 2026-09-03
+  ○ skipped DateWheel automatically clamps out-of-range value 2026-09-07
+  ○ skipped Wheel centers the initial value and selects options[k] at ROW_HEIGHT times k
+  ○ skipped the wizard moves its fields above the keyboard on Android as well as iOS
+  ○ skipped slider positions map to the nearest mark and clamp at both ends
+  ○ skipped tapping or dragging across the slider updates the value as the finger moves
+
+  ● four-step wizard submits basics, background, lifts and extras with no removed screens
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      290 | const fill = (patch: Partial<OnboardingForm>) => act(() => renderer.root.findByType(OnboardingStepContent).props.update(patch));
+      291 |
+    > 292 | test('four-step wizard submits basics, background, lifts and extras with no removed screens', async () => {
+          |     ^
+      293 |   setLocaleOverride('en');
+      294 |   const upsert = jest.spyOn(onboardingRepository, 'upsert').mockResolvedValue(completedProfile());
+      295 |   const completed = { ...completedProfile(), completed_at: '2026-11-02T00:00:00Z' };
+
+      at Object.<anonymous> (src/features/onboarding/__tests__/wizard.test.tsx:292:5)
+
+  ● old draft at former step 4 resumes at extras and preserves server history on submit
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      41 |     node.findAllByType(Text).some((text) => text.props.children === label),
+      42 |   );
+    > 43 |   expect(button).toBeDefined();
+         |                  ^
+      44 |   button!.props.onPress();
+      45 | }
+      46 |
+
+      at toBeDefined (src/features/onboarding/__tests__/wizard.test.tsx:43:18)
+      at press (src/features/onboarding/__tests__/wizard.test.tsx:329:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at src/features/onboarding/__tests__/wizard.test.tsx:329:12
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● old draft at former step 5 resumes at extras and preserves server history on submit
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      41 |     node.findAllByType(Text).some((text) => text.props.children === label),
+      42 |   );
+    > 43 |   expect(button).toBeDefined();
+         |                  ^
+      44 |   button!.props.onPress();
+      45 | }
+      46 |
+
+      at toBeDefined (src/features/onboarding/__tests__/wizard.test.tsx:43:18)
+      at press (src/features/onboarding/__tests__/wizard.test.tsx:329:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at src/features/onboarding/__tests__/wizard.test.tsx:329:12
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● old draft at former step 6 resumes at extras and preserves server history on submit
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      41 |     node.findAllByType(Text).some((text) => text.props.children === label),
+      42 |   );
+    > 43 |   expect(button).toBeDefined();
+         |                  ^
+      44 |   button!.props.onPress();
+      45 | }
+      46 |
+
+      at toBeDefined (src/features/onboarding/__tests__/wizard.test.tsx:43:18)
+      at press (src/features/onboarding/__tests__/wizard.test.tsx:329:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at src/features/onboarding/__tests__/wizard.test.tsx:329:12
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● old draft at former step 7 resumes at extras and preserves server history on submit
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+      41 |     node.findAllByType(Text).some((text) => text.props.children === label),
+      42 |   );
+    > 43 |   expect(button).toBeDefined();
+         |                  ^
+      44 |   button!.props.onPress();
+      45 | }
+      46 |
+
+      at toBeDefined (src/features/onboarding/__tests__/wizard.test.tsx:43:18)
+      at press (src/features/onboarding/__tests__/wizard.test.tsx:329:25)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at src/features/onboarding/__tests__/wizard.test.tsx:329:12
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 17 skipped, 22 total
+Snapshots:   0 total
+Time:        16.836 s
+Ran all test suites matching /src\/features\/onboarding\/__tests__\/wizard.test.tsx/i with tests matching "four-step wizard|old draft at former".

@@ -474,19 +474,22 @@ function PendingBindView({
     }
   };
 
-  const coachName = request?.coach_display_name || t('student.bindGateView.copy004');
+  const coachName = request?.coach_display_name?.trim() ?? '';
+  const subtitle = !coachName
+    ? t('student.rn.pendingBind.withoutName')
+    : t(/教练|教練|\bcoach\b/i.test(coachName) ? 'student.rn.pendingBind.namedCoach' : 'student.pendingBindView.copy002', [coachName]);
   const uploads = profile?.upload_attachment_ids.length ?? 0;
   return (
     <Screen>
-      <View style={styles.topBar}>
+      <View testID="pending-bind-header" style={[styles.topBar, styles.pendingHeader]}>
         <View style={styles.topSpacer} />
-        <AppButton accessibilityLabel={t('student.bindGateView.copy007')} label={t('student.bindGateView.copy006')} onPress={onLogout} variant="link" />
+        <AppButton accessibilityLabel={t('student.bindGateView.copy007')} label={t('student.bindGateView.copy006')} onPress={onLogout} style={styles.pendingLogout} variant="link" />
       </View>
       <ScrollView
         contentContainerStyle={styles.pendingContent}
         refreshControl={<RefreshControl onRefresh={refresh} refreshing={refreshing} tintColor={colors.gold500} />}>
         <Text style={styles.gateTitle}>{t('student.pendingBindView.copy001')}</Text>
-        <Text style={styles.detail}>{t('student.pendingBindView.copy002', [coachName])}</Text>
+        <Text style={styles.detail}>{subtitle}</Text>
         {request ? (
           <Card style={styles.waitCard}>
             <Text style={styles.clock}>◷</Text>
@@ -576,6 +579,8 @@ function GateFrame({
 const createStyles = (colors: Colors) => StyleSheet.create({
   topBar: { alignItems: 'center', flexDirection: 'row', minHeight: 52, paddingHorizontal: spacing.base },
   topSpacer: { flex: 1 },
+  pendingHeader: { flexShrink: 0 },
+  pendingLogout: { minHeight: 48 },
   content: { flex: 1, justifyContent: 'center', padding: spacing.base },
   pendingContent: { gap: spacing.base, padding: spacing.base, paddingBottom: spacing.xl },
   card: { gap: spacing.base, padding: spacing.lg },

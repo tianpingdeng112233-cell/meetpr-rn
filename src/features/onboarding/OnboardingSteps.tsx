@@ -1,6 +1,6 @@
 import { decimalInput, metricDisplay, metricStored } from '@/domain/measurement';
 import { useState, useMemo } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,11 +11,8 @@ import { t, type TranslationKey } from '@/i18n';
 
 import {
   BENCH_GRIPS, BENCH_GRIP_LABELS, DEADLIFT_STYLES, DEADLIFT_STYLE_LABELS,
-  EQUIPMENT_CATALOG, EQUIPMENT_GROUPS, EQUIPMENT_GROUP_LABELS, equipmentLabel,
-  GENDERS, GENDER_LABELS, GYM_TIERS, GYM_TIER_LABELS, GYM_TIER_SUBTITLES,
-  INJURY_AREAS, INJURY_AREA_LABELS, MUSCLE_GROUPS, MUSCLE_GROUP_LABELS,
-  prefillEquipment, SQUAT_STANCES, SQUAT_STANCE_LABELS, TRAINING_DAYS,
-  TRAINING_DAY_LABELS, UNIT_PREFERENCES, UNIT_LABELS,
+  GENDERS, GENDER_LABELS, INJURY_AREAS, INJURY_AREA_LABELS,
+  SQUAT_STANCES, SQUAT_STANCE_LABELS, UNIT_PREFERENCES, UNIT_LABELS,
 } from './catalog';
 import {
   ChoiceGroup,
@@ -24,7 +21,6 @@ import {
   FieldLabel,
   FormInput,
   MultiChoice,
-  Scale,
 } from './controls';
 import {
   estimateOneRepMax,
@@ -276,133 +272,6 @@ function LiftsStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   );
 }
 
-export function EnvironmentStep({ errorFields, form, update }: Omit<Props, 'step'>) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  const legacyEquipment = form.equipmentOverrides.filter((token) => !EQUIPMENT_CATALOG.some((item) => item.token === token));
-  const chooseGym = (gymTier: NonNullable<OnboardingForm['gymTier']>) => {
-    if (gymTier === form.gymTier) return;
-    const apply = () => update({ gymTier, equipmentOverrides: prefillEquipment(gymTier) });
-    if (form.gymTier) {
-      Alert.alert(t('student.step4EnvironmentSection.copy002'), undefined, [
-        { text: t('student.step4EnvironmentSection.copy004'), style: 'cancel' },
-        { text: t('student.step4EnvironmentSection.copy003'), onPress: apply },
-      ]);
-    } else apply();
-  };
-  return (
-    <View style={styles.section}>
-      <FieldLabel>{t('student.step4EnvironmentSection.copy001')}</FieldLabel>
-      <MultiChoice
-        choices={TRAINING_DAYS.map((day, index) => ({ label: TRAINING_DAY_LABELS[day], value: String(index + 1) }))}
-        error={errorFields.has('trainingDays')}
-        max={6}
-        onChange={(days) => update({ trainingDays: days.map(Number).sort() })}
-        selected={form.trainingDays.map(String)}
-      />
-      {form.trainingDays.length < 2 ? (
-        <Text style={styles.error}>{t(form.trainingDays.length === 1 ? 'student.step4EnvironmentSection.copy006.one' : 'student.step4EnvironmentSection.copy006', [form.trainingDays.length])}</Text>
-      ) : (
-        <Text style={styles.help}>{t('student.step4EnvironmentSection.copy007', [form.trainingDays.length])}</Text>
-      )}
-      <FieldLabel>{t('student.step4EnvironmentSection.copy008')}</FieldLabel>
-      <ChoiceGroup error={errorFields.has('gymTier')} choices={GYM_TIERS.map((value) => ({ value, label: GYM_TIER_LABELS[value], subtitle: GYM_TIER_SUBTITLES[value] }))} onChange={chooseGym} selected={form.gymTier} />
-      {form.gymTier ? (
-        <Card style={styles.equipmentCard}>
-          <FieldLabel>{t('student.step4EnvironmentSection.copy012')}</FieldLabel>
-          {EQUIPMENT_GROUPS.map((group) => {
-            const items = EQUIPMENT_CATALOG.filter((item) => item.group === group);
-            const choices = items
-              .map(({ token }) => ({ value: token, label: equipmentLabel(token) }));
-            const selected = form.equipmentOverrides.filter((token) =>
-              items.some((item) => item.token === token),
-            );
-            const otherGroups = form.equipmentOverrides.filter((token) =>
-              !items.some((item) => item.token === token),
-            );
-            return (
-              <View key={group} style={styles.section}>
-                <FieldLabel>{EQUIPMENT_GROUP_LABELS[group]}</FieldLabel>
-                {group === 'dumbbellMax' ? (
-                  <ChoiceGroup
-                    choices={choices}
-                    onChange={(token) => update({ equipmentOverrides: [...otherGroups, token] })}
-                    selected={selected[0] ?? null}
-                  />
-                ) : (
-                  <MultiChoice
-                    choices={choices}
-                    max={items.length}
-                    onChange={(tokens) => update({ equipmentOverrides: [...otherGroups, ...tokens] })}
-                    selected={selected}
-                  />
-                )}
-              </View>
-            );
-          })}
-          <MultiChoice
-            choices={legacyEquipment.map((token) => ({ value: token, label: equipmentLabel(token) }))}
-            max={legacyEquipment.length}
-            onChange={(tokens) => update({ equipmentOverrides: form.equipmentOverrides.filter((token) => !legacyEquipment.includes(token) || tokens.includes(token)) })}
-            selected={legacyEquipment}
-          />
-        </Card>
-      ) : null}
-    </View>
-  );
-}
-
-export function RecoveryStep({ errorFields, form, update }: Omit<Props, 'step'>) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <View style={styles.section}>
-      <Scale
-        error={errorFields.has('dailyLifeIntensity')}
-        footnote={t('student.step5RecoverySection.copy002')}
-        labels={[t('student.onboardingLabels.copy048'), t('student.onboardingLabels.copy052')]}
-        onChange={(dailyLifeIntensity) => update({ dailyLifeIntensity })}
-        title={t('student.step5RecoverySection.copy001')}
-        value={form.dailyLifeIntensity}
-      />
-      <Scale error={errorFields.has('lifeStress')} labels={[t('student.onboardingLabels.copy048'), t('student.onboardingLabels.copy052')]} onChange={(lifeStress) => update({ lifeStress })} title={t('student.step5RecoverySection.copy003')} value={form.lifeStress} />
-      <Scale
-        error={errorFields.has('recoverySpeed')}
-        footnote={t('student.step5RecoverySection.copy005')}
-        labels={[t('student.onboardingLabels.copy054'), t('student.onboardingLabels.copy058')]}
-        onChange={(recoverySpeed) => update({ recoverySpeed })}
-        title={t('student.step5RecoverySection.copy004')}
-        value={form.recoverySpeed}
-      />
-      <Scale error={errorFields.has('sleepHours')} labels={['≤5h', '9h+']} onChange={(sleepHours) => update({ sleepHours })} title={t('student.step5RecoverySection.copy006')} value={form.sleepHours} />
-    </View>
-  );
-}
-
-function MaterialsStep({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
-  const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <View style={styles.section}>
-      {/* iOS step 6 shows the plan-upload and big-three-video cards as coming soon. */}
-      {[t('student.step6MaterialsSection.copy001'), t('student.step6MaterialsSection.copy002')].map((title) => (
-        <Card key={title} style={styles.disabledUpload}>
-          <Text style={styles.uploadTitle}>{title}</Text>
-          <Text style={styles.disabledText}>{t('student.step6MaterialsSection.copy005')}</Text>
-        </Card>
-      ))}
-      <MusclesSection form={form} update={update} />
-    </View>
-  );
-}
-
-export function MusclesSection({ form, update }: Omit<Props, 'step' | 'errorFields'>) {
-  return <>
-      <FieldLabel>{t('student.step6MaterialsSection.copy004')}</FieldLabel>
-      <MultiChoice choices={MUSCLE_GROUPS.map((value) => ({ value, label: MUSCLE_GROUP_LABELS[value] }))} max={3} onChange={(muscleGroupsToStrengthen) => update({ muscleGroupsToStrengthen })} selected={form.muscleGroupsToStrengthen} />
-  </>;
-}
-
 function AdditionalStep({ errorFields, form, update }: Omit<Props, 'step'>) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -491,12 +360,6 @@ export function OnboardingStepContent(props: Props) {
     case 3:
       return <LiftsStep {...props} />;
     case 4:
-      return <EnvironmentStep {...props} />;
-    case 5:
-      return <RecoveryStep {...props} />;
-    case 6:
-      return <MaterialsStep {...props} />;
-    case 7:
       return <AdditionalStep {...props} />;
   }
 }
@@ -526,10 +389,6 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   modalTitle: { color: colors.textPrimary, ...typography.headline },
   modalContent: { gap: spacing.md, padding: spacing.base },
   estimate: { color: colors.textPrimary, paddingVertical: spacing.lg, textAlign: 'center', ...typography.title2 },
-  equipmentCard: { gap: spacing.md, padding: spacing.base },
-  disabledUpload: { gap: spacing.sm, opacity: 0.55, padding: spacing.base },
-  uploadTitle: { color: colors.textSecondary, ...typography.bodyEmphasis },
-  disabledText: { color: colors.textTertiary, ...typography.footnote },
   textArea: { minHeight: 104, textAlignVertical: 'top' },
   dateError: { borderColor: colors.danger, borderRadius: radius.md, borderWidth: 1 },
 });

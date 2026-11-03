@@ -5,6 +5,10 @@ import { OnboardingProfileSchema, OnboardingUpsertRequestSchema, type Onboarding
 import { calculateE1RM } from '@/domain/e1rm';
 
 import {
+  ONBOARDING_STEP_COUNT,
+  STEP_FIELDS,
+  resumeStep,
+  earliestMissingStep,
   completionValidationResult,
   createEmptyOnboardingForm,
   estimateOneRepMax,
@@ -108,7 +112,7 @@ describe('server ⊕ local draft merge', () => {
 describe('per-step patch semantics', () => {
   test('1RM fields are structurally present only in step 3', () => {
     const form = completeForm();
-    for (const step of [1, 2, 4, 5, 6, 7] as const) {
+    for (const step of [1, 2, 4] as const) {
       expect(onboardingPatchForStep(form, step)).not.toHaveProperty('squat_1rm_kg');
       expect(onboardingPatchForStep(form, step)).not.toHaveProperty('bench_1rm_kg');
       expect(onboardingPatchForStep(form, step)).not.toHaveProperty('deadlift_1rm_kg');
@@ -120,12 +124,12 @@ describe('per-step patch semantics', () => {
     });
   });
 
-  test('step 4 omits an invalid training-day selection and empty text becomes null', () => {
+  test('extras omit legacy training days and empty text becomes null', () => {
     const form = completeForm();
     form.trainingDays = [1];
     form.noteToCoach = '   ';
     expect(onboardingPatchForStep(form, 4)).not.toHaveProperty('training_days');
-    expect(onboardingPatchForStep(form, 7).note_to_coach).toBeNull();
+    expect(onboardingPatchForStep(form, 4).note_to_coach).toBeNull();
   });
 });
 
@@ -196,10 +200,6 @@ describe('Appendix B wire values', () => {
     };
     expect(fullOnboardingPatch(form)).toMatchObject({
       unit_preference: 'kg',
-      gym_tier: 'home_with_rack',
-      training_days: ['mon', 'wed', 'fri'],
-      equipment_overrides: ['barbell_dumbbell', 'squat_bench_rack', 'pullup_bar', 'db_max_20'],
-      muscle_groups_to_strengthen: ['quad', 'hamstring', 'glute'],
       injury_areas: ['shoulder', 'lower_back', 'knee'],
     });
   });
@@ -245,16 +245,16 @@ test.each([
   expect(OnboardingUpsertRequestSchema.safeParse(invalid).success).toBe(false);
 });
 
-test('lb and every weekday round-trip through the server mapping', () => {
+test('lb and every weekday restore through server mapping, but training days are not re-uploaded', () => {
   const form = formFromServer(serverProfile({
     unit_preference: 'lb', training_days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
   }));
   expect(form.unitPreference).toBe('lb');
   expect(form.trainingDays).toEqual([1, 2, 3, 4, 5, 6, 7]);
-  // The UI permits up to six selected days; exercise both ends of the wire mapping.
+  // Legacy training days remain readable but are never included in a new submission.
   form.trainingDays = [2, 4, 6, 7];
   expect(fullOnboardingPatch(form)).toMatchObject({
-    unit_preference: 'lb', training_days: ['tue', 'thu', 'sat', 'sun'],
+    unit_preference: 'lb',
   });
 });
 
@@ -269,7 +269,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-test('legacy equipment parses, survives form mapping and is written back verbatim (iOS parity)', () => {
+test('legacy equipment parses and survives form mapping without being re-uploaded', () => {
   const equipment = ['heavy_dumbbells', 'barbell_dumbbell'];
   const profile = OnboardingProfileSchema.parse({ ...serverProfile(), equipment_overrides: equipment });
   const form = formFromServer(profile);
@@ -293,31 +293,60 @@ test('unknown profile enums parse and map to unset form values', () => {
   expect(OnboardingProfileSchema.safeParse({ ...serverProfile(), training_days: [1] }).success).toBe(false);
 });
 
-test('tomorrow birthday and yesterday competition date are invalid in steps 1 and 7', () => {
+test('tomorrow birthday and yesterday competition date are invalid in steps 1 and 4', () => {
   jest.useFakeTimers().setSystemTime(new Date(2026, 8, 4, 12));
   const form = { ...completeForm(), birthDate: '2026-09-05', isCompeting: true, targetWeightClass: 'IPF · 83 kg', competitionDate: '2026-09-03' };
   expect(invalidFieldsForStep(form, 1)).toEqual(['birthDate']);
-  expect(invalidFieldsForStep(form, 7)).toEqual(['competitionDate']);
+  expect(invalidFieldsForStep(form, 4)).toEqual(['competitionDate']);
   expect(invalidFieldsForStep({ ...form, birthDate: '2026-09-04' }, 1)).toEqual([]);
-  expect(invalidFieldsForStep({ ...form, competitionDate: '2026-09-04' }, 7)).toEqual([]);
+  expect(invalidFieldsForStep({ ...form, competitionDate: '2026-09-04' }, 4)).toEqual([]);
   expect(invalidFieldsForStep({ ...form, birthDate: '1929-12-31' }, 1)).toEqual(['birthDate']);
-  expect(invalidFieldsForStep({ ...form, competitionDate: '2036-09-05' }, 7)).toEqual(['competitionDate']);
+  expect(invalidFieldsForStep({ ...form, competitionDate: '2036-09-05' }, 4)).toEqual(['competitionDate']);
 });
 
 
-test('step 7 can stay collapsed and clears stale meet fields while preserving the note', () => {
+test('step 4 can stay collapsed and clears stale meet fields while preserving the note', () => {
   const form = { ...createEmptyOnboardingForm(), targetWeightClass: '83kg', noteToCoach: 'Keep this note' };
-  expect(invalidFieldsForStep(form, 7)).toEqual([]);
-  expect(onboardingPatchForStep(form, 7)).toEqual({ injury_notes: null, injury_areas: null,
+  expect(invalidFieldsForStep(form, 4)).toEqual([]);
+  expect(onboardingPatchForStep(form, 4)).toEqual({ injury_notes: null, injury_areas: null,
     is_competing: false, competition_date: null, target_weight_class: null, note_to_coach: 'Keep this note' });
 });
 
-test('expanded step 7 requires a recognized federation and class and saves exactly the meet plus existing extras', () => {
+test('expanded step 4 requires a recognized federation and class and saves exactly the meet plus existing extras', () => {
   const form = { ...createEmptyOnboardingForm(), isCompeting: true, noteToCoach: 'Ready' };
-  expect(invalidFieldsForStep(form, 7)).toEqual(['federation', 'weightClass']);
-  expect(invalidFieldsForStep({ ...form, targetWeightClass: '83kg' }, 7)).toEqual(['federation', 'weightClass']);
+  expect(invalidFieldsForStep(form, 4)).toEqual(['federation', 'weightClass']);
+  expect(invalidFieldsForStep({ ...form, targetWeightClass: '83kg' }, 4)).toEqual(['federation', 'weightClass']);
   const complete = { ...form, targetWeightClass: 'IPF · 83 kg' };
-  expect(invalidFieldsForStep(complete, 7)).toEqual([]);
-  expect(onboardingPatchForStep(complete, 7)).toEqual({ injury_notes: null, injury_areas: null,
+  expect(invalidFieldsForStep(complete, 4)).toEqual([]);
+  expect(onboardingPatchForStep(complete, 4)).toEqual({ injury_notes: null, injury_areas: null,
     is_competing: true, competition_date: form.competitionDate, target_weight_class: 'IPF · 83 kg', note_to_coach: 'Ready' });
+});
+
+
+test('trimmed wizard validates only basics, background, lifts and extras, and resumes old drafts at extras', () => {
+  expect(ONBOARDING_STEP_COUNT).toBe(4);
+  expect(Object.keys(STEP_FIELDS)).toEqual(['1', '2', '3', '4']);
+  expect(STEP_FIELDS[4]).toEqual(['injuryNotes', 'injuryAreas', 'isCompeting', 'competitionDate', 'targetWeightClass', 'noteToCoach']);
+  const form = { ...completeForm(), trainingDays: [], gymTier: null, dailyLifeIntensity: null,
+    lifeStress: null, recoverySpeed: null, sleepHours: null };
+  expect(invalidFieldsForStep(form, 4)).toEqual([]);
+  expect(resumeStep(form)).toBe(4);
+  expect(resumeStep({ ...form, squat1RMKg: '' })).toBe(3);
+  expect(resumeStep({ ...form, squatStance: null })).toBe(2);
+  expect(resumeStep({ ...form, gender: null })).toBe(1);
+  expect(earliestMissingStep(['competition_date', 'target_weight_class'])).toBe(4);
+  expect(earliestMissingStep(['sleep_hours', 'squat_1rm_kg'])).toBe(3);
+});
+
+test('trimmed submission omits removed fields even in a full old draft and never clears server history', () => {
+  const server = serverProfile();
+  const form = mergeServerAndDraft(server, { form: { ...completeForm(), muscleGroupsToStrengthen: ['quad'], noteToCoach: ' Keep me ' }, savedAt: '2026-07-20T10:01:00Z' });
+  const patch = fullOnboardingPatch(form);
+  const removed = ['training_days', 'gym_tier', 'equipment_overrides', 'daily_life_intensity', 'life_stress', 'recovery_speed', 'sleep_hours', 'muscle_groups_to_strengthen'] as const;
+  for (const key of removed) {
+    expect(patch).not.toHaveProperty(key);
+    for (const step of [1, 2, 3, 4] as const) expect(onboardingPatchForStep(form, step)).not.toHaveProperty(key);
+    expect({ ...server, ...patch }[key]).toEqual(server[key]);
+  }
+  expect(patch).toMatchObject({ note_to_coach: 'Keep me', is_competing: false, squat_1rm_kg: '140' });
 });
