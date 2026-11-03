@@ -1,3 +1,4 @@
+import { EffortHelpButton } from './EffortHelpButton';
 import { EffortToggleLabel } from './EffortToggleLabel';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Text, TextInput, View, Vibration, type ViewStyle } from 'react-native';
@@ -16,9 +17,9 @@ import { normalizeDecimalInput, gymDayText } from './policy';
 import { studentAddedLogRequest } from './drafts';
 import { useVideoUploadStore } from './video-upload/store';
 
-// Keep the approved column proportions while allowing the six columns to fit small screens.
+// Keep columns aligned; reserve separate 44 dp targets for the effort toggle and help.
 const columns = [fontMetrics.size36, spacing.xxxl + spacing.sm, spacing.xxxl, spacing.xxl, spacing.xxl, spacing.minimumHitTarget];
-const column = (index: number): Pick<ViewStyle, 'flex' | 'minWidth'> => ({ flex: columns[index], minWidth: 0 });
+const column = (index: number): Pick<ViewStyle, 'flex' | 'minWidth'> => ({ flex: columns[index], minWidth: index === 4 ? spacing.minimumHitTarget * 2 : 0 });
 const fields = [
   ['weightText', 'weight', 'student.accessory.weightLabel'],
   ['repsText', 'reps', 'student.accessory.repsLabel'],
@@ -106,7 +107,11 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     {rows.some(row => row.isBodyweight) ? <Text style={{ ...font.body(fontMetrics.size12), color: colors.textSecondary }}>{t('loadTypes.extraWeight', [unit])}</Text> : null}
     {rows.some((_, index) => allowsRIR || effectiveLoadMode(drafts[index].planSet) !== 'free_weight') ? <View style={{ flexDirection: 'row', gap: spacing.point6 }}>
       {[t('student.accessory.set'), t('student.accessory.last'), unit.toUpperCase(), t('student.setEntrySheet.copy003'), headerKind.toUpperCase(), t('student.workoutCompletionFlowView.copy003')].map((label, index) =>
-        index === 4 && allowsRIR ? <Pressable key={index} accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} accessibilityValue={{ text: label }} disabled={readOnly || batchBusy || busyRows.size > 0 || firstPending < 0} onPress={switchEffort} style={{ ...column(index), minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}><EffortToggleLabel label={label} /></Pressable> : <Text key={index} style={{ ...column(index), ...font.mono(fontMetrics.size10), color: colors.textMuted, textAlign: 'center', alignSelf: 'center' }}>{label}</Text>)}
+        index === 4 ? <View key={index} style={{ ...column(index), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          {allowsRIR ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} accessibilityValue={{ text: label }} disabled={readOnly || batchBusy || busyRows.size > 0 || firstPending < 0} onPress={switchEffort} style={{ flex: 1, minWidth: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}><EffortToggleLabel label={label} /></Pressable>
+            : <Text style={{ ...font.mono(fontMetrics.size10), color: colors.textMuted }}>{label}</Text>}
+          <EffortHelpButton kind={headerKind} />
+        </View> : <Text key={index} style={{ ...column(index), ...font.mono(fontMetrics.size10), color: colors.textMuted, textAlign: 'center', alignSelf: 'center' }}>{label}</Text>)}
     </View> : null}
     {rows.map((row, index) => {
       const input = inputFor(index);

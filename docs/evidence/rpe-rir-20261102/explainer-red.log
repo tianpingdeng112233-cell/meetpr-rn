@@ -1,0 +1,24 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/effort-explainer.test.ts
+
+FAIL src/features/training/__tests__/effort-explainer.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../effort-explainer' from 'src/features/training/__tests__/effort-explainer.test.ts'
+
+      1 | import { setLocaleOverride, t } from '@/i18n';
+    > 2 | import { effortExplainerFor } from '../effort-explainer';
+        | ^
+      3 |
+      4 | afterEach(() => setLocaleOverride(null));
+      5 |
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (src/features/training/__tests__/effort-explainer.test.ts:2:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        4.531 s
+Ran all test suites matching /src\/features\/training\/__tests__\/effort-explainer.test.ts/i.

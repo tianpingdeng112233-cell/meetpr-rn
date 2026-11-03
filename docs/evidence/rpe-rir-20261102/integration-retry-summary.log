@@ -1,0 +1,5 @@
+Test Suites: 2 passed, 2 total
+Tests:       69 passed, 69 total
+Snapshots:   0 total
+Time:        83.094 s
+Ran all test suites matching /src\/features\/training\/__tests__\/set-save.test.tsx|src\/features\/dashboard\/__tests__\/visual-parity.test.tsx/i.

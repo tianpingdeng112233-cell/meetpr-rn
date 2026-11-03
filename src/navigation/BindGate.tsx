@@ -137,7 +137,7 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
           }
         }
         const resolution = resolveBindGateState(
-          request?.status ?? 'none',
+          request,
           stash !== null,
           profile?.completed_at != null,
           firstRun,

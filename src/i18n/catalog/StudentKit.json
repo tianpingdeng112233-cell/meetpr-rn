@@ -167,6 +167,18 @@
 "en": "Sign out",
 "zh": "退出登录"
 },
+"student.bindGateViewModel.unlinkedNamed": {
+"en": "{0} has unlinked you",
+"zh": "{0}已与你解绑"
+},
+"student.bindGateViewModel.unlinkedHistory": {
+"en": "Your training history is kept. Enter an invite code to link again.",
+"zh": "训练记录都还在，输入邀请码可重新绑定"
+},
+"student.bindGateViewModel.unlinkedFallback": {
+"en": "Your coach has unlinked you",
+"zh": "教练已与你解绑"
+},
 "student.bindGateViewModel.copy001": {
 "en": "This coach is not accepting new athletes. Enter another invite code or try again later",
 "zh": "教练当前不接收新学员,请输入新邀请码或稍后再试"
@@ -2444,48 +2456,48 @@
 "zh": "空杠 20kg"
 },
 "student.setEntryRpe.copy001": {
-"en": "Could do 5 reps",
-"zh": "还能多做 5 次"
+"en": "4–6 reps left",
+"zh": "还剩 4–6 次"
 },
 "student.setEntryRpe.copy002": {
-"en": "Could do 4-5 reps",
-"zh": "还能多做 4-5 次"
+"en": "4–6 reps left",
+"zh": "还剩 4–6 次"
 },
 "student.setEntryRpe.copy003": {
-"en": "Could do 4 reps",
-"zh": "还能多做 4 次"
+"en": "4–6 reps left",
+"zh": "还剩 4–6 次"
 },
 "student.setEntryRpe.copy004": {
-"en": "Could do 3-4 reps",
-"zh": "还能多做 3-4 次"
+"en": "3–4 reps left",
+"zh": "还剩 3–4 次"
 },
 "student.setEntryRpe.copy005": {
-"en": "Could do 3 reps",
-"zh": "还能多做 3 次"
+"en": "3 reps left",
+"zh": "还剩 3 次"
 },
 "student.setEntryRpe.copy006": {
-"en": "Could do 2-3 reps",
-"zh": "还能多做 2-3 次"
+"en": "2–3 reps left",
+"zh": "还剩 2–3 次"
 },
 "student.setEntryRpe.copy007": {
-"en": "Could do 2 reps",
-"zh": "还能多做 2 次"
+"en": "2 reps left",
+"zh": "还剩 2 次"
 },
 "student.setEntryRpe.copy008": {
-"en": "Could do 1-2 reps",
-"zh": "还能多做 1-2 次"
+"en": "1–2 reps left",
+"zh": "还剩 1–2 次"
 },
 "student.setEntryRpe.copy009": {
-"en": "Could do 1 rep",
-"zh": "还能多做 1 次"
+"en": "1 rep left",
+"zh": "还剩 1 次"
 },
 "student.setEntryRpe.copy010": {
-"en": "Could maybe do 1 rep",
-"zh": "或许还能多做 1 次"
+"en": "No more reps, but could add a little weight",
+"zh": "做不了下一次，但能再加点重"
 },
 "student.setEntryRpe.copy011": {
-"en": "Failure, no reps in reserve",
-"zh": "力竭，无保留"
+"en": "Couldn't do another rep",
+"zh": "做不动了"
 },
 "student.setEntryRpescale.copy001": {
 "en": "Swipe up or down in 0.5 increments",

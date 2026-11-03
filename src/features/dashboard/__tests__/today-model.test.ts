@@ -43,7 +43,7 @@ const binding = {
   id: 'binding', student_id: 'student', coach_id: 'coach', coach_display_name: 'Alex',
   status: 'accepted' as const, responded_at: '2026-09-02T12:00:00Z',
   submitted_at: '2026-09-01T00:00:00Z', expired_at: '2026-09-08T00:00:00Z',
-  invite_code_id: null, skip_evaluation: true, skip_reason: null,
+  invite_code_id: null, skip_evaluation: true, skip_reason: null, ended_at: null,
 };
 const first = plan([day('a'), day('b')], { coach_id: 'coach' });
 test('waiting uses the backend binding count even when completed plans are absent from the list', () => {

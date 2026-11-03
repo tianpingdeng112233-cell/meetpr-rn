@@ -1,0 +1,7 @@
+Command: npm test -- --runInBand
+Test Suites: 197 passed, 197 total
+Tests:       2037 passed, 2037 total
+Snapshots:   0 total
+Time:        212.724 s, estimated 475 s
+Ran all test suites.
+Exit status: 0

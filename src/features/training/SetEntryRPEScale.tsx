@@ -73,7 +73,7 @@ export function SetEntryRPEScale({ value, placeholder, onChange, onGestureActive
         <Text style={{ ...font.mono(32, 'bold'), color: placeholder ? colors.textGhost : colors.textPrimary }}>
           {placeholder ? t('coach.videoFeedback.missingValue') : formatWeight(selected)}
         </Text>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}
+        <Text
           style={{ ...font.body(13, 'medium'), color: colors.textMuted, flex: 1, textAlign: 'right', opacity: scrubbing ? 0 : 1 }}>
           {placeholder ?? rirCopy(selected)}
         </Text>
@@ -98,11 +98,11 @@ export function SetEntryRPEScale({ value, placeholder, onChange, onGestureActive
         })}
         {scrubbing ? (
           <View pointerEvents="none" onLayout={event => setBubbleWidth(event.nativeEvent.layout.width)}
-            style={{ position: 'absolute', top: -36, left: Math.max(0, Math.min(width - bubbleWidth, centerX(index(selected), width, 3) - bubbleWidth / 2)),
+            style={{ position: 'absolute', bottom: '100%', left: Math.max(0, Math.min(width - bubbleWidth, centerX(index(selected), width, 3) - bubbleWidth / 2)),
               maxWidth: width || undefined, flexDirection: 'row', alignItems: 'baseline', gap: 8,
               backgroundColor: colors.gold500, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 }}>
             <Text style={{ ...font.mono(18, 'bold'), color: colors.inkOnGold }}>{formatWeight(selected)}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={{ ...font.body(12, 'medium'), flexShrink: 1, color: colors.inkOnGold }}>{rirCopy(selected)}</Text>
+            <Text style={{ ...font.body(12, 'medium'), flexShrink: 1, color: colors.inkOnGold }}>{rirCopy(selected)}</Text>
           </View>
         ) : null}
       </View>

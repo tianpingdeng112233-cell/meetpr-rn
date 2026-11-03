@@ -176,23 +176,25 @@ describe('rest, gym-day, and RIR policies', () => {
   });
 
   test.each([
-    [5, '还能多做 5 次'],
-    [5.5, '还能多做 4-5 次'],
-    [6, '还能多做 4 次'],
-    [6.5, '还能多做 3-4 次'],
-    [7, '还能多做 3 次'],
-    [7.5, '还能多做 2-3 次'],
-    [8, '还能多做 2 次'],
-    [8.5, '还能多做 1-2 次'],
-    [9, '还能多做 1 次'],
-    [9.5, '或许还能多做 1 次'],
-    [10, '力竭，无保留'],
-  ] as [number, string][])('maps RPE %s to the exact RIR copy', (rpe, copy) => {
-    expect(rirCopy(rpe)).toBe(copy);
+    [5, '还剩 4–6 次', '4–6 reps left'],
+    [5.5, '还剩 4–6 次', '4–6 reps left'],
+    [6, '还剩 4–6 次', '4–6 reps left'],
+    [6.5, '还剩 3–4 次', '3–4 reps left'],
+    [7, '还剩 3 次', '3 reps left'],
+    [7.5, '还剩 2–3 次', '2–3 reps left'],
+    [8, '还剩 2 次', '2 reps left'],
+    [8.5, '还剩 1–2 次', '1–2 reps left'],
+    [9, '还剩 1 次', '1 rep left'],
+    [9.5, '做不了下一次，但能再加点重', 'No more reps, but could add a little weight'],
+    [10, '做不动了', "Couldn't do another rep"],
+  ] as [number, string, string][])('maps RPE %s to the exact RIR copy', (rpe, zh, en) => {
+    expect(rirCopy(rpe)).toBe(zh);
+    setLocaleOverride('en');
+    expect(rirCopy(rpe)).toBe(en);
   });
 
   test('snaps RIR copy to the nearest half step', () => {
-    expect(rirCopy(7.8)).toBe('还能多做 2 次');
+    expect(rirCopy(7.8)).toBe('还剩 2 次');
   });
 
   test('includes the exact 84-day history boundary', () => {

@@ -1,0 +1,36 @@
+- Creating native directory (./android)
+✔ Created native directory
+- Updating package.json
+✔ Updated package.json | no changes
+- Running prebuild
+✔ Finished prebuild
+Error: * daemon not running; starting now at tcp:5037
+ADB server didn't ACK
+Full server startup log: /var/folders/jj/2g0n2tlj2198ykqylx3w3cp00000gn/T//adb.501.log
+Server had pid: 29061
+--- adb starting (pid 29061) ---
+11-02 03:28:28.769 29061 6706473 I adb     : main.cpp:66 Android Debug Bridge version 1.0.41
+11-02 03:28:28.769 29061 6706473 I adb     : main.cpp:66 Version 37.0.0-14910828
+11-02 03:28:28.769 29061 6706473 I adb     : main.cpp:66 Installed as /opt/homebrew/share/android-commandlinetools/platform-tools/adb
+11-02 03:28:28.769 29061 6706473 I adb     : main.cpp:66 Running on Darwin 25.4.0 (arm64)
+11-02 03:28:28.769 29061 6706473 I adb     : main.cpp:66 
+11-02 03:28:29.307 29061 6706473 F adb     : main.cpp:165 could not install *smartsocket* listener: Operation not permitted
+
+* failed to start daemon
+error: cannot connect to daemon
+Error: /opt/homebrew/share/android-commandlinetools/platform-tools/adb start-server exited with non-zero code: 255
+    at ChildProcess.completionListener (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/@expo/spawn-async/build/spawnAsync.js:113:23)
+    at Object.onceWrapper (node:events:631:12)
+    at ChildProcess.emit (node:events:509:20)
+    at maybeClose (node:internal/child_process:1108:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:305:5)
+    ...
+    at spawnAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/@expo/spawn-async/build/spawnAsync.js:9:23)
+    at ADBServer.startAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/android/ADBServer.js:61:79)
+    at ADBServer.runAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/android/ADBServer.js:92:20)
+    at getAttachedDevicesAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/android/adb.js:225:38)
+    at getDevicesAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/android/getDevices.js:15:66)
+    at AndroidDeviceManager.resolveFromNameAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/start/platforms/android/AndroidDeviceManager.js:84:63)
+    at resolveDeviceAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/run/android/resolveDevice.js:23:59)
+    at resolveOptionsAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/run/android/resolveOptions.js:26:64)
+    at runAndroidAsync (/Users/david/Projects/apps/meetpr-rn-wt-100/node_modules/expo/node_modules/@expo/cli/build/src/run/android/runAndroidAsync.js:61:65)
