@@ -1,0 +1,180 @@
+Keyboard visibility verification — 2026-11-04
+Native boundaries are simulated in Jest. No emulator screenshot or OriginOS verification is claimed.
+
+Initial coordinate repro (unmodified TodayWorkoutView)
+FAIL src/features/training/__tests__/keyboard-visibility.test.tsx
+  ✓ Android keeps the focused accessory weight visible with a 0 dp page header (177 ms)
+  ✕ Android keeps the focused accessory weight visible with a 120 dp page header (77 ms)
+
+  ● Android keeps the focused accessory weight visible with a 120 dp page header
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 476
+    Received:    596
+
+      124 |     await new Promise(resolve => setTimeout(resolve, 10));
+      125 |   });
+    > 126 |   expect(headerHeight + 644 - offset).toBeLessThanOrEqual(500 - spacing.lg);
+          |                                       ^
+      127 | });
+      128 |
+
+      at toBeLessThanOrEqual (src/features/training/__tests__/keyboard-visibility.test.tsx:126:39)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        1.469 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/keyboard-visibility.test.tsx/i.
+
+Bottom scroll-limit repro (coordinate-only correction)
+FAIL src/features/training/__tests__/keyboard-visibility.test.tsx
+  ✓ Android keeps weight visible: 0 dp header, end=false (183 ms)
+  ✓ Android keeps weight visible: 120 dp header, end=false (57 ms)
+  ✕ Android keeps weight visible: 120 dp header, end=true (59 ms)
+
+  ● Android keeps weight visible: 120 dp header, end=true
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 476
+    Received:    696
+
+      129 |   });
+      130 |   await act(async () => { scroll.props.onContentSizeChange?.(400, 720 + StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom); });
+    > 131 |   expect(headerHeight + 644 - offset).toBeLessThanOrEqual(500 - spacing.lg);
+          |                                       ^
+      132 | });
+      133 |
+
+      at toBeLessThanOrEqual (src/features/training/__tests__/keyboard-visibility.test.tsx:131:39)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        1.431 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/keyboard-visibility.test.tsx/i.
+
+Keyboard reopening repro (before retaining Android focus)
+FAIL src/features/training/__tests__/keyboard-visibility.test.tsx
+  ✓ Android reveals every inline input: accessory card 0, header=0, end=false (359 ms)
+  ✓ Android reveals every inline input: accessory card 0, header=120, end=false (228 ms)
+  ✓ Android reveals every inline input: accessory card 2, header=120, end=false (164 ms)
+  ✓ Android reveals every inline input: accessory card 5, header=120, end=true (100 ms)
+  ✓ Android reveals every inline input: main_lift card 0, header=120, end=false (263 ms)
+  ✓ Android reveals every inline input: main_lift card 2, header=120, end=false (270 ms)
+  ✓ Android reveals every inline input: main_lift card 5, header=120, end=true (162 ms)
+  ✕ Android reopens the keyboard on an input that retained focus after Back (95 ms)
+
+  ● Android reopens the keyboard on an input that retained focus after Back
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 476
+    Received:    764
+
+      183 |   await showKeyboard();
+      184 |   await act(async () => { scene.layout(); });
+    > 185 |   expect(scene.bottom()).toBeLessThanOrEqual(476);
+          |                          ^
+      186 | });
+      187 |
+
+      at Object.toBeLessThanOrEqual (src/features/training/__tests__/keyboard-visibility.test.tsx:185:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+Snapshots:   0 total
+Time:        3.242 s, estimated 4 s
+Ran all test suites matching /src\/features\/training\/__tests__\/keyboard-visibility.test.tsx/i.
+
+Overlapping asynchronous measurements repro (before absolute target)
+FAIL src/features/training/__tests__/keyboard-visibility.test.tsx (9.633 s)
+  ✕ overlapping native measurements do not scroll the focused field above the viewport (2764 ms)
+  ○ skipped Android reveals every inline input: accessory card 0, header=0, end=false
+  ○ skipped Android reveals every inline input: accessory card 0, header=120, end=false
+  ○ skipped Android reveals every inline input: accessory card 2, header=120, end=false
+  ○ skipped Android reveals every inline input: accessory card 5, header=120, end=true
+  ○ skipped Android reveals every inline input: main_lift card 0, header=120, end=false
+  ○ skipped Android reveals every inline input: main_lift card 2, header=120, end=false
+  ○ skipped Android reveals every inline input: main_lift card 5, header=120, end=true
+  ○ skipped Android reopens the keyboard on an input that retained focus after Back
+  ○ skipped iOS retains its responder behavior and does not add Android keyboard padding
+
+  ● overlapping native measurements do not scroll the focused field above the viewport
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 120
+    Received:    -56
+
+      213 |   expect(replies).toHaveLength(2);
+      214 |   await act(async () => { replies.forEach(reply => reply()); });
+    > 215 |   expect(scene.bottom() - 44).toBeGreaterThanOrEqual(120);
+          |                               ^
+      216 |   expect(scene.bottom()).toBeLessThanOrEqual(376);
+      217 | });
+      218 |
+
+      at Object.toBeGreaterThanOrEqual (src/features/training/__tests__/keyboard-visibility.test.tsx:215:31)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 9 skipped, 10 total
+Snapshots:   0 total
+Time:        10.797 s, estimated 34 s
+Ran all test suites matching /src\/features\/training\/__tests__\/keyboard-visibility.test.tsx/i with tests matching "overlapping native".
+
+Keyboard regression after absolute target
+PASS src/features/training/__tests__/keyboard-visibility.test.tsx (18.919 s)
+  ✓ Android reveals every inline input: accessory card 0, header=0, end=false (2385 ms)
+  ✓ Android reveals every inline input: accessory card 0, header=120, end=false (777 ms)
+  ✓ Android reveals every inline input: accessory card 2, header=120, end=false (785 ms)
+  ✓ Android reveals every inline input: accessory card 5, header=120, end=true (662 ms)
+  ✓ Android reveals every inline input: main_lift card 0, header=120, end=false (1162 ms)
+  ✓ Android reveals every inline input: main_lift card 2, header=120, end=false (947 ms)
+  ✓ Android reveals every inline input: main_lift card 5, header=120, end=true (864 ms)
+  ✓ Android reopens the keyboard on an input that retained focus after Back (778 ms)
+  ✓ iOS retains its responder behavior and does not add Android keyboard padding (332 ms)
+  ✓ overlapping native measurements do not scroll the focused field above the viewport (571 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        19.359 s
+Ran all test suites matching /src\/features\/training\/__tests__\/keyboard-visibility.test.tsx/i.
+
+Final keyboard + completed-row regression
+Test Suites: 2 passed, 2 total
+Tests:       40 passed, 40 total
+Snapshots:   0 total
+Time:        6.18 s, estimated 15 s
+Ran all test suites matching /src\/features\/training\/__tests__\/keyboard-visibility.test.tsx|src\/features\/training\/__tests__\/completion-entry.test.tsx/i.
+
+Full npm test -- --runInBand --watch=false
+Test Suites: 198 passed, 198 total
+Tests:       2071 passed, 2071 total
+Snapshots:   0 total
+Time:        435.478 s
+Ran all test suites.
+
+npm run lint
+exit 0; 0 errors, 0 warnings
+
+npx tsc --noEmit
+exit 0; no diagnostics
+
+git diff --check
+exit 0
+
+Android emulator verification
+adb devices: could not install *smartsocket* listener: Operation not permitted
+No screenshots captured; device acceptance remains outstanding.
