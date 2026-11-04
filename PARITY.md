@@ -177,3 +177,7 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 ## 2026-11-02 098 被教练解绑提示
 
 与 iOS 同批（meetpr#388）。最近一条申请为 `cancelled` 且带 `ended_at` 时，邀请码页顶部显示两行解绑提示（三语 + 空名兜底）；学员自己撤回的 cancelled 不提示。依赖 backend 057（#356，已部署国内 staging）。195 suites / 2039 tests、tsc、lint 通过（set-save 并发超时单跑 39/39）。iOS 在本机后端（同一 057 代码）上 iPhone 17e 亲验带名与空名两种文案；安卓模拟器端到端 2026-11-03 补验通过（AVD `meetpr`，独立包名 `com.meetpr.app.v098`，本机后端同一 057 代码，经 `adb reverse` 连 127.0.0.1:3057）：被解绑学员登录停在邀请码页、英文提示「王教练 has unlinked you / Your training history is kept…」；已填问卷的学员输入原教练邀请码直接进入等待接受、不走问卷；教练接受后进入「You're now training with 王教练」，教练侧备注名保留。截图见 [docs/evidence/098-2026-11-03](docs/evidence/098-2026-11-03/)。注：模拟器经 `10.0.2.2` 连本机端口不通，验收包需把后端地址设为 127.0.0.1 并配 `adb reverse`。见 [JOURNAL](docs/journal/2026-11-02-098-card-a.md)。
+
+## 2026-11-03 095 资料向导缩成 4 步 + 待接收页修正
+
+与 iOS 同批（meetpr#382）。David 11-02 拍板向导只留基础信息 / 训练背景 / 三大项 1RM / 补充信息（`AMEND-wizard-trim.md`），训练环境、恢复能力、训练资料三块在向导与「我的资料」同时隐藏，数据库列与接口字段保留；旧草稿续填落在保留步骤、不再上传退役字段、不清服务端旧值；待接收页「登出」不压标题、副标题拼名、资料行「基础资料」；「健康与恢复」改名「伤病记录」。依赖 backend #359（完成必填 17→12，2026-11-03 已部署国内 staging；Global 未部署，Global 包不得带此改动）。rn#121 合入后全量 197 suites / 2061 tests、tsc、lint、繁体校验通过，PR CI check / android-build 绿。AVD `meetpr` + 本地 fixture 亲验：Step 1 of 4、旧草稿续填落 Step 4 of 4、提交成功、待接收页「Basic profile」，fixture 证 patch 不含退役字段、旧值保留（截图 `docs/evidence/spec095-trim-2026-11-02/opus/`）。缺口：老学员「我的资料」实屏未看（模拟器断连，单测覆盖）。随 CN 0.1.0(7) 发布（2026-11-04 `latest.json` versionCode=7 实读）。
