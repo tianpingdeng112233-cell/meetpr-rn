@@ -296,8 +296,9 @@ export function SetEntrySheet({
                   stableSetId={draft.stableSetId}
                   editable={editable}
                   initialCamera={initialCamera && presented}
-                  buildLogRequest={() =>
-                    CoachedSetLogRequestSchema.parse({
+                  inputReady={validWeight}
+                  buildLogRequest={() => {
+                    return CoachedSetLogRequestSchema.parse({
                       plan_exercise_id: draft.exercise.id,
                       logged_date: gymDayText(new Date()),
                       set_index: draft.setIndex,
@@ -306,18 +307,19 @@ export function SetEntrySheet({
                       ...effortFields(effortKind, rpeText),
                       completed: draft.status === 'complete',
                       failed: draft.status === 'failed',
-                    })
-                  }
-                  ensureSetLog={() =>
-                    ensureSetLog({
+                    });
+                  }}
+                  ensureSetLog={() => {
+                    setAttempted(true);
+                    return ensureSetLog({
                       stableSetId: draft.stableSetId,
                       weightText: normalizeDecimalInput(storedWeight),
                       repsText,
                       rpeText: normalizeDecimalInput(rpeText),
                       effortKind,
                       failed: draft.status === 'failed',
-                    })
-                  }
+                    });
+                  }}
                 />
               </View>
             </Animated.ScrollView>

@@ -8,7 +8,7 @@ import { useOverlayHost } from '../OverlayHost';
 import { useCameraAvailability } from './use-camera-availability';
 import type { SelectedVideo } from './model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { t } from '@/i18n';
 import { ActivityIndicator, Alert, Modal, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
@@ -23,6 +23,7 @@ import { preserveVideoAttachment, selectVideoUpload, useVideoUploadStore } from 
 type Props = {
   badge?: VideoBadgeInfo | null;
   initialCamera?: boolean;
+  inputReady?: boolean;
   buildLogRequest: () => SetLogUpsertRequest;
   editable: boolean;
   ensureSetLog: () => Promise<string>;
@@ -65,9 +66,14 @@ export function VideoAttachmentControls({
   stableSetId,
   studentId,
   initialCamera,
+  inputReady = true,
   buildLogRequest,
   badge,
 }: Props) {
+  // Camera overlays keep the element created at presentation time. Resolve form
+  // callbacks at handoff so async prefill and edits made meanwhile are included.
+  const logCallbacks = useRef({ ensureSetLog, buildLogRequest, inputReady });
+  useLayoutEffect(() => { logCallbacks.current = { ensureSetLog, buildLogRequest, inputReady }; });
   const colors = useColors();
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [choosing, setChoosing] = useState(false);
@@ -85,12 +91,12 @@ export function VideoAttachmentControls({
     if (select(next) !== select(previous)) setIsPreparing(false);
   }), [studentId, stableSetId]);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
-  const showActionError = (error: unknown) =>
+  const showActionError = useCallback((error: unknown) =>
     setActionErrorMessage(
       error instanceof VideoNativeError
         ? error.copy
         : t('student.videoAttachmentViewModel.copy001'),
-    );
+    ), []);
   const hasCamera = useCameraAvailability();
   const overlay = useOverlayHost();
   const [fallbackNode, setFallbackNode] = useState<ReactNode>(null);
@@ -151,10 +157,23 @@ export function VideoAttachmentControls({
     setActionErrorMessage(null);
     setIsPreparing(true);
     void videoUploadManager
-      .attach(identity, video, ensureSetLog, buildLogRequest)
+      .attach(identity, video, () => {
+        waitingForInput.current = !logCallbacks.current.inputReady;
+        return logCallbacks.current.ensureSetLog();
+      }, () => logCallbacks.current.inputReady ? logCallbacks.current.buildLogRequest() : undefined)
       .catch(showActionError)
       .finally(() => setIsPreparing(false));
   };
+  const waitingForInput = useRef(false);
+  useEffect(() => {
+    if (!editable || !inputReady || !waitingForInput.current || record.status !== 'failed') return;
+    waitingForInput.current = false;
+    void videoUploadManager.retry(
+      { studentId, stableSetId },
+      () => logCallbacks.current.ensureSetLog(),
+      () => logCallbacks.current.buildLogRequest(),
+    ).catch(showActionError);
+  }, [editable, inputReady, record.status, studentId, stableSetId, showActionError]);
   const autoOpened = useRef(false);
   useEffect(() => {
     if (initialCamera && hasCamera && !autoOpened.current) {
@@ -191,7 +210,7 @@ export function VideoAttachmentControls({
           </Text>
           {record.status === 'failed' ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable || choosing || isPreparing} onPress={() => {
             setActionErrorMessage(null);
-            void videoUploadManager.retry(identity, ensureSetLog).catch(showActionError);
+            void videoUploadManager.retry(identity, ensureSetLog, inputReady ? buildLogRequest : undefined).catch(showActionError);
           }} /> : null}
         </View> : <View style={{ flex: 1 }} />}
         {!preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point10, marginLeft: 'auto', flexShrink: 0 }}>
