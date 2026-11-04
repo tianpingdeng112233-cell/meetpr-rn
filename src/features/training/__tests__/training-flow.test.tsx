@@ -5,6 +5,7 @@ import { setLocaleOverride } from '@/i18n';
 import { day, set } from '@/domain/plan/test-fixtures';
 import { synthesizeDrafts } from '../drafts';
 import { WorkoutBody } from '../WorkoutBody';
+import { RollUpCard } from '@/design/TrainingRewardMotion';
 import type { WorkoutSetDraft } from '../model';
 
 jest.mock('react-native-compressor', () => ({}));
@@ -22,9 +23,9 @@ let renderer: ReactTestRenderer;
 const onRecord = jest.fn();
 const onToggleComplete = jest.fn();
 const onExerciseCompleted = jest.fn();
-async function render(rows: WorkoutSetDraft[], editable = true, recording = true, preview = false) {
+async function render(rows: WorkoutSetDraft[], editable = true, recording = true, preview = false, exercises = planDay.exercises) {
   setLocaleOverride('en');
-  const body = <View><WorkoutBody exercises={planDay.exercises} drafts={rows} editable={editable} recording={recording}
+  const body = <View><WorkoutBody exercises={exercises} drafts={rows} editable={editable} recording={recording}
     preview={preview ? { title: 'Preview' } : undefined} startLoading={false} onStart={() => {}}
     suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[]}
     onExerciseCompleted={onExerciseCompleted} studentId="student" onVideo={() => {}} onRecord={onRecord} onToggleComplete={onToggleComplete}
@@ -33,6 +34,46 @@ async function render(rows: WorkoutSetDraft[], editable = true, recording = true
 }
 const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
 afterEach(() => { act(() => renderer?.unmount()); renderer = undefined!; jest.clearAllMocks(); setLocaleOverride(null); });
+
+test('an accessory hero appears once and the lower set-table cards start with the next unfinished exercise', async () => {
+  const exercises = [planDay.exercises[2], planDay.exercises[0], planDay.exercises[1]]
+    .map((exercise, sort_order) => ({ ...exercise, sort_order }));
+  await render(synthesizeDrafts(day('day', { exercises }), []), true, true, false, exercises);
+  const lowerCards = renderer.root.findAllByType(RollUpCard).filter(card => !card.props.completed);
+  expect(lowerCards.map(card => card.findAllByType(Text)[0].props.children)).toEqual(['Squat', 'Bench']);
+  expect(copy().filter(text => text === 'Row')).toHaveLength(1);
+});
+
+test('a main-lift hero keeps its own set-table card first below the hero', async () => {
+  await render(drafts);
+  const lowerCards = renderer.root.findAllByType(RollUpCard).filter(card => !card.props.completed);
+  expect(lowerCards.map(card => card.findAllByType(Text)[0].props.children)).toEqual(['Squat', 'Bench', 'Row']);
+  expect(copy().filter(text => text === 'Squat')).toHaveLength(2);
+});
+
+test('restored accessory progress stays deduplicated through completion, the next accessory hero, and undo', async () => {
+  const row = planDay.exercises[2];
+  const exercises = [row, { ...row, id: 'Row-next', sets: row.sets.map(set => ({ ...set, id: `${set.id}-next` })) }, planDay.exercises[1]]
+    .map((exercise, sort_order) => ({ ...exercise, sort_order }));
+  const restored = synthesizeDrafts(day('day', { exercises }), [])
+    .map((draft, index) => index === 0 ? { ...draft, status: 'complete' as const } : draft);
+  const lowerTitles = () => renderer.root.findAllByType(RollUpCard)
+    .filter(card => !card.props.completed).map(card => card.findAllByType(Text)[0].props.children);
+  await render(restored, true, true, false, exercises);
+  expect(onExerciseCompleted).not.toHaveBeenCalled();
+  // The later plan exercise uses the same library exercise and must remain visible.
+  expect(lowerTitles()).toEqual(['Row', 'Bench']);
+
+  const completed = restored.map(draft => draft.exercise.id === 'Row' ? { ...draft, status: 'complete' as const } : draft);
+  await render(completed, true, true, false, exercises);
+  expect(onExerciseCompleted).toHaveBeenCalledWith('Row');
+  expect(copy().indexOf('Completed · 2 sets')).toBeLessThan(copy().lastIndexOf('Row'));
+  expect(lowerTitles()).toEqual(['Bench']);
+
+  await render(restored, true, true, false, exercises);
+  expect(copy()).not.toContain('Completed · 2 sets');
+  expect(lowerTitles()).toEqual(['Row', 'Bench']);
+});
 
 test('finishing the first exercise moves its completed row above the next hero and preserves editing', async () => {
   await render(drafts);
