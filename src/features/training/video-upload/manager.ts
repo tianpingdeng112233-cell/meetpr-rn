@@ -392,7 +392,7 @@ export const videoUploadManager = {
     id: UploadIdentity,
     source: SelectedVideo,
     ensure: EnsureSetLog,
-    buildLogRequest?: () => SetLogUpsertRequest,
+    buildLogRequest?: () => SetLogUpsertRequest | undefined,
   ): Promise<void> {
     const key = keyFor(id);
     const pending = attachments.get(key);
@@ -430,9 +430,15 @@ export const videoUploadManager = {
     attachments.set(key, { sourceUri: source.uri, done });
     return done;
   },
-  async retry(id: UploadIdentity, ensure: EnsureSetLog): Promise<void> {
-    if (recordFor(id)?.status !== 'failed') return;
-    dispatch(id, { type: 'retry' });
+  async retry(id: UploadIdentity, ensure: EnsureSetLog, buildLogRequest?: () => SetLogUpsertRequest): Promise<void> {
+    const record = recordFor(id);
+    if (record?.status !== 'failed') return;
+    // A prefill update may request retry while the failed attach is still settling.
+    await attachments.get(keyFor(id))?.done;
+    await jobs.get(keyFor(id))?.done;
+    if (recordFor(id) !== record) return;
+    const logRequest = buildLogRequest?.();
+    dispatch(id, { type: 'retry', logRequest });
     ensureCallbacks.set(keyFor(id), ensure);
     await execute(id, ensure);
   },

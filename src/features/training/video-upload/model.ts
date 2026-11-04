@@ -79,7 +79,7 @@ export type VideoUploadEvent =
   | { type: 'progress'; progress: number }
   | { type: 'succeeded'; attachmentId: string }
   | { type: 'failed'; message: string }
-  | { type: 'retry' }
+  | { type: 'retry'; logRequest?: SetLogUpsertRequest }
   | { type: 'remove' };
 
 export const EMPTY_VIDEO_UPLOAD: VideoUploadRecord = Object.freeze({
@@ -193,6 +193,7 @@ export function videoUploadReducer(
     case 'retry':
       return {
         ...state,
+        logRequest: event.logRequest ?? state.logRequest,
         status: state.prepared ? 'preparing' : 'pending',
         progress: 0,
         retry: null,
