@@ -1,0 +1,25 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false delivery-failures.test.ts
+
+FAIL src/features/training/video-upload/__tests__/delivery-failures.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../delivery-failures' from 'src/features/training/video-upload/__tests__/delivery-failures.test.ts'
+
+      1 | import { expect, test } from '@jest/globals';
+      2 | import { EMPTY_VIDEO_UPLOAD, videoUploadReducer } from '../model';
+    > 3 | import { videoDeliveryFailures } from '../delivery-failures';
+        | ^
+      4 |
+      5 | test('first failure including backoff and a suspended set log appears in day, exercise and set markers', () => {
+      6 |   const rows = [
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (src/features/training/video-upload/__tests__/delivery-failures.test.ts:3:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.451 s
+Ran all test suites matching /delivery-failures.test.ts/i.

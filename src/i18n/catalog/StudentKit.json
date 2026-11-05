@@ -3804,12 +3804,12 @@
 "zh": "训练视频上传失败"
 },
 "student.uploadFailureNotifier.copy002": {
-"en": "{0} training videos failed to upload. Open to review",
-"zh": "有 {0} 条训练视频没传成功，打开看看"
+"en": "{0} videos didn't upload. Tap to retry.",
+"zh": "有 {0} 条训练视频没传上，点击重试"
 },
 "student.uploadFailureNotifier.copy002.one": {
-"en": "{0} training video failed to upload. Open to review",
-"zh": "有 {0} 条训练视频没传成功，打开看看"
+"en": "{0} video didn't upload. Tap to retry.",
+"zh": "有 {0} 条训练视频没传上，点击重试"
 },
 "student.videoAttachmentSection.copy001": {
 "en": "Video",

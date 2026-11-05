@@ -1,0 +1,78 @@
+Summary of all failing tests
+FAIL src/features/training/video-upload/__tests__/delivery-failures.test.ts
+  ● first failure including backoff and a suspended set log appears in day, exercise and set markers
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+      Object {
+    -   "count": 2,
+    +   "count": 1,
+        "exerciseIds": Array [
+    -     "bench",
+          "squat",
+        ],
+        "setIds": Array [
+    -     "waiting",
+          "no-log",
+        ],
+      }
+
+       9 |     { stableSetId: 'sending', exerciseId: 'bench', upload: { ...EMPTY_VIDEO_UPLOAD, status: 'uploading' as const } },
+      10 |   ];
+    > 11 |   expect(videoDeliveryFailures(rows)).toEqual({ count: 2, setIds: ['waiting', 'no-log'], exerciseIds: ['bench', 'squat'] });
+         |                                       ^
+      12 | });
+      13 |
+      14 | test('manual retry keeps the failure visible until delivery, then removes all markers', () => {
+
+      at Object.toEqual (src/features/training/video-upload/__tests__/delivery-failures.test.ts:11:39)
+
+  ● manual retry keeps the failure visible until delivery, then removes all markers
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 0
+
+      16 |   const retrying = videoUploadReducer(failed, { type: 'retry' });
+      17 |   const row = { stableSetId: 'set', exerciseId: 'bench', upload: retrying };
+    > 18 |   expect(videoDeliveryFailures([row]).count).toBe(1);
+         |                                              ^
+      19 |   expect(videoDeliveryFailures([{ ...row, upload: videoUploadReducer(retrying, { type: 'succeeded', attachmentId: 'video' }) }]).count).toBe(0);
+      20 | });
+      21 |
+
+      at Object.toBe (src/features/training/video-upload/__tests__/delivery-failures.test.ts:18:46)
+
+FAIL src/features/history/__tests__/student-added-history.test.tsx
+  ● history reserves a video column only within the exercise with playable video: bench-log / failed
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+      125 |     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+      126 |     const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
+    > 127 |     expect(slots).toHaveLength(reserved ? 1 : 0);
+          |                   ^
+      128 |     const value = row.findAllByType(Text)[1];
+      129 |     const valueStyle = StyleSheet.flatten(value.props.style);
+      130 |     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+
+      at toHaveLength (src/features/history/__tests__/student-added-history.test.tsx:127:19)
+          at Array.forEach (<anonymous>)
+      at forEach (src/features/history/__tests__/student-added-history.test.tsx:124:8)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+
+Test Suites: 2 failed, 198 passed, 200 total
+Tests:       3 failed, 2070 passed, 2073 total
+Snapshots:   0 total
+Time:        60.099 s
+Ran all test suites.

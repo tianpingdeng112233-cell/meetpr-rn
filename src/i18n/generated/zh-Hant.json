@@ -2023,8 +2023,8 @@
   "student.trainingShareFailed": "無法分享訓練記錄",
   "student.unreadSuffix": "條未讀",
   "student.uploadFailureNotifier.copy001": "訓練影片上傳失敗",
-  "student.uploadFailureNotifier.copy002": "有 {0} 條訓練影片沒傳成功，開啟看看",
-  "student.uploadFailureNotifier.copy002.one": "有 {0} 條訓練影片沒傳成功，開啟看看",
+  "student.uploadFailureNotifier.copy002": "有 {0} 條訓練影片沒傳上，點選重試",
+  "student.uploadFailureNotifier.copy002.one": "有 {0} 條訓練影片沒傳上，點選重試",
   "student.videoAttachmentSection.copy001": "影片",
   "student.videoAttachmentSection.copy002": "重試",
   "student.videoAttachmentSection.copy003": "影片暫時無法播放,請重試",
@@ -2475,5 +2475,16 @@
   "training.explainer.rir.footer": "一下也做不動了就填 0",
   "training.explainer.rir.help": "RIR 是什麼",
   "training.explainer.close": "關閉",
-  "training.explainer.rir.remaining": "還剩 %@ 下"
+  "training.explainer.rir.remaining": "還剩 %@ 下",
+  "student.videoDelivery.failed": "{0} 條影片沒傳上，正在自動重試",
+  "student.videoDelivery.failedOne": "1 條影片沒傳上，正在自動重試",
+  "student.videoDelivery.history": "{0} 條影片沒傳上",
+  "student.videoDelivery.historyOne": "1 條影片沒傳上",
+  "student.videoDelivery.retryNow": "立即重試",
+  "student.videoDelivery.notUploaded": "沒傳上",
+  "student.videoDelivery.missingTitle": "這條影片沒傳上",
+  "student.videoDelivery.missingBody": "手機裡找不到這條影片的檔案了。從相簿選出來，就能掛回這一組。",
+  "student.videoDelivery.savedToPhotos": "錄影時它也存了一份到相簿。",
+  "student.videoDelivery.pickAgain": "從相簿重新選這條影片",
+  "student.videoDelivery.later": "先不管"
 }

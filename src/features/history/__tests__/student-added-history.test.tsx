@@ -100,7 +100,7 @@ test.each([
   { videoLogId: 'bench-log', pending: null }, { videoLogId: 'extra-bench', pending: null },
   { videoLogId: 'added-squat', pending: null }, { videoLogId: null, pending: null },
   { videoLogId: 'bench-log', pending: 'uploading' }, { videoLogId: 'bench-log', pending: 'failed' },
-] as const)('history reserves a video column only within the exercise with playable video: $videoLogId / $pending', async ({ videoLogId, pending }) => {
+] as const)('history reserves a trailing column for playable video or delivery failure: $videoLogId / $pending', async ({ videoLogId, pending }) => {
   if (pending) useVideoUploadStore.setState({ hydrated: true, records: { 'student:extra:bench-plan:2': {
     ...EMPTY_VIDEO_UPLOAD, status: pending, setLogId: 'extra-bench',
   } } });
@@ -123,8 +123,11 @@ test.each([
   expect(rows).toHaveLength(5);
   rows.forEach((row, index) => {
     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
-    const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
-    expect(slots).toHaveLength(reserved ? 1 : 0);
+    const width = pending === 'failed' && index < 3 ? 100 : 22;
+    const failedRow = pending === 'failed' && index === 2;
+    const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === width && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
+    expect(slots).toHaveLength(reserved && !failedRow ? 1 : 0);
+    if (failedRow) expect(row.findAllByType(Text).map(node => node.props.children)).toContain(t('student.videoDelivery.notUploaded'));
     const value = row.findAllByType(Text)[1];
     const valueStyle = StyleSheet.flatten(value.props.style);
     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);

@@ -1,0 +1,12 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false manager-attach.test.ts local-retention.test.ts
+
+PASS src/features/training/video-upload/__tests__/manager-attach.test.ts
+PASS src/features/training/video-upload/__tests__/local-retention.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        1.249 s
+Ran all test suites matching /manager-attach.test.ts|local-retention.test.ts/i.

@@ -14,6 +14,7 @@ import {
 const VIDEO_UPLOAD_STORAGE_KEY = 'training.videoUploads.v1';
 
 const SelectedVideoSchema = z.object({
+  savedToPhotos: z.boolean().optional(),
   uri: z.string(),
   width: z.number(),
   height: z.number(),
@@ -25,6 +26,7 @@ const SelectedVideoSchema = z.object({
 });
 
 const VideoUploadRecordSchema = z.object({
+  savedToPhotos: z.boolean().optional(),
   logRequest: SetLogUpsertRequestSchema.nullable().default(null),
   createdAt: z.number().default(0),
   retry: z

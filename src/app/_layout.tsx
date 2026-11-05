@@ -1,3 +1,4 @@
+import { VideoUploadNotificationSession } from '@/features/training/video-upload/VideoUploadNotificationSession';
 import { MinimumVersionGate } from '@/features/updates/MinimumVersionGate';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -172,6 +173,7 @@ function ThemedRoot() {
         <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} />
         <TrainingReminderSession />
         <PlanNotificationSession />
+        <VideoUploadNotificationSession />
         <RestTimerNotificationSession />
         <Toast />
         <PrivacyNoticeSheet

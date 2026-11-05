@@ -1,0 +1,27 @@
+PASS src/features/training/video-upload/__tests__/manager-attach.test.ts
+  ✓ native upload rejection remains retryable and persists its message: fetch failed: Call to function 'NativeRequest.start' has been rejected. Cannot cast value for field 'headers' (18 ms)
+  ✓ native upload rejection remains retryable and persists its message: Native upload arguments cannot be cast (3 ms)
+  ✓ one attach retains the picker source through the immediate sweep and prepares the nonempty copy (5 ms)
+  ✓ concurrent attaches of the same selection share one retained file and upload (5 ms)
+  ✓ a rejected native copy is caught as VideoNativeError without deleting the picker source or publishing a phantom record (1 ms)
+  ✓ Set log unavailable fails deterministically with readable attachment copy and keeps the source for retry (4 ms)
+  ✓ Invalid set input fails deterministically with readable attachment copy and keeps the source for retry (3 ms)
+  ✓ a native part deletion failure is deterministic and keeps the prepared video for retry (2 ms)
+  ✓ a picker deletion failure returns VideoNativeError and keeps the original selection (1 ms)
+  ✓ startup during an asynchronous retain cannot reclaim the not-yet-published copy (3 ms)
+  ✓ transcode output is retained before its cache file and old source are reclaimed (4 ms)
+  ✓ a late startup hydration cannot roll the retained source back to a stale picker URI (4 ms)
+  ✓ an ensureSetLog transport failure still uses network backoff (2 ms)
+  ✓ cancelling a video awaiting its offline set releases the job and permits replacement (4 ms)
+  ✓ retry now interrupts backoff and delivers the same set without waiting for its timer (3 ms)
+  ✓ a missing prepared file remains retryable and a Photos replacement attaches to the original set (6 ms)
+  ✓ cold start after an upgrade preserves yesterday's failed file over 500 MiB and its retry identity (1 ms)
+  ✓ replacement deletion failure retains the new video and retries the same set after restart (6 ms)
+  ✓ retry waits for the restored offline set receipt before uploading (26 ms)
+  ✓ replaceMissing waits for the restored offline set receipt before uploading (25 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       20 passed, 20 total
+Snapshots:   0 total
+Time:        1.652 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/manager-attach.test.ts/i.

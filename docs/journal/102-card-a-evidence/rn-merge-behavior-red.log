@@ -1,0 +1,79 @@
+FAIL src/features/training/video-upload/__tests__/manager-attach.test.ts
+  ✓ native upload rejection remains retryable and persists its message: fetch failed: Call to function 'NativeRequest.start' has been rejected. Cannot cast value for field 'headers' (14 ms)
+  ✓ native upload rejection remains retryable and persists its message: Native upload arguments cannot be cast (4 ms)
+  ✓ one attach retains the picker source through the immediate sweep and prepares the nonempty copy (6 ms)
+  ✓ concurrent attaches of the same selection share one retained file and upload (4 ms)
+  ✓ a rejected native copy is caught as VideoNativeError without deleting the picker source or publishing a phantom record (1 ms)
+  ✓ Set log unavailable fails deterministically with readable attachment copy and keeps the source for retry (4 ms)
+  ✓ Invalid set input fails deterministically with readable attachment copy and keeps the source for retry (2 ms)
+  ✓ a native part deletion failure is deterministic and keeps the prepared video for retry (6 ms)
+  ✓ a picker deletion failure returns VideoNativeError and keeps the original selection (3 ms)
+  ✓ startup during an asynchronous retain cannot reclaim the not-yet-published copy (1 ms)
+  ✓ transcode output is retained before its cache file and old source are reclaimed (4 ms)
+  ✓ a late startup hydration cannot roll the retained source back to a stale picker URI (3 ms)
+  ✓ an ensureSetLog transport failure still uses network backoff (2 ms)
+  ✓ cancelling a video awaiting its offline set releases the job and permits replacement (4 ms)
+  ✓ retry now interrupts backoff and delivers the same set without waiting for its timer (3 ms)
+  ✓ a missing prepared file remains retryable and a Photos replacement attaches to the original set (4 ms)
+  ✓ cold start after an upgrade preserves yesterday's failed file over 500 MiB and its retry identity (1 ms)
+  ✓ replacement deletion failure retains the new video and retries the same set after restart (5 ms)
+  ✕ retry waits for the restored offline set receipt before uploading (28 ms)
+  ✕ replaceMissing waits for the restored offline set receipt before uploading (22 ms)
+
+  ● retry waits for the restored offline set receipt before uploading
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "setLogId": "restored-receipt",
+    -   "status": "uploaded",
+    +   "setLogId": null,
+    +   "status": "waiting",
+      }
+
+      358 |   try {
+      359 |     await uploading;
+    > 360 |     expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'restored-receipt' });
+          |                                                                   ^
+      361 |     expect(setsRepository.upsert).toHaveBeenCalledTimes(1);
+      362 |   } finally { useSessionStore.setState({ user: null }); }
+      363 | });
+
+      at toMatchObject (src/features/training/video-upload/__tests__/manager-attach.test.ts:360:67)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● replaceMissing waits for the restored offline set receipt before uploading
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "setLogId": "restored-receipt",
+    -   "status": "uploaded",
+    +   "setLogId": null,
+    +   "status": "waiting",
+      }
+
+      358 |   try {
+      359 |     await uploading;
+    > 360 |     expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'restored-receipt' });
+          |                                                                   ^
+      361 |     expect(setsRepository.upsert).toHaveBeenCalledTimes(1);
+      362 |   } finally { useSessionStore.setState({ user: null }); }
+      363 | });
+
+      at toMatchObject (src/features/training/video-upload/__tests__/manager-attach.test.ts:360:67)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 18 passed, 20 total
+Snapshots:   0 total
+Time:        1.377 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/manager-attach.test.ts/i.

@@ -1,0 +1,18 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/training-flow.test.tsx
+
+PASS src/features/training/__tests__/training-flow.test.tsx (15.066 s)
+  ✓ an accessory hero appears once and the lower set-table cards start with the next unfinished exercise (866 ms)
+  ✓ a main-lift hero keeps its own set-table card first below the hero (335 ms)
+  ✓ restored accessory progress stays deduplicated through completion, the next accessory hero, and undo (693 ms)
+  ✓ finishing the first exercise moves its completed row above the next hero and preserves editing (558 ms)
+  ✓ all done removes the hero; undo restores the first unfinished exercise below completed rows (594 ms)
+  ✓ main lift progress is hidden from screen readers and excluded from summary and preview (664 ms)
+  ✓ restored completed exercises start in place; only a new completion requests completed-row reveal (478 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        15.9 s
+Ran all test suites matching /src\/features\/training\/__tests__\/training-flow.test.tsx/i.

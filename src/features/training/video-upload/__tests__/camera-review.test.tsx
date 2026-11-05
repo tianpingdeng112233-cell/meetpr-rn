@@ -146,7 +146,7 @@ test.each<[string, AppStateStatus[]]>([
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(onUse).toHaveBeenCalledTimes(1);
-  expect(onUse).toHaveBeenCalledWith(uri);
+  expect(onUse).toHaveBeenCalledWith(uri, true);
   act(() => renderer.unmount());
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
 });
@@ -180,7 +180,7 @@ test('Retry after returning from background deletes the old file and allows a ne
   await press(t('student.cameraRecorderComponents.copy003'));
   expect(renderer.root.findByType(Video).props.source.uri).toBe(nextUri);
   await press(t('student.cameraRecorderComponents.copy010'));
-  expect(onUse).toHaveBeenCalledWith(nextUri);
+  expect(onUse).toHaveBeenCalledWith(nextUri, true);
   act(() => renderer.unmount());
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(nextUri);
 });
@@ -244,7 +244,7 @@ test('moving handles then Use exports the selected range, saves that file to Pho
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).toHaveBeenCalledWith(expect.any(String), 1000, 2000);
   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
-  expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+  expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4', true);
   expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBe('true');
@@ -329,7 +329,7 @@ test.each(['metadata', 'thumbnails'])('%s preparation failure hides trim tools a
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.cameraRecorderComponents.copy007'));
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).not.toHaveBeenCalled();
-  expect(onUse).toHaveBeenCalledWith(uri);
+  expect(onUse).toHaveBeenCalledWith(uri, true);
 });
 
 test('Retry resets the previous selection and keeps handles disabled while the next clip is preparing', async () => {
@@ -360,7 +360,7 @@ test('Use during thumbnail preparation delivers the original and cleans late thu
   expect(handle.props.accessibilityState.disabled).toBe(true);
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).not.toHaveBeenCalled();
-  expect(onUse).toHaveBeenCalledWith(uri);
+  expect(onUse).toHaveBeenCalledWith(uri, true);
   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
   await act(async () => { finish(['file:///cache/late-thumb.jpg']); });
   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/late-thumb.jpg');
@@ -433,7 +433,7 @@ test('untouched Use does not export or suppress the hint and hands off only the 
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).not.toHaveBeenCalled();
   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith(uri);
-  expect(onUse).toHaveBeenCalledWith(uri);
+  expect(onUse).toHaveBeenCalledWith(uri, true);
   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
@@ -482,4 +482,12 @@ test.each(['light', 'dark'] as const)('trim presentation uses %s theme tokens an
   act(() => scrubber.props.onResponderRelease(touch));
   expect(renderer.root.findAllByProps({ testID: 'trim-time-bubble' })).toHaveLength(0);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain(t('student.cameraRecorderComponents.copy007'));
+});
+
+test('a failed Photos save never claims the camera video has an album backup', async () => {
+  jest.mocked(MediaLibrary.Asset.create).mockRejectedValueOnce(new Error('Photos write failed'));
+  const { onUse } = await mountCamera();
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(onUse).toHaveBeenCalledWith(uri, false);
 });

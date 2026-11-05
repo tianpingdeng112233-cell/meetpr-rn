@@ -1,0 +1,17 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false local-retention.test.ts
+
+PASS src/features/training/video-upload/__tests__/local-retention.test.ts
+  ✓ keeps today by device calendar day and clears prior uploaded files only (1 ms)
+  ✓ over 500 MiB only evicts delivered files and preserves prepared pending uploads
+  ✓ delete and replace reclaim both original and prepared file without duplicate deletion
+  ✓ playback chooses existing local file, otherwise fetches a fresh remote URL
+  ✓ unprepared sources, including a just attached file, are protected under storage pressure (1 ms)
+  ✓ source selection is local first, remote second, or unavailable
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.385 s, estimated 1 s
+Ran all test suites matching /local-retention.test.ts/i.
