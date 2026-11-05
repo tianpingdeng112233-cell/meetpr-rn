@@ -76,3 +76,12 @@ R1 最终自测：206 suites / 2159 tests 全绿（50.173 秒、进程 exit 0）
 - 首次账号输入期间 AVD 曾报告输入超时，现场日志显示系统/输入法负载；切换键盘并重试后录入、选片、恢复等流程正常。未据此改产品代码，原始日志留本机。
 
 原始设备截图、签名/哈希及有序请求证据仅存本会话 `work/101-evidence/`、`work/101-upgrade-android/`，避免公开仓出现真实账号/设备状态。核心链路已亲验；超时、剩余语言/外观与弱网验收尚在继续，PR 可先运行 CI，不代表已宣布完整验收通过。
+
+## Opus 接手验收追加（2026-11-05 11:01–11:17 UTC，emulator-5556，繁體/浅色）
+
+- 30 分钟超时：长按起 10:31:25，11:01 系统通知出现，标题 `MeetPR`，正文「還有 1 條影片沒傳上，點選重試」，渠道 `video-upload-v2`，importance 3（DEFAULT）。
+- 点通知 → 回到 W1D1，顶部「1 條影片沒傳上，正在自動重試 · 立即重試」，底部「影片上傳中 2/3」；点击同时触发一次重试（测试网关仍拦截，503），状态保持等待送达。
+- 弱网送达：仅 5556 的 MeetPR UID TCP443 加 10% 随机丢包 + 延迟 1000–2000ms + 512/1024kbps；11:02:41 解除该动作的上传拦截后 initiate 201，11:15:41 upload complete 200，紧接着 `POST /plans/days/80d16876…/complete` 200（本轮仅一次），丢包规则计数 691 包。
+- 完成通知：「今日訓練已完成，3 條影片已送達」，标题 `MeetPR`。
+- 收尾：DROP 规则已删（`iptables -S OUTPUT` 无残留），`emu network delay none`、`speed full` 已恢复。
+- 截图（本机证据目录，不入公开仓）：android-b-timeout-tap-return.png、android-b-weaknet-delivered.png、android-b-complete-notice.png。
