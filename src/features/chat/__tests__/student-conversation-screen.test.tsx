@@ -204,6 +204,18 @@ test('feedback becomes read only when at least 55 percent of its height is visib
 });
 
 test('initial scroll aligns the first unread feedback bottom, and prepending history preserves the visible message', async () => {
+  // This renderer test supplies layout explicitly, then advances the frame.
+  // Keep host timers from running RAF between the render and its layout events.
+  const frames = new Map<number, FrameRequestCallback>();
+  let nextFrame = 0;
+  jest.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(callback => { frames.set(++nextFrame, callback); return nextFrame; });
+  jest.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(id => { if (id != null) frames.delete(id); });
+  const flushFrame = async () => {
+    await act(async () => {
+      const callbacks = [...frames.values()]; frames.clear();
+      callbacks.forEach(callback => callback(0));
+    });
+  };
   const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {});
   feedbackItems = [{ id: coachId, student_id: studentId, coach_id: coachId, text: 'Anchor', posted_at: '2026-09-05T09:04:00Z', read_at: null }];
   jest.mocked(chatRepository.messages).mockResolvedValueOnce({ messages: [message('new', 5, coachId, 'Latest')], meta: { has_more: true } })
@@ -216,15 +228,15 @@ test('initial scroll aligns the first unread feedback bottom, and prepending his
     view().props.onLayout({ nativeEvent: { layout: { height: 400 } } });
     layout('message-new', 80, 100); layout(`feedback-${coachId}`, 700, 200);
     view().props.onContentSizeChange(400, 1100);
-    await new Promise(resolve => setTimeout(resolve, 30));
   });
+  await flushFrame();
   expect(scrollTo).toHaveBeenCalledWith({ y: 518, animated: false });
   await act(async () => { view().props.onScroll({ nativeEvent: { contentOffset: { y: 30 }, layoutMeasurement: { height: 400 }, contentSize: { height: 1100 } } }); });
   await act(async () => {
     layout('message-old', 80, 150); layout('message-new', 240, 100); layout(`feedback-${coachId}`, 860, 200);
     view().props.onContentSizeChange(400, 1260);
-    await new Promise(resolve => setTimeout(resolve, 30));
   });
+  await flushFrame();
   expect(scrollTo).toHaveBeenLastCalledWith({ y: 190, animated: false });
   scrollTo.mockRestore();
 });
