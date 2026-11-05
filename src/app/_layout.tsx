@@ -134,6 +134,7 @@ function ThemedRoot() {
     }
     let disposed = false;
     let stop: (() => void) | undefined;
+    void import('@/features/training/set-sync/runtime').then(({ accountSetSync }) => { if (!disposed) accountSetSync(user.id); }).catch(() => undefined);
     void import('@/features/training/video-upload/manager')
       .then(({ videoUploadManager }) => disposed ? undefined : videoUploadManager.start(user.id))
       .then(cleanup => { if (disposed) cleanup?.(); else stop = cleanup; })

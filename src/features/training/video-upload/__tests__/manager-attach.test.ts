@@ -267,3 +267,14 @@ test('an ensureSetLog transport failure still uses network backoff', async () =>
     status: 'waiting', retry: { failure: 'network' }, errorMessage: 'Network request failed',
   });
 });
+
+test('cancelling a video awaiting its offline set releases the job and permits replacement', async () => {
+  const waiting = videoUploadManager.attach(id, source, () => new Promise(() => {}));
+  for (let tick = 0; tick < 100; tick++) await Promise.resolve();
+  await videoUploadManager.cancel(id);
+  await waiting;
+  expect(useVideoUploadStore.getState().records['student:set']?.status ?? 'none').toBe('none');
+  mockFiles.set(source.uri, 350000);
+  await videoUploadManager.attach(id, source, async () => 'set-log');
+  expect(useVideoUploadStore.getState().records['student:set'].status).toBe('uploaded');
+});

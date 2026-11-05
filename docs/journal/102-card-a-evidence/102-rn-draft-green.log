@@ -1,0 +1,32 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/queue.test.ts
+
+PASS src/features/training/set-sync/__tests__/queue.test.ts
+  ✓ server snapshot at 2026-11-05T12:00:00Z retires its receipt durably without changing the overlay (11 ms)
+  ✓ server snapshot at 2026-11-05T13:00:00Z retires its receipt durably without changing the overlay (1 ms)
+  ✓ stale and unrelated snapshots retain receipts, including deletion protection (2 ms)
+  ✓ receipts older than 14 calendar days are pruned on restore, retaining the boundary and pending writes (3 ms)
+  ✓ receipts older than 14 calendar days are pruned on refresh, retaining the boundary and pending writes (2 ms)
+  ✓ receipts older than 14 calendar days are pruned on wake, retaining the boundary and pending writes (4 ms)
+  ✓ a snapshot arriving during confirmation storage cannot strand a video waiting for the server id (62 ms)
+  ✓ sends in order and keeps other rows local while the first request hangs (1 ms)
+  ✓ retries transport errors without rolling back and network recovery bypasses backoff (2 ms)
+  ✓ same set finishes with the latest values after check, edit and uncheck (2 ms)
+  ✓ 4xx stops retries, remains visible locally, and explicit retry resends (17 ms)
+  ✓ sendNow prioritizes its day ahead of an older backed-off day
+  ✓ storage rebuild preserves pending edits and isolates accounts (1 ms)
+  ✓ overlay keeps check, changed numbers and uncheck across stale refreshes; delete stays deleted (1 ms)
+  ✓ 408 and 5xx retry automatically with exponential backoff (1 ms)
+  ✓ new extra rows survive restart before their first completed entry and can be removed locally (1 ms)
+  ✓ recording an extra row retires its redundant draft durably without losing the pending set (1 ms)
+  ✓ a converted set keeps the allocated added index when an edit was already queued (1 ms)
+  ✓ foreground sendNow during hydration cannot overwrite a stored outbox (1 ms)
+  ✓ leaving an account releases video waiters while retaining its pending set (32 ms)
+  ✓ an old account response cannot overwrite a newly logged-in account outbox (79 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        2.129 s, estimated 7 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/queue.test.ts/i.

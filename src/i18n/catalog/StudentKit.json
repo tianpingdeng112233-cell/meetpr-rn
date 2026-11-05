@@ -4194,5 +4194,14 @@
 "student.e1rmSourceUnavailable": {
 "en": "The original calculation cannot be fully reproduced. The saved estimate is shown.",
 "zh": "原始计算明细不可完整还原，展示已保存的估算值。"
-}
+},
+  "student.setSync.syncing": {"en": "Syncing your sets…", "zh": "正在同步训练记录…"},
+  "student.setSync.failedTitle": {"en": "Your sets haven't uploaded yet", "zh": "训练记录还没传上去"},
+  "student.setSync.failedBody": {"en": "They're saved on this phone. Try again when your connection is better.", "zh": "记录都存在手机里，不会丢。网络好一点再试。"},
+  "student.setSync.retry": {"en": "Try again", "zh": "重试"},
+  "student.setSync.logoutTitle": {"en": {"one": "{n} set hasn't uploaded yet", "other": "{n} sets haven't uploaded yet"}, "zh": "还有 {n} 组没上传"},
+  "student.setSync.logoutBody": {"en": "They'll stay on this phone and upload next time you log in.", "zh": "直接退出也会保留，下次登录这个账号时接着传。"},
+  "student.setSync.uploadLogout": {"en": "Upload, then log out", "zh": "先上传再退出"},
+  "student.setSync.logoutNow": {"en": "Log out now", "zh": "直接退出"},
+  "student.setSync.logoutProgress": {"en": {"one": "{n} set hasn't uploaded yet", "other": "{n} sets haven't uploaded yet"}, "zh": "还有 {n} 组没上传"}
 }

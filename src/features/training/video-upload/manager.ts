@@ -1,6 +1,7 @@
+import { ensureVideoSet } from '../set-sync/runtime';
 import { t } from '@/i18n';
 import { SerialTaskQueue } from '../serial-task-queue';
-import { setsRepository, type SetLogUpsertRequest } from '@/api/domains/sets';
+import { type SetLogUpsertRequest } from '@/api/domains/sets';
 import { AppState } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { AnalyticsEvent, track } from '@/analytics';
@@ -140,9 +141,17 @@ function resume(id: UploadIdentity, networkRestored = false): void {
         throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
           deterministic: true,
         });
-      return (await setsRepository.upsert(request)).id;
+      return ensureVideoSet(id.studentId, id.stableSetId, request);
     });
   void execute(id, ensure).catch(() => terminal(id));
+}
+function waitForSetLog(promise: Promise<string>, signal: AbortSignal): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(new UploadCancelledError());
+    signal.addEventListener('abort', abort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+    if (signal.aborted) abort();
+  });
 }
 async function run(
   id: UploadIdentity,
@@ -159,7 +168,7 @@ async function run(
     let setLogId = record.setLogId;
     if (!setLogId) {
       try {
-        setLogId = await ensureSetLog();
+        setLogId = await waitForSetLog(ensureSetLog(), signal);
       } catch (cause) {
         // These are local validation failures from the sheet's save queue.
         // API/transport errors keep their original retry classification.
@@ -185,6 +194,7 @@ async function run(
         ensureCallbacks.delete(keyFor(id));
       }
     }
+    setLogId = await waitForSetLog(ensureVideoSet(id.studentId, id.stableSetId, record.logRequest, setLogId), signal);
     check();
     dispatch(id, { type: 'setLogReady', setLogId });
     await flushVideoUploads();

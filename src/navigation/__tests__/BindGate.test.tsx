@@ -12,6 +12,8 @@ import { ApiError } from '@/api/client';
 import { bindRepository, onboardingRepository, plansRepository, type BindRequest, type OnboardingProfile } from '@/api/domains';
 import * as buildTrack from '@/config/build-track';
 import { inviteStashStorage } from '@/features/onboarding/storage';
+import { plan as makePlan } from '@/domain/plan/test-fixtures';
+import { saveWorkoutSnapshot } from '@/features/training/set-sync/workout-snapshot';
 
 import { BindGate } from '../BindGate';
 
@@ -318,4 +320,62 @@ test.each<[Locale, string | null, string, string]>([
   expect(header).toBeDefined();
   expect(StyleSheet.flatten(header.props.style)).toMatchObject({ flexShrink: 0 });
   expect(StyleSheet.flatten(header.props.style).position).not.toBe('absolute');
+});
+
+
+test('same account with a saved workout can remount offline after an accepted binding', async () => {
+  const accepted = { ...pendingRequest, status: 'accepted' as const };
+  jest.mocked(bindRepository.mine).mockResolvedValue({ bind_request: accepted });
+  jest.mocked(onboardingRepository.get).mockResolvedValue(completedProfile);
+  await saveWorkoutSnapshot(STUDENT_ID, makePlan([], {
+    id: '30000000-0000-4000-8000-000000000000', trainee_id: STUDENT_ID,
+  }));
+  await renderGate();
+  expect(hasText('tabs')).toBe(true);
+  act(() => renderer.unmount());
+  jest.mocked(bindRepository.mine).mockRejectedValue(new ApiError('network', 'offline'));
+  jest.mocked(onboardingRepository.get).mockRejectedValue(new ApiError('network', 'offline'));
+  await renderGate();
+  expect(hasText('tabs')).toBe(true);
+});
+
+
+test.each(['no-workout', 'other-account', 'revoked', 'unauthorized', 'server-error', 'http-protocol-error'])(
+  'offline training cannot bypass %s', async scenario => {
+    const accepted = { ...pendingRequest, status: 'accepted' as const };
+    jest.mocked(bindRepository.mine).mockResolvedValue({ bind_request: accepted });
+    await saveWorkoutSnapshot(STUDENT_ID, makePlan([], {
+      id: '30000000-0000-4000-8000-000000000000', trainee_id: STUDENT_ID,
+    }));
+    await renderGate();
+    expect(hasText('tabs')).toBe(true);
+    act(() => renderer.unmount());
+    if (scenario === 'no-workout') await saveWorkoutSnapshot(STUDENT_ID, null);
+    if (scenario === 'revoked' || scenario === 'unauthorized') {
+      if (scenario === 'revoked') jest.mocked(bindRepository.mine).mockResolvedValue({ bind_request: null });
+      else jest.mocked(bindRepository.mine).mockRejectedValue(new ApiError('backend', 'Unauthorized', { status: 401 }));
+      await renderGate();
+      expect(hasText('tabs')).toBe(false);
+      act(() => renderer.unmount());
+    }
+    jest.mocked(bindRepository.mine).mockRejectedValue(scenario === 'server-error'
+      ? new ApiError('server', 'Unavailable', { status: 500 })
+      : scenario === 'http-protocol-error' ? new ApiError('network', 'Invalid response', { status: 200 })
+        : new ApiError('network', 'offline'));
+    jest.mocked(onboardingRepository.get).mockRejectedValue(new ApiError('network', 'offline'));
+    await act(async () => {
+      renderer = create(<BindGate studentId={scenario === 'other-account'
+        ? '20000000-0000-4000-8000-000000000000' : STUDENT_ID}><Text>tabs</Text></BindGate>);
+    });
+    expect(hasText('tabs')).toBe(false);
+  },
+);
+
+
+test('unbound first-run with a stash keeps retry state when profile transport fails', async () => {
+  await inviteStashStorage.write(STUDENT_ID, stash);
+  jest.mocked(onboardingRepository.get).mockRejectedValue(new ApiError('network', 'offline'));
+  await renderGate();
+  expect(hasText(t('student.bindGateView.copy002'))).toBe(true);
+  expect(hasText('tabs')).toBe(false);
 });

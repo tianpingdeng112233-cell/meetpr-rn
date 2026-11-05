@@ -1,0 +1,50 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/queue.test.ts
+
+FAIL src/features/training/set-sync/__tests__/queue.test.ts (6.613 s)
+  ✓ server snapshot at 2026-11-05T12:00:00Z retires its receipt durably without changing the overlay (10 ms)
+  ✓ server snapshot at 2026-11-05T13:00:00Z retires its receipt durably without changing the overlay (2 ms)
+  ✓ stale and unrelated snapshots retain receipts, including deletion protection (2 ms)
+  ✓ receipts older than 14 calendar days are pruned on restore, retaining the boundary and pending writes (6 ms)
+  ✓ receipts older than 14 calendar days are pruned on refresh, retaining the boundary and pending writes (8 ms)
+  ✓ receipts older than 14 calendar days are pruned on wake, retaining the boundary and pending writes (2 ms)
+  ✓ a snapshot arriving during confirmation storage cannot strand a video waiting for the server id (4 ms)
+  ✓ sends in order and keeps other rows local while the first request hangs (3 ms)
+  ✓ retries transport errors without rolling back and network recovery bypasses backoff (2 ms)
+  ✓ same set finishes with the latest values after check, edit and uncheck (1 ms)
+  ✓ 4xx stops retries, remains visible locally, and explicit retry resends (10 ms)
+  ✓ sendNow prioritizes its day ahead of an older backed-off day (1 ms)
+  ✓ storage rebuild preserves pending edits and isolates accounts (1 ms)
+  ✓ overlay keeps check, changed numbers and uncheck across stale refreshes; delete stays deleted (5 ms)
+  ✓ 408 and 5xx retry automatically with exponential backoff (4 ms)
+  ✓ new extra rows survive restart before their first completed entry and can be removed locally (4 ms)
+  ✕ recording an extra row retires its redundant draft durably without losing the pending set (3 ms)
+  ✓ a converted set keeps the allocated added index when an edit was already queued (5 ms)
+  ✓ foreground sendNow during hydration cannot overwrite a stored outbox (1 ms)
+  ✓ leaving an account releases video waiters while retaining its pending set (10 ms)
+  ✓ an old account response cannot overwrite a newly logged-in account outbox (1 ms)
+
+  ● recording an extra row retires its redundant draft durably without losing the pending set
+
+    expect(received).toBeUndefined()
+
+    Received: {"exercise": {"plan_day_id": "day"}, "kind": "extra", "stableSetId": "extra"}
+
+      174 |   await q.saveDraft(draft);
+      175 |   await q.enqueue(input('extra'));
+    > 176 |   expect(q.snapshot().drafts?.extra).toBeUndefined();
+          |                                      ^
+      177 |   q.dispose(); const restored = s.create(); await restored.ready;
+      178 |   expect(restored.snapshot().drafts?.extra).toBeUndefined();
+      179 |   expect(overlaySetLogs([], restored.snapshot())).toMatchObject([{ completed: true }]);
+
+      at Object.toBeUndefined (src/features/training/set-sync/__tests__/queue.test.ts:176:38)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 20 passed, 21 total
+Snapshots:   0 total
+Time:        8.378 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/queue.test.ts/i.

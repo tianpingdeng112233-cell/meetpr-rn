@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { accountSetSync } from '../set-sync/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { E1RMRecorder } from '@/domain/e1rm';
 import { ApiError } from '@/api/client';
@@ -23,7 +24,7 @@ import { writeRestPreference } from '@/features/settings/storage';
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, ActivityIndicator, AppState, StyleSheet, Text, TextInput, View, type AppStateStatus } from 'react-native';
+import { Alert, AppState, StyleSheet, Text, TextInput, View, type AppStateStatus } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
@@ -129,6 +130,59 @@ const openSet = async () => {
 };
 const saveButton = (failed = false) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t(failed ? 'student.setEntrySheet.copy009' : 'student.setEntrySheet.copy012')))[0];
 const loadFailedTitle = () => renderer.root.findAll(node => node.type === Text && node.props.children === t('student.todayWorkoutScreen.copy001'));
+test('102: an already loaded workout survives an offline cold start with its pending completed set', async () => {
+  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/exercises') return { exercises: [{ id: plan.days[0].exercises[0].exercise_id, name: '哑铃推举', name_en: 'Dumbbell press', exercise_type: 'accessory', main_lift_family: null, is_competition_lift: false, competition_stance: null, muscle_groups: [], equipment: [], movement_pattern: null, created_by_coach_id: null, created_at: plan.created_at }] } as never;
+    if (path.endsWith('/onboarding')) return { unit_preference: 'lb' } as never;
+    return base(path, options);
+  });
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  const draft = body().props.drafts[0];
+  jest.mocked(authenticatedRequest).mockRejectedValue(new ApiError('network', 'Offline'));
+  await act(async () => body().props.onAccessorySave(draft, { plan_exercise_id: draft.exercise.id, set_index: 0, weight_kg: '90', reps: 5, rpe: '8', completed: true }, 'single'));
+  expect(body().props.drafts[0].sourceLog.completed).toBe(true);
+  act(() => renderer.unmount()); client.clear();
+  useSessionStore.setState({ user: null });
+  useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
+  await mount();
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+  expect(body().props.drafts[0]).toMatchObject({ sourceLog: { completed: true }, weightText: '90' });
+  expect(body().props.unit).toBe('lb');
+  expect(body().props.resolveExerciseMetadata(draft.exercise.exercise_id)).toMatchObject({ name: 'Dumbbell press', exerciseType: 'accessory' });
+  act(() => renderer.unmount()); client.clear();
+  useSessionStore.setState({ user: { id: '10000000-0000-4000-8000-000000000001', phone: '', role: 'coached_student', created_at: plan.created_at } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  await mount();
+  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(0);
+  expect(loadFailedTitle().length).toBeGreaterThan(0);
+});
+
+test('102: an offline student-added accessory keeps its catalog metadata after cold start', async () => {
+  const exerciseId = '60000000-0000-4000-8000-000000000009';
+  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/exercises') return { exercises: [{ id: exerciseId, name: '绳索下压', name_en: 'Cable pushdown', exercise_type: 'accessory', main_lift_family: null, is_competition_lift: false, competition_stance: null, muscle_groups: [], equipment: [], movement_pattern: null, created_by_coach_id: null, created_at: plan.created_at }] } as never;
+    return base(path, options);
+  });
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  jest.mocked(authenticatedRequest).mockRejectedValue(new ApiError('network', 'Offline'));
+  await act(async () => body().props.onAddExercise());
+  await act(async () => renderer.root.findByType(StudentExercisePicker).props.onSelect(exerciseId));
+  const added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  await act(async () => body().props.onAccessorySave(added, { exercise_id: exerciseId, plan_day_id: plan.days[0].id, set_index: 0, weight_kg: '12.5', reps: 12, actual_rir: 2, completed: true }, 'single'));
+  act(() => renderer.unmount()); client.clear();
+  useSessionStore.setState({ user: null });
+  useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
+  await mount();
+  expect(body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added')).toMatchObject({ sourceLog: { completed: true, actual_rir: 2 }, weightText: '12.5' });
+  expect(body().props.resolveExerciseMetadata(exerciseId)).toMatchObject({ name: 'Cable pushdown', exerciseType: 'accessory' });
+});
+
 test('a rate-limited background refetch keeps the loaded workout instead of replacing it with the load error', async () => {
   await mount();
   expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
@@ -149,7 +203,7 @@ test('a first load that fails still shows the load error with retry', async () =
   expect(loadFailedTitle()).toHaveLength(1);
   expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(0);
 });
-test('a slow set save immediately disables both actions and shows progress until success', async () => {
+test('a slow set save closes the sheet before the request succeeds', async () => {
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   let finish!: () => void;
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
@@ -158,15 +212,14 @@ test('a slow set save immediately disables both actions and shows progress until
   });
   await openSet();
   await act(async () => { saveButton().props.onPress(); });
-  expect(saveButton().props.disabled).toBe(true);
-  expect(saveButton(true).props.disabled).toBe(true);
-  expect(renderer.root.findByType(SetEntrySheet).findAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
+  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].status).toBe('complete');
   await act(async () => { finish(); });
   expect(writes).toBe(1);
   expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
 });
 
-test.each(['failure', 'timeout'])('%s keeps the inputs and permits the same set to retry', async (mode) => {
+test.each(['failure', 'timeout'])('%s retains the local failed-set mark and retries in the background', async (mode) => {
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   let attempt = 0;
   const bodies: unknown[] = [];
@@ -184,9 +237,10 @@ test.each(['failure', 'timeout'])('%s keeps the inputs and permits the same set 
   jest.useFakeTimers();
   await act(async () => { saveButton(true).props.onPress(); });
   await act(async () => { await jest.advanceTimersByTimeAsync(30_001); });
-  expect(Alert.alert).toHaveBeenCalled();
-  expect(saveButton().props.disabled).toBe(false);
-  await act(async () => { saveButton(true).props.onPress(); });
+  expect(Alert.alert).not.toHaveBeenCalled();
+  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
+  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].status).toBe('failed');
+  await act(async () => { accountSetSync(studentId).queue.sendNow(); });
   expect(bodies[1]).toEqual(bodies[0]);
   expect(writes).toBe(1);
   expect(storedLogs[0]).toMatchObject({ weight_kg: '80', reps: 5, rpe: '8' });
@@ -347,10 +401,10 @@ test.each<[number | undefined, number | null, number]>([[undefined, null, 60], [
   await startAccessories();
   await act(async () => accessoryInput('Set 2 weight').props.onChangeText('82,5'));
   await act(async () => accessoryButton('Complete set 2').props.onPress());
-  expect(accessoryButton('Complete set 2').props.disabled).toBe(true);
-  expect(renderer.root.findAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+  expect(accessoryButton('Undo set 2').props.disabled).toBe(false);
+  expect(accessoryButton('Complete set 1').props.disabled).toBe(false);
   await act(async () => { release(); });
-  expect(setBodies()).toEqual([{ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, actual_rir: null, completed: true, failed: false }]);
+  expect(setBodies()).toEqual([expect.objectContaining({ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, actual_rir: null, completed: true, failed: false })]);
   expect(accessoryButton('Undo set 2')).toBeDefined();
   expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(seconds);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
@@ -363,7 +417,7 @@ test.each<[number | undefined, number | null, number]>([[undefined, null, 60], [
   expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
 });
 
-test('an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and save failures retain retry inputs', async () => {
+test('an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and transport failures keep the latest local values', async () => {
   serveAccessories();
   storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80.123', reps: 10, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' }];
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
@@ -386,10 +440,10 @@ test('an upgraded completed accessory row cancels with its exact kg value; edits
   expect(accessoryButton('Complete set 1')).toBeDefined();
   failNext = true;
   await act(async () => accessoryButton('Complete set 1').props.onPress());
-  expect(Alert.alert).toHaveBeenCalledWith(t('student.setEntrySheet.copy010'), expect.any(String), expect.any(Array));
+  expect(Alert.alert).not.toHaveBeenCalled();
   expect(accessoryInput('Set 1 reps').props.value).toBe('12');
-  expect(accessoryButton('Complete set 1').props.disabled).toBe(false);
-  await act(async () => accessoryButton('Complete set 1').props.onPress());
+  expect(accessoryButton('Undo set 1').props.disabled).toBe(false);
+  await act(async () => { accountSetSync(studentId).queue.sendNow(); });
   expect(setBodies()[3]).toEqual(setBodies()[2]);
   expect(setBodies()[3]).toMatchObject({ completed: true, failed: false, reps: 12 });
   expect(accessoryButton('Undo set 1')).toBeDefined();
@@ -412,7 +466,7 @@ test.each(['uploading', 'uploaded'] as const)('a completed accessory with %s vid
   } finally { act(() => toast.unmount()); }
 });
 
-test.each([0, 1, 2])('complete all submits serially without rest, leaves %s empty rows and preserves successful saves on failure', async skipped => {
+test.each([0, 1, 2])('complete all submits serially without rest, leaves %s empty rows and keeps all local completions on transport failure', async skipped => {
   serveAccessories();
   const exercise = servedPlan.days[0].exercises[0];
   for (let index = 0; index < skipped; index++) exercise.sets.push({ ...exercise.sets[0], id: `empty-${index}`, set_number: index + 3, intensity_mode: 'rpe', target_value: '8' });
@@ -430,8 +484,10 @@ test.each([0, 1, 2])('complete all submits serially without rest, leaves %s empt
   await startAccessories();
   await act(async () => accessoryInput('Set 1 RPE').props.onChangeText('7'));
   await act(async () => accessoryButton('Complete all as planned').props.onPress());
-  expect(accessoryButton('Complete all as planned').props.disabled).toBe(true);
-  expect(accessoryButton('Complete set 2').props.disabled).toBe(true);
+  if (skipped) {
+    expect(accessoryButton('Complete all as planned').props.disabled).toBe(false);
+    expect(accessoryButton('Undo set 2').props.disabled).toBe(false);
+  }
   expect(setBodies().map(body => body.set_index)).toEqual([0]);
   await act(async () => release());
   expect(setBodies().map(body => body.set_index)).toEqual([0, 1]);
@@ -446,9 +502,9 @@ test.each([0, 1, 2])('complete all submits serially without rest, leaves %s empt
   expect(accessoryButton('Undo set 1')).toBeDefined();
   if (skipped === 2) {
     expect(writes).toBe(1);
-    expect(accessoryButton('Complete set 2')).toBeDefined();
-    expect(Alert.alert).toHaveBeenCalled();
-    await act(async () => accessoryButton('Complete all as planned').props.onPress());
+    expect(accessoryButton('Undo set 2')).toBeDefined();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    await act(async () => { accountSetSync(studentId).queue.sendNow(); });
     expect(setBodies().map(body => body.set_index)).toEqual([0, 1, 1]);
     expect(accessoryButton('Undo set 2')).toBeDefined();
   }
@@ -653,6 +709,20 @@ test.each(['delete', 'cancel'] as const)('extra %s immediately refreshes the cur
   expect(suggestion()).toBe(baseline);
 });
 
+test.each(['cancel', 'fail'] as const)('102: %s of a pre-existing extra set removes its server-derived history with an empty outbox', async action => {
+  const exercise = plan.days[0].exercises[0];
+  const id = '80000000-0000-4000-8000-000000000000';
+  storedLogs = [{ id, student_id: studentId, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id, set_index: 1, weight_kg: '100', reps: 5, rpe: '8', completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' }];
+  await new E1RMRecorder(trainingE1RMRepository).record({ studentId, exerciseId: exercise.exercise_id, setLogId: id, family: 'bench', weightKg: 100, reps: 5, rpe: 8, completed: true, failed: false });
+  await mount();
+  const body = () => renderer.root.findByType(WorkoutBody);
+  const extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
+  expect(extra.sourceLog.id).toBe(id);
+  expect((await trainingE1RMRepository.historySnapshot(studentId)).points.some(point => point.setLogId === id)).toBe(true);
+  await act(async () => body().props.onAccessorySave(extra, { plan_exercise_id: exercise.id, set_index: 1, weight_kg: '100', reps: 5, rpe: '8', completed: false, failed: action === 'fail' }, 'single'));
+  expect((await trainingE1RMRepository.historySnapshot(studentId)).points.some(point => point.setLogId === id)).toBe(false);
+});
+
 test('a completed day shows the overview card with logged counts and expandable sets instead of a set hero', async () => {
   servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' }] };
   const base: SetLog = { id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' };
@@ -674,7 +744,7 @@ test('a completed day shows the overview card with logged counts and expandable 
   expect(copy()).toContain('85 kg × 5');
 });
 
-test('removing a student-added card stops on a feedback conflict without restoring earlier deletions', async () => {
+test('removing a student-added card keeps a rejected delete queued without restoring its rows', async () => {
   const base: SetLog = { id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: null, plan_day_id: plan.days[0].id, exercise_id: '60000000-0000-4000-8000-000000000002', set_index: 0, weight_kg: '10', reps: 12, rpe: null, completed: true, failed: false, assumed: false, adhoc: true, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' };
   storedLogs = [base, { ...base, id: '80000000-0000-4000-8000-000000000001', set_index: 1 }, { ...base, id: '80000000-0000-4000-8000-000000000002', set_index: 2 }];
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
@@ -693,9 +763,10 @@ test('removing a student-added card stops on a feedback conflict without restori
   const added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
   await act(async () => body().props.onRemoveExercise(added.exercise));
   await act(async () => { jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive')?.onPress?.(); });
-  expect(deleted).toEqual(['/sets/80000000-0000-4000-8000-000000000000', '/sets/80000000-0000-4000-8000-000000000001']);
-  expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added').map((draft: { setIndex: number }) => draft.setIndex)).toEqual([1, 2]);
-  expect(jest.mocked(Alert.alert).mock.calls.at(-1)?.[1]).toBe(t('student.added.rated'));
+  expect(deleted).toEqual(['/sets/80000000-0000-4000-8000-000000000000', '/sets/80000000-0000-4000-8000-000000000001', '/sets/80000000-0000-4000-8000-000000000002']);
+  expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added').map((draft: { setIndex: number }) => draft.setIndex)).toEqual([]);
+  expect(accountSetSync(studentId).queue.pending()).toMatchObject([{ status: 'failed', remove: true }]);
+  expect(Alert.alert).toHaveBeenCalledTimes(1);
 });
 
 test.each(['uploaded', 'none', 'uploading', 'failed'] as const)('completed summary replay and upload status: %s', async status => {

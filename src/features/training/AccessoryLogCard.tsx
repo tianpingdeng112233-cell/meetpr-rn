@@ -1,7 +1,7 @@
 import { EffortHelpButton } from './EffortHelpButton';
 import { EffortToggleLabel } from './EffortToggleLabel';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Text, TextInput, View, Vibration, type ViewStyle } from 'react-native';
+import { Text, TextInput, View, Vibration, type ViewStyle } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppButton, font, fontMetrics, radius, spacing, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
@@ -150,7 +150,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel={t(isCancel(index) ? 'student.accessory.undo' : 'student.accessory.complete', [row.setIndex + 1])} disabled={disabled}
               onPress={() => void saveRow(index)} style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.sm, justifyContent: 'center', borderRadius: radius.inset, backgroundColor: complete ? colors.success : colors.ctaFill }}>
-              {busyRows.has(row.stableSetId) ? <ActivityIndicator color={colors.inkOnCTAFill} /> : <Text style={{ ...font.body(fontMetrics.size12, 'bold'), color: colors.inkOnCTAFill }}>{complete ? '✓' : t('loadTypes.complete')}</Text>}
+              <Text style={{ ...font.body(fontMetrics.size12, 'bold'), color: colors.inkOnCTAFill }}>{complete ? '✓' : t('loadTypes.complete')}</Text>
             </Pressable>
           </View>
           {row.extraNote ? <Text style={{ ...font.body(fontMetrics.size12), color: colors.textMuted }}>{row.extraNote}</Text> : null}
@@ -181,7 +181,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
             accessibilityHint={!canAct ? t('student.accessory.needsWeightOne') : undefined} disabled={readOnly || batchBusy || !canAct || busyRows.has(row.stableSetId)} onPress={() => void saveRow(index)}
             accessibilityState={{ disabled: readOnly || batchBusy || !canAct || busyRows.has(row.stableSetId), busy: busyRows.has(row.stableSetId) }}
             style={{ ...column(5), aspectRatio: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: spacing.point2, borderColor: !canAct ? colors.textGhost : complete ? colors.success : colors.textPrimary, backgroundColor: complete ? colors.success : colors.surfaceCard }}>
-            {busyRows.has(row.stableSetId) ? <ActivityIndicator size="small" color={colors.textPrimary} /> : <MaterialCommunityIcons name="check" size={spacing.lg} color={!canAct ? colors.textGhost : complete ? colors.inkOnCTAFill : colors.textPrimary} />}
+            <MaterialCommunityIcons name="check" size={spacing.lg} color={!canAct ? colors.textGhost : complete ? colors.inkOnCTAFill : colors.textPrimary} />
           </Pressable>
         </View>
         {!readOnly && row.kind && onRemoveSet ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.added.removeSet')} disabled={batchBusy || busyRows.has(row.stableSetId)} onPress={() => onRemoveSet(drafts[index])} style={{ alignSelf: 'flex-end', minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'center' }}><Text style={{ color: colors.textMuted }}>×</Text></Pressable> : null}
@@ -194,6 +194,6 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
       <Text style={{ flex: 1, ...font.body(fontMetrics.size12), color: colors.textSecondary }}>{t('student.accessory.hint')}</Text>
     </View> : null}
     {!readOnly && onAddSet ? <AppButton variant="link" label={t('student.added.addSet')} disabled={batchBusy || busyRows.size > 0 || (added ? rows.length : rows.filter(row => row.kind === 'extra').length) >= 10} onPress={onAddSet} /> : null}
-    {!readOnly && !added && rows.some(row => !row.kind && row.status === 'pending') ? <AppButton label={t('student.accessory.completeAll')} labelStyle={{ textAlign: 'center' }} loading={batchBusy} disabled={batchBusy || busyRows.size > 0} onPress={() => void completeAll()} /> : null}
+    {!readOnly && !added && rows.some(row => !row.kind && row.status === 'pending') ? <AppButton label={t('student.accessory.completeAll')} labelStyle={{ textAlign: 'center' }}  disabled={batchBusy} onPress={() => void completeAll()} /> : null}
   </View>;
 }
