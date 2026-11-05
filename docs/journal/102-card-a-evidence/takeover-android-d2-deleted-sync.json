@@ -1,0 +1,48 @@
+{
+  "logs": [
+    {
+      "id": "25c801c9-f25c-433a-9e31-2b00a54dc628",
+      "student_id": "75a9b726-23c0-415c-8ac9-147608233898",
+      "plan_exercise_id": null,
+      "plan_day_id": "acd0c626-f538-4a21-b1ea-ed9ee25639ac",
+      "exercise_id": "00000000-0000-0000-ca70-0000000000c1",
+      "set_index": 2,
+      "weight_kg": "20.00",
+      "reps": 5,
+      "rpe": null,
+      "actual_rir": null,
+      "coach_rpe": null,
+      "completed": true,
+      "failed": false,
+      "assumed": false,
+      "adhoc": true,
+      "logged_date": "2026-11-05",
+      "logged_at": "2026-11-05T09:13:30.577Z"
+    },
+    {
+      "id": "0d0832c0-a181-4d64-93ff-ef02fab12a84",
+      "student_id": "75a9b726-23c0-415c-8ac9-147608233898",
+      "plan_exercise_id": "8c534afd-f518-4496-b901-08ed4e62688a",
+      "plan_day_id": null,
+      "exercise_id": "40c56af8-69d8-4a4a-a690-526ee38d081b",
+      "set_index": 0,
+      "weight_kg": "25.00",
+      "reps": 5,
+      "rpe": "8.0",
+      "actual_rir": null,
+      "coach_rpe": null,
+      "completed": true,
+      "failed": false,
+      "assumed": false,
+      "adhoc": false,
+      "logged_date": "2026-11-05",
+      "logged_at": "2026-11-05T09:13:30.119Z"
+    }
+  ],
+  "day_completed_at": "2026-11-05T09:13:30.775Z",
+  "assertions": [
+    "2 completed records",
+    "deleted accessory preserved as adhoc",
+    "day completed after set delivery"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "while_coach_logged_in": {
+    "id": "efbe158b-9d44-438b-a0d5-daf88edbaf37",
+    "student_id": "75a9b726-23c0-415c-8ac9-147608233898",
+    "plan_exercise_id": "43ce498f-7292-4518-85cd-d7d981235b1f",
+    "plan_day_id": null,
+    "exercise_id": "40c56af8-69d8-4a4a-a690-526ee38d081b",
+    "set_index": 0,
+    "weight_kg": "20.00",
+    "reps": 5,
+    "rpe": "8.0",
+    "actual_rir": null,
+    "coach_rpe": null,
+    "completed": true,
+    "failed": false,
+    "assumed": false,
+    "adhoc": false,
+    "logged_date": "2026-11-05",
+    "logged_at": "2026-11-05T08:45:12.824Z"
+  },
+  "assertion": "student pending cancellation not sent under coach",
+  "same_account_resumed": {
+    "id": "efbe158b-9d44-438b-a0d5-daf88edbaf37",
+    "student_id": "75a9b726-23c0-415c-8ac9-147608233898",
+    "plan_exercise_id": "43ce498f-7292-4518-85cd-d7d981235b1f",
+    "plan_day_id": null,
+    "exercise_id": "40c56af8-69d8-4a4a-a690-526ee38d081b",
+    "set_index": 0,
+    "weight_kg": "20.00",
+    "reps": 5,
+    "rpe": "8.0",
+    "actual_rir": null,
+    "coach_rpe": null,
+    "completed": false,
+    "failed": false,
+    "assumed": false,
+    "adhoc": false,
+    "logged_date": "2026-11-05",
+    "logged_at": "2026-11-05T09:17:29.137Z"
+  }
+}
