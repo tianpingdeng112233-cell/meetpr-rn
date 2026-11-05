@@ -1,0 +1,49 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false manager-attach.test.ts
+
+FAIL src/features/training/video-upload/__tests__/manager-attach.test.ts
+  ✓ native upload rejection remains retryable and persists its message: fetch failed: Call to function 'NativeRequest.start' has been rejected. Cannot cast value for field 'headers' (5 ms)
+  ✓ native upload rejection remains retryable and persists its message: Native upload arguments cannot be cast (1 ms)
+  ✓ one attach retains the picker source through the immediate sweep and prepares the nonempty copy (2 ms)
+  ✓ concurrent attaches of the same selection share one retained file and upload (1 ms)
+  ✓ a rejected native copy is caught as VideoNativeError without deleting the picker source or publishing a phantom record (2 ms)
+  ✓ Set log unavailable fails deterministically with readable attachment copy and keeps the source for retry (7 ms)
+  ✓ Invalid set input fails deterministically with readable attachment copy and keeps the source for retry (1 ms)
+  ✓ a native part deletion failure is deterministic and keeps the prepared video for retry (1 ms)
+  ✓ a picker deletion failure returns VideoNativeError and keeps the original selection (2 ms)
+  ✓ startup during an asynchronous retain cannot reclaim the not-yet-published copy (17 ms)
+  ✓ transcode output is retained before its cache file and old source are reclaimed (3 ms)
+  ✓ a late startup hydration cannot roll the retained source back to a stale picker URI (2 ms)
+  ✓ an ensureSetLog transport failure still uses network backoff (1 ms)
+  ✕ retry now interrupts backoff and delivers the same set without waiting for its timer (3 ms)
+
+  ● retry now interrupts backoff and delivers the same set without waiting for its timer
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "setLogId": "set-log",
+    -   "status": "uploaded",
+    +   "status": "waiting",
+      }
+
+      274 |   expect(useVideoUploadStore.getState().records['student:set'].status).toBe('waiting');
+      275 |   await videoUploadManager.retry(id, async () => 'set-log');
+    > 276 |   expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'set-log' });
+          |                                                                 ^
+      277 | });
+      278 |
+
+      at Object.toMatchObject (src/features/training/video-upload/__tests__/manager-attach.test.ts:276:65)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 13 passed, 14 total
+Snapshots:   0 total
+Time:        0.758 s
+Ran all test suites matching /manager-attach.test.ts/i.

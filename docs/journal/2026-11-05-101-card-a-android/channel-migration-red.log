@@ -1,0 +1,54 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false failure-notifier.test.ts
+
+FAIL src/features/training/video-upload/__tests__/failure-notifier.test.ts
+  ✓ failure notification requests normal permission and publishes one DEFAULT aggregate with retry copy (7 ms)
+  ✕ migrates legacy importance 2 to v2 importance 3 without reopening a disabled channel (3 ms)
+  ✕ migrates legacy importance 0 to v2 importance 0 without reopening a disabled channel (1 ms)
+
+  ● migrates legacy importance 2 to v2 importance 3 without reopening a disabled channel
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "video-upload"
+
+    Number of calls: 0
+
+      36 |   notifyUploadFailures(() => 1);
+      37 |   await jest.advanceTimersByTimeAsync(1000);
+    > 38 |   expect(Notifications.getNotificationChannelAsync).toHaveBeenCalledWith('video-upload');
+         |                                                     ^
+      39 |   expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith('video-upload-v2', expect.objectContaining({ importance: expectedImportance }));
+      40 |   expect(Notifications.deleteNotificationChannelAsync).toHaveBeenCalledWith('video-upload');
+      41 |   expect(jest.mocked(Notifications.setNotificationChannelAsync).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(Notifications.deleteNotificationChannelAsync).mock.invocationCallOrder[0]);
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/failure-notifier.test.ts:38:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● migrates legacy importance 0 to v2 importance 0 without reopening a disabled channel
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "video-upload"
+
+    Number of calls: 0
+
+      36 |   notifyUploadFailures(() => 1);
+      37 |   await jest.advanceTimersByTimeAsync(1000);
+    > 38 |   expect(Notifications.getNotificationChannelAsync).toHaveBeenCalledWith('video-upload');
+         |                                                     ^
+      39 |   expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith('video-upload-v2', expect.objectContaining({ importance: expectedImportance }));
+      40 |   expect(Notifications.deleteNotificationChannelAsync).toHaveBeenCalledWith('video-upload');
+      41 |   expect(jest.mocked(Notifications.setNotificationChannelAsync).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(Notifications.deleteNotificationChannelAsync).mock.invocationCallOrder[0]);
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/failure-notifier.test.ts:38:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        1.64 s
+Ran all test suites matching /failure-notifier.test.ts/i.

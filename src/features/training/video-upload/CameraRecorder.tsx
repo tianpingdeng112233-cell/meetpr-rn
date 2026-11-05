@@ -25,7 +25,7 @@ const clockText = (seconds: number) =>
     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 type CameraRecorderProps = {
   onClose: () => void;
-  onUse: (uri: string) => void;
+  onUse: (uri: string, savedToPhotos?: boolean) => void;
   maxDurationSeconds?: number;
 };
 
@@ -209,11 +209,13 @@ export function CameraRecorder({
       }
     }
     const output = result?.uri ?? review;
+    let savedToPhotos = false;
     if (saveToPhotos) {
       try {
         if (!(await requestPhotos())) throw new Error('Photos denied');
         if (closed.current) return;
         await MediaLibrary.Asset.create(output);
+        savedToPhotos = true;
       } catch {
         if (!closed.current) ToastAndroid.show(t('student.cameraRecorderView.copy013'), ToastAndroid.LONG);
       }
@@ -227,7 +229,7 @@ export function CameraRecorder({
       current?.dispose();
     }
     ownedUri.current = null;
-    onUse(output);
+    onUse(output, savedToPhotos);
   };
   const close = () => {
     if (usingRef.current) return;

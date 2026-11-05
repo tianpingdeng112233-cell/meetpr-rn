@@ -1,0 +1,630 @@
+Summary of all failing tests
+FAIL src/features/training/__tests__/set-save.test.tsx (8.484 s)
+  ● completed summary replay and upload status: uploading
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+      723 |       return;
+      724 |     }
+    > 725 |     expect(summary.findAllByType(SetVideoUploadIndicator)).toHaveLength(1);
+          |                                                            ^
+      726 |     // Completing the pending upload updates the mounted summary without navigation.
+      727 |     await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
+      728 |   }
+
+      at toHaveLength (src/features/training/__tests__/set-save.test.tsx:725:60)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● completed summary replay and upload status: failed
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 0
+    Received array:  []
+
+      723 |       return;
+      724 |     }
+    > 725 |     expect(summary.findAllByType(SetVideoUploadIndicator)).toHaveLength(1);
+          |                                                            ^
+      726 |     // Completing the pending upload updates the mounted summary without navigation.
+      727 |     await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
+      728 |   }
+
+      at toHaveLength (src/features/training/__tests__/set-save.test.tsx:725:60)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/training/video-upload/__tests__/camera-review.test.tsx
+  ● no interruption control: completed preview and file survive for Use
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      147 |   await press(t('student.cameraRecorderComponents.copy010'));
+      148 |   expect(onUse).toHaveBeenCalledTimes(1);
+    > 149 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      150 |   act(() => renderer.unmount());
+      151 |   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+      152 | });
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:149:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● inactive-only control: completed preview and file survive for Use
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      147 |   await press(t('student.cameraRecorderComponents.copy010'));
+      148 |   expect(onUse).toHaveBeenCalledTimes(1);
+    > 149 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      150 |   act(() => renderer.unmount());
+      151 |   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+      152 | });
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:149:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● background and return: completed preview and file survive for Use
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      147 |   await press(t('student.cameraRecorderComponents.copy010'));
+      148 |   expect(onUse).toHaveBeenCalledTimes(1);
+    > 149 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      150 |   act(() => renderer.unmount());
+      151 |   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+      152 | });
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:149:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● background alone: completed preview and file survive for Use
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      147 |   await press(t('student.cameraRecorderComponents.copy010'));
+      148 |   expect(onUse).toHaveBeenCalledTimes(1);
+    > 149 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      150 |   act(() => renderer.unmount());
+      151 |   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+      152 | });
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:149:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Retry after returning from background deletes the old file and allows a new recording
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///retake.mp4"
+    Received: "file:///retake.mp4", true
+
+    Number of calls: 1
+
+      181 |   expect(renderer.root.findByType(Video).props.source.uri).toBe(nextUri);
+      182 |   await press(t('student.cameraRecorderComponents.copy010'));
+    > 183 |   expect(onUse).toHaveBeenCalledWith(nextUri);
+          |                 ^
+      184 |   act(() => renderer.unmount());
+      185 |   expect(deleteLocalVideo).not.toHaveBeenCalledWith(nextUri);
+      186 | });
+
+      at Object.toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:183:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● moving handles then Use exports the selected range, saves that file to Photos and releases the original
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///cache/trimmed.mp4"
+    Received: "file:///cache/trimmed.mp4", true
+
+    Number of calls: 1
+
+      245 |   expect(mockMedia.trim).toHaveBeenCalledWith(expect.any(String), 1000, 2000);
+      246 |   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+    > 247 |   expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+          |                 ^
+      248 |   expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
+      249 |   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
+      250 |   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBe('true');
+
+      at Object.toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:247:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● metadata preparation failure hides trim tools and Use delivers the original
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      330 |   await press(t('student.cameraRecorderComponents.copy010'));
+      331 |   expect(mockMedia.trim).not.toHaveBeenCalled();
+    > 332 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      333 | });
+      334 |
+      335 | test('Retry resets the previous selection and keeps handles disabled while the next clip is preparing', async () => {
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:332:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● thumbnails preparation failure hides trim tools and Use delivers the original
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      330 |   await press(t('student.cameraRecorderComponents.copy010'));
+      331 |   expect(mockMedia.trim).not.toHaveBeenCalled();
+    > 332 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      333 | });
+      334 |
+      335 | test('Retry resets the previous selection and keeps handles disabled while the next clip is preparing', async () => {
+
+      at toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:332:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● Use during thumbnail preparation delivers the original and cleans late thumbnails without exporting
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      361 |   await press(t('student.cameraRecorderComponents.copy010'));
+      362 |   expect(mockMedia.trim).not.toHaveBeenCalled();
+    > 363 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      364 |   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
+      365 |   await act(async () => { finish(['file:///cache/late-thumb.jpg']); });
+      366 |   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/late-thumb.jpg');
+
+      at Object.toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:363:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● untouched Use does not export or suppress the hint and hands off only the original
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "file:///recorded.mp4"
+    Received: "file:///recorded.mp4", true
+
+    Number of calls: 1
+
+      434 |   expect(mockMedia.trim).not.toHaveBeenCalled();
+      435 |   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith(uri);
+    > 436 |   expect(onUse).toHaveBeenCalledWith(uri);
+          |                 ^
+      437 |   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
+      438 |   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+      439 |   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
+
+      at Object.toHaveBeenCalledWith (src/features/training/video-upload/__tests__/camera-review.test.tsx:436:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/training/video-upload/__tests__/set-video-player.test.tsx
+  ● video attachment status wraps as a group with single-line actions: failed
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 4
+
+      Object {
+    -   "flexShrink": 0,
+    +   "alignItems": "center",
+    +   "flex": 1,
+    +   "flexDirection": "row",
+    +   "gap": 4,
+      }
+
+      247 |   let group = text.parent!;
+      248 |   while (group.type !== View) group = group.parent!;
+    > 249 |   expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexShrink: 0 });
+          |                                                 ^
+      250 |   expect(StyleSheet.flatten(text.props.style)).toMatchObject({ flexShrink: 0 });
+      251 |   let row = group.parent!;
+      252 |   while (row.type !== View) row = row.parent!;
+
+      at toMatchObject (src/features/training/video-upload/__tests__/set-video-player.test.tsx:249:49)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● video attachment status wraps as a group with single-line actions: uploading
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 4
+
+      Object {
+    -   "flexShrink": 0,
+    +   "alignItems": "center",
+    +   "flex": 1,
+    +   "flexDirection": "row",
+    +   "gap": 4,
+      }
+
+      247 |   let group = text.parent!;
+      248 |   while (group.type !== View) group = group.parent!;
+    > 249 |   expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexShrink: 0 });
+          |                                                 ^
+      250 |   expect(StyleSheet.flatten(text.props.style)).toMatchObject({ flexShrink: 0 });
+      251 |   let row = group.parent!;
+      252 |   while (row.type !== View) row = row.parent!;
+
+      at toMatchObject (src/features/training/video-upload/__tests__/set-video-player.test.tsx:249:49)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● video attachment status wraps as a group with single-line actions: preparing
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 4
+
+      Object {
+    -   "flexShrink": 0,
+    +   "alignItems": "center",
+    +   "flex": 1,
+    +   "flexDirection": "row",
+    +   "gap": 4,
+      }
+
+      247 |   let group = text.parent!;
+      248 |   while (group.type !== View) group = group.parent!;
+    > 249 |   expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexShrink: 0 });
+          |                                                 ^
+      250 |   expect(StyleSheet.flatten(text.props.style)).toMatchObject({ flexShrink: 0 });
+      251 |   let row = group.parent!;
+      252 |   while (row.type !== View) row = row.parent!;
+
+      at toMatchObject (src/features/training/video-upload/__tests__/set-video-player.test.tsx:249:49)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● video attachment status wraps as a group with single-line actions: uploaded
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 4
+
+      Object {
+    -   "flexShrink": 0,
+    +   "alignItems": "center",
+    +   "flex": 1,
+    +   "flexDirection": "row",
+    +   "gap": 4,
+      }
+
+      247 |   let group = text.parent!;
+      248 |   while (group.type !== View) group = group.parent!;
+    > 249 |   expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexShrink: 0 });
+          |                                                 ^
+      250 |   expect(StyleSheet.flatten(text.props.style)).toMatchObject({ flexShrink: 0 });
+      251 |   let row = group.parent!;
+      252 |   while (row.type !== View) row = row.parent!;
+
+      at toMatchObject (src/features/training/video-upload/__tests__/set-video-player.test.tsx:249:49)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/history/__tests__/student-added-history.test.tsx
+  ● Test suite failed to run
+
+    Failed to get NitroModules: The native "NitroModules" Turbo/Native-Module could not be found.
+    * Make sure react-native-nitro-modules/NitroModules is correctly autolinked (run `npx react-native config` to verify)
+    * Make sure you enabled the new architecture (TurboModules) and CodeGen properly generated the "NativeNitroModules"/NitroModules specs. See https://github.com/reactwg/react-native-new-architecture/blob/main/docs/enable-apps.md
+    * Make sure you are using react-native 0.75.0 or higher.
+    * Make sure you rebuilt the app.
+    * Make sure you ran `expo prebuild`.
+    * Make sure you ran `pod install` in the ios/ directory.
+
+      11 | import { UploadCancelledError } from './multipart';
+      12 | import * as ImagePicker from 'expo-image-picker';
+    > 13 | import * as Compressor from 'react-native-compressor';
+         | ^
+      14 | import { VideoNativeError } from './native-error';
+      15 | export type VideoSource = 'camera' | 'library';
+      16 | export { VideoNativeError } from './native-error';
+
+      at Object.<anonymous> (node_modules/react-native-nitro-modules/src/turbomodule/NativeNitroModules.ts:39:11)
+      at Object.require (node_modules/react-native-nitro-modules/src/NitroModules.ts:2:1)
+      at Object.require (node_modules/react-native-nitro-modules/src/worklets/installWorkletsSupport.ts:2:1)
+      at Object.require (node_modules/react-native-nitro-modules/src/index.ts:1:1)
+      at Object.require (node_modules/react-native-compressor/src/Main.tsx:2:1)
+      at Object.require (node_modules/react-native-compressor/src/Video/index.tsx:1:1)
+      at Object.require (node_modules/react-native-compressor/src/index.tsx:1:1)
+      at Object.require (src/features/training/video-upload/native.ts:13:1)
+      at Object.require (src/features/training/video-upload/manager.ts:16:1)
+      at Object.require (src/features/training/video-upload/VideoDeliveryRecovery.tsx:8:1)
+      at Object.require (src/features/training/video-upload/VideoFailureSummary.tsx:9:1)
+      at Object.require (src/features/history/HistoryEntriesView.tsx:1:1)
+      at Object.require (src/features/history/TrainingHistoryScreen.tsx:7:1)
+      at Object.require (src/features/history/__tests__/student-added-history.test.tsx:9:1)
+
+    Cause:
+     Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'NitroModules' could not be found. Verify that a module by this name is registered in the native binary.
+
+          11 | import { UploadCancelledError } from './multipart';
+          12 | import * as ImagePicker from 'expo-image-picker';
+        > 13 | import * as Compressor from 'react-native-compressor';
+             | ^
+          14 | import { VideoNativeError } from './native-error';
+          15 | export type VideoSource = 'camera' | 'library';
+          16 | export { VideoNativeError } from './native-error';
+
+          at invariant (node_modules/invariant/invariant.js:40:15)
+          at Object.getEnforcing (node_modules/react-native/Libraries/TurboModule/TurboModuleRegistry.js:28:26)
+          at Object.getEnforcing (node_modules/react-native-nitro-modules/src/turbomodule/NativeNitroModules.ts:37:39)
+          at Object.require (node_modules/react-native-nitro-modules/src/NitroModules.ts:2:1)
+          at Object.require (node_modules/react-native-nitro-modules/src/worklets/installWorkletsSupport.ts:2:1)
+          at Object.require (node_modules/react-native-nitro-modules/src/index.ts:1:1)
+          at Object.require (node_modules/react-native-compressor/src/Main.tsx:2:1)
+          at Object.require (node_modules/react-native-compressor/src/Video/index.tsx:1:1)
+          at Object.require (node_modules/react-native-compressor/src/index.tsx:1:1)
+          at Object.require (src/features/training/video-upload/native.ts:13:1)
+          at Object.require (src/features/training/video-upload/manager.ts:16:1)
+          at Object.require (src/features/training/video-upload/VideoDeliveryRecovery.tsx:8:1)
+          at Object.require (src/features/training/video-upload/VideoFailureSummary.tsx:9:1)
+          at Object.require (src/features/history/HistoryEntriesView.tsx:1:1)
+          at Object.require (src/features/history/TrainingHistoryScreen.tsx:7:1)
+          at Object.require (src/features/history/__tests__/student-added-history.test.tsx:9:1)
+
+
+FAIL src/features/history/__tests__/progress-details.test.tsx
+  ● Test suite failed to run
+
+    Failed to get NitroModules: The native "NitroModules" Turbo/Native-Module could not be found.
+    * Make sure react-native-nitro-modules/NitroModules is correctly autolinked (run `npx react-native config` to verify)
+    * Make sure you enabled the new architecture (TurboModules) and CodeGen properly generated the "NativeNitroModules"/NitroModules specs. See https://github.com/reactwg/react-native-new-architecture/blob/main/docs/enable-apps.md
+    * Make sure you are using react-native 0.75.0 or higher.
+    * Make sure you rebuilt the app.
+    * Make sure you ran `expo prebuild`.
+    * Make sure you ran `pod install` in the ios/ directory.
+
+      11 | import { UploadCancelledError } from './multipart';
+      12 | import * as ImagePicker from 'expo-image-picker';
+    > 13 | import * as Compressor from 'react-native-compressor';
+         | ^
+      14 | import { VideoNativeError } from './native-error';
+      15 | export type VideoSource = 'camera' | 'library';
+      16 | export { VideoNativeError } from './native-error';
+
+      at Object.<anonymous> (node_modules/react-native-nitro-modules/src/turbomodule/NativeNitroModules.ts:39:11)
+      at Object.require (node_modules/react-native-nitro-modules/src/NitroModules.ts:2:1)
+      at Object.require (node_modules/react-native-nitro-modules/src/worklets/installWorkletsSupport.ts:2:1)
+      at Object.require (node_modules/react-native-nitro-modules/src/index.ts:1:1)
+      at Object.require (node_modules/react-native-compressor/src/Main.tsx:2:1)
+      at Object.require (node_modules/react-native-compressor/src/Video/index.tsx:1:1)
+      at Object.require (node_modules/react-native-compressor/src/index.tsx:1:1)
+      at Object.require (src/features/training/video-upload/native.ts:13:1)
+      at Object.require (src/features/training/video-upload/manager.ts:16:1)
+      at Object.require (src/features/training/video-upload/VideoDeliveryRecovery.tsx:8:1)
+      at Object.require (src/features/training/video-upload/VideoFailureSummary.tsx:9:1)
+      at Object.require (src/features/history/HistoryEntriesView.tsx:1:1)
+      at Object.require (src/features/history/TrainingHistoryScreen.tsx:7:1)
+      at Object.require (src/features/history/__tests__/progress-details.test.tsx:10:1)
+
+    Cause:
+     Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'NitroModules' could not be found. Verify that a module by this name is registered in the native binary.
+
+          11 | import { UploadCancelledError } from './multipart';
+          12 | import * as ImagePicker from 'expo-image-picker';
+        > 13 | import * as Compressor from 'react-native-compressor';
+             | ^
+          14 | import { VideoNativeError } from './native-error';
+          15 | export type VideoSource = 'camera' | 'library';
+          16 | export { VideoNativeError } from './native-error';
+
+          at invariant (node_modules/invariant/invariant.js:40:15)
+          at Object.getEnforcing (node_modules/react-native/Libraries/TurboModule/TurboModuleRegistry.js:28:26)
+          at Object.getEnforcing (node_modules/react-native-nitro-modules/src/turbomodule/NativeNitroModules.ts:37:39)
+          at Object.require (node_modules/react-native-nitro-modules/src/NitroModules.ts:2:1)
+          at Object.require (node_modules/react-native-nitro-modules/src/worklets/installWorkletsSupport.ts:2:1)
+          at Object.require (node_modules/react-native-nitro-modules/src/index.ts:1:1)
+          at Object.require (node_modules/react-native-compressor/src/Main.tsx:2:1)
+          at Object.require (node_modules/react-native-compressor/src/Video/index.tsx:1:1)
+          at Object.require (node_modules/react-native-compressor/src/index.tsx:1:1)
+          at Object.require (src/features/training/video-upload/native.ts:13:1)
+          at Object.require (src/features/training/video-upload/manager.ts:16:1)
+          at Object.require (src/features/training/video-upload/VideoDeliveryRecovery.tsx:8:1)
+          at Object.require (src/features/training/video-upload/VideoFailureSummary.tsx:9:1)
+          at Object.require (src/features/history/HistoryEntriesView.tsx:1:1)
+          at Object.require (src/features/history/TrainingHistoryScreen.tsx:7:1)
+          at Object.require (src/features/history/__tests__/progress-details.test.tsx:10:1)
+
+
+FAIL src/features/training/video-upload/__tests__/upload-status.test.tsx
+  ● the video row shows live integer upload percentages in en
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "Sending"
+    Received array: ["Could not load video. Check your connection and try again", "Retry", "Upload failed", ["��", undefined], ["��", undefined], ["��", undefined]]
+
+      39 |     failureCount: 1, firstFailureAt: 0, lastFailureAt: 0, failure: 'network',
+      40 |   } }); });
+    > 41 |   expect(text()).toContain(locale === 'en' ? 'Sending' : '还在路上');
+         |                  ^
+      42 |   expect(text()).not.toContain(locale === 'en' ? 'Sending · 42%' : '发送中 · 42%');
+      43 | });
+      44 |
+
+      at toContain (src/features/training/video-upload/__tests__/upload-status.test.tsx:41:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● the video row shows live integer upload percentages in zh
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "还在路上"
+    Received array: ["视频加载失败,请检查网络后重试", "重试", "上传失败", ["��", undefined], ["��", undefined], ["��", undefined]]
+
+      39 |     failureCount: 1, firstFailureAt: 0, lastFailureAt: 0, failure: 'network',
+      40 |   } }); });
+    > 41 |   expect(text()).toContain(locale === 'en' ? 'Sending' : '还在路上');
+         |                  ^
+      42 |   expect(text()).not.toContain(locale === 'en' ? 'Sending · 42%' : '发送中 · 42%');
+      43 | });
+      44 |
+
+      at toContain (src/features/training/video-upload/__tests__/upload-status.test.tsx:41:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● native progress reaches the video row during upload (saved session: false)
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "Sending · 42%"
+    Received array: [["��", undefined], "0:00", "0:00", [1, "×"], ["��", undefined], "Upload failed", ["��", undefined], ["��", undefined], ["��", undefined], "Upload failed"]
+
+      87 |   try {
+      88 |     act(() => { mockProgress({ totalBytesSent: 42, totalBytesExpectedToSend: 100 }); });
+    > 89 |     expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Sending · 42%');
+         |                                                                                ^
+      90 |   } finally {
+      91 |     await act(async () => {
+      92 |       mockFinish({ status: 200, headers: { ETag: 'etag' } });
+
+      at toContain (src/features/training/video-upload/__tests__/upload-status.test.tsx:89:80)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● native progress reaches the video row during upload (saved session: true)
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "Sending · 42%"
+    Received array: [["��", undefined], "0:00", "0:00", [1, "×"], ["��", undefined], "Upload failed", ["��", undefined], ["��", undefined], ["��", undefined], "Upload failed"]
+
+      87 |   try {
+      88 |     act(() => { mockProgress({ totalBytesSent: 42, totalBytesExpectedToSend: 100 }); });
+    > 89 |     expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Sending · 42%');
+         |                                                                                ^
+      90 |   } finally {
+      91 |     await act(async () => {
+      92 |       mockFinish({ status: 200, headers: { ETag: 'etag' } });
+
+      at toContain (src/features/training/video-upload/__tests__/upload-status.test.tsx:89:80)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/analytics/__tests__/root-layout.test.tsx
+  ● Test suite failed to run
+
+    Failed to get NitroModules: The native "NitroModules" Turbo/Native-Module could not be found.
+    * Make sure react-native-nitro-modules/NitroModules is correctly autolinked (run `npx react-native config` to verify)
+    * Make sure you enabled the new architecture (TurboModules) and CodeGen properly generated the "NativeNitroModules"/NitroModules specs. See https://github.com/reactwg/react-native-new-architecture/blob/main/docs/enable-apps.md
+    * Make sure you are using react-native 0.75.0 or higher.
+    * Make sure you rebuilt the app.
+    * Make sure you ran `expo prebuild`.
+    * Make sure you ran `pod install` in the ios/ directory.
+
+      11 | import { UploadCancelledError } from './multipart';
+      12 | import * as ImagePicker from 'expo-image-picker';
+    > 13 | import * as Compressor from 'react-native-compressor';
+         | ^
+      14 | import { VideoNativeError } from './native-error';
+      15 | export type VideoSource = 'camera' | 'library';
+      16 | export { VideoNativeError } from './native-error';
+
+      at Object.<anonymous> (node_modules/react-native-nitro-modules/src/turbomodule/NativeNitroModules.ts:39:11)
+      at Object.require (node_modules/react-native-nitro-modules/src/NitroModules.ts:2:1)
+      at Object.require (node_modules/react-native-nitro-modules/src/worklets/installWorkletsSupport.ts:2:1)
+      at Object.require (node_modules/react-native-nitro-modules/src/index.ts:1:1)
+      at Object.require (node_modules/react-native-compressor/src/Main.tsx:2:1)
+      at Object.require (node_modules/react-native-compressor/src/Video/index.tsx:1:1)
+      at Object.require (node_modules/react-native-compressor/src/index.tsx:1:1)
+      at Object.require (src/features/training/video-upload/native.ts:13:1)
+      at Object.require (src/features/training/video-upload/manager.ts:16:1)
+      at Object.require (src/features/training/video-upload/VideoUploadNotificationSession.tsx:5:1)
+      at Object.require (src/app/_layout.tsx:1:1)
+      at Object.require (src/analytics/__tests__/root-layout.test.tsx:9:1)
+
+    Cause:
+     Invariant Violation: TurboModuleRegistry.getEnforcing(...): 'NitroModules' could not be found. Verify that a module by this name is registered in the native binary.
+
+          11 | import { UploadCancelledError } from './multipart';
+          12 | import * as ImagePicker from 'expo-image-picker';
+        > 13 | import * as Compressor from 'react-native-compressor';
+             | ^
+          14 | import { VideoNativeError } from './native-error';
+          15 | export type VideoSource = 'camera' | 'library';
+          16 | export { VideoNativeError } from './native-error';
+
+          at invariant (node_modules/invariant/invariant.js:40:15)
+          at Object.getEnforcing (node_modules/react-native/Libraries/TurboModule/TurboModuleRegistry.js:28:26)
+          at Object.getEnforcing (node_modules/react-native-nitro-modules/src/turbomodule/NativeNitroModules.ts:37:39)
+          at Object.require (node_modules/react-native-nitro-modules/src/NitroModules.ts:2:1)
+          at Object.require (node_modules/react-native-nitro-modules/src/worklets/installWorkletsSupport.ts:2:1)
+          at Object.require (node_modules/react-native-nitro-modules/src/index.ts:1:1)
+          at Object.require (node_modules/react-native-compressor/src/Main.tsx:2:1)
+          at Object.require (node_modules/react-native-compressor/src/Video/index.tsx:1:1)
+          at Object.require (node_modules/react-native-compressor/src/index.tsx:1:1)
+          at Object.require (src/features/training/video-upload/native.ts:13:1)
+          at Object.require (src/features/training/video-upload/manager.ts:16:1)
+          at Object.require (src/features/training/video-upload/VideoUploadNotificationSession.tsx:5:1)
+          at Object.require (src/app/_layout.tsx:1:1)
+          at Object.require (src/analytics/__tests__/root-layout.test.tsx:9:1)
+
+
+
+Test Suites: 7 failed, 193 passed, 200 total
+Tests:       20 failed, 2024 passed, 2044 total
+Snapshots:   0 total
+Time:        53.989 s
+Ran all test suites.

@@ -238,7 +238,7 @@ test.each([false, true])('the set-entry sheet keeps its player mounted across re
 });
 
 
-test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video attachment status wraps as a group with single-line actions: %s', async status => {
+test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video attachment status and accessible 44dp actions stay in one row: %s', async status => {
   setLocaleOverride('en');
   useVideoUploadStore.setState({ records: { 'student:set': { ...EMPTY_VIDEO_UPLOAD, status } } });
   await act(async () => { renderer = create(<VideoAttachmentControls studentId="student" stableSetId="set" editable ensureSetLog={async () => 'log'} buildLogRequest={() => { throw new Error('not used'); }} />); });
@@ -246,17 +246,18 @@ test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video atta
   const text = renderer.root.findAllByType(Text).find(node => node.props.children === label)!;
   let group = text.parent!;
   while (group.type !== View) group = group.parent!;
-  expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexShrink: 0 });
-  expect(StyleSheet.flatten(text.props.style)).toMatchObject({ flexShrink: 0 });
+  expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flex: 1 });
+  expect(StyleSheet.flatten(text.props.style).flexShrink).toBe(status === 'preparing' ? 0 : 1);
   let row = group.parent!;
   while (row.type !== View) row = row.parent!;
-  expect(StyleSheet.flatten(row.props.style).flexWrap).toBe('wrap');
+  expect(StyleSheet.flatten(row.props.style).flexWrap).not.toBe('wrap');
   for (const button of renderer.root.findAllByType(FeedbackPressable)) {
     const style = StyleSheet.flatten(button.props.style({ pressed: false }));
     expect(style.minHeight).toBeGreaterThanOrEqual(spacing.minimumHitTarget);
     expect(style.minWidth).toBeGreaterThanOrEqual(spacing.minimumHitTarget);
     const label = button.findAllByType(Text).find(node => node.props.children === button.props.accessibilityLabel)!;
-    expect(label.props.numberOfLines).toBe(1);
+    if (label) expect(label.props.numberOfLines).toBe(1);
+    else expect(button.props.accessibilityLabel).toBeTruthy();
   }
 });
 

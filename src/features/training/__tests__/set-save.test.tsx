@@ -7,7 +7,6 @@ import { STORAGE_KEYS } from '../constants';
 import { StudentExercisePicker } from '../StudentExercisePicker';
 import { TrainingWeekStrip } from '../TrainingWeekStrip';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
-import { SetVideoUploadIndicator } from '../video-upload/VideoStatusIcon';
 import { VideoPlayback } from '../video-upload/VideoPlayback';
 import { WorkoutBody } from '../WorkoutBody';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
@@ -722,7 +721,8 @@ test.each(['uploaded', 'none', 'uploading', 'failed'] as const)('completed summa
       expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(0);
       return;
     }
-    expect(summary.findAllByType(SetVideoUploadIndicator)).toHaveLength(1);
+    const failures = summary.findAllByType(Text).filter(node => node.props.children === t('student.videoDelivery.notUploaded'));
+    expect(failures).toHaveLength(status === 'failed' ? 1 : 0);
     // Completing the pending upload updates the mounted summary without navigation.
     await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
   }

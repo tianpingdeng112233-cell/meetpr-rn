@@ -1,0 +1,1322 @@
+diff --git a/src/app/_layout.tsx b/src/app/_layout.tsx
+index 7321060..f6f474a 100644
+--- a/src/app/_layout.tsx
++++ b/src/app/_layout.tsx
+@@ -1,3 +1,4 @@
++import { VideoUploadNotificationSession } from '@/features/training/video-upload/VideoUploadNotificationSession';
+ import { MinimumVersionGate } from '@/features/updates/MinimumVersionGate';
+ import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
+ import { useFonts } from 'expo-font';
+@@ -171,6 +172,7 @@ function ThemedRoot() {
+         <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} />
+         <TrainingReminderSession />
+         <PlanNotificationSession />
++        <VideoUploadNotificationSession />
+         <RestTimerNotificationSession />
+         <Toast />
+         <PrivacyNoticeSheet
+diff --git a/src/features/history/HistoryEntriesView.tsx b/src/features/history/HistoryEntriesView.tsx
+index 8a9d907..f4a9ed8 100644
+--- a/src/features/history/HistoryEntriesView.tsx
++++ b/src/features/history/HistoryEntriesView.tsx
+@@ -1,3 +1,4 @@
++import { VideoFailureSummary } from '@/features/training/video-upload/VideoFailureSummary';
+ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+ import { useMemo, useState, type ReactNode } from 'react';
+ import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+@@ -144,6 +145,9 @@ function HistoryDayCard({ day }: { day: HistoryDay }) {
+   const complete = day.total > 0 && day.done === day.total;
+   return (
+     <Card style={styles.dayCard}>
++      <VideoFailureSummary history studentId={day.exercises.flatMap(exercise => exercise.logs)[0]?.student_id ?? ''}
++        sets={day.exercises.flatMap(exercise => exercise.logs.map(log => ({ stableSetId: historyStableSetId(log, exercise), setLogId: log.id,
++          badge: { exerciseName: exercise.name, setOrdinal: log.set_index + 1, weightKg: Number(log.weight_kg), reps: log.reps, rpe: log.rpe === null ? null : Number(log.rpe) } })))} />
+       <View style={styles.dayHeader}>
+         <View><Text style={styles.dayDate}>{chineseMonthDay(day.date)}</Text><Text style={styles.weekday}>{new Intl.DateTimeFormat(getLocale(), { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day.date}T12:00:00Z`))}</Text></View>
+         {!day.isRest ? (
+diff --git a/src/features/history/__tests__/student-added-history.test.tsx b/src/features/history/__tests__/student-added-history.test.tsx
+index e93f55a..c58727c 100644
+--- a/src/features/history/__tests__/student-added-history.test.tsx
++++ b/src/features/history/__tests__/student-added-history.test.tsx
+@@ -100,7 +100,7 @@ test.each([
+   { videoLogId: 'bench-log', pending: null }, { videoLogId: 'extra-bench', pending: null },
+   { videoLogId: 'added-squat', pending: null }, { videoLogId: null, pending: null },
+   { videoLogId: 'bench-log', pending: 'uploading' }, { videoLogId: 'bench-log', pending: 'failed' },
+-] as const)('history reserves a video column only within the exercise with playable video: $videoLogId / $pending', async ({ videoLogId, pending }) => {
++] as const)('history reserves a trailing column for playable video or delivery failure: $videoLogId / $pending', async ({ videoLogId, pending }) => {
+   if (pending) useVideoUploadStore.setState({ hydrated: true, records: { 'student:extra:bench-plan:2': {
+     ...EMPTY_VIDEO_UPLOAD, status: pending, setLogId: 'extra-bench',
+   } } });
+@@ -123,8 +123,11 @@ test.each([
+   expect(rows).toHaveLength(5);
+   rows.forEach((row, index) => {
+     const reserved = videoLogId !== null && (index < 3 ? videoLogId !== 'added-squat' : videoLogId === 'added-squat');
+-    const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
+-    expect(slots).toHaveLength(reserved ? 1 : 0);
++    const width = pending === 'failed' && index < 3 ? 100 : 22;
++    const failedRow = pending === 'failed' && index === 2;
++    const slots = row.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === width && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch');
++    expect(slots).toHaveLength(reserved && !failedRow ? 1 : 0);
++    if (failedRow) expect(row.findAllByType(Text).map(node => node.props.children)).toContain(t('student.videoDelivery.notUploaded'));
+     const value = row.findAllByType(Text)[1];
+     const valueStyle = StyleSheet.flatten(value.props.style);
+     expect(valueStyle.flex).toBe(reserved ? 1 : undefined);
+diff --git a/src/features/training/WorkoutBody.tsx b/src/features/training/WorkoutBody.tsx
+index 6ff896e..4471f47 100644
+--- a/src/features/training/WorkoutBody.tsx
++++ b/src/features/training/WorkoutBody.tsx
+@@ -1,3 +1,4 @@
++import { VideoFailureSummary, useVideoFailures } from './video-upload/VideoFailureSummary';
+ import { LoadTypeSummary } from './LoadTypeSummary';
+ import { metricDisplay, POUNDS_PER_KG } from '@/domain/measurement';
+ import type { ComponentProps } from 'react';
+@@ -110,6 +111,10 @@ export function WorkoutBody({
+   resolveExerciseMetadata: ExerciseMetadataResolver;
+ }) {
+   const { colors, scheme } = useTheme();
++  const deliverySets = drafts.map(draft => ({ stableSetId: draft.stableSetId, setLogId: draft.sourceLog?.id, exerciseId: draft.exercise.id,
++    badge: { exerciseName: exerciseTitle(resolveExerciseMetadata(draft.exercise.exercise_id)), setOrdinal: draft.setIndex + 1,
++      weightKg: Number(draft.weightText) || null, reps: Number(draft.repsText) || null, rpe: Number(draft.rpeText) || null } }));
++  const failures = useVideoFailures(studentId, deliverySets);
+   // The light success token is below 4.5:1 on successTint; retain a readable existing ink token.
+   const completedLabelColor = scheme === 'light' ? colors.textPrimary : colors.successSoft;
+   const [accentSize, setAccentSize] = useState({ width: 0, height: 0 });
+@@ -231,6 +236,7 @@ export function WorkoutBody({
+         >
+           {exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}
+         </Text>
++        {failures.exerciseIds.includes(exercise.id) ? <MaterialCommunityIcons accessibilityLabel={t('student.videoDelivery.notUploaded')} name="alert-circle-outline" size={18} color={colors.danger} /> : null}
+         {completed ? <Text style={{ color: completedLabelColor, ...font.mono(fontMetrics.size12, 'semibold') }}>{t(rows.filter(row => !row.kind).length === 1 ? 'student.trainingFlow.completedOne' : 'student.trainingFlow.completedMany', [rows.filter(row => !row.kind).length])}</Text> : null}
+         <Text style={{ color: completed ? completedLabelColor : colors.textMuted }}>
+           {collapsed[exercise.id] ? '›' : '⌄'}
+@@ -378,6 +384,7 @@ export function WorkoutBody({
+   );
+   return (
+     <>
++      {!preview ? <VideoFailureSummary studentId={studentId} sets={deliverySets} history={Boolean(completedDay)} /> : null}
+       {progressFlow && progress.completed.length ? <View
+         testID="workout-completed-exercises"
+         style={{ gap: spacing.point6 }}
+@@ -421,6 +428,7 @@ export function WorkoutBody({
+                 <MaterialCommunityIcons name="check" size={spacing.point14} color={completedLabelColor} />
+               </View> : <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>}
+               <Text style={{ flex: 1, color: colors.textPrimary, ...font.body(14, 'bold') }}>{title}</Text>
++              {failures.exerciseIds.includes(exercise.id) ? <MaterialCommunityIcons accessibilityLabel={t('student.videoDelivery.notUploaded')} name="alert-circle-outline" size={18} color={colors.danger} /> : null}
+               <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>{added ? t('student.completedDay.addedSets %lld', [logged]) : t('student.completedDay.loggedSets %lld %lld', [logged, prescribed.length])}</Text>
+               <Text style={{ color: colors.textMuted }}>{open ? '⌄' : '›'}</Text>
+             </Pressable>
+diff --git a/src/features/training/__tests__/set-save.test.tsx b/src/features/training/__tests__/set-save.test.tsx
+index e0ea7b1..e89ecb7 100644
+--- a/src/features/training/__tests__/set-save.test.tsx
++++ b/src/features/training/__tests__/set-save.test.tsx
+@@ -7,7 +7,6 @@ import { STORAGE_KEYS } from '../constants';
+ import { StudentExercisePicker } from '../StudentExercisePicker';
+ import { TrainingWeekStrip } from '../TrainingWeekStrip';
+ import { HoldToCompleteButton } from '../HoldToCompleteButton';
+-import { SetVideoUploadIndicator } from '../video-upload/VideoStatusIcon';
+ import { VideoPlayback } from '../video-upload/VideoPlayback';
+ import { WorkoutBody } from '../WorkoutBody';
+ import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
+@@ -722,7 +721,8 @@ test.each(['uploaded', 'none', 'uploading', 'failed'] as const)('completed summa
+       expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(0);
+       return;
+     }
+-    expect(summary.findAllByType(SetVideoUploadIndicator)).toHaveLength(1);
++    const failures = summary.findAllByType(Text).filter(node => node.props.children === t('student.videoDelivery.notUploaded'));
++    expect(failures).toHaveLength(status === 'failed' ? 1 : 0);
+     // Completing the pending upload updates the mounted summary without navigation.
+     await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
+   }
+diff --git a/src/features/training/video-upload/CameraRecorder.tsx b/src/features/training/video-upload/CameraRecorder.tsx
+index 7f8d239..0040f09 100644
+--- a/src/features/training/video-upload/CameraRecorder.tsx
++++ b/src/features/training/video-upload/CameraRecorder.tsx
+@@ -25,7 +25,7 @@ const clockText = (seconds: number) =>
+     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+ type CameraRecorderProps = {
+   onClose: () => void;
+-  onUse: (uri: string) => void;
++  onUse: (uri: string, savedToPhotos?: boolean) => void;
+   maxDurationSeconds?: number;
+ };
+ 
+@@ -209,11 +209,13 @@ export function CameraRecorder({
+       }
+     }
+     const output = result?.uri ?? review;
++    let savedToPhotos = false;
+     if (saveToPhotos) {
+       try {
+         if (!(await requestPhotos())) throw new Error('Photos denied');
+         if (closed.current) return;
+         await MediaLibrary.Asset.create(output);
++        savedToPhotos = true;
+       } catch {
+         if (!closed.current) ToastAndroid.show(t('student.cameraRecorderView.copy013'), ToastAndroid.LONG);
+       }
+@@ -227,7 +229,7 @@ export function CameraRecorder({
+       current?.dispose();
+     }
+     ownedUri.current = null;
+-    onUse(output);
++    onUse(output, savedToPhotos);
+   };
+   const close = () => {
+     if (usingRef.current) return;
+diff --git a/src/features/training/video-upload/CompletedVideoReplay.tsx b/src/features/training/video-upload/CompletedVideoReplay.tsx
+index 403ed7f..8e02de4 100644
+--- a/src/features/training/video-upload/CompletedVideoReplay.tsx
++++ b/src/features/training/video-upload/CompletedVideoReplay.tsx
+@@ -1,19 +1,20 @@
+ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+ import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+-import { Modal, View } from 'react-native';
++import { Modal, Text, View } from 'react-native';
+ import { useRouter } from 'expo-router';
+ import { feedbackRepository, type FeedbackItem } from '@/api/domains/feedback';
+ import { VideoPlayback } from './VideoPlayback';
+ import { File } from 'expo-file-system';
+ import { videosRepository, type StudentVideo } from '@/api/domains/videos';
+-import { spacing, useColors } from '@/design';
++import { font, spacing, useColors } from '@/design';
+ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+ import { t } from '@/i18n';
+ import type { VideoBadgeInfo } from '@/features/video-player/types';
+ import { hydrateVideoUploads, useVideoUploadStore } from './store';
+ import { EMPTY_VIDEO_UPLOAD, type VideoUploadRecord } from './model';
+ import { latestVideoFeedbackId, playableSetVideo, type ReplayVideo } from './completed-replay';
+-import { SetVideoUploadIndicator } from './VideoStatusIcon';
++import { hasVideoDeliveryFailure } from './delivery-failures';
++import { useVideoDeliveryRetry } from './VideoDeliveryRecovery';
+ 
+ type ReplaySelection = ReplayVideo & { badge: VideoBadgeInfo };
+ const ReplayContext = createContext<{ studentId: string; videos: readonly StudentVideo[]; play: (selection: ReplaySelection) => void }>({ studentId: '', videos: [], play: () => {} });
+@@ -55,7 +56,7 @@ export function CompletedVideoReplayProvider({ studentId, children, onNavigate }
+ }
+ 
+ type ReplaySet = { setLogId: string | null; stableSetId?: string };
+-const VideoColumnContext = createContext(false);
++const VideoColumnContext = createContext(0);
+ 
+ function resolveSetVideo(studentId: string, videos: readonly StudentVideo[], records: Record<string, VideoUploadRecord>, { setLogId, stableSetId }: ReplaySet) {
+   const direct = stableSetId ? records[`${studentId}:${stableSetId}`] : undefined;
+@@ -68,23 +69,33 @@ function resolveSetVideo(studentId: string, videos: readonly StudentVideo[], rec
+   return { entry, indicatorSetId, video: playableSetVideo(setLogId, videos, entry, exists) };
+ }
+ 
+-/** Reserve the same trailing width across one exercise, only while it has a playable video. */
++/** Reserve a trailing column for playback or a visible delivery failure within one exercise. */
+ export function CompletedVideoGroup({ sets, children }: { sets: readonly ReplaySet[]; children: (hasVideo: boolean) => ReactNode }) {
+   const { studentId, videos } = useContext(ReplayContext);
+   const records = useVideoUploadStore(state => state.records);
+-  const hasVideo = sets.some(set => resolveSetVideo(studentId, videos, records, set).video !== null);
+-  return <VideoColumnContext.Provider value={hasVideo}>{children(hasVideo)}</VideoColumnContext.Provider>;
++  const resolved = sets.map(set => resolveSetVideo(studentId, videos, records, set));
++  const failed = resolved.some(set => hasVideoDeliveryFailure(set.entry));
++  const hasVideo = failed || resolved.some(set => set.video !== null);
++  return <VideoColumnContext.Provider value={failed ? 100 : hasVideo ? 22 : 0}>{children(hasVideo)}</VideoColumnContext.Provider>;
+ }
+ 
+ export function CompletedSetVideo({ setLogId, stableSetId, badge }: ReplaySet & { badge: VideoBadgeInfo }) {
+   const { studentId, videos, play } = useContext(ReplayContext);
+   const reserveColumn = useContext(VideoColumnContext);
++  const { retry, recovery } = useVideoDeliveryRetry(studentId);
+   const colors = useColors();
+   const records = useVideoUploadStore(state => state.records);
+   const { entry, indicatorSetId, video } = resolveSetVideo(studentId, videos, records, { setLogId, stableSetId });
+-  if (entry.status !== 'none' && entry.status !== 'uploaded' && indicatorSetId) {
+-    const indicator = <SetVideoUploadIndicator studentId={studentId} stableSetId={indicatorSetId} />;
+-    return reserveColumn ? <CompletedVideoSlot>{indicator}</CompletedVideoSlot> : indicator;
++  if (hasVideoDeliveryFailure(entry) && indicatorSetId) {
++    return <>
++      <Pressable accessibilityRole="button" accessibilityLabel={t('student.videoDelivery.notUploaded') + ' · ' + t('student.videoAttachmentV3Controls.copy009')}
++        onPress={() => void retry([{ stableSetId: indicatorSetId, badge }])}
++        style={{ minHeight: spacing.minimumHitTarget, width: reserveColumn || 100, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs }}>
++        <Text style={{ ...font.body(11), color: colors.danger, flexShrink: 1 }}>{t('student.videoDelivery.notUploaded')}</Text>
++        <MaterialCommunityIcons name="alert-circle-outline" color={colors.danger} size={20} />
++      </Pressable>
++      {recovery}
++    </>;
+   }
+   if (!video) return reserveColumn ? <CompletedVideoSlot /> : null;
+   return <CompletedVideoSlot>
+@@ -98,9 +109,10 @@ export function CompletedSetVideo({ setLogId, stableSetId, badge }: ReplaySet &
+ 
+ /** The 44pt native parent contains hitSlop without contributing to row height. */
+ function CompletedVideoSlot({ children }: { children?: ReactNode }) {
+-  return <View style={{ width: 22, alignSelf: 'stretch' }}>
++  const width = useContext(VideoColumnContext) || 22;
++  return <View style={{ width, alignSelf: 'stretch' }}>
+     {children ? <View collapsable={false} pointerEvents="box-none" style={{ position: 'absolute', top: '50%',
+-      left: (22 - spacing.minimumHitTarget) / 2, marginTop: -spacing.minimumHitTarget / 2,
++      right: (22 - spacing.minimumHitTarget) / 2, marginTop: -spacing.minimumHitTarget / 2,
+       width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}>
+       {children}
+     </View> : null}
+diff --git a/src/features/training/video-upload/VideoAttachmentControls.tsx b/src/features/training/video-upload/VideoAttachmentControls.tsx
+index 76929be..3be1a0d 100644
+--- a/src/features/training/video-upload/VideoAttachmentControls.tsx
++++ b/src/features/training/video-upload/VideoAttachmentControls.tsx
+@@ -1,3 +1,5 @@
++import { hasVideoDeliveryFailure } from './delivery-failures';
++import { useVideoDeliveryRetry } from './VideoDeliveryRecovery';
+ import type { VideoBadgeInfo } from '@/features/video-player/types';
+ import type { SetLogUpsertRequest } from '@/api/domains/sets';
+ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+@@ -10,7 +12,7 @@ import type { SelectedVideo } from './model';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
+ import { t } from '@/i18n';
+-import { ActivityIndicator, Alert, Modal, Text, View } from 'react-native';
++import { ActivityIndicator, Alert, Modal, Text, View, useWindowDimensions } from 'react-native';
+ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+ 
+ import { useColors, radius, spacing, font, fontMetrics } from '@/design';
+@@ -75,6 +77,9 @@ export function VideoAttachmentControls({
+   const logCallbacks = useRef({ ensureSetLog, buildLogRequest, inputReady });
+   useLayoutEffect(() => { logCallbacks.current = { ensureSetLog, buildLogRequest, inputReady }; });
+   const colors = useColors();
++  const { width, fontScale } = useWindowDimensions();
++  const compact = width / fontScale < 440;
++  const { retry, recovery } = useVideoDeliveryRetry(studentId, { ensureSetLog, buildLogRequest: inputReady ? buildLogRequest : undefined });
+   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
+   const [choosing, setChoosing] = useState(false);
+   const [videoToTrim, setVideoToTrim] = useState<SelectedVideo | null>(null);
+@@ -121,10 +126,11 @@ export function VideoAttachmentControls({
+         present(
+           <CameraRecorder
+             onClose={dismiss}
+-            onUse={(uri) => {
++            onUse={(uri, savedToPhotos) => {
+               dismiss();
+               attach({
+                 uri,
++                savedToPhotos,
+                 width: 720,
+                 height: 1280,
+                 durationMs: null,
+@@ -190,40 +196,41 @@ export function VideoAttachmentControls({
+     }
+   };
+   const playable = Boolean(record.localUri || record.source?.uri || record.attachmentId);
+-  const preparing = isPreparing || record.status === 'preparing';
+-  const errorMessage = actionErrorMessage ?? record.errorMessage;
++  const failed = hasVideoDeliveryFailure(record);
++  const preparing = !failed && (isPreparing || record.status === 'preparing');
++  const errorMessage = actionErrorMessage ?? (failed && videoUploadManager.needsReselection(identity)
++    ? t('student.videoDelivery.missingBody') : record.errorMessage);
+   const percentage = Math.round(record.progress * 100);
+-  const statusLabel = record.status === 'uploading'
++  const statusLabel = failed ? t('student.videoAttachmentV3Controls.copy008') : record.status === 'uploading'
+     ? t(percentage > 0 ? 'student.videoUpload.sendingProgress' : 'student.videoUpload.sending', [percentage])
+     : t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007');
+   return (
+     <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: spacing.point14, paddingVertical: spacing.point11, gap: spacing.space2 }}>
+       {playable ? <VideoPlayback key={record.createdAt} inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => undefined} /> : null}
+-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md }}>
+-        {!playable ? <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size16, 'medium') }}>{t('student.videoAttachmentSection.copy001')}</Text> : null}
+-        {preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 0 }}>
++      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
++        {!playable && record.status === 'none' ? <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size16, 'medium') }}>{t('student.videoAttachmentSection.copy001')}</Text> : null}
++        {preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
+           <ActivityIndicator color={colors.gold500} />
+           <Text style={{ ...font.body(fontMetrics.size12, 'medium'), color: colors.textSecondary, flexShrink: 0 }}>{t('student.videoAttachmentV3Controls.copy003')}</Text>
+-        </View> : record.status !== 'none' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 0 }}>
+-          <Text style={{ ...font.body(fontMetrics.size12), color: record.status === 'failed' ? colors.danger : colors.textSecondary, flexShrink: 0 }}>
++        </View> : record.status !== 'none' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
++          <Text style={{ ...font.body(fontMetrics.size12), color: failed ? colors.danger : colors.textSecondary, flexShrink: 1 }}>
+             {statusLabel}
+           </Text>
+-          {record.status === 'failed' ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable || choosing || isPreparing} onPress={() => {
+-            setActionErrorMessage(null);
+-            void videoUploadManager.retry(identity, ensureSetLog, inputReady ? buildLogRequest : undefined).catch(showActionError);
+-          }} /> : null}
+         </View> : <View style={{ flex: 1 }} />}
+-        {!preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point10, marginLeft: 'auto', flexShrink: 0 }}>
++        {!preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginLeft: 'auto', flexShrink: 0 }}>
+           {record.status === 'none' ? <>
+             <VideoAction icon="video" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing || !hasCamera} onPress={() => void choose('camera')} />
+             <VideoAction icon="image" label={t('student.videoAttachmentV3Controls.copy002')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
+           </> : <>
+-            <VideoAction icon="image" label={t('student.videoAttachmentV3Controls.copy004')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
+-            <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable || choosing || isPreparing} onPress={() => void remove()} />
++            {failed ? <VideoAction compact={compact} icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable || choosing || isPreparing}
++              onPress={() => void retry([{ stableSetId, badge: badge ?? undefined }])} /> : null}
++            <VideoAction compact={compact && failed} icon="image" label={t('student.videoAttachmentV3Controls.copy004')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
++            <VideoAction compact={compact && failed} icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable || choosing || isPreparing} onPress={() => void remove()} />
+           </>}
+         </View> : null}
+       </View>
+       {errorMessage ? <Text style={{ ...font.body(fontMetrics.size11, 'medium'), color: colors.danger }}>{errorMessage}</Text> : null}
++      {recovery}
+       {videoToTrim ? <VideoTrimView uri={videoToTrim.uri} onOutcome={outcome => {
+         releaseOriginal.current?.();
+         releaseOriginal.current = null;
+@@ -241,16 +248,17 @@ export function VideoAttachmentControls({
+ }
+ 
+ 
+-function VideoAction({ icon, label, onPress, disabled }: {
++function VideoAction({ icon, label, onPress, disabled, compact = false }: {
++  compact?: boolean;
+   icon: ComponentProps<typeof MaterialCommunityIcons>['name']; label: string; onPress: () => void; disabled: boolean;
+ }) {
+   const colors = useColors();
+   const color = `${colors.gold500}${disabled ? '4D' : 'B8'}`;
+   return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
+     style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.point7, flexShrink: 0,
+-      borderRadius: radius.control, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget,
++      borderRadius: radius.control, paddingHorizontal: compact ? spacing.sm : spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget,
+       borderWidth: spacing.point1, borderColor: `${colors.gold500}${disabled ? '1F' : '3D'}`, opacity: pressed ? 0.6 : 1 })}>
+     <MaterialCommunityIcons name={icon} size={spacing.space5} color={color} />
+-    <Text numberOfLines={1} style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text>
++    {!compact ? <Text numberOfLines={1} style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text> : null}
+   </Pressable>;
+ }
+diff --git a/src/features/training/video-upload/VideoStatusIcon.tsx b/src/features/training/video-upload/VideoStatusIcon.tsx
+index 4485c55..319cf30 100644
+--- a/src/features/training/video-upload/VideoStatusIcon.tsx
++++ b/src/features/training/video-upload/VideoStatusIcon.tsx
+@@ -1,4 +1,6 @@
+ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import { hasVideoDeliveryFailure } from './delivery-failures';
++import { t } from '@/i18n';
+ import { useColors } from '@/design';
+ import { selectVideoUpload, useVideoUploadStore } from './store';
+ 
+@@ -13,16 +15,10 @@ export function SetVideoUploadIndicator({
+ }) {
+   const colors = useColors();
+   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
+-  const color =
+-    record.status === 'failed'
+-      ? colors.danger
+-      : record.status === 'uploaded'
+-        ? colors.success
+-        : record.status === 'none'
+-          ? colors.textGhost
+-          : colors.gold500;
+-  return (
+-    <MaterialCommunityIcons color={color} name="video-outline" size={size} />
+-  );
++  const failed = hasVideoDeliveryFailure(record);
++  if (!failed && record.status !== 'uploaded' && record.status !== 'none') return null;
++  return <MaterialCommunityIcons accessibilityLabel={failed ? t('student.videoDelivery.notUploaded') : undefined}
++    color={failed ? colors.danger : record.status === 'uploaded' ? colors.success : colors.textGhost}
++    name={failed ? 'alert-circle-outline' : 'video-outline'} size={size} />;
+ }
+ export const VideoStatusIcon = SetVideoUploadIndicator;
+diff --git a/src/features/training/video-upload/__tests__/camera-review.test.tsx b/src/features/training/video-upload/__tests__/camera-review.test.tsx
+index dac4b6e..25cecdf 100644
+--- a/src/features/training/video-upload/__tests__/camera-review.test.tsx
++++ b/src/features/training/video-upload/__tests__/camera-review.test.tsx
+@@ -146,7 +146,7 @@ test.each<[string, AppStateStatus[]]>([
+   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+   await press(t('student.cameraRecorderComponents.copy010'));
+   expect(onUse).toHaveBeenCalledTimes(1);
+-  expect(onUse).toHaveBeenCalledWith(uri);
++  expect(onUse).toHaveBeenCalledWith(uri, true);
+   act(() => renderer.unmount());
+   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+ });
+@@ -180,7 +180,7 @@ test('Retry after returning from background deletes the old file and allows a ne
+   await press(t('student.cameraRecorderComponents.copy003'));
+   expect(renderer.root.findByType(Video).props.source.uri).toBe(nextUri);
+   await press(t('student.cameraRecorderComponents.copy010'));
+-  expect(onUse).toHaveBeenCalledWith(nextUri);
++  expect(onUse).toHaveBeenCalledWith(nextUri, true);
+   act(() => renderer.unmount());
+   expect(deleteLocalVideo).not.toHaveBeenCalledWith(nextUri);
+ });
+@@ -244,7 +244,7 @@ test('moving handles then Use exports the selected range, saves that file to Pho
+   await press(t('student.cameraRecorderComponents.copy010'));
+   expect(mockMedia.trim).toHaveBeenCalledWith(expect.any(String), 1000, 2000);
+   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+-  expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
++  expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4', true);
+   expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
+   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
+   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBe('true');
+@@ -329,7 +329,7 @@ test.each(['metadata', 'thumbnails'])('%s preparation failure hides trim tools a
+   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.cameraRecorderComponents.copy007'));
+   await press(t('student.cameraRecorderComponents.copy010'));
+   expect(mockMedia.trim).not.toHaveBeenCalled();
+-  expect(onUse).toHaveBeenCalledWith(uri);
++  expect(onUse).toHaveBeenCalledWith(uri, true);
+ });
+ 
+ test('Retry resets the previous selection and keeps handles disabled while the next clip is preparing', async () => {
+@@ -360,7 +360,7 @@ test('Use during thumbnail preparation delivers the original and cleans late thu
+   expect(handle.props.accessibilityState.disabled).toBe(true);
+   await press(t('student.cameraRecorderComponents.copy010'));
+   expect(mockMedia.trim).not.toHaveBeenCalled();
+-  expect(onUse).toHaveBeenCalledWith(uri);
++  expect(onUse).toHaveBeenCalledWith(uri, true);
+   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
+   await act(async () => { finish(['file:///cache/late-thumb.jpg']); });
+   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/late-thumb.jpg');
+@@ -433,7 +433,7 @@ test('untouched Use does not export or suppress the hint and hands off only the
+   await press(t('student.cameraRecorderComponents.copy010'));
+   expect(mockMedia.trim).not.toHaveBeenCalled();
+   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith(uri);
+-  expect(onUse).toHaveBeenCalledWith(uri);
++  expect(onUse).toHaveBeenCalledWith(uri, true);
+   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
+   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
+   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
+@@ -483,3 +483,11 @@ test.each(['light', 'dark'] as const)('trim presentation uses %s theme tokens an
+   expect(renderer.root.findAllByProps({ testID: 'trim-time-bubble' })).toHaveLength(0);
+   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain(t('student.cameraRecorderComponents.copy007'));
+ });
++
++test('a failed Photos save never claims the camera video has an album backup', async () => {
++  jest.mocked(MediaLibrary.Asset.create).mockRejectedValueOnce(new Error('Photos write failed'));
++  const { onUse } = await mountCamera();
++  await completeRecording();
++  await press(t('student.cameraRecorderComponents.copy010'));
++  expect(onUse).toHaveBeenCalledWith(uri, false);
++});
+diff --git a/src/features/training/video-upload/__tests__/local-retention.test.ts b/src/features/training/video-upload/__tests__/local-retention.test.ts
+index f913227..29ac6a0 100644
+--- a/src/features/training/video-upload/__tests__/local-retention.test.ts
++++ b/src/features/training/video-upload/__tests__/local-retention.test.ts
+@@ -32,7 +32,7 @@ test('keeps today by device calendar day and clears prior uploaded files only',
+     ),
+   ).toEqual(['yesterday']);
+ });
+-test('over 500 MiB evicts oldest prepared files first, including pending uploads', () => {
++test('over 500 MiB only evicts delivered files and preserves prepared pending uploads', () => {
+   expect(
+     localRetentionRemovals(
+       [
+@@ -53,7 +53,7 @@ test('over 500 MiB evicts oldest prepared files first, including pending uploads
+       ],
+       now,
+     ),
+-  ).toEqual(['old']);
++  ).toEqual(['new']);
+ });
+ test('delete and replace reclaim both original and prepared file without duplicate deletion', () => {
+   expect(
+@@ -92,3 +92,10 @@ test('source selection is local first, remote second, or unavailable', () => {
+   expect(VideoAttachmentPlaybackSourceSelector.select('file:///video', false, 'https://remote')).toBe('https://remote');
+   expect(VideoAttachmentPlaybackSourceSelector.select(null, false, null)).toBeNull();
+ });
++
++test.each([today, yesterday])('all undelivered prepared files survive the 500 MiB limit on day %s', createdAt => {
++  expect(localRetentionRemovals([
++    { key: 'pending-a', createdAt, sizeBytes: 600 * 1024 * 1024, uploaded: false, prepared: true },
++    { key: 'pending-b', createdAt, sizeBytes: 100 * 1024 * 1024, uploaded: false, prepared: true },
++  ], now)).toEqual([]);
++});
+diff --git a/src/features/training/video-upload/__tests__/manager-attach.test.ts b/src/features/training/video-upload/__tests__/manager-attach.test.ts
+index df47a82..2d4077b 100644
+--- a/src/features/training/video-upload/__tests__/manager-attach.test.ts
++++ b/src/features/training/video-upload/__tests__/manager-attach.test.ts
+@@ -1,4 +1,5 @@
+ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
++import { uploadsRepository } from '@/api/domains/uploads';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
+ import { videoUploadManager } from '../manager';
+ import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../store';
+@@ -267,3 +268,55 @@ test('an ensureSetLog transport failure still uses network backoff', async () =>
+     status: 'waiting', retry: { failure: 'network' }, errorMessage: 'Network request failed',
+   });
+ });
++
++test('retry now interrupts backoff and delivers the same set without waiting for its timer', async () => {
++  mockUploadAsync.mockRejectedValueOnce(new TypeError('offline'));
++  await videoUploadManager.attach(id, source, async () => 'set-log');
++  expect(useVideoUploadStore.getState().records['student:set'].status).toBe('waiting');
++  await videoUploadManager.retry(id, async () => 'set-log');
++  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'set-log' });
++});
++
++test('a missing prepared file remains retryable and a Photos replacement attaches to the original set', async () => {
++  mockUploadAsync.mockRejectedValueOnce(new TypeError('offline'));
++  await videoUploadManager.attach(id, source, async () => 'original-log');
++  const failed = useVideoUploadStore.getState().records['student:set'];
++  mockFiles.delete(failed.localUri!);
++  await videoUploadManager.retry(id);
++  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'failed', setLogId: 'original-log' });
++  expect(videoUploadManager.needsReselection(id)).toBe(true);
++  mockFiles.set(source.uri, 350000);
++  await videoUploadManager.replaceMissing(id, source);
++  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'original-log' });
++});
++
++test('cold start after an upgrade preserves yesterday\'s failed file over 500 MiB and its retry identity', async () => {
++  const uri = 'file:///documents/training-videos/old.mp4';
++  const sizeBytes = 600 * 1024 * 1024;
++  mockFiles.set(uri, sizeBytes);
++  await AsyncStorage.setItem('training.videoUploads.v1', JSON.stringify({ version: 1, records: {
++    'student:set': { ...EMPTY_VIDEO_UPLOAD, status: 'failed', createdAt: Date.now() - 86400000,
++      prepared: true, localUri: uri, sizeBytes, setLogId: 'old-log' },
++  } }));
++  const dispose = videoUploadManager.start('student');
++  try {
++    for (let i = 0; i < 80; i++) await Promise.resolve();
++    expect(mockFiles.get(uri)).toBe(sizeBytes);
++    expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'failed', localUri: uri, setLogId: 'old-log' });
++  } finally { dispose(); }
++});
++
++
++test('replacement deletion failure retains the new video and retries the same set after restart', async () => {
++  await videoUploadManager.attach(id, source, async () => 'original-log');
++  mockFiles.set(source.uri, 400000);
++  jest.mocked(uploadsRepository.remove).mockRejectedValueOnce(new TypeError('offline'));
++  await expect(videoUploadManager.attach(id, source, async () => 'original-log')).resolves.toBeUndefined();
++  const record = useVideoUploadStore.getState().records['student:set'];
++  expect(record.status).toBe('waiting');
++  expect(mockFiles.get(record.source!.uri)).toBe(400000);
++  resetVideoUploadStoreForTests();
++  await useVideoUploadStore.getState().hydrate();
++  await videoUploadManager.retry(id);
++  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'original-log' });
++});
+diff --git a/src/features/training/video-upload/__tests__/set-video-player.test.tsx b/src/features/training/video-upload/__tests__/set-video-player.test.tsx
+index 81adf4d..35c69df 100644
+--- a/src/features/training/video-upload/__tests__/set-video-player.test.tsx
++++ b/src/features/training/video-upload/__tests__/set-video-player.test.tsx
+@@ -238,7 +238,7 @@ test.each([false, true])('the set-entry sheet keeps its player mounted across re
+ });
+ 
+ 
+-test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video attachment status wraps as a group with single-line actions: %s', async status => {
++test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video attachment status and accessible 44dp actions stay in one row: %s', async status => {
+   setLocaleOverride('en');
+   useVideoUploadStore.setState({ records: { 'student:set': { ...EMPTY_VIDEO_UPLOAD, status } } });
+   await act(async () => { renderer = create(<VideoAttachmentControls studentId="student" stableSetId="set" editable ensureSetLog={async () => 'log'} buildLogRequest={() => { throw new Error('not used'); }} />); });
+@@ -246,17 +246,18 @@ test.each(['failed', 'uploading', 'preparing', 'uploaded'] as const)('video atta
+   const text = renderer.root.findAllByType(Text).find(node => node.props.children === label)!;
+   let group = text.parent!;
+   while (group.type !== View) group = group.parent!;
+-  expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flexShrink: 0 });
+-  expect(StyleSheet.flatten(text.props.style)).toMatchObject({ flexShrink: 0 });
++  expect(StyleSheet.flatten(group.props.style)).toMatchObject({ flex: 1 });
++  expect(StyleSheet.flatten(text.props.style).flexShrink).toBe(status === 'preparing' ? 0 : 1);
+   let row = group.parent!;
+   while (row.type !== View) row = row.parent!;
+-  expect(StyleSheet.flatten(row.props.style).flexWrap).toBe('wrap');
++  expect(StyleSheet.flatten(row.props.style).flexWrap).not.toBe('wrap');
+   for (const button of renderer.root.findAllByType(FeedbackPressable)) {
+     const style = StyleSheet.flatten(button.props.style({ pressed: false }));
+     expect(style.minHeight).toBeGreaterThanOrEqual(spacing.minimumHitTarget);
+     expect(style.minWidth).toBeGreaterThanOrEqual(spacing.minimumHitTarget);
+     const label = button.findAllByType(Text).find(node => node.props.children === button.props.accessibilityLabel)!;
+-    expect(label.props.numberOfLines).toBe(1);
++    if (label) expect(label.props.numberOfLines).toBe(1);
++    else expect(button.props.accessibilityLabel).toBeTruthy();
+   }
+ });
+ 
+diff --git a/src/features/training/video-upload/__tests__/upload-status.test.tsx b/src/features/training/video-upload/__tests__/upload-status.test.tsx
+index 8b7fdb1..91c40f2 100644
+--- a/src/features/training/video-upload/__tests__/upload-status.test.tsx
++++ b/src/features/training/video-upload/__tests__/upload-status.test.tsx
+@@ -38,7 +38,7 @@ test.each(['en', 'zh'] as const)('the video row shows live integer upload percen
+   act(() => { dispatch('student', 'set', { type: 'waiting', retry: {
+     failureCount: 1, firstFailureAt: 0, lastFailureAt: 0, failure: 'network',
+   } }); });
+-  expect(text()).toContain(locale === 'en' ? 'Sending' : '还在路上');
++  expect(text()).toContain(locale === 'en' ? 'Upload failed' : '上传失败');
+   expect(text()).not.toContain(locale === 'en' ? 'Sending · 42%' : '发送中 · 42%');
+ });
+ 
+@@ -69,7 +69,7 @@ jest.mock('@/api/domains/uploads', () => ({ uploadsRepository: {
+ } }));
+ jest.mock('@/analytics', () => ({ AnalyticsEvent: { MediaUpload: 'media_upload' }, track: async () => {} }));
+ 
+-test.each([false, true])('native progress reaches the video row during upload (saved session: %s)', async resumed => {
++test.each([false, true])('retry keeps failure visible until delivery (saved session: %s)', async resumed => {
+   setLocaleOverride('en');
+   useVideoUploadStore.setState({ records: { 'student:set': {
+     ...EMPTY_VIDEO_UPLOAD, status: 'failed', localUri: 'file:///source', sizeBytes: 100,
+@@ -86,7 +86,7 @@ test.each([false, true])('native progress reaches the video row during upload (s
+   });
+   try {
+     act(() => { mockProgress({ totalBytesSent: 42, totalBytesExpectedToSend: 100 }); });
+-    expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Sending · 42%');
++    expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Upload failed');
+   } finally {
+     await act(async () => {
+       mockFinish({ status: 200, headers: { ETag: 'etag' } });
+diff --git a/src/features/training/video-upload/failure-notifier.ts b/src/features/training/video-upload/failure-notifier.ts
+index 5886e6a..9eeb9d5 100644
+--- a/src/features/training/video-upload/failure-notifier.ts
++++ b/src/features/training/video-upload/failure-notifier.ts
+@@ -3,20 +3,35 @@ import * as Notifications from 'expo-notifications';
+ import { t } from '@/i18n';
+ configureNotificationHandler();
+ let timer: ReturnType<typeof setTimeout> | undefined;
+-export function notifyUploadFailures(count: () => number): void {
++export const VIDEO_UPLOAD_CHANNEL = 'video-upload-v2';
++let channelMigration: Promise<void> | undefined;
++/** Android channel importance is immutable. Preserve opt-out before retiring v1. */
++export function configureVideoUploadChannel(): Promise<void> {
++  channelMigration ??= (async () => {
++    const legacy = await Notifications.getNotificationChannelAsync('video-upload');
++    await Notifications.setNotificationChannelAsync(VIDEO_UPLOAD_CHANNEL, {
++      name: t('student.uploadFailureNotifier.copy001'),
++      importance: legacy?.importance === Notifications.AndroidImportance.NONE
++        ? Notifications.AndroidImportance.NONE : Notifications.AndroidImportance.DEFAULT,
++      sound: 'default',
++    });
++    if (legacy) await Notifications.deleteNotificationChannelAsync('video-upload');
++  })().finally(() => { channelMigration = undefined; });
++  return channelMigration;
++}
++export function notifyUploadFailures(count: () => number, studentId?: string): void {
+   clearTimeout(timer);
+   timer = setTimeout(() => {
+-    void publish(count).catch(() => undefined);
++    void publish(count, studentId).catch(() => undefined);
+   }, 1000);
+ }
+-async function publish(getCount: () => number): Promise<void> {
+-  if (!getCount()) return;
+-  await Notifications.setNotificationChannelAsync('video-upload', {
+-    name: t('student.uploadFailureNotifier.copy001'),
+-    importance: Notifications.AndroidImportance.LOW,
+-    sound: null,
+-    enableVibrate: false,
+-  });
++async function publish(getCount: () => number, studentId?: string): Promise<void> {
++  if (!getCount()) {
++    await Notifications.cancelScheduledNotificationAsync('video-upload-failures');
++    await Notifications.dismissNotificationAsync('video-upload-failures');
++    return;
++  }
++  await configureVideoUploadChannel();
+   let permission = await Notifications.getPermissionsAsync();
+   if (!permission.granted && permission.canAskAgain)
+     permission = await Notifications.requestPermissionsAsync();
+@@ -33,13 +48,13 @@ async function publish(getCount: () => number): Promise<void> {
+           : 'student.uploadFailureNotifier.copy002',
+         [count],
+       ),
+-      sound: false,
+-      data: { screen: 'training' },
++      sound: 'default',
++      data: { screen: 'training', category: 'video-upload', studentId },
+     },
+     trigger: {
+       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+       seconds: 1,
+-      channelId: 'video-upload',
++      channelId: VIDEO_UPLOAD_CHANNEL,
+     },
+   });
+ }
+diff --git a/src/features/training/video-upload/local-retention.ts b/src/features/training/video-upload/local-retention.ts
+index 007aede..07121d3 100644
+--- a/src/features/training/video-upload/local-retention.ts
++++ b/src/features/training/video-upload/local-retention.ts
+@@ -27,8 +27,8 @@ export function localRetentionRemovals(
+   let total = remaining.reduce((sum, file) => sum + file.sizeBytes, 0);
+   for (const file of remaining) {
+     if (total <= VIDEO_LOCAL_LIMIT_BYTES) break;
+-    // A source still awaiting preparation owns its only recoverable copy.
+-    if (!file.prepared) continue;
++    // Delivery, not preparation, makes a retained copy eligible for cleanup.
++    if (!file.prepared || !file.uploaded) continue;
+     removed.add(file.key);
+     total -= file.sizeBytes;
+   }
+diff --git a/src/features/training/video-upload/manager.ts b/src/features/training/video-upload/manager.ts
+index 8807662..6b5945a 100644
+--- a/src/features/training/video-upload/manager.ts
++++ b/src/features/training/video-upload/manager.ts
+@@ -1,4 +1,5 @@
+ import { t } from '@/i18n';
++import { hasVideoDeliveryFailure } from './delivery-failures';
+ import { SerialTaskQueue } from '../serial-task-queue';
+ import { setsRepository, type SetLogUpsertRequest } from '@/api/domains/sets';
+ import { AppState } from 'react-native';
+@@ -88,6 +89,7 @@ function notify(studentId: string) {
+             key.startsWith(`${studentId}:`) && record.status === 'failed',
+         ).length
+       : 0,
++    studentId,
+   );
+ }
+ function terminal(
+@@ -156,6 +158,9 @@ async function run(
+   try {
+     let record = recordFor(id);
+     if (!record) return;
++    const uri = record.prepared ? record.localUri : record.source?.uri;
++    if (!uri || !localVideoSize(uri))
++      throw new VideoNativeError(t('student.videoDelivery.missingBody'), { deterministic: true });
+     let setLogId = record.setLogId;
+     if (!setLogId) {
+       try {
+@@ -190,6 +195,15 @@ async function run(
+     await flushVideoUploads();
+     check();
+     record = recordFor(id)!;
++    if (record.attachmentId && !record.session) {
++      // An explicit replacement may still need to retire its previous remote attachment.
++      await uploadsRepository.remove(record.attachmentId).catch(error => {
++        if (!(error instanceof ApiError && error.status === 404)) throw error;
++      });
++      check();
++      record = dispatch(id, { type: 'sessionExpired' });
++      await flushVideoUploads();
++    }
+     if (!record.prepared || !record.localUri || !record.sizeBytes) {
+       if (!record.source)
+         throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
+@@ -244,6 +258,7 @@ async function run(
+     check();
+     const original = recordFor(id)?.source?.uri;
+     dispatch(id, { type: 'succeeded', attachmentId });
++    notify(id.studentId);
+     await flushVideoUploads();
+     if (original && original !== record.localUri) deleteLocalVideo(original);
+     void track(AnalyticsEvent.MediaUpload, {
+@@ -343,6 +358,7 @@ async function removeRecord(id: UploadIdentity): Promise<void> {
+     });
+   removedVideoUris(record).forEach(deleteLocalVideo);
+   dispatch(id, { type: 'remove' });
++  notify(id.studentId);
+   ensureCallbacks.delete(keyFor(id));
+   await flushVideoUploads();
+ }
+@@ -364,12 +380,11 @@ async function sweep(): Promise<void> {
+       studentId: key.slice(0, separator),
+       stableSetId: key.slice(separator + 1),
+     };
+-    await stop(id);
+     const record = recordFor(id);
+-    if (!record) continue;
++    // Delivered files need no cancellation. Do not yield between eligibility and deletion.
++    if (!record || record.status !== 'uploaded') continue;
+     removedVideoUris(record).forEach(deleteLocalVideo);
+     dispatch(id, { type: 'localCleared' });
+-    if (record.status !== 'uploaded') terminal(id);
+   }
+   await flushVideoUploads();
+ }
+@@ -388,6 +403,30 @@ function mutate<T>(
+ const remove = (id: UploadIdentity) => mutate(id, () => removeRecord(id));
+ 
+ export const videoUploadManager = {
++  needsReselection(id: UploadIdentity): boolean {
++    const record = recordFor(id);
++    if (!record || record.status === 'none' || record.status === 'uploaded') return false;
++    const uri = record.prepared ? record.localUri : record.source?.uri;
++    return !uri || localVideoSize(uri) === 0;
++  },
++  async replaceMissing(id: UploadIdentity, source: SelectedVideo, ensure?: EnsureSetLog): Promise<void> {
++    const record = recordFor(id);
++    if (!record || !videoUploadManager.needsReselection(id)) return;
++    const setLogId = record.setLogId;
++    const request = record.logRequest;
++    await videoUploadManager.attach(id, source, async () => {
++      if (setLogId) return setLogId;
++      if (ensure) return ensure();
++      if (request) return (await setsRepository.upsert(request)).id;
++      throw new Error('Set log unavailable');
++    }, () => request ?? undefined);
++  },
++  async retryAll(studentId: string, stableSetIds?: readonly string[]): Promise<void> {
++    await useVideoUploadStore.getState().hydrate();
++    const ids = stableSetIds ?? Object.keys(useVideoUploadStore.getState().records)
++      .filter(key => key.startsWith(`${studentId}:`)).map(key => key.slice(studentId.length + 1));
++    await Promise.all(ids.map(stableSetId => videoUploadManager.retry({ studentId, stableSetId })));
++  },
+   attach(
+     id: UploadIdentity,
+     source: SelectedVideo,
+@@ -400,18 +439,16 @@ export const videoUploadManager = {
+     const done = (async () => {
+       const retainedUri = await mutate(id, async () => {
+         await useVideoUploadStore.getState().hydrate();
++        const logRequest = buildLogRequest?.();
+         const retained = await retainVideoSource(source);
+-        let logRequest: SetLogUpsertRequest | undefined;
+-        try {
+-          logRequest = buildLogRequest?.();
+-          await removeRecord(id);
+-        } catch (error) {
+-          deleteLocalVideo(retained.uri);
+-          throw error;
+-        }
+-        dispatch(id, { type: 'attach', source: retained, logRequest });
++        await stop(id);
++        const previous = recordFor(id);
++        // Publish the new durable copy before retiring the explicitly replaced local file.
++        // Remote deletion is retryable work; it must never discard this new recording.
++        dispatch(id, { type: 'attach', source: retained, logRequest, previousAttachmentId: previous?.attachmentId });
+         ensureCallbacks.set(keyFor(id), ensure);
+         await flushVideoUploads();
++        if (previous) removedVideoUris(previous).filter(uri => uri !== retained.uri).forEach(deleteLocalVideo);
+         return retained.uri;
+       });
+       void track(AnalyticsEvent.MediaUpload, {
+@@ -430,17 +467,27 @@ export const videoUploadManager = {
+     attachments.set(key, { sourceUri: source.uri, done });
+     return done;
+   },
+-  async retry(id: UploadIdentity, ensure: EnsureSetLog, buildLogRequest?: () => SetLogUpsertRequest): Promise<void> {
++  async retry(id: UploadIdentity, ensure?: EnsureSetLog, buildLogRequest?: () => SetLogUpsertRequest): Promise<void> {
+     const record = recordFor(id);
+-    if (record?.status !== 'failed') return;
++    if (!record || !hasVideoDeliveryFailure(record)) return;
++    // Do not restart an active retry; waiting jobs can jump their backoff timer.
++    if (jobs.has(keyFor(id)) && record.status !== 'failed') return;
++    clearTimeout(timers.get(keyFor(id)));
++    timers.delete(keyFor(id));
+     // A prefill update may request retry while the failed attach is still settling.
+     await attachments.get(keyFor(id))?.done;
+     await jobs.get(keyFor(id))?.done;
+     if (recordFor(id) !== record) return;
+     const logRequest = buildLogRequest?.();
+     dispatch(id, { type: 'retry', logRequest });
+-    ensureCallbacks.set(keyFor(id), ensure);
+-    await execute(id, ensure);
++    const ensureLog = ensure ?? (async () => {
++      const current = recordFor(id);
++      if (current?.setLogId) return current.setLogId;
++      if (current?.logRequest) return (await setsRepository.upsert(current.logRequest)).id;
++      throw new Error('Set log unavailable');
++    });
++    ensureCallbacks.set(keyFor(id), ensureLog);
++    await execute(id, ensureLog);
+   },
+   remove,
+   cancel: remove,
+@@ -476,6 +523,7 @@ export const videoUploadManager = {
+       }
+       await sweep();
+       initialized = true;
++      notify(studentId);
+       resumeAll();
+     })().catch(() => undefined);
+     let connected: boolean | null = null;
+diff --git a/src/features/training/video-upload/model.ts b/src/features/training/video-upload/model.ts
+index 9fdf17c..e1bebef 100644
+--- a/src/features/training/video-upload/model.ts
++++ b/src/features/training/video-upload/model.ts
+@@ -24,6 +24,7 @@ export const VIDEO_UPLOAD_ERRORS = Object.freeze({
+ });
+ 
+ export type SelectedVideo = {
++  savedToPhotos?: boolean;
+   uri: string;
+   width: number;
+   height: number;
+@@ -44,6 +45,7 @@ export type VideoUploadStatus =
+   | 'waiting';
+ 
+ export type VideoUploadRecord = {
++  savedToPhotos?: boolean;
+   logRequest: SetLogUpsertRequest | null;
+   createdAt: number;
+   retry: RetryState | null;
+@@ -144,6 +146,7 @@ export function videoUploadReducer(
+         status: 'pending',
+         createdAt: Date.now(),
+         source: event.source,
++        savedToPhotos: event.source.savedToPhotos ?? false,
+         logRequest: event.logRequest ?? null,
+         attachmentId: event.previousAttachmentId ?? null,
+       };
+@@ -197,7 +200,7 @@ export function videoUploadReducer(
+         status: state.prepared ? 'preparing' : 'pending',
+         progress: 0,
+         retry: null,
+-        errorMessage: null,
++        errorMessage: state.errorMessage ?? t('student.videoAttachmentV3Controls.copy008'),
+       };
+     case 'remove':
+       return EMPTY_VIDEO_UPLOAD;
+diff --git a/src/features/training/video-upload/native.ts b/src/features/training/video-upload/native.ts
+index cba4f26..927ef4a 100644
+--- a/src/features/training/video-upload/native.ts
++++ b/src/features/training/video-upload/native.ts
+@@ -139,7 +139,7 @@ export async function prepareTrainingVideo(
+   };
+   check();
+   if (!localVideoSize(source.uri))
+-    throw new VideoNativeError(t('student.videoAttachmentViewModel.copy002'), {
++    throw new VideoNativeError(t('student.videoDelivery.missingBody'), {
+       deterministic: true,
+     });
+   let output: string | null = null;
+diff --git a/src/features/training/video-upload/store.ts b/src/features/training/video-upload/store.ts
+index c41cba6..17af596 100644
+--- a/src/features/training/video-upload/store.ts
++++ b/src/features/training/video-upload/store.ts
+@@ -14,6 +14,7 @@ import {
+ const VIDEO_UPLOAD_STORAGE_KEY = 'training.videoUploads.v1';
+ 
+ const SelectedVideoSchema = z.object({
++  savedToPhotos: z.boolean().optional(),
+   uri: z.string(),
+   width: z.number(),
+   height: z.number(),
+@@ -25,6 +26,7 @@ const SelectedVideoSchema = z.object({
+ });
+ 
+ const VideoUploadRecordSchema = z.object({
++  savedToPhotos: z.boolean().optional(),
+   logRequest: SetLogUpsertRequestSchema.nullable().default(null),
+   createdAt: z.number().default(0),
+   retry: z
+diff --git a/src/i18n/catalog/RnExtras.json b/src/i18n/catalog/RnExtras.json
+index ccef7c5..d9929a6 100644
+--- a/src/i18n/catalog/RnExtras.json
++++ b/src/i18n/catalog/RnExtras.json
+@@ -480,5 +480,16 @@
+ "training.explainer.rir.footer": {"en": "Couldn't do another rep? Enter 0.", "zh": "一次也做不动了就填 0"},
+ "training.explainer.rir.help": {"en": "What is RIR", "zh": "RIR 是什么"},
+ "training.explainer.close": {"en": "Close", "zh": "关闭"},
+-"training.explainer.rir.remaining": {"en": {"one": "%@ rep left", "other": "%@ reps left"}, "zh": "还剩 %@ 次"}
++"training.explainer.rir.remaining": {"en": {"one": "%@ rep left", "other": "%@ reps left"}, "zh": "还剩 %@ 次"},
++"student.videoDelivery.failed": {"en": "{0} videos didn't upload. Retrying…", "zh": "{0} 条视频没传上，正在自动重试"},
++"student.videoDelivery.failedOne": {"en": "1 video didn't upload. Retrying…", "zh": "1 条视频没传上，正在自动重试"},
++"student.videoDelivery.history": {"en": "{0} videos didn't upload", "zh": "{0} 条视频没传上"},
++"student.videoDelivery.historyOne": {"en": "1 video didn't upload", "zh": "1 条视频没传上"},
++"student.videoDelivery.retryNow": {"en": "Retry now", "zh": "立即重试"},
++"student.videoDelivery.notUploaded": {"en": "Not uploaded", "zh": "没传上"},
++"student.videoDelivery.missingTitle": {"en": "This video didn't upload", "zh": "这条视频没传上"},
++"student.videoDelivery.missingBody": {"en": "This video's file is no longer on your phone. Pick it from Photos to attach it to this set again.", "zh": "手机里找不到这条视频的文件了。从相册选出来，就能挂回这一组。"},
++"student.videoDelivery.savedToPhotos": {"en": "A copy was saved to Photos when you recorded it.", "zh": "录像时它也存了一份到相册。"},
++"student.videoDelivery.pickAgain": {"en": "Pick this video again from Photos", "zh": "从相册重新选这条视频"},
++"student.videoDelivery.later": {"en": "Not now", "zh": "先不管"}
+ }
+diff --git a/src/i18n/catalog/StudentKit.json b/src/i18n/catalog/StudentKit.json
+index c5a9a81..28bf97c 100644
+--- a/src/i18n/catalog/StudentKit.json
++++ b/src/i18n/catalog/StudentKit.json
+@@ -3804,12 +3804,12 @@
+ "zh": "训练视频上传失败"
+ },
+ "student.uploadFailureNotifier.copy002": {
+-"en": "{0} training videos failed to upload. Open to review",
+-"zh": "有 {0} 条训练视频没传成功，打开看看"
++"en": "{0} videos didn't upload. Tap to retry.",
++"zh": "有 {0} 条训练视频没传上，点击重试"
+ },
+ "student.uploadFailureNotifier.copy002.one": {
+-"en": "{0} training video failed to upload. Open to review",
+-"zh": "有 {0} 条训练视频没传成功，打开看看"
++"en": "{0} video didn't upload. Tap to retry.",
++"zh": "有 {0} 条训练视频没传上，点击重试"
+ },
+ "student.videoAttachmentSection.copy001": {
+ "en": "Video",
+diff --git a/src/i18n/generated/zh-Hant.json b/src/i18n/generated/zh-Hant.json
+index 6a9a6f6..a101f58 100644
+--- a/src/i18n/generated/zh-Hant.json
++++ b/src/i18n/generated/zh-Hant.json
+@@ -2023,8 +2023,8 @@
+   "student.trainingShareFailed": "無法分享訓練記錄",
+   "student.unreadSuffix": "條未讀",
+   "student.uploadFailureNotifier.copy001": "訓練影片上傳失敗",
+-  "student.uploadFailureNotifier.copy002": "有 {0} 條訓練影片沒傳成功，開啟看看",
+-  "student.uploadFailureNotifier.copy002.one": "有 {0} 條訓練影片沒傳成功，開啟看看",
++  "student.uploadFailureNotifier.copy002": "有 {0} 條訓練影片沒傳上，點選重試",
++  "student.uploadFailureNotifier.copy002.one": "有 {0} 條訓練影片沒傳上，點選重試",
+   "student.videoAttachmentSection.copy001": "影片",
+   "student.videoAttachmentSection.copy002": "重試",
+   "student.videoAttachmentSection.copy003": "影片暫時無法播放,請重試",
+@@ -2466,5 +2466,16 @@
+   "training.explainer.rir.footer": "一下也做不動了就填 0",
+   "training.explainer.rir.help": "RIR 是什麼",
+   "training.explainer.close": "關閉",
+-  "training.explainer.rir.remaining": "還剩 %@ 下"
++  "training.explainer.rir.remaining": "還剩 %@ 下",
++  "student.videoDelivery.failed": "{0} 條影片沒傳上，正在自動重試",
++  "student.videoDelivery.failedOne": "1 條影片沒傳上，正在自動重試",
++  "student.videoDelivery.history": "{0} 條影片沒傳上",
++  "student.videoDelivery.historyOne": "1 條影片沒傳上",
++  "student.videoDelivery.retryNow": "立即重試",
++  "student.videoDelivery.notUploaded": "沒傳上",
++  "student.videoDelivery.missingTitle": "這條影片沒傳上",
++  "student.videoDelivery.missingBody": "手機裡找不到這條影片的檔案了。從相簿選出來，就能掛回這一組。",
++  "student.videoDelivery.savedToPhotos": "錄影時它也存了一份到相簿。",
++  "student.videoDelivery.pickAgain": "從相簿重新選這條影片",
++  "student.videoDelivery.later": "先不管"
+ }
+diff --git a/src/notifications/handler.ts b/src/notifications/handler.ts
+index 9f4a650..480a443 100644
+--- a/src/notifications/handler.ts
++++ b/src/notifications/handler.ts
+@@ -5,7 +5,8 @@ export function configureNotificationHandler(): void {
+   const notifications: typeof import('expo-notifications') = require('expo-notifications');
+   notifications.setNotificationHandler({
+     handleNotification: async (notification) => {
+-      const training = notification.request.content.data?.category === 'training-reminder'
++      const training = notification.request.content.data?.category === 'video-upload'
++        || notification.request.content.data?.category === 'training-reminder'
+         || notification.request.identifier.startsWith('training-reminder-');
+       return {
+         shouldShowBanner: training,
+diff --git a/src/features/training/video-upload/VideoDeliveryRecovery.tsx b/src/features/training/video-upload/VideoDeliveryRecovery.tsx
+new file mode 100644
+index 0000000..3adc6ce
+--- /dev/null
++++ b/src/features/training/video-upload/VideoDeliveryRecovery.tsx
+@@ -0,0 +1,60 @@
++import { useState } from 'react';
++import { Modal, Text, View } from 'react-native';
++import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import { AppButton, font, radius, spacing, useColors } from '@/design';
++import { t } from '@/i18n';
++import type { SetLogUpsertRequest } from '@/api/domains/sets';
++import type { VideoBadgeInfo } from '@/features/video-player/types';
++import { useVideoUploadStore } from './store';
++
++export type RetryVideo = { stableSetId: string; badge?: VideoBadgeInfo };
++
++/** Shared by editable sets and read-only history; identity stays with the failed set. */
++export function useVideoDeliveryRetry(studentId: string, callbacks?: {
++  ensureSetLog: () => Promise<string>; buildLogRequest?: () => SetLogUpsertRequest;
++}) {
++  const colors = useColors();
++  const [missing, setMissing] = useState<RetryVideo[]>([]);
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState(false);
++  const selected = missing[0];
++  const record = useVideoUploadStore(state => selected ? state.records[`${studentId}:${selected.stableSetId}`] : undefined);
++  const retry = async (videos: readonly RetryVideo[]) => {
++    const { videoUploadManager } = await import('./manager');
++    const absent = videos.filter(video => videoUploadManager.needsReselection({ studentId, stableSetId: video.stableSetId }));
++    setError(false);
++    setMissing(absent);
++    await Promise.all(videos.filter(video => !absent.includes(video)).map(video =>
++      videoUploadManager.retry({ studentId, stableSetId: video.stableSetId }, callbacks?.ensureSetLog, callbacks?.buildLogRequest),
++    )).catch(() => setError(true));
++  };
++  const close = () => { if (!busy) { setMissing([]); setError(false); } };
++  const badge = selected?.badge;
++  const details = [badge?.exerciseName, badge?.setOrdinal ? t('student.historyEntriesView.copy001', [badge.setOrdinal]) : null,
++    badge?.weightKg != null && badge?.reps != null ? `${badge.weightKg} kg × ${badge.reps}` : null,
++    badge?.rpe != null ? `RPE ${badge.rpe}` : null].filter(Boolean).join(' · ');
++  const recovery = selected ? <Modal transparent visible animationType="slide" onRequestClose={close}>
++    <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: colors.modalShadow }}>
++      <View accessibilityViewIsModal style={{ padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md, backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card }}>
++        {details ? <Text style={{ ...font.body(12), color: colors.textSecondary }}>{details}</Text> : null}
++        <MaterialCommunityIcons name="alert-circle-outline" color={colors.danger} size={28} />
++        <Text style={{ ...font.body(20, 'bold'), color: colors.danger }}>{t('student.videoDelivery.missingTitle')}</Text>
++        <Text style={{ ...font.body(15), color: colors.textSecondary }}>{t('student.videoDelivery.missingBody')}{record?.savedToPhotos ? ` ${t('student.videoDelivery.savedToPhotos')}` : ''}</Text>
++        {error ? <Text style={{ ...font.body(13), color: colors.danger }}>{t('student.videoAttachmentViewModel.copy001')}</Text> : null}
++        <AppButton disabled={busy} label={t('student.videoDelivery.pickAgain')} onPress={() => {
++          setBusy(true); setError(false);
++          void (async () => {
++            const { pickTrainingVideo } = await import('./native');
++            const { videoUploadManager } = await import('./manager');
++            const video = await pickTrainingVideo();
++            if (!video) return;
++            await videoUploadManager.replaceMissing({ studentId, stableSetId: selected.stableSetId }, video, callbacks?.ensureSetLog);
++            setMissing(current => current.slice(1));
++          })().catch(() => setError(true)).finally(() => setBusy(false));
++        }} />
++        <AppButton variant="link" disabled={busy} label={t('student.videoDelivery.later')} onPress={close} />
++      </View>
++    </View>
++  </Modal> : null;
++  return { retry, recovery };
++}
+diff --git a/src/features/training/video-upload/VideoFailureSummary.tsx b/src/features/training/video-upload/VideoFailureSummary.tsx
+new file mode 100644
+index 0000000..e17d667
+--- /dev/null
++++ b/src/features/training/video-upload/VideoFailureSummary.tsx
+@@ -0,0 +1,41 @@
++import { Text, View } from 'react-native';
++import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
++import { font, radius, spacing, useColors } from '@/design';
++import { t } from '@/i18n';
++import { EMPTY_VIDEO_UPLOAD } from './model';
++import { useVideoUploadStore } from './store';
++import { videoDeliveryFailures } from './delivery-failures';
++import { useVideoDeliveryRetry, type RetryVideo } from './VideoDeliveryRecovery';
++
++export type DeliverySet = RetryVideo & { exerciseId?: string; setLogId?: string | null };
++export function useVideoFailures(studentId: string, sets: readonly DeliverySet[]) {
++  const records = useVideoUploadStore(state => state.records);
++  const rows = sets.map(set => {
++    const key = `${studentId}:${set.stableSetId}`;
++    const direct = records[key];
++    const found = direct && (!set.setLogId || !direct.setLogId || direct.setLogId === set.setLogId)
++      ? [key, direct] as const : Object.entries(records).find(([key, record]) => key.startsWith(`${studentId}:`) && set.setLogId && record.setLogId === set.setLogId);
++    return { ...set, stableSetId: found?.[0].slice(studentId.length + 1) ?? set.stableSetId, exerciseId: set.exerciseId ?? '', upload: found?.[1] ?? EMPTY_VIDEO_UPLOAD };
++  });
++  const failures = videoDeliveryFailures(rows);
++  return { ...failures, videos: rows.filter(row => failures.setIds.includes(row.stableSetId)) };
++}
++
++export function VideoFailureSummary({ studentId, sets, history = false }: { studentId: string; sets: readonly DeliverySet[]; history?: boolean }) {
++  const colors = useColors();
++  const failures = useVideoFailures(studentId, sets);
++  const { retry, recovery } = useVideoDeliveryRetry(studentId);
++  if (!failures.count && !recovery) return null;
++  const key = history ? (failures.count === 1 ? 'historyOne' : 'history') : (failures.count === 1 ? 'failedOne' : 'failed');
++  return <>
++    {failures.count ? <View accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.control, backgroundColor: colors.dangerSoft }}>
++      <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.danger} />
++      <Text style={{ flex: 1, ...font.body(13), color: colors.danger }}>{t(`student.videoDelivery.${key}`, [failures.count])}</Text>
++      <Pressable accessibilityRole="button" onPress={() => void retry(failures.videos)} style={{ minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget, justifyContent: 'center' }}>
++        <Text style={{ ...font.body(13, 'semibold'), color: colors.goldText }}>{t(history ? 'student.videoAttachmentV3Controls.copy009' : 'student.videoDelivery.retryNow')}</Text>
++      </Pressable>
++    </View> : null}
++    {recovery}
++  </>;
++}
+diff --git a/src/features/training/video-upload/VideoUploadNotificationSession.tsx b/src/features/training/video-upload/VideoUploadNotificationSession.tsx
+new file mode 100644
+index 0000000..09f0769
+--- /dev/null
++++ b/src/features/training/video-upload/VideoUploadNotificationSession.tsx
+@@ -0,0 +1,34 @@
++import { useEffect } from 'react';
++import { useRouter } from 'expo-router';
++import * as Notifications from 'expo-notifications';
++import { useSessionStore } from '@/api/session';
++
++export function VideoUploadNotificationSession() {
++  const studentId = useSessionStore(state => state.status === 'authenticated' &&
++    (state.user?.role === 'coached_student' || state.user?.role === 'self_train_student') ? state.user.id : null);
++  const router = useRouter();
++  useEffect(() => {
++    if (!studentId) return;
++    void import('./failure-notifier').then(({ configureVideoUploadChannel }) => configureVideoUploadChannel()).catch(() => undefined);
++    let disposed = false;
++    const consumed = new Set<string>();
++    const handle = async (response: Notifications.NotificationResponse | null) => {
++      if (!response || disposed || useSessionStore.getState().user?.id !== studentId) return;
++      const request = response.notification.request;
++      if (request.identifier !== 'video-upload-failures' || consumed.has(request.identifier)) return;
++      // Old notifications lack ownership: open training, but never retry another account's videos.
++      if (request.content.data?.studentId && request.content.data?.studentId !== studentId) return;
++      consumed.add(request.identifier);
++      await Notifications.clearLastNotificationResponseAsync();
++      if (disposed) return;
++      router.navigate('/(student)/training');
++      const { videoUploadManager } = await import('./manager');
++      if (!disposed && useSessionStore.getState().user?.id === studentId) await videoUploadManager.retryAll(studentId);
++      consumed.delete(request.identifier);
++    };
++    const subscription = Notifications.addNotificationResponseReceivedListener(response => { void handle(response).catch(() => undefined); });
++    void Notifications.getLastNotificationResponseAsync().then(handle).catch(() => undefined);
++    return () => { disposed = true; subscription.remove(); };
++  }, [studentId, router]);
++  return null;
++}
+diff --git a/src/features/training/video-upload/__tests__/delivery-failures.test.ts b/src/features/training/video-upload/__tests__/delivery-failures.test.ts
+new file mode 100644
+index 0000000..7319342
+--- /dev/null
++++ b/src/features/training/video-upload/__tests__/delivery-failures.test.ts
+@@ -0,0 +1,20 @@
++import { expect, test } from '@jest/globals';
++import { EMPTY_VIDEO_UPLOAD, videoUploadReducer } from '../model';
++import { videoDeliveryFailures } from '../delivery-failures';
++
++test('first failure including backoff and a suspended set log appears in day, exercise and set markers', () => {
++  const rows = [
++    { stableSetId: 'waiting', exerciseId: 'bench', upload: { ...EMPTY_VIDEO_UPLOAD, status: 'waiting' as const } },
++    { stableSetId: 'no-log', exerciseId: 'squat', upload: { ...EMPTY_VIDEO_UPLOAD, status: 'failed' as const } },
++    { stableSetId: 'sending', exerciseId: 'bench', upload: { ...EMPTY_VIDEO_UPLOAD, status: 'uploading' as const } },
++  ];
++  expect(videoDeliveryFailures(rows)).toEqual({ count: 2, setIds: ['waiting', 'no-log'], exerciseIds: ['bench', 'squat'] });
++});
++
++test('manual retry keeps the failure visible until delivery, then removes all markers', () => {
++  const failed = videoUploadReducer(EMPTY_VIDEO_UPLOAD, { type: 'failed', message: 'offline' });
++  const retrying = videoUploadReducer(failed, { type: 'retry' });
++  const row = { stableSetId: 'set', exerciseId: 'bench', upload: retrying };
++  expect(videoDeliveryFailures([row]).count).toBe(1);
++  expect(videoDeliveryFailures([{ ...row, upload: videoUploadReducer(retrying, { type: 'succeeded', attachmentId: 'video' }) }]).count).toBe(0);
++});
+diff --git a/src/features/training/video-upload/__tests__/failure-notifier.test.ts b/src/features/training/video-upload/__tests__/failure-notifier.test.ts
+new file mode 100644
+index 0000000..e5f1409
+--- /dev/null
++++ b/src/features/training/video-upload/__tests__/failure-notifier.test.ts
+@@ -0,0 +1,60 @@
++import { afterEach, expect, jest, test } from '@jest/globals';
++import * as Notifications from 'expo-notifications';
++import { notifyUploadFailures } from '../failure-notifier';
++
++jest.mock('expo-notifications', () => ({
++  AndroidImportance: { DEFAULT: 3, LOW: 2, NONE: 0 },
++  SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval' },
++  setNotificationHandler: jest.fn(),
++  getNotificationChannelAsync: jest.fn(async () => null),
++  deleteNotificationChannelAsync: jest.fn(async () => {}),
++  setNotificationChannelAsync: jest.fn(async () => null),
++  getPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
++  requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
++  scheduleNotificationAsync: jest.fn(async () => 'video-upload-failures'),
++  cancelScheduledNotificationAsync: jest.fn(async () => {}),
++  dismissNotificationAsync: jest.fn(async () => {}),
++}));
++afterEach(() => { jest.useRealTimers(); jest.clearAllMocks(); jest.mocked(Notifications.getNotificationChannelAsync).mockReset().mockResolvedValue(null); });
++test('failure notification requests normal permission and publishes one DEFAULT aggregate with retry copy', async () => {
++  jest.useFakeTimers();
++  notifyUploadFailures(() => 1);
++  notifyUploadFailures(() => 2);
++  await jest.advanceTimersByTimeAsync(1000);
++  expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith('video-upload-v2', expect.objectContaining({ importance: 3 }));
++  expect(Notifications.requestPermissionsAsync).toHaveBeenCalledWith();
++  expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
++  expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(expect.objectContaining({
++    identifier: 'video-upload-failures', content: expect.objectContaining({ body: "2 videos didn't upload. Tap to retry.", sound: 'default' }),
++  }));
++});
++
++
++test.each([[2, 3], [0, 0]])('migrates legacy importance %s to v2 importance %s without reopening a disabled channel', async (legacyImportance, expectedImportance) => {
++  jest.useFakeTimers();
++  jest.mocked(Notifications.getNotificationChannelAsync).mockResolvedValueOnce({ id: 'video-upload', importance: legacyImportance } as Notifications.NotificationChannel);
++  notifyUploadFailures(() => 1);
++  await jest.advanceTimersByTimeAsync(1000);
++  expect(Notifications.getNotificationChannelAsync).toHaveBeenCalledWith('video-upload');
++  expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith('video-upload-v2', expect.objectContaining({ importance: expectedImportance }));
++  expect(Notifications.deleteNotificationChannelAsync).toHaveBeenCalledWith('video-upload');
++  expect(jest.mocked(Notifications.setNotificationChannelAsync).mock.invocationCallOrder[0]).toBeLessThan(jest.mocked(Notifications.deleteNotificationChannelAsync).mock.invocationCallOrder[0]);
++});
++
++test('denied notification permission stays denied and does not publish', async () => {
++  jest.useFakeTimers();
++  jest.mocked(Notifications.getPermissionsAsync).mockResolvedValueOnce({ granted: false, canAskAgain: false } as Notifications.NotificationPermissionsStatus);
++  notifyUploadFailures(() => 2);
++  await jest.advanceTimersByTimeAsync(1000);
++  expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
++  expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
++});
++
++test('delivery clears the single outstanding aggregate', async () => {
++  jest.useFakeTimers();
++  notifyUploadFailures(() => 0);
++  await jest.advanceTimersByTimeAsync(1000);
++  expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('video-upload-failures');
++  expect(Notifications.dismissNotificationAsync).toHaveBeenCalledWith('video-upload-failures');
++  expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
++});
+diff --git a/src/features/training/video-upload/delivery-failures.ts b/src/features/training/video-upload/delivery-failures.ts
+new file mode 100644
+index 0000000..dab762d
+--- /dev/null
++++ b/src/features/training/video-upload/delivery-failures.ts
+@@ -0,0 +1,13 @@
++import type { VideoUploadRecord } from './model';
++
++/** Delivery is the only successful end state; a retry must not hide a failure. */
++export function hasVideoDeliveryFailure(record: VideoUploadRecord): boolean {
++  return record.status !== 'none' && record.status !== 'uploaded' &&
++    (record.status === 'failed' || record.status === 'waiting' || record.retry !== null || Boolean(record.errorMessage));
++}
++
++export function videoDeliveryFailures(rows: readonly { stableSetId: string; exerciseId: string; upload: VideoUploadRecord }[]) {
++  const failed = rows.filter(row => hasVideoDeliveryFailure(row.upload));
++  const setIds = [...new Set(failed.map(row => row.stableSetId))];
++  return { count: setIds.length, setIds, exerciseIds: [...new Set(failed.map(row => row.exerciseId))] };
++}

@@ -24,6 +24,7 @@ export const VIDEO_UPLOAD_ERRORS = Object.freeze({
 });
 
 export type SelectedVideo = {
+  savedToPhotos?: boolean;
   uri: string;
   width: number;
   height: number;
@@ -44,6 +45,7 @@ export type VideoUploadStatus =
   | 'waiting';
 
 export type VideoUploadRecord = {
+  savedToPhotos?: boolean;
   logRequest: SetLogUpsertRequest | null;
   createdAt: number;
   retry: RetryState | null;
@@ -144,6 +146,7 @@ export function videoUploadReducer(
         status: 'pending',
         createdAt: Date.now(),
         source: event.source,
+        savedToPhotos: event.source.savedToPhotos ?? false,
         logRequest: event.logRequest ?? null,
         attachmentId: event.previousAttachmentId ?? null,
       };
@@ -197,7 +200,7 @@ export function videoUploadReducer(
         status: state.prepared ? 'preparing' : 'pending',
         progress: 0,
         retry: null,
-        errorMessage: null,
+        errorMessage: state.errorMessage ?? t('student.videoAttachmentV3Controls.copy008'),
       };
     case 'remove':
       return EMPTY_VIDEO_UPLOAD;

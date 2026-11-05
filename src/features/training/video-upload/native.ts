@@ -139,7 +139,7 @@ export async function prepareTrainingVideo(
   };
   check();
   if (!localVideoSize(source.uri))
-    throw new VideoNativeError(t('student.videoAttachmentViewModel.copy002'), {
+    throw new VideoNativeError(t('student.videoDelivery.missingBody'), {
       deterministic: true,
     });
   let output: string | null = null;

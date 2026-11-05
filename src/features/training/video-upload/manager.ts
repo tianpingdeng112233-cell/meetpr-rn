@@ -1,4 +1,5 @@
 import { t } from '@/i18n';
+import { hasVideoDeliveryFailure } from './delivery-failures';
 import { SerialTaskQueue } from '../serial-task-queue';
 import { setsRepository, type SetLogUpsertRequest } from '@/api/domains/sets';
 import { AppState } from 'react-native';
@@ -88,6 +89,7 @@ function notify(studentId: string) {
             key.startsWith(`${studentId}:`) && record.status === 'failed',
         ).length
       : 0,
+    studentId,
   );
 }
 function terminal(
@@ -156,6 +158,9 @@ async function run(
   try {
     let record = recordFor(id);
     if (!record) return;
+    const uri = record.prepared ? record.localUri : record.source?.uri;
+    if (!uri || !localVideoSize(uri))
+      throw new VideoNativeError(t('student.videoDelivery.missingBody'), { deterministic: true });
     let setLogId = record.setLogId;
     if (!setLogId) {
       try {
@@ -190,6 +195,15 @@ async function run(
     await flushVideoUploads();
     check();
     record = recordFor(id)!;
+    if (record.attachmentId && !record.session) {
+      // An explicit replacement may still need to retire its previous remote attachment.
+      await uploadsRepository.remove(record.attachmentId).catch(error => {
+        if (!(error instanceof ApiError && error.status === 404)) throw error;
+      });
+      check();
+      record = dispatch(id, { type: 'sessionExpired' });
+      await flushVideoUploads();
+    }
     if (!record.prepared || !record.localUri || !record.sizeBytes) {
       if (!record.source)
         throw new VideoNativeError(VIDEO_UPLOAD_ERRORS.processing, {
@@ -244,6 +258,7 @@ async function run(
     check();
     const original = recordFor(id)?.source?.uri;
     dispatch(id, { type: 'succeeded', attachmentId });
+    notify(id.studentId);
     await flushVideoUploads();
     if (original && original !== record.localUri) deleteLocalVideo(original);
     void track(AnalyticsEvent.MediaUpload, {
@@ -343,6 +358,7 @@ async function removeRecord(id: UploadIdentity): Promise<void> {
     });
   removedVideoUris(record).forEach(deleteLocalVideo);
   dispatch(id, { type: 'remove' });
+  notify(id.studentId);
   ensureCallbacks.delete(keyFor(id));
   await flushVideoUploads();
 }
@@ -364,12 +380,11 @@ async function sweep(): Promise<void> {
       studentId: key.slice(0, separator),
       stableSetId: key.slice(separator + 1),
     };
-    await stop(id);
     const record = recordFor(id);
-    if (!record) continue;
+    // Delivered files need no cancellation. Do not yield between eligibility and deletion.
+    if (!record || record.status !== 'uploaded') continue;
     removedVideoUris(record).forEach(deleteLocalVideo);
     dispatch(id, { type: 'localCleared' });
-    if (record.status !== 'uploaded') terminal(id);
   }
   await flushVideoUploads();
 }
@@ -388,6 +403,30 @@ function mutate<T>(
 const remove = (id: UploadIdentity) => mutate(id, () => removeRecord(id));
 
 export const videoUploadManager = {
+  needsReselection(id: UploadIdentity): boolean {
+    const record = recordFor(id);
+    if (!record || record.status === 'none' || record.status === 'uploaded') return false;
+    const uri = record.prepared ? record.localUri : record.source?.uri;
+    return !uri || localVideoSize(uri) === 0;
+  },
+  async replaceMissing(id: UploadIdentity, source: SelectedVideo, ensure?: EnsureSetLog): Promise<void> {
+    const record = recordFor(id);
+    if (!record || !videoUploadManager.needsReselection(id)) return;
+    const setLogId = record.setLogId;
+    const request = record.logRequest;
+    await videoUploadManager.attach(id, source, async () => {
+      if (setLogId) return setLogId;
+      if (ensure) return ensure();
+      if (request) return (await setsRepository.upsert(request)).id;
+      throw new Error('Set log unavailable');
+    }, () => request ?? undefined);
+  },
+  async retryAll(studentId: string, stableSetIds?: readonly string[]): Promise<void> {
+    await useVideoUploadStore.getState().hydrate();
+    const ids = stableSetIds ?? Object.keys(useVideoUploadStore.getState().records)
+      .filter(key => key.startsWith(`${studentId}:`)).map(key => key.slice(studentId.length + 1));
+    await Promise.all(ids.map(stableSetId => videoUploadManager.retry({ studentId, stableSetId })));
+  },
   attach(
     id: UploadIdentity,
     source: SelectedVideo,
@@ -400,18 +439,16 @@ export const videoUploadManager = {
     const done = (async () => {
       const retainedUri = await mutate(id, async () => {
         await useVideoUploadStore.getState().hydrate();
+        const logRequest = buildLogRequest?.();
         const retained = await retainVideoSource(source);
-        let logRequest: SetLogUpsertRequest | undefined;
-        try {
-          logRequest = buildLogRequest?.();
-          await removeRecord(id);
-        } catch (error) {
-          deleteLocalVideo(retained.uri);
-          throw error;
-        }
-        dispatch(id, { type: 'attach', source: retained, logRequest });
+        await stop(id);
+        const previous = recordFor(id);
+        // Publish the new durable copy before retiring the explicitly replaced local file.
+        // Remote deletion is retryable work; it must never discard this new recording.
+        dispatch(id, { type: 'attach', source: retained, logRequest, previousAttachmentId: previous?.attachmentId });
         ensureCallbacks.set(keyFor(id), ensure);
         await flushVideoUploads();
+        if (previous) removedVideoUris(previous).filter(uri => uri !== retained.uri).forEach(deleteLocalVideo);
         return retained.uri;
       });
       void track(AnalyticsEvent.MediaUpload, {
@@ -430,17 +467,27 @@ export const videoUploadManager = {
     attachments.set(key, { sourceUri: source.uri, done });
     return done;
   },
-  async retry(id: UploadIdentity, ensure: EnsureSetLog, buildLogRequest?: () => SetLogUpsertRequest): Promise<void> {
+  async retry(id: UploadIdentity, ensure?: EnsureSetLog, buildLogRequest?: () => SetLogUpsertRequest): Promise<void> {
     const record = recordFor(id);
-    if (record?.status !== 'failed') return;
+    if (!record || !hasVideoDeliveryFailure(record)) return;
+    // Do not restart an active retry; waiting jobs can jump their backoff timer.
+    if (jobs.has(keyFor(id)) && record.status !== 'failed') return;
+    clearTimeout(timers.get(keyFor(id)));
+    timers.delete(keyFor(id));
     // A prefill update may request retry while the failed attach is still settling.
     await attachments.get(keyFor(id))?.done;
     await jobs.get(keyFor(id))?.done;
     if (recordFor(id) !== record) return;
     const logRequest = buildLogRequest?.();
     dispatch(id, { type: 'retry', logRequest });
-    ensureCallbacks.set(keyFor(id), ensure);
-    await execute(id, ensure);
+    const ensureLog = ensure ?? (async () => {
+      const current = recordFor(id);
+      if (current?.setLogId) return current.setLogId;
+      if (current?.logRequest) return (await setsRepository.upsert(current.logRequest)).id;
+      throw new Error('Set log unavailable');
+    });
+    ensureCallbacks.set(keyFor(id), ensureLog);
+    await execute(id, ensureLog);
   },
   remove,
   cancel: remove,
@@ -476,6 +523,7 @@ export const videoUploadManager = {
       }
       await sweep();
       initialized = true;
+      notify(studentId);
       resumeAll();
     })().catch(() => undefined);
     let connected: boolean | null = null;

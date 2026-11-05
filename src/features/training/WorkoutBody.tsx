@@ -1,3 +1,4 @@
+import { VideoFailureSummary, useVideoFailures } from './video-upload/VideoFailureSummary';
 import { LoadTypeSummary } from './LoadTypeSummary';
 import { metricDisplay, POUNDS_PER_KG } from '@/domain/measurement';
 import type { ComponentProps } from 'react';
@@ -110,6 +111,10 @@ export function WorkoutBody({
   resolveExerciseMetadata: ExerciseMetadataResolver;
 }) {
   const { colors, scheme } = useTheme();
+  const deliverySets = drafts.map(draft => ({ stableSetId: draft.stableSetId, setLogId: draft.sourceLog?.id, exerciseId: draft.exercise.id,
+    badge: { exerciseName: exerciseTitle(resolveExerciseMetadata(draft.exercise.exercise_id)), setOrdinal: draft.setIndex + 1,
+      weightKg: Number(draft.weightText) || null, reps: Number(draft.repsText) || null, rpe: Number(draft.rpeText) || null } }));
+  const failures = useVideoFailures(studentId, deliverySets);
   // The light success token is below 4.5:1 on successTint; retain a readable existing ink token.
   const completedLabelColor = scheme === 'light' ? colors.textPrimary : colors.successSoft;
   const [accentSize, setAccentSize] = useState({ width: 0, height: 0 });
@@ -231,6 +236,7 @@ export function WorkoutBody({
         >
           {exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))}
         </Text>
+        {failures.exerciseIds.includes(exercise.id) ? <MaterialCommunityIcons accessibilityLabel={t('student.videoDelivery.notUploaded')} name="alert-circle-outline" size={18} color={colors.danger} /> : null}
         {completed ? <Text style={{ color: completedLabelColor, ...font.mono(fontMetrics.size12, 'semibold') }}>{t(rows.filter(row => !row.kind).length === 1 ? 'student.trainingFlow.completedOne' : 'student.trainingFlow.completedMany', [rows.filter(row => !row.kind).length])}</Text> : null}
         <Text style={{ color: completed ? completedLabelColor : colors.textMuted }}>
           {collapsed[exercise.id] ? '›' : '⌄'}
@@ -378,6 +384,7 @@ export function WorkoutBody({
   );
   return (
     <>
+      {!preview ? <VideoFailureSummary studentId={studentId} sets={deliverySets} history={Boolean(completedDay)} /> : null}
       {progressFlow && progress.completed.length ? <View
         testID="workout-completed-exercises"
         style={{ gap: spacing.point6 }}
@@ -421,6 +428,7 @@ export function WorkoutBody({
                 <MaterialCommunityIcons name="check" size={spacing.point14} color={completedLabelColor} />
               </View> : <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>}
               <Text style={{ flex: 1, color: colors.textPrimary, ...font.body(14, 'bold') }}>{title}</Text>
+              {failures.exerciseIds.includes(exercise.id) ? <MaterialCommunityIcons accessibilityLabel={t('student.videoDelivery.notUploaded')} name="alert-circle-outline" size={18} color={colors.danger} /> : null}
               <Text style={{ color: colors.textTertiary, ...font.mono(12) }}>{added ? t('student.completedDay.addedSets %lld', [logged]) : t('student.completedDay.loggedSets %lld %lld', [logged, prescribed.length])}</Text>
               <Text style={{ color: colors.textMuted }}>{open ? '⌄' : '›'}</Text>
             </Pressable>

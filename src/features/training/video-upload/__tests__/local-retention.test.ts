@@ -32,7 +32,7 @@ test('keeps today by device calendar day and clears prior uploaded files only', 
     ),
   ).toEqual(['yesterday']);
 });
-test('over 500 MiB evicts oldest prepared files first, including pending uploads', () => {
+test('over 500 MiB only evicts delivered files and preserves prepared pending uploads', () => {
   expect(
     localRetentionRemovals(
       [
@@ -53,7 +53,7 @@ test('over 500 MiB evicts oldest prepared files first, including pending uploads
       ],
       now,
     ),
-  ).toEqual(['old']);
+  ).toEqual(['new']);
 });
 test('delete and replace reclaim both original and prepared file without duplicate deletion', () => {
   expect(
@@ -91,4 +91,11 @@ test('source selection is local first, remote second, or unavailable', () => {
   expect(VideoAttachmentPlaybackSourceSelector.select('file:///video', true, 'https://remote')).toBe('file:///video');
   expect(VideoAttachmentPlaybackSourceSelector.select('file:///video', false, 'https://remote')).toBe('https://remote');
   expect(VideoAttachmentPlaybackSourceSelector.select(null, false, null)).toBeNull();
+});
+
+test.each([today, yesterday])('all undelivered prepared files survive the 500 MiB limit on day %s', createdAt => {
+  expect(localRetentionRemovals([
+    { key: 'pending-a', createdAt, sizeBytes: 600 * 1024 * 1024, uploaded: false, prepared: true },
+    { key: 'pending-b', createdAt, sizeBytes: 100 * 1024 * 1024, uploaded: false, prepared: true },
+  ], now)).toEqual([]);
 });

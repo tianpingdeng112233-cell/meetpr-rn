@@ -480,5 +480,16 @@
 "training.explainer.rir.footer": {"en": "Couldn't do another rep? Enter 0.", "zh": "一次也做不动了就填 0"},
 "training.explainer.rir.help": {"en": "What is RIR", "zh": "RIR 是什么"},
 "training.explainer.close": {"en": "Close", "zh": "关闭"},
-"training.explainer.rir.remaining": {"en": {"one": "%@ rep left", "other": "%@ reps left"}, "zh": "还剩 %@ 次"}
+"training.explainer.rir.remaining": {"en": {"one": "%@ rep left", "other": "%@ reps left"}, "zh": "还剩 %@ 次"},
+"student.videoDelivery.failed": {"en": "{0} videos didn't upload. Retrying…", "zh": "{0} 条视频没传上，正在自动重试"},
+"student.videoDelivery.failedOne": {"en": "1 video didn't upload. Retrying…", "zh": "1 条视频没传上，正在自动重试"},
+"student.videoDelivery.history": {"en": "{0} videos didn't upload", "zh": "{0} 条视频没传上"},
+"student.videoDelivery.historyOne": {"en": "1 video didn't upload", "zh": "1 条视频没传上"},
+"student.videoDelivery.retryNow": {"en": "Retry now", "zh": "立即重试"},
+"student.videoDelivery.notUploaded": {"en": "Not uploaded", "zh": "没传上"},
+"student.videoDelivery.missingTitle": {"en": "This video didn't upload", "zh": "这条视频没传上"},
+"student.videoDelivery.missingBody": {"en": "This video's file is no longer on your phone. Pick it from Photos to attach it to this set again.", "zh": "手机里找不到这条视频的文件了。从相册选出来，就能挂回这一组。"},
+"student.videoDelivery.savedToPhotos": {"en": "A copy was saved to Photos when you recorded it.", "zh": "录像时它也存了一份到相册。"},
+"student.videoDelivery.pickAgain": {"en": "Pick this video again from Photos", "zh": "从相册重新选这条视频"},
+"student.videoDelivery.later": {"en": "Not now", "zh": "先不管"}
 }

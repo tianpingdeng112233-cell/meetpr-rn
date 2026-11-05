@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { uploadsRepository } from '@/api/domains/uploads';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { videoUploadManager } from '../manager';
 import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../store';
@@ -266,4 +267,56 @@ test('an ensureSetLog transport failure still uses network backoff', async () =>
   expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({
     status: 'waiting', retry: { failure: 'network' }, errorMessage: 'Network request failed',
   });
+});
+
+test('retry now interrupts backoff and delivers the same set without waiting for its timer', async () => {
+  mockUploadAsync.mockRejectedValueOnce(new TypeError('offline'));
+  await videoUploadManager.attach(id, source, async () => 'set-log');
+  expect(useVideoUploadStore.getState().records['student:set'].status).toBe('waiting');
+  await videoUploadManager.retry(id, async () => 'set-log');
+  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'set-log' });
+});
+
+test('a missing prepared file remains retryable and a Photos replacement attaches to the original set', async () => {
+  mockUploadAsync.mockRejectedValueOnce(new TypeError('offline'));
+  await videoUploadManager.attach(id, source, async () => 'original-log');
+  const failed = useVideoUploadStore.getState().records['student:set'];
+  mockFiles.delete(failed.localUri!);
+  await videoUploadManager.retry(id);
+  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'failed', setLogId: 'original-log' });
+  expect(videoUploadManager.needsReselection(id)).toBe(true);
+  mockFiles.set(source.uri, 350000);
+  await videoUploadManager.replaceMissing(id, source);
+  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'original-log' });
+});
+
+test('cold start after an upgrade preserves yesterday\'s failed file over 500 MiB and its retry identity', async () => {
+  const uri = 'file:///documents/training-videos/old.mp4';
+  const sizeBytes = 600 * 1024 * 1024;
+  mockFiles.set(uri, sizeBytes);
+  await AsyncStorage.setItem('training.videoUploads.v1', JSON.stringify({ version: 1, records: {
+    'student:set': { ...EMPTY_VIDEO_UPLOAD, status: 'failed', createdAt: Date.now() - 86400000,
+      prepared: true, localUri: uri, sizeBytes, setLogId: 'old-log' },
+  } }));
+  const dispose = videoUploadManager.start('student');
+  try {
+    for (let i = 0; i < 80; i++) await Promise.resolve();
+    expect(mockFiles.get(uri)).toBe(sizeBytes);
+    expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'failed', localUri: uri, setLogId: 'old-log' });
+  } finally { dispose(); }
+});
+
+
+test('replacement deletion failure retains the new video and retries the same set after restart', async () => {
+  await videoUploadManager.attach(id, source, async () => 'original-log');
+  mockFiles.set(source.uri, 400000);
+  jest.mocked(uploadsRepository.remove).mockRejectedValueOnce(new TypeError('offline'));
+  await expect(videoUploadManager.attach(id, source, async () => 'original-log')).resolves.toBeUndefined();
+  const record = useVideoUploadStore.getState().records['student:set'];
+  expect(record.status).toBe('waiting');
+  expect(mockFiles.get(record.source!.uri)).toBe(400000);
+  resetVideoUploadStoreForTests();
+  await useVideoUploadStore.getState().hydrate();
+  await videoUploadManager.retry(id);
+  expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'original-log' });
 });
