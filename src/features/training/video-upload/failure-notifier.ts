@@ -93,7 +93,8 @@ export async function notifyVideoCompletion(kind: 'complete' | 'timeout', count:
     await Notifications.dismissNotificationAsync('video-upload-failures');
     if (version !== revision) return;
     await Notifications.scheduleNotificationAsync({ identifier: 'video-upload-failures', content: {
-      title: 'MeetPR', body: t(`student.videoDelivery.${key}${count === 1 ? 'One' : ''}`, [count]),
+      title: 'MeetPR', body: kind === 'complete' && count === 0 ? t('student.videoDelivery.completeNoVideos')
+        : t(`student.videoDelivery.${key}${count === 1 ? 'One' : ''}`, [count]),
       sound: 'default', data: { screen: 'training', category: 'video-upload', studentId, dayId, kind },
     }, trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1, channelId: VIDEO_UPLOAD_CHANNEL } });
   });

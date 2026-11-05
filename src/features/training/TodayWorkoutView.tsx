@@ -668,7 +668,8 @@ export function TodayWorkoutView() {
     return { ...row, badge: draft ? { exerciseName: exerciseTitle(resolveExerciseMetadata(draft.exercise.exercise_id)),
       setOrdinal: draft.setIndex + 1, weightKg: Number(draft.weightText) || null, reps: Number(draft.repsText) || null, rpe: Number(draft.rpeText) || null } : undefined };
   }) : [];
-  const waitingForVideos = Boolean(selectedDayID && completionGate.videoIntent(selectedDayID)) && dayState?.kind !== 'completed';
+  const waitingForNetwork = Boolean(selectedDayID && completionGate.awaitingNetwork(selectedDayID)) && dayState?.kind !== 'completed';
+  const waitingForVideos = (Boolean(selectedDayID && completionGate.videoIntent(selectedDayID)) && dayState?.kind !== 'completed') || waitingForNetwork;
   const completionCoordinator = useMemo(() => new SetCompletionCoordinator(setSyncQueue, completionGate, {
     reward: () => { setCompletionPhase('celebration'); },
     prepareVideos: hydrateVideoUploads,

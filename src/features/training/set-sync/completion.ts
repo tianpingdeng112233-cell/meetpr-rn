@@ -1,11 +1,12 @@
 import type { completionVideoSummary } from '../video-upload/completion-delivery';
+import { ApiError } from '@/api/client';
 import { SerialTaskQueue } from '../serial-task-queue';
 import { storageQueue, systemClock, type SetSyncQueue, type SyncClock, type SyncStorage } from './queue';
 
 export type CompletionConditions = { setsSynchronized: boolean; videosDelivered: boolean };
 export type VideoCompletionContext = { sets: { stableSetId: string; setLogId?: string | null }[]; exerciseIds: string[] };
 export type VideoCompletionIntent = VideoCompletionContext & { heldAt: number; timedOut?: boolean };
-type GateDay = { completed: boolean; released: boolean; video?: VideoCompletionIntent };
+type GateDay = { completed: boolean; released: boolean; video?: VideoCompletionIntent; heldOffline?: boolean };
 type CompletionVideos = {
   summary(dayId: string, context: VideoCompletionContext): ReturnType<typeof completionVideoSummary>;
   timeout(dayId: string, count: number): Promise<void>;
@@ -42,6 +43,15 @@ export class CompletionGate {
     });
   }
   dispose() { this.disposed = true; this.timers.forEach(timer => this.clock.clearTimeout(timer)); this.timers.clear(); }
+  /** Released with no video intent: only the completion request is waiting (offline). */
+  awaitingNetwork(dayId: string) { const day = this.days[dayId]; return Boolean(day?.released && !day.completed && !day.video && day.heldOffline); }
+  async holdForNetwork(dayId: string) {
+    await this.ready;
+    return this.serial.enqueue(async () => {
+      if (this.disposed || !this.days[dayId]) return;
+      this.days[dayId] = { ...this.days[dayId], heldOffline: true }; await this.persist();
+    });
+  }
   pendingDays() { return Object.keys(this.days).filter(day => this.days[day].released && !this.days[day].completed); }
   async arm(dayId: string, video?: VideoCompletionIntent) {
     await this.ready;
@@ -75,7 +85,8 @@ export class CompletionGate {
       delete this.days[dayId];
       this.clearTimer(dayId);
       await this.persist();
-      if (summary) await this.videos?.delivered(dayId, summary.total).catch(() => {});
+      // A day held only for the network still tells the student it finished.
+      if (summary || day.heldOffline) await this.videos?.delivered(dayId, summary?.total ?? 0).catch(() => {});
     });
   }
   async updateVideoContext(dayId: string, context: VideoCompletionContext) {
@@ -141,7 +152,12 @@ export class SetCompletionCoordinator {
       if (generation !== this.generation) return;
       this.set('reward'); this.callbacks.reward();
       try { await this.gate.release(dayId); await this.gate.updateConditions(dayId, { setsSynchronized: this.queue.pending(dayId).length === 0, videosDelivered: this.callbacks.videosDelivered(dayId, context) }); }
-      catch (error) { this.callbacks.error?.(error); this.set('idle'); }
+      catch (error) {
+        // Offline after every set and video is in: the gate keeps the released day and the
+        // runtime retries completion once online, so the reward stays instead of failing.
+        if (isConnectivityFailure(error)) { await this.gate.holdForNetwork(dayId).catch(() => {}); return; }
+        this.callbacks.error?.(error); this.set('idle');
+      }
     };
     if (!this.queue.pending(dayId).length) { await reward(); return; }
     if (!retry && this.queue.pending(dayId).some(entry => entry.status === 'failed')) { this.set('failed'); return; }
@@ -158,4 +174,8 @@ export class SetCompletionCoordinator {
     this.timer = this.clock.setTimeout(() => { this.clear(); this.set('failed'); }, 20_000);
     check();
   }
+}
+
+export function isConnectivityFailure(error: unknown): boolean {
+  return (error instanceof ApiError && error.kind === 'network') || (error instanceof TypeError && /network/i.test(error.message));
 }

@@ -85,3 +85,11 @@ R1 最终自测：206 suites / 2159 tests 全绿（50.173 秒、进程 exit 0）
 - 完成通知：「今日訓練已完成，3 條影片已送達」，标题 `MeetPR`。
 - 收尾：DROP 规则已删（`iptables -S OUTPUT` 无残留），`emu network delay none`、`speed full` 已恢复。
 - 截图（本机证据目录，不入公开仓）：android-b-timeout-tap-return.png、android-b-weaknet-delivered.png、android-b-complete-notice.png。
+
+## iPhone 12 走查发现的同类问题（安卓侧，2026-11-05，Opus 实装，Codex 额度不足降级）
+
+David 在 iOS 真机发现「当天组已同步、视频已全部送达时，飞行模式下长按完成，奖励页弹出后立刻撤下」（David 拍 A：断网也照常完成，联网后自动补发）。安卓同样存在：奖励后 `gate.updateConditions` → 完成请求断网失败 → `callbacks.error` 撤奖励并弹错误；挂起记录仍在，runtime 之后静默补发，但学员看到的是失败且没有等待卡。
+
+修：`SetCompletionCoordinator` 奖励后完成请求遇连接失败（`ApiError.kind === 'network'` 或 `TypeError /network/`）不再报错，`CompletionGate.holdForNetwork` 标记该日 `heldOffline` 并保留奖励；训练页把 `awaitingNetwork` 日视同等待，底部卡片 0 条视频时显示「等待联网完成今日训练 / 联网后会自动完成…」；联网补发成功后对 `heldOffline` 日发「今日训练已完成」（无条数）。正常在线、无视频的完成不发通知。业务拒绝保持原行为。
+
+测试：`completion.test.ts` 新增「offline completion … keeps the reward and completes once online」（撤掉修复时红）与「a normal online completion without videos sends no completion notice」。全量 jest `--runInBand` 2161/2161、tsc、lint 绿（并行跑在主机负载 60+ 时会出现超时假失败）。

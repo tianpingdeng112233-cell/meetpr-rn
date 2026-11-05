@@ -18,14 +18,14 @@ export function VideoCompletionControl({ studentId, videos, waiting, showSummary
   if (waiting) return <View testID="video-completion-progress" accessibilityLiveRegion="polite"
     style={{ padding: spacing.md, gap: spacing.sm, borderRadius: radius.card, backgroundColor: colors.surfaceCard }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-      <MaterialCommunityIcons name="cloud-upload-outline" size={22} color={colors.goldText} />
-      <Text style={{ ...font.body(16, 'semibold'), color: colors.textPrimary, flex: 1 }}>{t('student.videoDelivery.progress', [summary.done, summary.total])}</Text>
+      <MaterialCommunityIcons name={summary.total ? 'cloud-upload-outline' : 'wifi-off'} size={22} color={colors.goldText} />
+      <Text style={{ ...font.body(16, 'semibold'), color: colors.textPrimary, flex: 1 }}>{summary.total ? t('student.videoDelivery.progress', [summary.done, summary.total]) : t('student.videoDelivery.waitingNetwork')}</Text>
     </View>
-    <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: summary.total, now: summary.done }}
+    {summary.total ? <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: summary.total, now: summary.done }}
       style={{ height: 4, borderRadius: radius.pill, backgroundColor: colors.borderSubtle, overflow: 'hidden' }}>
-      <View style={{ height: '100%', width: `${summary.total ? summary.done / summary.total * 100 : 100}%`, backgroundColor: colors.gold500 }} />
-    </View>
-    <Text style={{ ...font.body(13), color: colors.textSecondary }}>{t('student.videoDelivery.progressBody')}</Text>
+      <View style={{ height: '100%', width: `${summary.done / summary.total * 100}%`, backgroundColor: colors.gold500 }} />
+    </View> : null}
+    <Text style={{ ...font.body(13), color: colors.textSecondary }}>{t(summary.total ? 'student.videoDelivery.progressBody' : 'student.videoDelivery.waitingNetworkBody')}</Text>
   </View>;
   const visible = showSummary && !summary.delivered;
   return <View style={{ gap: spacing.sm }}>
