@@ -1,0 +1,87 @@
+FAIL src/navigation/__tests__/BindGate.test.tsx
+  ✕ offline training cannot bypass http-protocol-error (31 ms)
+  ✕ unbound first-run with a stash keeps retry state when profile transport fails (171 ms)
+  ○ skipped needsOnboarding opens immediately and save-and-exit allows continuing from the interstitial
+  ○ skipped submitting a code for an incomplete profile opens onboarding immediately
+  ○ skipped invalid stashed invite returns to an empty code field with the stashed name
+  ○ skipped invalid invite clears the submitted code while prefilling the submitted name
+  ○ skipped network failure clears the submitted code while prefilling the submitted name
+  ○ skipped pasting a whole invite message into the code field keeps the code (spec 093)
+  ○ skipped Global track has no paste button
+  ○ skipped China track paste button fills the code from a copied invite message
+  ○ skipped China track paste button explains when the clipboard has no code
+  ○ skipped entering a valid typed code clears the earlier empty-clipboard notice
+  ○ skipped entering a valid native pasted invite clears the earlier empty-clipboard notice
+  ○ skipped foreground pending page polls at 30 seconds, accepted opens welcome, Continue persists across remount
+  ○ skipped pending polling stops in background, refreshes on foreground, survives a transient failure and stops on unmount
+  ○ skipped already delivered first plan welcomes in zh with coach 王磊
+  ○ skipped already delivered first plan welcomes in zh with coach 王教练
+  ○ skipped already delivered first plan welcomes in zh with coach null
+  ○ skipped already delivered first plan welcomes in zh-Hant with coach 王教練
+  ○ skipped already delivered first plan welcomes in en with coach null
+  ○ skipped completed-plan students skip welcome without reading plans and persist a binding terminal marker
+  ○ skipped first_run undefined keeps existing access unmarked and can welcome after the backend supplies it
+  ○ skipped first_run null keeps existing access unmarked and can welcome after the backend supplies it
+  ○ skipped failed terminal storage does not block an accepted settled student
+  ○ skipped pending page formats zh coach null and basic profile
+  ○ skipped pending page formats zh coach "   " and basic profile
+  ○ skipped pending page formats zh coach " 王教练 " and basic profile
+  ○ skipped pending page formats zh coach "王磊" and basic profile
+  ○ skipped pending page formats zh-Hant coach null and basic profile
+  ○ skipped pending page formats zh-Hant coach "王教練" and basic profile
+  ○ skipped pending page formats zh-Hant coach "王磊" and basic profile
+  ○ skipped pending page formats en coach null and basic profile
+  ○ skipped pending page formats en coach "Coach Alex" and basic profile
+  ○ skipped pending page formats en coach "coach Alex" and basic profile
+  ○ skipped pending page formats en coach "Alex" and basic profile
+  ○ skipped pending page formats en coach "Coachman" and basic profile
+  ○ skipped same account with a saved workout can remount offline after an accepted binding
+  ○ skipped offline training cannot bypass no-workout
+  ○ skipped offline training cannot bypass other-account
+  ○ skipped offline training cannot bypass revoked
+  ○ skipped offline training cannot bypass unauthorized
+  ○ skipped offline training cannot bypass server-error
+
+  ● offline training cannot bypass http-protocol-error
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      368 |         ? '20000000-0000-4000-8000-000000000000' : STUDENT_ID}><Text>tabs</Text></BindGate>);
+      369 |     });
+    > 370 |     expect(hasText('tabs')).toBe(false);
+          |                             ^
+      371 |   },
+      372 | );
+      373 |
+
+      at toBe (src/navigation/__tests__/BindGate.test.tsx:370:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● unbound first-run with a stash keeps retry state when profile transport fails
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      377 |   jest.mocked(onboardingRepository.get).mockRejectedValue(new ApiError('network', 'offline'));
+      378 |   await renderGate();
+    > 379 |   expect(hasText(t('student.bindGateView.copy002'))).toBe(true);
+          |                                                      ^
+      380 |   expect(hasText('tabs')).toBe(false);
+      381 | });
+      382 |
+
+      at Object.toBe (src/navigation/__tests__/BindGate.test.tsx:379:54)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 40 skipped, 42 total
+Snapshots:   0 total
+Time:        1.079 s
+Ran all test suites matching /src\/navigation\/__tests__\/BindGate.test.tsx/i with tests matching "http-protocol|unbound first-run".

@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { useSessionStore } from '@/api/session';
+import { setsRepository } from '@/api/domains/sets';
+import { accountSetSync } from '../../set-sync/runtime';
 import { uploadsRepository } from '@/api/domains/uploads';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { videoUploadManager } from '../manager';
@@ -269,6 +272,17 @@ test('an ensureSetLog transport failure still uses network backoff', async () =>
   });
 });
 
+test('cancelling a video awaiting its offline set releases the job and permits replacement', async () => {
+  const waiting = videoUploadManager.attach(id, source, () => new Promise(() => {}));
+  for (let tick = 0; tick < 100; tick++) await Promise.resolve();
+  await videoUploadManager.cancel(id);
+  await waiting;
+  expect(useVideoUploadStore.getState().records['student:set']?.status ?? 'none').toBe('none');
+  mockFiles.set(source.uri, 350000);
+  await videoUploadManager.attach(id, source, async () => 'set-log');
+  expect(useVideoUploadStore.getState().records['student:set'].status).toBe('uploaded');
+});
+
 test('retry now interrupts backoff and delivers the same set without waiting for its timer', async () => {
   mockUploadAsync.mockRejectedValueOnce(new TypeError('offline'));
   await videoUploadManager.attach(id, source, async () => 'set-log');
@@ -319,4 +333,31 @@ test('replacement deletion failure retains the new video and retries the same se
   await useVideoUploadStore.getState().hydrate();
   await videoUploadManager.retry(id);
   expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'original-log' });
+});
+
+
+test.each(['retry', 'replaceMissing'] as const)('%s waits for the restored offline set receipt before uploading', async action => {
+  useSessionStore.setState({ user: { id: 'student', phone: '', role: 'coached_student', created_at: '2026-11-05T12:00:00Z' } });
+  let finish!: (value: { id: string; logged_at: string }) => void;
+  jest.spyOn(setsRepository, 'upsert').mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const request = { exercise_id: '10000000-0000-4000-8000-000000000001', plan_day_id: '10000000-0000-4000-8000-000000000002', set_index: 0, weight_kg: '80', reps: 5, completed: true, logged_date: '2026-11-05' };
+  const { queue } = accountSetSync('student');
+  await queue.ready;
+  await queue.enqueue({ stableSetId: 'set', dayId: 'day', exerciseId: 'squat', loggedDate: '2026-11-05', request });
+  await AsyncStorage.setItem('training.videoUploads.v1', JSON.stringify({ version: 1, records: {
+    'student:set': { ...EMPTY_VIDEO_UPLOAD, status: 'failed', logRequest: request, source: action === 'retry' ? source : null },
+  } }));
+  resetVideoUploadStoreForTests();
+  await useVideoUploadStore.getState().hydrate();
+  expect(useVideoUploadStore.getState().records['student:set']?.status).toBe('failed');
+  jest.mocked(uploadsRepository.initiate).mockClear();
+  const uploading = action === 'retry' ? videoUploadManager.retry(id) : videoUploadManager.replaceMissing(id, source);
+  await new Promise(resolve => setTimeout(resolve, 20));
+  expect(uploadsRepository.initiate).not.toHaveBeenCalled();
+  finish({ id: 'restored-receipt', logged_at: '2026-11-05T12:00:00Z' });
+  try {
+    await uploading;
+    expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'restored-receipt' });
+    expect(setsRepository.upsert).toHaveBeenCalledTimes(1);
+  } finally { useSessionStore.setState({ user: null }); }
 });

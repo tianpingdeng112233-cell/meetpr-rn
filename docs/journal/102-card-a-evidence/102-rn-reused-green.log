@@ -1,0 +1,34 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/queue.test.ts -t reusing a deleted
+
+PASS src/features/training/set-sync/__tests__/queue.test.ts
+  ✓ a new unfilled row reusing a deleted slot survives restart and stale server reconciliation (2 ms)
+  ○ skipped server snapshot at 2026-11-05T12:00:00Z retires its receipt durably without changing the overlay
+  ○ skipped server snapshot at 2026-11-05T13:00:00Z retires its receipt durably without changing the overlay
+  ○ skipped stale and unrelated snapshots retain receipts, including deletion protection
+  ○ skipped receipts older than 14 calendar days are pruned on restore, retaining the boundary and pending writes
+  ○ skipped receipts older than 14 calendar days are pruned on refresh, retaining the boundary and pending writes
+  ○ skipped receipts older than 14 calendar days are pruned on wake, retaining the boundary and pending writes
+  ○ skipped a snapshot arriving during confirmation storage cannot strand a video waiting for the server id
+  ○ skipped sends in order and keeps other rows local while the first request hangs
+  ○ skipped retries transport errors without rolling back and network recovery bypasses backoff
+  ○ skipped same set finishes with the latest values after check, edit and uncheck
+  ○ skipped 4xx stops retries, remains visible locally, and explicit retry resends
+  ○ skipped sendNow prioritizes its day ahead of an older backed-off day
+  ○ skipped storage rebuild preserves pending edits and isolates accounts
+  ○ skipped overlay keeps check, changed numbers and uncheck across stale refreshes; delete stays deleted
+  ○ skipped 408 and 5xx retry automatically with exponential backoff
+  ○ skipped new extra rows survive restart before their first completed entry and can be removed locally
+  ○ skipped recording an extra row retires its redundant draft durably without losing the pending set
+  ○ skipped restoring an older outbox removes recorded drafts but preserves unfilled rows
+  ○ skipped a converted set keeps the allocated added index when an edit was already queued
+  ○ skipped foreground sendNow during hydration cannot overwrite a stored outbox
+  ○ skipped leaving an account releases video waiters while retaining its pending set
+  ○ skipped an old account response cannot overwrite a newly logged-in account outbox
+
+Test Suites: 1 passed, 1 total
+Tests:       22 skipped, 1 passed, 23 total
+Snapshots:   0 total
+Time:        0.243 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/queue.test.ts/i with tests matching "reusing a deleted".

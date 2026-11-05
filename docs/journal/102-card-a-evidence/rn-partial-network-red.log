@@ -1,0 +1,29 @@
+FAIL src/features/training/set-sync/__tests__/runtime.test.ts
+  ✓ a restored completion intent proceeds when restored pending sets drain without another foreground event (5 ms)
+  ✕ connected networks retry the training API even when platform internet validation fails (2 ms)
+
+  ● connected networks retry the training API even when platform internet validation fails
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 0
+    Received length: 1
+    Received array:  [{"attempts": 0, "dayId": "day", "exerciseId": "squat", "id": 1, "log": {"actual_rir": null, "adhoc": false, "assumed": false, "completed": true, "exercise_id": "squat", "failed": false, "id": "local:set", "logged_at": "2026-11-05T08:54:04.996Z", "logged_date": "2026-11-05", "plan_day_id": "day", "plan_exercise_id": "exercise", "reps": 5, "rpe": null, "set_index": 0, "student_id": "10000000-0000-4000-8000-000000000001", "weight_kg": "80"}, "loggedDate": "2026-11-05", "remove": false, "request": {"completed": true, "plan_exercise_id": "exercise", "reps": 5, "set_index": 0, "weight_kg": "80"}, "retryAt": 0, "stableSetId": "set", "status": "pending"}]
+
+      38 |   mockNetworkChanged!({ isConnected: true, isInternetReachable: false });
+      39 |   await queue.sendNow('day', true); await flush();
+    > 40 |   expect(queue.pending()).toHaveLength(0);
+         |                           ^
+      41 |   expect(queue.snapshot().confirmed.set.log.id).toBe('server');
+      42 |   expect(upsert).toHaveBeenCalledTimes(1);
+      43 | });
+
+      at Object.toHaveLength (src/features/training/set-sync/__tests__/runtime.test.ts:40:27)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        1.46 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/runtime.test.ts/i.

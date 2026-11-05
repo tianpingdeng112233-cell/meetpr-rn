@@ -1,0 +1,2 @@
+src/features/training/video-upload/manager.ts(430,34): error TS2304: Cannot find name 'setsRepository'.
+src/features/training/video-upload/manager.ts(496,46): error TS2304: Cannot find name 'setsRepository'.

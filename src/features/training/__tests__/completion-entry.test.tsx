@@ -475,3 +475,67 @@ test('a day completed on an earlier day shows the status row without undo', asyn
   expect(completedRow().length).toBeGreaterThan(0);
   expect(renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy023'))).toHaveLength(0);
 });
+
+test('102: a hanging set request turns the row green immediately and leaves other rows available', async () => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: '70000000-0000-4000-8000-000000000001', set_number: 2 }] }] }] };
+  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/sets/log') return new Promise(() => {});
+    if (path.includes('/sets')) return { logs: [] } as never;
+    if (path === '/exercises') return { exercises: [{ id: exercise.exercise_id, name: 'Press', name_en: 'Press', exercise_type: 'accessory', main_lift_family: null, is_competition_lift: false, competition_stance: null }] } as never;
+    return base(path, options);
+  });
+  await AsyncStorage.setItem(`training.started.${studentId}:${plan.days[0].id}`, 'true');
+  await mount(); await press('Complete set 1');
+  const buttons = renderer.root.findAll(node => node.props.accessibilityRole === 'button');
+  expect(buttons.some(node => node.props.accessibilityLabel === 'Undo set 1')).toBe(true);
+  expect(buttons.find(node => node.props.accessibilityLabel === 'Complete set 2')?.props.disabled).toBe(false);
+  expect(buttons.find(node => node.props.accessibilityLabel === 'Complete all as planned')?.props.disabled).toBe(false);
+  expect(Alert.alert).not.toHaveBeenCalled();
+});
+
+test('102: a hanging set request closes SetEntrySheet immediately after completing a set', async () => {
+  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/sets/log') return new Promise(() => {});
+    if (path.includes('/sets')) return { logs: [] } as never;
+    return base(path, options);
+  });
+  await mount();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { WorkoutBody } = require('../WorkoutBody');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { SetEntrySheet } = require('../SetEntrySheet');
+  await act(async () => { const body = renderer.root.findByType(WorkoutBody); body.props.onRecord(body.props.drafts[0]); });
+  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))[0].props.onPress(); });
+  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
+  expect(Alert.alert).not.toHaveBeenCalled();
+});
+
+test.each([
+  { sourceId: 'log', expectedDate: '2026-09-01' },
+  { sourceId: null, expectedDate: '2026-09-02' },
+  { sourceId: 'local:one', expectedDate: '2026-09-02' },
+])('102 R1: source=$sourceId records use $expectedDate when saved after the day changes', async ({ sourceId, expectedDate }) => {
+  jest.useFakeTimers({ now: new Date(2026, 8, 1, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
+  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockClear();
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/sets/log') return { id: '80000000-0000-4000-8000-000000000000', logged_at: '2026-09-02T12:00:00Z' } as never;
+    if (path.includes('/sets')) {
+      if (!sourceId) return { logs: [] } as never;
+      const response = await base(path, options) as import('@/api/domains/sets').SetLogsResponse;
+      return { logs: response.logs.map(log => ({ ...log, id: sourceId })) } as never;
+    }
+    return base(path, options);
+  });
+  await mount();
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { WorkoutBody } = require('../WorkoutBody');
+  await act(async () => { const body = renderer.root.findByType(WorkoutBody); body.props.onRecord(body.props.drafts[0]); });
+  jest.setSystemTime(new Date(2026, 8, 2, 12));
+  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))[0].props.onPress(); });
+  const write = jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path === '/sets/log');
+  expect(write?.[1]?.body).toMatchObject({ logged_date: expectedDate, completed: true });
+});

@@ -1,0 +1,93 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/set-save.test.tsx -t offline cold start
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 2 | import * as Notifications from 'expo-notifications';
+        | ^
+      3 | import { t } from '@/i18n';
+      4 | configureNotificationHandler();
+      5 | let timer: ReturnType<typeof setTimeout> | undefined;
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:2:1)
+      at Object.require (src/features/training/video-upload/manager.ts:38:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:19:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/__tests__/set-save.test.tsx:16:1)
+
+FAIL src/features/training/__tests__/set-save.test.tsx
+  ✕ 102: an already loaded workout survives an offline cold start with its pending completed set (300 ms)
+  ○ skipped a rate-limited background refetch keeps the loaded workout instead of replacing it with the load error
+  ○ skipped a first load that fails still shows the load error with retry
+  ○ skipped a slow set save closes the sheet before the request succeeds
+  ○ skipped failure retains the local failed-set mark and retries in the background
+  ○ skipped timeout retains the local failed-set mark and retries in the background
+  ○ skipped Sending does not block the TodayWorkoutView save path or discard the attachment
+  ○ skipped a saved PR is recorded and silently acknowledged without a banner (previous record: false)
+  ○ skipped a saved PR is recorded and silently acknowledged without a banner (previous record: true)
+  ○ skipped reentering Training silently drains all pending PRs at the replay time, leaving other accounts alone
+  ○ skipped recording the next set closes the previous rest before returning to background
+  ○ skipped a rest preference read cannot revive rest after leaving Training (return first: false)
+  ○ skipped a rest preference read cannot revive rest after leaving Training (return first: true)
+  ○ skipped saved set supplies its exercise name to the background rest notification (Competition Deadlift)
+  ○ skipped saved set supplies its exercise name to the background rest notification (undefined)
+  ○ skipped accessory check saves ordinary data, prevents double taps and rests with preference undefined / coach null
+  ○ skipped accessory check saves ordinary data, prevents double taps and rests with preference 90 / coach null
+  ○ skipped accessory check saves ordinary data, prevents double taps and rests with preference 90 / coach 75
+  ○ skipped an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and transport failures keep the latest local values
+  ○ skipped a completed accessory with uploading video cannot be cancelled and explains how to manage it
+  ○ skipped a completed accessory with uploaded video cannot be cancelled and explains how to manage it
+  ○ skipped complete all submits serially without rest, leaves 0 empty rows and keeps all local completions on transport failure
+  ○ skipped complete all submits serially without rest, leaves 1 empty rows and keeps all local completions on transport failure
+  ○ skipped complete all submits serially without rest, leaves 2 empty rows and keeps all local completions on transport failure
+  ○ skipped two accessory checks queued before the first response still recognize the final unrecorded set
+  ○ skipped an accessory recorded through its full entry also uses accessory rest and skips the RPE explanation
+  ○ skipped in-week switch starts, logs and settles the selected day without changing the cursor day
+  ○ skipped extra and student-added saves retain their identities and card date across 04:00; deleting updates the visible day
+  ○ skipped main-lift extra full entry keeps RPE optional and unprescribed weight empty
+  ○ skipped restored non-cursor selection stays on the open day across 04:00 and a new visit returns to the cursor
+  ○ skipped extra main-lift rest uses student RPE settings instead of prescription rest
+  ○ skipped extra delete immediately refreshes the current e1RM suggestion
+  ○ skipped extra cancel immediately refreshes the current e1RM suggestion
+  ○ skipped 102: cancel of a pre-existing extra set removes its server-derived history with an empty outbox
+  ○ skipped 102: fail of a pre-existing extra set removes its server-derived history with an empty outbox
+  ○ skipped a completed day shows the overview card with logged counts and expandable sets instead of a set hero
+  ○ skipped removing a student-added card keeps a rejected delete queued without restoring its rows
+  ○ skipped completed summary replay and upload status: uploaded
+  ○ skipped completed summary replay and upload status: none
+  ○ skipped completed summary replay and upload status: uploading
+  ○ skipped completed summary replay and upload status: failed
+  ○ skipped Training focus cycle preserves the pre-096 behavior of returning to the cursor
+
+  ● 102: an already loaded workout survives an offline cold start with its pending completed set
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "lb"
+    Received: "kg"
+
+      151 |   expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+      152 |   expect(body().props.drafts[0]).toMatchObject({ sourceLog: { completed: true }, weightText: '90' });
+    > 153 |   expect(body().props.unit).toBe('lb');
+          |                             ^
+      154 |   expect(body().props.resolveExerciseMetadata(draft.exercise.exercise_id)).toMatchObject({ name: 'Dumbbell press', exerciseType: 'accessory' });
+      155 |   act(() => renderer.unmount()); client.clear();
+      156 |   useSessionStore.setState({ user: { id: '10000000-0000-4000-8000-000000000001', phone: '', role: 'coached_student', created_at: plan.created_at } });
+
+      at Object.toBe (src/features/training/__tests__/set-save.test.tsx:153:29)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 41 skipped, 42 total
+Snapshots:   0 total
+Time:        1.815 s, estimated 13 s
+Ran all test suites matching /src\/features\/training\/__tests__\/set-save.test.tsx/i with tests matching "offline cold start".

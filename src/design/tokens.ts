@@ -24,6 +24,8 @@ export const palette = {
   videoWorkbenchFill: { light: '#111827', dark: '#111827' },
   goldCTA: { light: '#B45309', dark: '#FFB800' },
   gold500: { light: '#D97706', dark: '#F5A623' },
+  failure: { light: '#C2410C', dark: '#F0954A' },
+  failureSoft: { light: 'rgba(194,65,12,0.10)', dark: 'rgba(240,149,74,0.14)' },
   gold400: { light: '#F59E0B', dark: '#FBBF3E' },
   gold300: { light: '#FFD470', dark: '#FFD470' },
   gold200: { light: '#FEF3C7', dark: '#FFE28E' },

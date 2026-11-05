@@ -50,6 +50,7 @@ import {
   type InviteStash,
 } from '@/features/onboarding';
 
+import { loadTrainingBinding } from '@/features/onboarding/offline-binding';
 import { firstRunStorage } from '@/features/onboarding/first-run-storage';
 import { WelcomeScreen } from '@/features/onboarding/WelcomeScreen';
 
@@ -113,9 +114,14 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
   useEffect(() => {
     if (!studentId) return;
     let active = true;
+    const binding = loadTrainingBinding(studentId, () => active);
     void Promise.all([
-      bindRepository.mine(),
-      onboardingRepository.get(studentId),
+      binding,
+      onboardingRepository.get(studentId).catch(async error => {
+        if (error instanceof ApiError && error.kind === 'network' && error.status === undefined &&
+          (await binding).bind_request?.status === 'accepted') return null;
+        throw error;
+      }),
       inviteStashStorage.read(studentId),
     ])
       .then(async ([mine, profile, stash]) => {

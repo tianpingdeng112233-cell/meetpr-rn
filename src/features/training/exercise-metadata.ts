@@ -45,18 +45,18 @@ function deadliftStyle(value: string | null): DeadliftStyle | null {
 }
 
 function liftProfile(
-  onboarding: OnboardingProfile | null | undefined,
+  onboarding: Partial<Pick<OnboardingProfile, 'squat_stance' | 'deadlift_style'>> | null | undefined,
 ): OnboardingLiftProfile | null {
   if (!onboarding) return null;
   return {
-    squatStance: squatStance(onboarding.squat_stance),
-    deadliftStyle: deadliftStyle(onboarding.deadlift_style),
+    squatStance: squatStance(onboarding.squat_stance ?? null),
+    deadliftStyle: deadliftStyle(onboarding.deadlift_style ?? null),
   };
 }
 
 export function createExerciseMetadataResolver(
   exercises: readonly Exercise[] | undefined,
-  onboarding: OnboardingProfile | null | undefined,
+  onboarding: Partial<Pick<OnboardingProfile, 'squat_stance' | 'deadlift_style'>> | null | undefined,
 ): ExerciseMetadataResolver {
   if (!exercises) {
     return () => null;

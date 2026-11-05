@@ -80,6 +80,19 @@ function mutate(
 }
 
 export class AsyncStorageE1RMRepository implements E1RMRepository {
+  /** Replace only the transport identity; preserve the locally calculated record and PR. */
+  async resolveSetLogId(studentId: string, localId: string, serverId: string): Promise<void> {
+    if (localId === serverId) return;
+    await mutate(stored => {
+      const local = stored.points.find(point => point.studentId === studentId && point.setLogId === localId);
+      if (!local) return false;
+      const duplicates = new Set(stored.points.filter(point => point.studentId === studentId && point.setLogId === serverId).map(point => point.id));
+      stored.points = stored.points.filter(point => !duplicates.has(point.id));
+      stored.points = stored.points.map(point => point.id === local.id ? { ...point, setLogId: serverId } : point);
+      stored.prs = stored.prs.map(pr => pr.studentId === studentId && duplicates.has(pr.pointId) ? { ...pr, pointId: local.id } : pr);
+    });
+  }
+
   async removeSetLog(studentId: string, setLogId: string): Promise<void> {
     await mutate(stored => {
       const removed = new Set(stored.points.filter(point => point.studentId === studentId && point.setLogId === setLogId).map(point => point.id));

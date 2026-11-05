@@ -1,0 +1,53 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/completion-control.test.tsx
+
+FAIL src/features/training/set-sync/__tests__/completion-control.test.tsx
+  ✕ light syncing text and spinner use the white training button foreground (25 ms)
+  ✕ dark syncing text and spinner use the white training button foreground (1 ms)
+  ✓ light failure uses orange while the explanation and retry retain their normal colors (8 ms)
+  ✓ dark failure uses orange while the explanation and retry retain their normal colors (1 ms)
+
+  ● light syncing text and spinner use the white training button foreground
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "#FFFFFF"
+    Received: "#9A4A06"
+
+      18 |   await act(async () => { renderer = create(<ColorSchemeProvider scheme={scheme}><SetSyncCompletionControl state="syncing" onComplete={() => {}} /></ColorSchemeProvider>); });
+      19 |   const label = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.setSync.syncing'))!;
+    > 20 |   expect(StyleSheet.flatten(label.props.style).color).toBe('#FFFFFF');
+         |                                                       ^
+      21 |   expect(renderer.root.findByType(ActivityIndicator).props.color).toBe('#FFFFFF');
+      22 | });
+      23 |
+
+      at toBe (src/features/training/set-sync/__tests__/completion-control.test.tsx:20:55)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● dark syncing text and spinner use the white training button foreground
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "#FFFFFF"
+    Received: "#F5A623"
+
+      18 |   await act(async () => { renderer = create(<ColorSchemeProvider scheme={scheme}><SetSyncCompletionControl state="syncing" onComplete={() => {}} /></ColorSchemeProvider>); });
+      19 |   const label = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.setSync.syncing'))!;
+    > 20 |   expect(StyleSheet.flatten(label.props.style).color).toBe('#FFFFFF');
+         |                                                       ^
+      21 |   expect(renderer.root.findByType(ActivityIndicator).props.color).toBe('#FFFFFF');
+      22 | });
+      23 |
+
+      at toBe (src/features/training/set-sync/__tests__/completion-control.test.tsx:20:55)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 passed, 4 total
+Snapshots:   0 total
+Time:        0.664 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/completion-control.test.tsx/i.

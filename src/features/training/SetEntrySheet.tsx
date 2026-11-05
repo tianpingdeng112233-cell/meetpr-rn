@@ -13,7 +13,7 @@ import { decodePrescription } from '@/domain/plan/prescription';
 import { entryPrefill } from './suggestion-gating';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -327,7 +327,7 @@ export function SetEntrySheet({
               {attempted && freeWeight && !weightText.trim() ? <Text accessibilityLiveRegion="polite" style={{ color: colors.danger, ...font.body(fontMetrics.size12) }}>{t('loadTypes.missingWeight', [draft.setIndex + 1])}</Text> : null}
               <Pressable accessibilityRole="button" disabled={!editable || saving || (!validWeight && !freeWeight)} accessibilityState={{ busy: saving, disabled: !editable || saving || (!validWeight && !freeWeight) }} onPress={() => void save(false)}
                 style={({ pressed }) => [styles.completeButton, pressed && styles.footerPressed, !validWeight && styles.footerDisabled]}>
-                {saving ? <ActivityIndicator color={colors.ctaText} /> : <MaterialCommunityIcons color={colors.ctaText} name="check" size={20} />}
+                <MaterialCommunityIcons color={colors.ctaText} name="check" size={20} />
                 <Text style={styles.completeText}>{t('student.setEntrySheet.copy012')}</Text>
               </Pressable>
               <Pressable accessibilityRole="button" disabled={!editable || saving || (!validWeight && !freeWeight)} accessibilityState={{ busy: saving, disabled: !editable || saving || (!validWeight && !freeWeight) }} onPress={() => void save(true)}

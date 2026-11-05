@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Platform, Text } from 'react-native';
 import * as Application from 'expo-application';
-import { useQueryClient } from '@tanstack/react-query';
+import { PendingSetsSignOut } from '@/features/training/set-sync/PendingSetsSignOut';
 import { useOnboardingProfile } from '@/api/domains/onboarding';
 import { useSessionStore } from '@/api/session';
-import { AppButton, font, spacing, useColors } from '@/design';
+import { font, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { AccountSecuritySection } from '@/features/account/AccountSecuritySection';
 import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
@@ -27,13 +27,6 @@ function PreferenceRows({ studentId, trainingDays }: { studentId: string; traini
     {page === 'reminder' ? <TrainingReminderSettingsScreen studentId={studentId} initial={reminder.settings} onClose={() => setPage(null)} /> : null}
   </>;
 }
-function SignOut() {
-  const client = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  return <AppButton variant="secondary" icon="logout" label={t('student.myProfileView.copy013')} disabled={busy} onPress={() => {
-    setBusy(true); client.clear(); void useSessionStore.getState().logout().catch(() => undefined).finally(() => setBusy(false));
-  }} />;
-}
 export function ProfileSettingsScreen() {
   const studentId = useSessionStore(state => state.user?.id ?? '');
   const profile = useOnboardingProfile(studentId);
@@ -47,7 +40,7 @@ export function ProfileSettingsScreen() {
     <Text style={labelStyle}>{t('student.rn.profile.account')}</Text>
     <AccountSecuritySection studentId={studentId} />
     {profile.isError ? <ProfilePageStatus pending={false} failed retry={() => void profile.refetch()} /> : null}
-    <SignOut />
+    <PendingSetsSignOut />
     {version ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{version}</Text> : null}
   </ProfilePage>;
 }
