@@ -1,0 +1,13 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/video-upload/__tests__/completion-delivery.test.ts
+
+PASS src/features/training/video-upload/__tests__/completion-delivery.test.ts
+  ✓ completion counts waiting-for-set and backoff as undelivered, separates failures from active uploads (1 ms)
+  ✓ waiting-day videos include later additions and replacements but never other days or accounts (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.423 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/completion-delivery.test.ts/i.

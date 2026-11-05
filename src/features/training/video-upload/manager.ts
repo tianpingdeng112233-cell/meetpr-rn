@@ -29,7 +29,7 @@ import {
   cleanInterruptedParts,
 } from './multipart';
 import { runPreparedVideoUpload } from './upload-runner';
-import { useVideoUploadStore, flushVideoUploads } from './store';
+import { useVideoUploadStore, flushVideoUploads, preserveVideoAttachment } from './store';
 import {
   UploadRetryScheduler,
   UPLOAD_RETRY_WINDOW_MS,
@@ -446,6 +446,7 @@ export const videoUploadManager = {
     const key = keyFor(id);
     const pending = attachments.get(key);
     if (pending?.sourceUri === source.uri) return pending.done;
+    const releaseEdit = preserveVideoAttachment(id.studentId, id.stableSetId, buildLogRequest?.());
     const done = (async () => {
       const retainedUri = await mutate(id, async () => {
         await useVideoUploadStore.getState().hydrate();
@@ -473,6 +474,7 @@ export const videoUploadManager = {
         await execute(id, ensure);
     })().finally(() => {
       if (attachments.get(key)?.done === done) attachments.delete(key);
+      releaseEdit();
     });
     attachments.set(key, { sourceUri: source.uri, done });
     return done;

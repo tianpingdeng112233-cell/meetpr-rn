@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
+import { useStudentTabsStore } from '@/features/student-tabs';
 import { useSessionStore } from '@/api/session';
 
 export function VideoUploadNotificationSession() {
@@ -22,6 +23,8 @@ export function VideoUploadNotificationSession() {
       await Notifications.clearLastNotificationResponseAsync();
       if (disposed) return;
       router.navigate('/(student)/training');
+      const dayId = request.content.data?.dayId;
+      if (typeof dayId === 'string') useStudentTabsStore.setState({ videoNotificationDay: { studentId, dayId } });
       const { videoUploadManager } = await import('./manager');
       if (!disposed && useSessionStore.getState().user?.id === studentId) await videoUploadManager.retryAll(studentId);
       consumed.delete(request.identifier);

@@ -1,4 +1,4 @@
-import { SetLogUpsertRequestSchema } from '@/api/domains/sets';
+import { SetLogUpsertRequestSchema, type SetLogUpsertRequest } from '@/api/domains/sets';
 import { videosRepository, type StudentVideo } from '@/api/domains/videos';
 import AsyncStorage from '@/demo/storage';
 import { z } from 'zod';
@@ -90,21 +90,34 @@ async function persist(
 
 let persistChain: Promise<void> = Promise.resolve();
 const remoteRequests = new Map<string, symbol>();
-const attachmentEdits = new Map<string, Set<symbol>>();
+const attachmentEdits = new Map<string, Map<symbol, SetLogUpsertRequest | undefined>>();
 
 /** Picker/trim is provisional: refreshes must not replace its original attachment. */
-export function preserveVideoAttachment(studentId: string, stableSetId: string): () => void {
+export function preserveVideoAttachment(studentId: string, stableSetId: string, logRequest?: SetLogUpsertRequest): () => void {
   const key = uploadKey(studentId, stableSetId);
   const token = Symbol('attachment edit');
-  const edits = attachmentEdits.get(key) ?? new Set<symbol>();
-  edits.add(token);
+  const edits = attachmentEdits.get(key) ?? new Map<symbol, SetLogUpsertRequest | undefined>();
+  edits.set(token, logRequest);
   attachmentEdits.set(key, edits);
   remoteRequests.delete(key);
+  useVideoUploadStore.setState(state => ({ attachmentEditRevision: state.attachmentEditRevision + 1 }));
   return () => {
     if (!edits.delete(token)) return;
     remoteRequests.delete(key);
     if (edits.size === 0) attachmentEdits.delete(key);
+    useVideoUploadStore.setState(state => ({ attachmentEditRevision: state.attachmentEditRevision + 1 }));
   };
+}
+
+/** Provisional copies count as pending for completion without replacing durable originals. */
+export function videoUploadsForCompletion(): Readonly<Record<string, VideoUploadRecord>> {
+  const records = { ...useVideoUploadStore.getState().records };
+  for (const [key, edits] of attachmentEdits) {
+    const original = records[key] ?? EMPTY_VIDEO_UPLOAD;
+    const request = [...edits.values()].findLast(value => value !== undefined);
+    records[key] = { ...original, status: 'pending', logRequest: request ?? original.logRequest };
+  }
+  return records;
 }
 
 function schedulePersist(records: Record<string, VideoUploadRecord>): void {
@@ -115,6 +128,7 @@ function schedulePersist(records: Record<string, VideoUploadRecord>): void {
 }
 
 type VideoUploadStore = {
+  attachmentEditRevision: number;
   hydrated: boolean;
   records: Record<string, VideoUploadRecord>;
   hydrate: () => Promise<void>;
@@ -126,19 +140,17 @@ type VideoUploadStore = {
 };
 
 export const useVideoUploadStore = create<VideoUploadStore>((set, get) => ({
+  attachmentEditRevision: 0,
   hydrated: false,
   records: {},
   hydrate: async () => {
     if (get().hydrated) return;
     let records: Record<string, VideoUploadRecord> = {};
-    try {
-      const raw = await AsyncStorage.getItem(VIDEO_UPLOAD_STORAGE_KEY);
-      if (raw) {
-        const parsed = StoredUploadsSchema.safeParse(JSON.parse(raw));
-        if (parsed.success) records = parsed.data.records;
-      }
-    } catch {
-      records = {};
+    const raw = await AsyncStorage.getItem(VIDEO_UPLOAD_STORAGE_KEY);
+    if (raw) {
+      const parsed = StoredUploadsSchema.safeParse(JSON.parse(raw));
+      if (!parsed.success) throw new Error('Invalid video upload storage');
+      records = parsed.data.records;
     }
 
     // Never overwrite newer in-memory records when root and attach hydrate together.
@@ -235,7 +247,7 @@ export function resetVideoUploadStoreForTests(): void {
   persistChain = Promise.resolve();
   remoteRequests.clear();
   attachmentEdits.clear();
-  useVideoUploadStore.setState({ hydrated: false, records: {} });
+  useVideoUploadStore.setState({ hydrated: false, records: {}, attachmentEditRevision: 0 });
 }
 
 export async function flushVideoUploads(): Promise<void> {

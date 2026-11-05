@@ -103,3 +103,62 @@ test('a completion response from a logged-out instance cannot erase new completi
   const restored = new CompletionGate('alice', s.storage, async () => {}); await restored.ready;
   expect(restored.pendingDays()).toContain('day-b'); fresh.dispose(); restored.dispose(); s.stop();
 });
+
+test('video wait survives restart, times out once from the hold, and completes once after both inputs arrive', async () => {
+  const s = setup(); const timeout = jest.fn(async () => {}); const delivered = jest.fn(async () => {});
+  let summary = { failed: 1, uploading: 1, done: 1, total: 3, undelivered: 2, delivered: false };
+  const videos = { summary: () => summary, timeout, delivered };
+  const context = { sets: [{ stableSetId: 'video' }], exerciseIds: ['exercise'], heldAt: Date.now() };
+  const first = new CompletionGate('alice', s.storage, s.complete, videos);
+  await first.arm('day', context); await first.release('day');
+  await first.updateConditions('day', { setsSynchronized: true, videosDelivered: false });
+  first.dispose();
+  const restored = new CompletionGate('alice', s.storage, s.complete, videos); await restored.ready;
+  await restored.updateConditions('day', { setsSynchronized: true, videosDelivered: false });
+  await jest.advanceTimersByTimeAsync(30 * 60_000 - 1); expect(timeout).not.toHaveBeenCalled();
+  await jest.advanceTimersByTimeAsync(1); expect(timeout).toHaveBeenCalledWith('day', 2);
+  expect(restored.pendingDays()).toEqual(['day']); expect(s.complete).not.toHaveBeenCalled();
+  restored.dispose();
+  const again = new CompletionGate('alice', s.storage, s.complete, videos); await again.ready;
+  await again.updateConditions('day', { setsSynchronized: true, videosDelivered: false });
+  await jest.advanceTimersByTimeAsync(30 * 60_000); expect(timeout).toHaveBeenCalledTimes(1);
+  summary = { failed: 0, uploading: 0, done: 3, total: 3, undelivered: 0, delivered: true };
+  await again.updateConditions('day', { setsSynchronized: false, videosDelivered: true }); expect(s.complete).not.toHaveBeenCalled();
+  await Promise.all([again.updateConditions('day', { setsSynchronized: true, videosDelivered: true }), again.updateConditions('day', { setsSynchronized: true, videosDelivered: true })]);
+  expect(s.complete).toHaveBeenCalledTimes(1); expect(delivered).toHaveBeenCalledWith('day', 3);
+  expect(again.pendingDays()).toEqual([]); again.dispose(); s.stop();
+});
+
+test('retrying a failed completion after adding a video persists the new delivery wait', async () => {
+  const s = setup(); await s.gate.arm('day'); await s.gate.release('day');
+  await s.gate.arm('day', { heldAt: Date.now(), sets: [{ stableSetId: 'new-video' }], exerciseIds: ['exercise'] });
+  const restored = new CompletionGate('alice', s.storage, s.complete); await restored.ready;
+  expect(restored.videoIntent('day')?.sets).toEqual([{ stableSetId: 'new-video' }]);
+  restored.dispose(); s.stop();
+});
+
+test('offline completion after every set and video is in keeps the reward and completes once online (iPhone 12 walkthrough 2026-11-05)', async () => {
+  const s = setup(); const timeout = jest.fn(async () => {}); const delivered = jest.fn(async () => {});
+  let online = false;
+  const complete = jest.fn(async () => { if (!online) throw new TypeError('Network request failed'); });
+  const gate = new CompletionGate('alice', s.storage, complete, { summary: () => undefined as never, timeout, delivered });
+  const error = jest.fn(); const reward = jest.fn();
+  const flow = new SetCompletionCoordinator(s.queue, gate, { reward, error, videosDelivered: () => true });
+  await s.queue.ready; await flow.begin('day'); await flush();
+  expect(reward).toHaveBeenCalledTimes(1); expect(error).not.toHaveBeenCalled();
+  expect(flow.snapshot()).toBe('reward'); expect(gate.awaitingNetwork('day')).toBe(true);
+  online = true;
+  await gate.updateConditions('day', { setsSynchronized: true, videosDelivered: true });
+  expect(complete).toHaveBeenCalledTimes(2); expect(gate.pendingDays()).toEqual([]);
+  expect(delivered).toHaveBeenCalledWith('day', 0);
+  flow.reset(); gate.dispose(); s.stop();
+});
+
+test('a normal online completion without videos sends no completion notice', async () => {
+  const s = setup(); const delivered = jest.fn(async () => {});
+  const gate = new CompletionGate('alice', s.storage, s.complete, { summary: () => undefined as never, timeout: jest.fn(async () => {}), delivered });
+  const flow = new SetCompletionCoordinator(s.queue, gate, { reward: jest.fn(), videosDelivered: () => true });
+  await s.queue.ready; await flow.begin('day'); await flush();
+  expect(s.complete).toHaveBeenCalledTimes(1); expect(delivered).not.toHaveBeenCalled();
+  flow.reset(); gate.dispose(); s.stop();
+});

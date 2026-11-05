@@ -2486,5 +2486,18 @@
   "student.videoDelivery.missingBody": "手機裡找不到這條影片的檔案了。從相簿選出來，就能掛回這一組。",
   "student.videoDelivery.savedToPhotos": "錄影時它也存了一份到相簿。",
   "student.videoDelivery.pickAgain": "從相簿重新選這條影片",
-  "student.videoDelivery.later": "先不管"
+  "student.videoDelivery.later": "先不管",
+  "student.videoDelivery.progress": "影片上傳中 {0}/{1}",
+  "student.videoDelivery.progressBody": "傳完會自動完成今日訓練，可以先離開，完成後會通知你。",
+  "student.videoDelivery.waitingNetwork": "等待聯網完成今日訓練",
+  "student.videoDelivery.waitingNetworkBody": "聯網後會自動完成，可以先離開，完成後會通知你。",
+  "student.videoDelivery.completeNoVideos": "今日訓練已完成",
+  "student.videoDelivery.holdHint": "影片傳完後才會真正完成，長按後可以先離開",
+  "student.videoDelivery.summary": "{0} 條影片沒傳上 · {1} 條正在傳",
+  "student.videoDelivery.uploading": "{0} 條影片正在傳",
+  "student.videoDelivery.uploadingOne": "1 條影片正在傳",
+  "student.videoDelivery.complete": "今日訓練已完成，{0} 條影片已送達",
+  "student.videoDelivery.completeOne": "今日訓練已完成，1 條影片已送達",
+  "student.videoDelivery.videoTimeout": "還有 {0} 條影片沒傳上，點選重試",
+  "student.videoDelivery.videoTimeoutOne": "還有 1 條影片沒傳上，點選重試"
 }

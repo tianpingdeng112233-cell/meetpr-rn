@@ -10,6 +10,7 @@ import { create } from 'zustand';
 export type TrainingHandoff = { plan: PlanDetail; dayID: string; existingLogs: SetLog[] };
 type StudentTabsStore = {
   trainingHandoff: TrainingHandoff | null;
+  videoNotificationDay: { studentId: string; dayId: string } | null;
   handoffTraining: (handoff: TrainingHandoff) => void;
   completionRevision: number;
   bumpCompletionRevision: () => void;
@@ -29,6 +30,7 @@ type StudentTabsStore = {
 
 export const useStudentTabsStore = create<StudentTabsStore>((set) => ({
   trainingHandoff: null,
+  videoNotificationDay: null,
   handoffTraining: (trainingHandoff) => set(s => ({ trainingHandoff, trainingJumpToken: s.trainingJumpToken + 1 })),
   completionRevision: 0,
   bumpCompletionRevision: () => set(s => ({ completionRevision: s.completionRevision + 1, planRevision: s.planRevision + 1 })),

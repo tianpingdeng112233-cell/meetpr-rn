@@ -1,0 +1,25 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/video-upload/__tests__/completion-delivery.test.ts
+
+FAIL src/features/training/video-upload/__tests__/completion-delivery.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../completion-delivery' from 'src/features/training/video-upload/__tests__/completion-delivery.test.ts'
+
+      1 | import { expect, test } from '@jest/globals';
+      2 | import { EMPTY_VIDEO_UPLOAD } from '../model';
+    > 3 | import { completionVideoSummary } from '../completion-delivery';
+        | ^
+      4 |
+      5 | test('completion counts waiting-for-set and backoff as undelivered, separates failures from active uploads', () => {
+      6 |   const summary = completionVideoSummary([
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (src/features/training/video-upload/__tests__/completion-delivery.test.ts:3:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.456 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/completion-delivery.test.ts/i.

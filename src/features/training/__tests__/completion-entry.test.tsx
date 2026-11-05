@@ -12,6 +12,9 @@ import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
+import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
+
 
 jest.mock('expo-media-library', () => ({}));
 jest.mock('react-native-compressor', () => ({}));
@@ -53,6 +56,7 @@ let servedPlan: PlanDetail;
 let failCompletion = false;
 
 beforeEach(() => {
+  jest.mocked(authenticatedRequest).mockClear();
   setLocaleOverride('en');
   mockNavigate.mockClear();
   jest.mocked(useFocusEffect).mockClear();
@@ -96,6 +100,7 @@ afterEach(async () => {
   jest.restoreAllMocks();
   jest.useRealTimers();
   await AsyncStorage.clear();
+  resetVideoUploadStoreForTests();
 });
 
 test('successful settlement opens celebration and direct finish persists review and navigates to Today', async () => {
@@ -538,4 +543,46 @@ test.each([
   await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))[0].props.onPress(); });
   const write = jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path === '/sets/log');
   expect(write?.[1]?.body).toMatchObject({ logged_date: expectedDate, completed: true });
+});
+
+test('undelivered videos reward first, keep the training progress card after closing, and complete on delivery', async () => {
+  const key = `${studentId}:${plan.days[0].exercises[0].sets[0].id}`;
+  useVideoUploadStore.setState({ hydrated: true, records: { [key]: { ...EMPTY_VIDEO_UPLOAD, status: 'uploading', setLogId: 'log' } } });
+  await mount();
+  expect(copy()).toContain('1 video uploading');
+  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction(); });
+  expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(0);
+  await press(t('student.workoutCompletionFlowView.copy003'));
+  expect(mockNavigate).not.toHaveBeenCalled();
+  expect(copy()).toContain('Uploading videos 0/1');
+  await act(async () => { useVideoUploadStore.setState({ records: { [key]: { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded', setLogId: 'log' } } }); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(1);
+  expect(copy()).not.toContain('Uploading videos 0/1');
+});
+
+test('first hold waits for delayed video storage before deciding delivery, even with synchronized sets', async () => {
+  const read = jest.mocked(AsyncStorage.getItem).getMockImplementation()!;
+  let release!: (value: string) => void;
+  const stored = new Promise<string>(resolve => { release = resolve; });
+  jest.spyOn(AsyncStorage, 'getItem').mockImplementation(key => key === 'training.videoUploads.v1' ? stored : read(key));
+  await mount();
+  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction(); });
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(0);
+  await act(async () => { release(JSON.stringify({ version: 1, records: {
+    [`${studentId}:${plan.days[0].exercises[0].sets[0].id}`]: { ...EMPTY_VIDEO_UPLOAD, status: 'waiting', setLogId: 'log' },
+  } })); });
+  expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(0);
+});
+
+test.each(['read failure', 'invalid data'])('video storage %s cannot be treated as all videos delivered', async failure => {
+  const read = jest.mocked(AsyncStorage.getItem).getMockImplementation()!;
+  jest.spyOn(AsyncStorage, 'getItem').mockImplementation(key => key !== 'training.videoUploads.v1' ? read(key)
+    : failure === 'read failure' ? Promise.reject(new Error('Storage unavailable')) : Promise.resolve('{"version":1,"records":"broken"}'));
+  await mount();
+  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction(); });
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete')).length).toBe(0);
+  expect(useVideoUploadStore.getState().hydrated).toBe(false);
 });

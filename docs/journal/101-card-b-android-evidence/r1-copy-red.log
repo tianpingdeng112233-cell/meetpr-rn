@@ -1,0 +1,71 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/video-upload/__tests__/manager-attach.test.ts -t replacement copy blocks
+
+FAIL src/features/training/video-upload/__tests__/manager-attach.test.ts
+  ✕ a replacement copy blocks completion without overwriting the delivered source until success (17 ms)
+  ✕ a replacement copy blocks completion without overwriting the delivered source until copy failure (12 ms)
+  ○ skipped native upload rejection remains retryable and persists its message: fetch failed: Call to function 'NativeRequest.start' has been rejected. Cannot cast value for field 'headers'
+  ○ skipped native upload rejection remains retryable and persists its message: Native upload arguments cannot be cast
+  ○ skipped one attach retains the picker source through the immediate sweep and prepares the nonempty copy
+  ○ skipped concurrent attaches of the same selection share one retained file and upload
+  ○ skipped a rejected native copy is caught as VideoNativeError without deleting the picker source or publishing a phantom record
+  ○ skipped Set log unavailable fails deterministically with readable attachment copy and keeps the source for retry
+  ○ skipped Invalid set input fails deterministically with readable attachment copy and keeps the source for retry
+  ○ skipped a native part deletion failure is deterministic and keeps the prepared video for retry
+  ○ skipped a picker deletion failure returns VideoNativeError and keeps the original selection
+  ○ skipped startup during an asynchronous retain cannot reclaim the not-yet-published copy
+  ○ skipped transcode output is retained before its cache file and old source are reclaimed
+  ○ skipped a late startup hydration cannot roll the retained source back to a stale picker URI
+  ○ skipped an ensureSetLog transport failure still uses network backoff
+  ○ skipped cancelling a video awaiting its offline set releases the job and permits replacement
+  ○ skipped retry now interrupts backoff and delivers the same set without waiting for its timer
+  ○ skipped a missing prepared file remains retryable and a Photos replacement attaches to the original set
+  ○ skipped cold start after an upgrade preserves yesterday's failed file over 500 MiB and its retry identity
+  ○ skipped replacement deletion failure retains the new video and retries the same set after restart
+  ○ skipped retry waits for the restored offline set receipt before uploading
+  ○ skipped replaceMissing waits for the restored offline set receipt before uploading
+
+  ● a replacement copy blocks completion without overwriting the delivered source until success
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 1
+
+      388 |   release(); await attaching;
+      389 |   for (let i = 0; i < 150; i++) await Promise.resolve();
+    > 390 |   expect(prematureCompletions).toBe(0);
+          |                                ^
+      391 |   expect(complete).toHaveBeenCalledTimes(1);
+      392 |   expect(useVideoUploadStore.getState().records['student:set'].status).toBe('uploaded');
+      393 | });
+
+      at toBe (src/features/training/video-upload/__tests__/manager-attach.test.ts:390:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a replacement copy blocks completion without overwriting the delivered source until copy failure
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 1
+
+      388 |   release(); await attaching;
+      389 |   for (let i = 0; i < 150; i++) await Promise.resolve();
+    > 390 |   expect(prematureCompletions).toBe(0);
+          |                                ^
+      391 |   expect(complete).toHaveBeenCalledTimes(1);
+      392 |   expect(useVideoUploadStore.getState().records['student:set'].status).toBe('uploaded');
+      393 | });
+
+      at toBe (src/features/training/video-upload/__tests__/manager-attach.test.ts:390:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 20 skipped, 22 total
+Snapshots:   0 total
+Time:        0.565 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/manager-attach.test.ts/i with tests matching "replacement copy blocks".

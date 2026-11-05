@@ -1,0 +1,91 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/completion-entry.test.tsx -t first hold waits
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:121:1)
+      at Object.require (src/features/training/__tests__/completion-entry.test.tsx:14:1)
+
+FAIL src/features/training/__tests__/completion-entry.test.tsx
+  ✕ first hold waits for delayed video storage before deciding delivery, even with synchronized sets (253 ms)
+  ○ skipped successful settlement opens celebration and direct finish persists review and navigates to Today
+  ○ skipped completed-day banner opens review directly and reflection survives reopening
+  ○ skipped failed settlement leaves the completion flow closed
+  ○ skipped Ask coach opens the picker before navigating, then enters chat with a staged current set
+  ○ skipped Ask coach conversation failure uses the training share alert and stays on Training
+  ○ skipped completion immediately celebrates while sending, then acknowledges the coach after success
+  ○ skipped a 503 closes celebration, restores completion eligibility and keeps the recorded set for retry
+  ○ skipped 30 seconds without a response closes celebration and rolls back, ignoring late success
+  ○ skipped coach receipt follows the completion response without waiting for the plan refresh
+  ○ skipped failure after leaving celebration rolls back without reopening it or losing recorded sets
+  ○ skipped Chinese celebration shows sending until the completion response
+  ○ skipped training header shows cursor status on September 7
+  ○ skipped training header shows cursor status on September 8
+  ○ skipped training header shows cursor status on September 25
+  ○ skipped training header recalculates after 4am on focus without waiting for its minute tick
+  ○ skipped training header recalculates after 4am on foreground without waiting for its minute tick
+  ○ skipped browsing a completed week keeps Completed instead of the overdue cursor count
+  ○ skipped 090 all done docks exactly one completion control outside the scroll content
+  ○ skipped 090 undoing a recorded set restores the hero and returns the single completion control to the scroll content
+  ○ skipped 090 completed-row scroll: first completion
+  ○ skipped 090 completed-row scroll: batch completion in plan order, before a previously completed later row
+  ○ skipped 090 completed-row scroll: last exercise with no hero remaining
+  ○ skipped 090 completed-row scroll: reduced motion
+  ○ skipped 090 completed-row scroll: keyboard already open
+  ○ skipped 090 completed-row scroll: keyboard opens before layout
+  ○ skipped 090 completed-row scroll: user dragging
+  ○ skipped 090 completed-row scroll: user starts dragging before layout
+  ○ skipped 090 completed-row scroll: momentum scrolling
+  ○ skipped a day completed today shows one status row whose undo reopens the day
+  ○ skipped a day completed on an earlier day shows the status row without undo
+  ○ skipped 102: a hanging set request turns the row green immediately and leaves other rows available
+  ○ skipped 102: a hanging set request closes SetEntrySheet immediately after completing a set
+  ○ skipped 102 R1: source=log records use 2026-09-01 when saved after the day changes
+  ○ skipped 102 R1: source=null records use 2026-09-02 when saved after the day changes
+  ○ skipped 102 R1: source=local:one records use 2026-09-02 when saved after the day changes
+  ○ skipped undelivered videos reward first, keep the training progress card after closing, and complete on delivery
+
+  ● first hold waits for delayed video storage before deciding delivery, even with synchronized sets
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 0
+    Received length: 1
+    Received array:  [["/plans/days/40000000-0000-4000-8000-000000000000/complete", {"method": "POST", "schema": {"decode": [Function anonymous], "decodeAsync": [Function anonymous], "def": {"shape": {"completed_at": {"base64": [Function anonymous], "base64url": [Function anonymous], "cidrv4": [Function anonymous], "cidrv6": [Function anonymous], "cuid": [Function anonymous], "cuid2": [Function anonymous], "date": [Function anonymous], "datetime": [Function anonymous], "decode": [Function anonymous], "decodeAsync": [Function anonymous], "def": {"checks": [{}], "type": "string"}, "duration": [Function anonymous], "e164": [Function anonymous], "email": [Function anonymous], "emoji": [Function anonymous], "encode": [Function anonymous], "encodeAsync": [Function anonymous], "format": "regex", "guid": [Function anonymous], "ipv4": [Function anonymous], "ipv6": [Function anonymous], "jwt": [Function anonymous], "ksuid": [Function anonymous], "maxLength": null, "minLength": null, "nanoid": [Function anonymous], "nullable": [Function bound nullable], "nullish": [Function bound nullish], "parse": [Function anonymous], "parseAsync": [Function anonymous], "safeDecode": [Function anonymous], "safeDecodeAsync": [Function anonymous], "safeEncode": [Function anonymous], "safeEncodeAsync": [Function anonymous], "safeParse": [Function anonymous], "safeParseAsync": [Function anonymous], "spa": [Function anonymous], "time": [Function anonymous], "toJSONSchema": [Function anonymous], "type": "string", "ulid": [Function anonymous], "url": [Function anonymous], "uuid": [Function anonymous], "uuidv4": [Function anonymous], "uuidv6": [Function anonymous], "uuidv7": [Function anonymous], "xid": [Function anonymous]}, "id": {"base64": [Function anonymous], "base64url": [Function anonymous], "cidrv4": [Function anonymous], "cidrv6": [Function anonymous], "cuid": [Function anonymous], "cuid2": [Function anonymous], "date": [Function anonymous], "datetime": [Function anonymous], "decode": [Function anonymous], "decodeAsync": [Function anonymous], "def": {"checks": [{}], "type": "string"}, "duration": [Function anonymous], "e164": [Function anonymous], "email": [Function anonymous], "emoji": [Function anonymous], "encode": [Function anonymous], "encodeAsync": [Function anonymous], "format": "regex", "guid": [Function anonymous], "ipv4": [Function anonymous], "ipv6": [Function anonymous], "jwt": [Function anonymous], "ksuid": [Function anonymous], "maxLength": null, "minLength": null, "nanoid": [Function anonymous], "nullable": [Function bound nullable], "nullish": [Function bound nullish], "optional": [Function bound optional], "parse": [Function anonymous], "parseAsync": [Function anonymous], "safeDecode": [Function anonymous], "safeDecodeAsync": [Function anonymous], "safeEncode": [Function anonymous], "safeEncodeAsync": [Function anonymous], "safeParse": [Function anonymous], "safeParseAsync": [Function anonymous], "spa": [Function anonymous], "time": [Function anonymous], "toJSONSchema": [Function anonymous], "type": "string", "ulid": [Function anonymous], "url": [Function anonymous], "uuid": [Function anonymous], "uuidv4": [Function anonymous], "uuidv6": [Function anonymous], "uuidv7": [Function anonymous], "xid": [Function anonymous]}, "plan_day_id": {"base64": [Function anonymous], "base64url": [Function anonymous], "cidrv4": [Function anonymous], "cidrv6": [Function anonymous], "cuid": [Function anonymous], "cuid2": [Function anonymous], "date": [Function anonymous], "datetime": [Function anonymous], "decode": [Function anonymous], "decodeAsync": [Function anonymous], "def": {"checks": [{}], "type": "string"}, "duration": [Function anonymous], "e164": [Function anonymous], "email": [Function anonymous], "emoji": [Function anonymous], "encode": [Function anonymous], "encodeAsync": [Function anonymous], "format": "regex", "guid": [Function anonymous], "ipv4": [Function anonymous], "ipv6": [Function anonymous], "jwt": [Function anonymous], "ksuid": [Function anonymous], "maxLength": null, "minLength": null, "nanoid": [Function anonymous], "nullable": [Function bound nullable], "nullish": [Function bound nullish], "optional": [Function bound optional], "parse": [Function anonymous], "parseAsync": [Function anonymous], "safeDecode": [Function anonymous], "safeDecodeAsync": [Function anonymous], "safeEncode": [Function anonymous], "safeEncodeAsync": [Function anonymous], "safeParse": [Function anonymous], "safeParseAsync": [Function anonymous], "spa": [Function anonymous], "time": [Function anonymous], "toJSONSchema": [Function anonymous], "type": "string", "ulid": [Function anonymous], "url": [Function anonymous], "uuid": [Function anonymous], "uuidv4": [Function anonymous], "uuidv6": [Function anonymous], "uuidv7": [Function anonymous], "xid": [Function anonymous]}, "source": {"decode": [Function anonymous], "decodeAsync": [Function anonymous], "def": {"entries": {"auto": "auto", "backfill": "backfill", "manual": "manual"}, "type": "enum"}, "encode": [Function anonymous], "encodeAsync": [Function anonymous], "enum": {"auto": "auto", "backfill": "backfill", "manual": "manual"}, "exclude": [Function anonymous], "extract": [Function anonymous], "options": ["manual", "auto", "backfill"], "parse": [Function anonymous], "parseAsync": [Function anonymous], "safeDecode": [Function anonymous], "safeDecodeAsync": [Function anonymous], "safeEncode": [Function anonymous], "safeEncodeAsync": [Function anonymous], "safeParse": [Function anonymous], "safeParseAsync": [Function anonymous], "spa": [Function anonymous], "toJSONSchema": [Function anonymous], "type": "enum"}, "student_id": {"base64": [Function anonymous], "base64url": [Function anonymous], "cidrv4": [Function anonymous], "cidrv6": [Function anonymous], "cuid": [Function anonymous], "cuid2": [Function anonymous], "date": [Function anonymous], "datetime": [Function anonymous], "decode": [Function anonymous], "decodeAsync": [Function anonymous], "def": {"checks": [{}], "type": "string"}, "duration": [Function anonymous], "e164": [Function anonymous], "email": [Function anonymous], "emoji": [Function anonymous], "encode": [Function anonymous], "encodeAsync": [Function anonymous], "format": "regex", "guid": [Function anonymous], "ipv4": [Function anonymous], "ipv6": [Function anonymous], "jwt": [Function anonymous], "ksuid": [Function anonymous], "maxLength": null, "minLength": null, "nanoid": [Function anonymous], "nullable": [Function bound nullable], "nullish": [Function bound nullish], "optional": [Function bound optional], "parse": [Function anonymous], "parseAsync": [Function anonymous], "safeDecode": [Function anonymous], "safeDecodeAsync": [Function anonymous], "safeEncode": [Function anonymous], "safeEncodeAsync": [Function anonymous], "safeParse": [Function anonymous], "safeParseAsync": [Function anonymous], "spa": [Function anonymous], "time": [Function anonymous], "toJSONSchema": [Function anonymous], "type": "string", "ulid": [Function anonymous], "url": [Function anonymous], "uuid": [Function anonymous], "uuidv4": [Function anonymous], "uuidv6": [Function anonymous], "uuidv7": [Function anonymous], "xid": [Function anonymous]}}, "type": "object"}, "encode": [Function anonymous], "encodeAsync": [Function anonymous], "parse": [Function anonymous], "parseAsync": [Function anonymous], "safeDecode": [Function anonymous], "safeDecodeAsync": [Function anonymous], "safeEncode": [Function anonymous], "safeEncodeAsync": [Function anonymous], "safeParse": [Function anonymous], "safeParseAsync": [Function anonymous], "spa": [Function anonymous], "toJSONSchema": [Function anonymous], "type": "object"}, "signal": {Symbol(kEvents): Map {}, Symbol(events.maxEventTargetListeners): 0, Symbol(events.maxEventTargetListenersWarned): false, Symbol(kHandlers): Map {}, Symbol(kAborted): false, Symbol(kReason): undefined, Symbol(kComposite): false}}]]
+
+      569 |   await mount();
+      570 |   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction(); });
+    > 571 |   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(0);
+          |                                                                                                       ^
+      572 |   await act(async () => { release(JSON.stringify({ version: 1, records: {
+      573 |     [`${studentId}:${plan.days[0].exercises[0].sets[0].id}`]: { ...EMPTY_VIDEO_UPLOAD, status: 'waiting', setLogId: 'log' },
+      574 |   } })); });
+
+      at Object.toHaveLength (src/features/training/__tests__/completion-entry.test.tsx:571:103)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 36 skipped, 37 total
+Snapshots:   0 total
+Time:        1.366 s, estimated 4 s
+Ran all test suites matching /src\/features\/training\/__tests__\/completion-entry.test.tsx/i with tests matching "first hold waits".
