@@ -23,6 +23,7 @@ export function accountSetSync(studentId: string): AccountSync {
   const existing = accounts.get(studentId);
   if (existing) return existing;
   let online = true;
+  let internetReachable: boolean | null = null;
   let disposed = false;
   const networkListeners = new Set<() => void>();
   const active = () => !disposed && Boolean(studentId) && useSessionStore.getState().user?.id === studentId;
@@ -65,8 +66,11 @@ export function accountSetSync(studentId: string): AccountSync {
   const stopReceipts = queue.subscribe(() => { reconcileIds(); void resumeGate().catch(() => {}); });
   const stopNetwork = NetInfo.addEventListener(state => {
     const wasOnline = online;
-    online = state.isConnected !== false && state.isInternetReachable !== false;
-    if (online && !wasOnline) { networkListeners.forEach(fn => fn()); void resumeGate().catch(() => {}); }
+    // Platform internet probes can fail while our API remains reachable (for example on CN networks).
+    online = state.isConnected !== false;
+    const internetRecovered = internetReachable === false && state.isInternetReachable === true;
+    internetReachable = state.isInternetReachable;
+    if (online && (!wasOnline || internetRecovered)) { networkListeners.forEach(fn => fn()); void resumeGate().catch(() => {}); }
   });
   const appState = AppState.addEventListener('change', state => { if (state === 'active' && active()) { queue.sendNow(); void resumeGate().catch(() => {}); } });
   const stopSession = useSessionStore.subscribe(state => { if (state.user?.id !== studentId) { accounts.get(studentId)?.stop(); accounts.delete(studentId); } });
