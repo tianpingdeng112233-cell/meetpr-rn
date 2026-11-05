@@ -611,7 +611,7 @@ export function WorkoutBody({
         ) : null}
       </Card> : null}
       {recording && !completedDay ? (progressFlow
-        ? groups.filter(group => !progress.completed.includes(group))
+        ? groups.filter(group => !progress.completed.includes(group) && !(accessory && group.exercise.id === active.exercise.id))
         : groups).map(group => renderGroup(group, false)) : null}
       {recording && !completedDay ? addedGroups.map(({ exercise, rows }) => <Card key={exercise.id} style={{ gap: spacing.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>

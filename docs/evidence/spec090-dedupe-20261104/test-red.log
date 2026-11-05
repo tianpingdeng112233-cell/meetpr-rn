@@ -1,0 +1,42 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/training-flow.test.tsx
+
+FAIL src/features/training/__tests__/training-flow.test.tsx (37.043 s)
+  ✕ an accessory hero appears once and the lower set-table cards start with the next unfinished exercise (1087 ms)
+  ✓ a main-lift hero keeps its own set-table card first below the hero (403 ms)
+  ✓ finishing the first exercise moves its completed row above the next hero and preserves editing (523 ms)
+  ✓ all done removes the hero; undo restores the first unfinished exercise below completed rows (373 ms)
+  ✓ main lift progress is hidden from screen readers and excluded from summary and preview (256 ms)
+  ✓ restored completed exercises start in place; only a new completion requests completed-row reveal (379 ms)
+
+  ● an accessory hero appears once and the lower set-table cards start with the next unfinished exercise
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+    +   "Row",
+        "Squat",
+        "Bench",
+      ]
+
+      41 |   await render(synthesizeDrafts(day('day', { exercises }), []), true, true, false, exercises);
+      42 |   const lowerCards = renderer.root.findAllByType(RollUpCard).filter(card => !card.props.completed);
+    > 43 |   expect(lowerCards.map(card => card.findAllByType(Text)[0].props.children)).toEqual(['Squat', 'Bench']);
+         |                                                                              ^
+      44 |   expect(copy().filter(text => text === 'Row')).toHaveLength(1);
+      45 | });
+      46 |
+
+      at Object.toEqual (src/features/training/__tests__/training-flow.test.tsx:43:78)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 5 passed, 6 total
+Snapshots:   0 total
+Time:        38.213 s
+Ran all test suites matching /src\/features\/training\/__tests__\/training-flow.test.tsx/i.
