@@ -1,0 +1,12 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false failure-notifier.test.ts
+
+PASS src/features/training/video-upload/__tests__/failure-notifier.test.ts
+  ✓ failure notification requests normal permission and publishes one DEFAULT aggregate with retry copy (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.415 s, estimated 1 s
+Ran all test suites matching /failure-notifier.test.ts/i.

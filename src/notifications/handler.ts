@@ -5,7 +5,8 @@ export function configureNotificationHandler(): void {
   const notifications: typeof import('expo-notifications') = require('expo-notifications');
   notifications.setNotificationHandler({
     handleNotification: async (notification) => {
-      const training = notification.request.content.data?.category === 'training-reminder'
+      const training = notification.request.content.data?.category === 'video-upload'
+        || notification.request.content.data?.category === 'training-reminder'
         || notification.request.identifier.startsWith('training-reminder-');
       return {
         shouldShowBanner: training,

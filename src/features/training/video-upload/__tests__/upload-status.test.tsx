@@ -38,7 +38,7 @@ test.each(['en', 'zh'] as const)('the video row shows live integer upload percen
   act(() => { dispatch('student', 'set', { type: 'waiting', retry: {
     failureCount: 1, firstFailureAt: 0, lastFailureAt: 0, failure: 'network',
   } }); });
-  expect(text()).toContain(locale === 'en' ? 'Sending' : '还在路上');
+  expect(text()).toContain(locale === 'en' ? 'Upload failed' : '上传失败');
   expect(text()).not.toContain(locale === 'en' ? 'Sending · 42%' : '发送中 · 42%');
 });
 
@@ -69,7 +69,7 @@ jest.mock('@/api/domains/uploads', () => ({ uploadsRepository: {
 } }));
 jest.mock('@/analytics', () => ({ AnalyticsEvent: { MediaUpload: 'media_upload' }, track: async () => {} }));
 
-test.each([false, true])('native progress reaches the video row during upload (saved session: %s)', async resumed => {
+test.each([false, true])('retry keeps failure visible until delivery (saved session: %s)', async resumed => {
   setLocaleOverride('en');
   useVideoUploadStore.setState({ records: { 'student:set': {
     ...EMPTY_VIDEO_UPLOAD, status: 'failed', localUri: 'file:///source', sizeBytes: 100,
@@ -86,7 +86,7 @@ test.each([false, true])('native progress reaches the video row during upload (s
   });
   try {
     act(() => { mockProgress({ totalBytesSent: 42, totalBytesExpectedToSend: 100 }); });
-    expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Sending · 42%');
+    expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Upload failed');
   } finally {
     await act(async () => {
       mockFinish({ status: 200, headers: { ETag: 'etag' } });

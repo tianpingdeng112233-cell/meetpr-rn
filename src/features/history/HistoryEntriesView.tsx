@@ -1,3 +1,4 @@
+import { VideoFailureSummary } from '@/features/training/video-upload/VideoFailureSummary';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMemo, useState, type ReactNode } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -144,6 +145,9 @@ function HistoryDayCard({ day }: { day: HistoryDay }) {
   const complete = day.total > 0 && day.done === day.total;
   return (
     <Card style={styles.dayCard}>
+      <VideoFailureSummary history studentId={day.exercises.flatMap(exercise => exercise.logs)[0]?.student_id ?? ''}
+        sets={day.exercises.flatMap(exercise => exercise.logs.map(log => ({ stableSetId: historyStableSetId(log, exercise), setLogId: log.id,
+          badge: { exerciseName: exercise.name, setOrdinal: log.set_index + 1, weightKg: Number(log.weight_kg), reps: log.reps, rpe: log.rpe === null ? null : Number(log.rpe) } })))} />
       <View style={styles.dayHeader}>
         <View><Text style={styles.dayDate}>{chineseMonthDay(day.date)}</Text><Text style={styles.weekday}>{new Intl.DateTimeFormat(getLocale(), { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day.date}T12:00:00Z`))}</Text></View>
         {!day.isRest ? (

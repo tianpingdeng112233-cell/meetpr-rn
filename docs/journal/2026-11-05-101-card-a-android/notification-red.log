@@ -1,0 +1,33 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false failure-notifier.test.ts
+
+FAIL src/features/training/video-upload/__tests__/failure-notifier.test.ts
+  ✕ failure notification requests normal permission and publishes one DEFAULT aggregate with retry copy (6 ms)
+
+  ● failure notification requests normal permission and publishes one DEFAULT aggregate with retry copy
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "video-upload", ObjectContaining {"importance": 3}
+    Received: "video-upload", {"enableVibrate": false, "importance": 2, "name": "Training video upload failed", "sound": null}
+
+    Number of calls: 1
+
+      20 |   notifyUploadFailures(() => 2);
+      21 |   await jest.advanceTimersByTimeAsync(1000);
+    > 22 |   expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith('video-upload', expect.objectContaining({ importance: 3 }));
+         |                                                     ^
+      23 |   expect(Notifications.requestPermissionsAsync).toHaveBeenCalledWith();
+      24 |   expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(1);
+      25 |   expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(expect.objectContaining({
+
+      at Object.toHaveBeenCalledWith (src/features/training/video-upload/__tests__/failure-notifier.test.ts:22:53)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.711 s
+Ran all test suites matching /failure-notifier.test.ts/i.

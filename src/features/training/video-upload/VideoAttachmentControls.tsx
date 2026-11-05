@@ -1,3 +1,5 @@
+import { hasVideoDeliveryFailure } from './delivery-failures';
+import { useVideoDeliveryRetry } from './VideoDeliveryRecovery';
 import type { VideoBadgeInfo } from '@/features/video-player/types';
 import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -10,7 +12,7 @@ import type { SelectedVideo } from './model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { t } from '@/i18n';
-import { ActivityIndicator, Alert, Modal, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Text, View, useWindowDimensions } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { useColors, radius, spacing, font, fontMetrics } from '@/design';
@@ -75,6 +77,9 @@ export function VideoAttachmentControls({
   const logCallbacks = useRef({ ensureSetLog, buildLogRequest, inputReady });
   useLayoutEffect(() => { logCallbacks.current = { ensureSetLog, buildLogRequest, inputReady }; });
   const colors = useColors();
+  const { width, fontScale } = useWindowDimensions();
+  const compact = width / fontScale < 440;
+  const { retry, recovery } = useVideoDeliveryRetry(studentId, { ensureSetLog, buildLogRequest: inputReady ? buildLogRequest : undefined });
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [choosing, setChoosing] = useState(false);
   const [videoToTrim, setVideoToTrim] = useState<SelectedVideo | null>(null);
@@ -121,10 +126,11 @@ export function VideoAttachmentControls({
         present(
           <CameraRecorder
             onClose={dismiss}
-            onUse={(uri) => {
+            onUse={(uri, savedToPhotos) => {
               dismiss();
               attach({
                 uri,
+                savedToPhotos,
                 width: 720,
                 height: 1280,
                 durationMs: null,
@@ -190,40 +196,41 @@ export function VideoAttachmentControls({
     }
   };
   const playable = Boolean(record.localUri || record.source?.uri || record.attachmentId);
-  const preparing = isPreparing || record.status === 'preparing';
-  const errorMessage = actionErrorMessage ?? record.errorMessage;
+  const failed = hasVideoDeliveryFailure(record);
+  const preparing = !failed && (isPreparing || record.status === 'preparing');
+  const errorMessage = actionErrorMessage ?? (failed && videoUploadManager.needsReselection(identity)
+    ? t('student.videoDelivery.missingBody') : record.errorMessage);
   const percentage = Math.round(record.progress * 100);
-  const statusLabel = record.status === 'uploading'
+  const statusLabel = failed ? t('student.videoAttachmentV3Controls.copy008') : record.status === 'uploading'
     ? t(percentage > 0 ? 'student.videoUpload.sendingProgress' : 'student.videoUpload.sending', [percentage])
     : t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007');
   return (
     <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: spacing.point14, paddingVertical: spacing.point11, gap: spacing.space2 }}>
       {playable ? <VideoPlayback key={record.createdAt} inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => undefined} /> : null}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.md }}>
-        {!playable ? <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size16, 'medium') }}>{t('student.videoAttachmentSection.copy001')}</Text> : null}
-        {preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        {!playable && record.status === 'none' ? <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size16, 'medium') }}>{t('student.videoAttachmentSection.copy001')}</Text> : null}
+        {preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
           <ActivityIndicator color={colors.gold500} />
           <Text style={{ ...font.body(fontMetrics.size12, 'medium'), color: colors.textSecondary, flexShrink: 0 }}>{t('student.videoAttachmentV3Controls.copy003')}</Text>
-        </View> : record.status !== 'none' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexGrow: 1, flexShrink: 0 }}>
-          <Text style={{ ...font.body(fontMetrics.size12), color: record.status === 'failed' ? colors.danger : colors.textSecondary, flexShrink: 0 }}>
+        </View> : record.status !== 'none' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1 }}>
+          <Text style={{ ...font.body(fontMetrics.size12), color: failed ? colors.danger : colors.textSecondary, flexShrink: 1 }}>
             {statusLabel}
           </Text>
-          {record.status === 'failed' ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable || choosing || isPreparing} onPress={() => {
-            setActionErrorMessage(null);
-            void videoUploadManager.retry(identity, ensureSetLog, inputReady ? buildLogRequest : undefined).catch(showActionError);
-          }} /> : null}
         </View> : <View style={{ flex: 1 }} />}
-        {!preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point10, marginLeft: 'auto', flexShrink: 0 }}>
+        {!preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginLeft: 'auto', flexShrink: 0 }}>
           {record.status === 'none' ? <>
             <VideoAction icon="video" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing || !hasCamera} onPress={() => void choose('camera')} />
             <VideoAction icon="image" label={t('student.videoAttachmentV3Controls.copy002')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
           </> : <>
-            <VideoAction icon="image" label={t('student.videoAttachmentV3Controls.copy004')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
-            <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable || choosing || isPreparing} onPress={() => void remove()} />
+            {failed ? <VideoAction compact={compact} icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable || choosing || isPreparing}
+              onPress={() => void retry([{ stableSetId, badge: badge ?? undefined }])} /> : null}
+            <VideoAction compact={compact && failed} icon="image" label={t('student.videoAttachmentV3Controls.copy004')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('library')} />
+            <VideoAction compact={compact && failed} icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable || choosing || isPreparing} onPress={() => void remove()} />
           </>}
         </View> : null}
       </View>
       {errorMessage ? <Text style={{ ...font.body(fontMetrics.size11, 'medium'), color: colors.danger }}>{errorMessage}</Text> : null}
+      {recovery}
       {videoToTrim ? <VideoTrimView uri={videoToTrim.uri} onOutcome={outcome => {
         releaseOriginal.current?.();
         releaseOriginal.current = null;
@@ -241,16 +248,17 @@ export function VideoAttachmentControls({
 }
 
 
-function VideoAction({ icon, label, onPress, disabled }: {
+function VideoAction({ icon, label, onPress, disabled, compact = false }: {
+  compact?: boolean;
   icon: ComponentProps<typeof MaterialCommunityIcons>['name']; label: string; onPress: () => void; disabled: boolean;
 }) {
   const colors = useColors();
   const color = `${colors.gold500}${disabled ? '4D' : 'B8'}`;
   return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
     style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.point7, flexShrink: 0,
-      borderRadius: radius.control, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget,
+      borderRadius: radius.control, paddingHorizontal: compact ? spacing.sm : spacing.md, paddingVertical: spacing.sm, minHeight: spacing.minimumHitTarget, minWidth: spacing.minimumHitTarget,
       borderWidth: spacing.point1, borderColor: `${colors.gold500}${disabled ? '1F' : '3D'}`, opacity: pressed ? 0.6 : 1 })}>
     <MaterialCommunityIcons name={icon} size={spacing.space5} color={color} />
-    <Text numberOfLines={1} style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text>
+    {!compact ? <Text numberOfLines={1} style={{ color, flexShrink: 0, ...font.body(fontMetrics.size15, 'semibold') }}>{label}</Text> : null}
   </Pressable>;
 }

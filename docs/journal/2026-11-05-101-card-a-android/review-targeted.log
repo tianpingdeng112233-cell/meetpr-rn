@@ -1,0 +1,13 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false student-added-history.test.tsx failure-notifier.test.ts delivery-failures.test.ts
+
+PASS src/features/history/__tests__/student-added-history.test.tsx (6.046 s)
+PASS src/features/training/video-upload/__tests__/failure-notifier.test.ts
+PASS src/features/training/video-upload/__tests__/delivery-failures.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        7.27 s
+Ran all test suites matching /student-added-history.test.tsx|failure-notifier.test.ts|delivery-failures.test.ts/i.

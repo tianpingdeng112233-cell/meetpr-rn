@@ -1,0 +1,13 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watch=false --watchman=false delivery-failures.test.ts
+
+PASS src/features/training/video-upload/__tests__/delivery-failures.test.ts
+  ✓ first failure including backoff and a suspended set log appears in day, exercise and set markers (2 ms)
+  ✓ manual retry keeps the failure visible until delivery, then removes all markers (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.516 s, estimated 1 s
+Ran all test suites matching /delivery-failures.test.ts/i.

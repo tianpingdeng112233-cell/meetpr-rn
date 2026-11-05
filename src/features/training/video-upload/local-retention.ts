@@ -27,8 +27,8 @@ export function localRetentionRemovals(
   let total = remaining.reduce((sum, file) => sum + file.sizeBytes, 0);
   for (const file of remaining) {
     if (total <= VIDEO_LOCAL_LIMIT_BYTES) break;
-    // A source still awaiting preparation owns its only recoverable copy.
-    if (!file.prepared) continue;
+    // Delivery, not preparation, makes a retained copy eligible for cleanup.
+    if (!file.prepared || !file.uploaded) continue;
     removed.add(file.key);
     total -= file.sizeBytes;
   }
