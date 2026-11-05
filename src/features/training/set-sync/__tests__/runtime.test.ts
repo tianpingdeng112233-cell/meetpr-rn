@@ -6,12 +6,14 @@ import { plansRepository } from '@/api/domains/plans';
 import { accountSetSync } from '../runtime';
 import { SetSyncQueue } from '../queue';
 import { CompletionGate } from '../completion';
+import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../../video-upload/store';
+import { EMPTY_VIDEO_UPLOAD } from '../../video-upload/model';
 
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 let mockNetworkChanged: ((state: { isConnected: boolean; isInternetReachable: boolean }) => void) | undefined;
 jest.mock('@react-native-community/netinfo', () => ({ addEventListener: (callback: typeof mockNetworkChanged) => { mockNetworkChanged = callback; return () => {}; } }));
 const flush = async () => { for (let i = 0; i < 150; i++) await Promise.resolve(); };
-afterEach(async () => { useSessionStore.setState({ user: null }); jest.restoreAllMocks(); await AsyncStorage.clear(); jest.useRealTimers(); });
+afterEach(async () => { useSessionStore.setState({ user: null }); jest.restoreAllMocks(); await AsyncStorage.clear(); resetVideoUploadStoreForTests(); jest.useRealTimers(); });
 test('a restored completion intent proceeds when restored pending sets drain without another foreground event', async () => {
   const id = '10000000-0000-4000-8000-000000000000';
   const q = new SetSyncQueue(id, { storage: AsyncStorage, network: { isOnline: () => false, subscribe: () => () => {} }, send: async () => undefined });
@@ -56,4 +58,28 @@ test('internet validation recovery wakes a connected queue before its backoff ti
   await flush();
   expect(queue.pending()).toHaveLength(0);
   expect(upsert).toHaveBeenCalledTimes(2);
+});
+
+
+test('cold runtime waits for all current-day videos including a later addition without mounting training', async () => {
+  const id = '10000000-0000-4000-8000-000000000003';
+  const first = new CompletionGate(id, AsyncStorage, async () => {});
+  await first.arm('day', { sets: [{ stableSetId: 'video' }], exerciseIds: ['exercise'], heldAt: Date.now() });
+  await first.release('day'); first.dispose();
+  const uploading = { ...EMPTY_VIDEO_UPLOAD, status: 'uploading' as const };
+  useVideoUploadStore.setState({ hydrated: true, records: { [`${id}:video`]: uploading } });
+  const complete = jest.spyOn(plansRepository, 'completeDay').mockResolvedValue({} as never);
+  useSessionStore.setState({ user: { id, phone: '', role: 'coached_student', created_at: '2026-11-05T12:00:00Z' } });
+  const restored = accountSetSync(id); await restored.queue.ready; await flush();
+  expect(complete).not.toHaveBeenCalled();
+  useVideoUploadStore.setState({ records: {
+    [`${id}:video`]: { ...uploading, status: 'uploaded' },
+    [`${id}:new`]: { ...uploading, logRequest: { plan_exercise_id: 'exercise', set_index: 1, weight_kg: '80', reps: 5, completed: true } },
+  } });
+  await flush(); expect(complete).not.toHaveBeenCalled();
+  useVideoUploadStore.setState({ records: {
+    [`${id}:video`]: { ...uploading, status: 'uploaded' },
+    [`${id}:new`]: { ...uploading, status: 'uploaded', logRequest: { plan_exercise_id: 'exercise', set_index: 1, weight_kg: '80', reps: 5, completed: true } },
+  } });
+  await flush(); expect(complete).toHaveBeenCalledTimes(1); expect(restored.gate.pendingDays()).toEqual([]);
 });

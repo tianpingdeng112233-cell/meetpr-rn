@@ -1,0 +1,55 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/video-upload/__tests__/failure-notifier.test.ts
+
+FAIL src/features/training/video-upload/__tests__/failure-notifier.test.ts
+  ✓ failure notification requests normal permission and publishes one DEFAULT aggregate with retry copy (2 ms)
+  ✓ migrates legacy importance 2 to v2 importance 3 without reopening a disabled channel (1 ms)
+  ✓ migrates legacy importance 0 to v2 importance 0 without reopening a disabled channel
+  ✓ denied notification permission stays denied and does not publish
+  ✓ delivery clears the single outstanding aggregate
+  ✓ completion and timeout reuse the failure aggregate identifier and route to the waiting day
+  ✕ a newer completion remains the aggregate when an older failure is suspended in dismiss (2 ms)
+  ✕ a newer completion remains the aggregate when an older failure is suspended in schedule
+
+  ● a newer completion remains the aggregate when an older failure is suspended in dismiss
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Workout complete. 2 videos delivered."
+    Received: "2 videos didn't upload. Tap to retry."
+
+      88 |   release(); await completion;
+      89 |   for (let i = 0; i < 30; i++) await Promise.resolve();
+    > 90 |   expect(published.at(-1)).toBe('Workout complete. 2 videos delivered.');
+         |                            ^
+      91 | });
+      92 |
+
+      at toBe (src/features/training/video-upload/__tests__/failure-notifier.test.ts:90:28)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● a newer completion remains the aggregate when an older failure is suspended in schedule
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Workout complete. 2 videos delivered."
+    Received: "2 videos didn't upload. Tap to retry."
+
+      88 |   release(); await completion;
+      89 |   for (let i = 0; i < 30; i++) await Promise.resolve();
+    > 90 |   expect(published.at(-1)).toBe('Workout complete. 2 videos delivered.');
+         |                            ^
+      91 | });
+      92 |
+
+      at toBe (src/features/training/video-upload/__tests__/failure-notifier.test.ts:90:28)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 6 passed, 8 total
+Snapshots:   0 total
+Time:        0.516 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/failure-notifier.test.ts/i.

@@ -9,9 +9,11 @@ import { trainingE1RMRepository } from '../storage';
 import { gymDayText } from '../policy';
 import { SetSyncQueue, type PendingSet } from './queue';
 import { createSetSender } from './sender';
-import { CompletionGate } from './completion';
+import { CompletionGate, type VideoCompletionContext } from './completion';
+import { hydrateVideoUploads, useVideoUploadStore, videoUploadsForCompletion } from '../video-upload/store';
+import { completionVideoSummary, dayCompletionVideos } from '../video-upload/completion-delivery';
 
-type AccountSync = { queue: SetSyncQueue; gate: CompletionGate; stop: () => void; setCompletionHandler: (handler: (dayId: string) => Promise<unknown>) => () => void };
+type AccountSync = { dayVideos: (dayId: string, context?: VideoCompletionContext) => ReturnType<typeof dayCompletionVideos>; retryWaitingVideos: (dayId: string) => Promise<void>; queue: SetSyncQueue; gate: CompletionGate; stop: () => void; setCompletionHandler: (handler: (dayId: string) => Promise<unknown>) => () => void };
 const accounts = new Map<string, AccountSync>();
 const completionListeners = new Set<(studentId: string, dayId: string) => void>();
 export const onSyncedDayCompletion = (fn: (studentId: string, dayId: string) => void) => { completionListeners.add(fn); return () => { completionListeners.delete(fn); }; };
@@ -46,23 +48,46 @@ export function accountSetSync(studentId: string): AccountSync {
     network: { isOnline: () => online, subscribe: fn => { networkListeners.add(fn); return () => { networkListeners.delete(fn); }; } } });
   let completionHandler: (dayId: string) => Promise<unknown> = dayId => plansRepository.completeDay(dayId);
   const defaultCompletionHandler = completionHandler;
+  const dayVideos = (dayId: string, context?: VideoCompletionContext): ReturnType<typeof dayCompletionVideos> => {
+    const snapshot = queue.snapshot();
+    return dayCompletionVideos(studentId, dayId, context ?? gate.videoIntent(dayId) ?? { sets: [], exerciseIds: [] },
+      videoUploadsForCompletion(), [
+        ...Object.values(snapshot.drafts ?? {}).map(draft => ({ stableSetId: draft.stableSetId, dayId: draft.exercise.plan_day_id, remove: false, log: { id: draft.sourceLog?.id ?? '' } })),
+        ...Object.values(snapshot.confirmed), ...snapshot.pending]);
+  };
+  const notify = async (dayId: string, count: number, kind: 'complete' | 'timeout') => {
+    if (!active()) return;
+    const { notifyVideoCompletion } = await import('../video-upload/failure-notifier');
+    if (active()) await notifyVideoCompletion(kind, count, studentId, dayId);
+  };
   const gate = new CompletionGate(studentId, AsyncStorage, async dayId => {
-    if (!active() || queue.pending(dayId).length) throw new Error('Completion conditions changed');
+    await hydrateVideoUploads();
+    if (!active() || queue.pending(dayId).length || !completionVideoSummary(dayVideos(dayId).map(row => row.upload)).delivered) throw new Error('Completion conditions changed');
     await completionHandler(dayId);
     if (!active()) return;
     completionListeners.forEach(fn => fn(studentId, dayId));
-  });
-  // 101 will supply videosDelivered here and call updateConditions on delivery.
+  }, { summary: (dayId, context) => completionVideoSummary(dayVideos(dayId, context).map(row => row.upload)),
+    timeout: (dayId, count) => notify(dayId, count, 'timeout'), delivered: (dayId, count) => notify(dayId, count, 'complete') });
+  const retryWaitingVideos = async (dayId: string) => {
+    await Promise.all([queue.ready, gate.ready, hydrateVideoUploads()]);
+    if (!active() || !gate.videoIntent(dayId)) return;
+    const { videoUploadManager } = await import('../video-upload/manager');
+    if (active()) await videoUploadManager.retryAll(studentId, dayVideos(dayId).map(row => row.stableSetId));
+  };
   const resumeGate = async () => {
     await Promise.all([queue.ready, gate.ready]);
+    if (!active() || !gate.pendingDays().length) return;
+    await hydrateVideoUploads();
     if (!active()) return;
-    for (const dayId of gate.pendingDays()) await gate.updateConditions(dayId, { setsSynchronized: queue.pending(dayId).length === 0, videosDelivered: true });
+    for (const dayId of gate.pendingDays()) await gate.updateConditions(dayId, { setsSynchronized: queue.pending(dayId).length === 0, videosDelivered: completionVideoSummary(dayVideos(dayId).map(row => row.upload)).delivered });
   };
   const reconcileIds = () => {
     for (const [stableId, entry] of Object.entries(queue.snapshot().confirmed)) {
       if (!entry.remove) void trainingE1RMRepository.resolveSetLogId(studentId, `local:${stableId}`, entry.log.id).catch(() => {});
     }
   };
+  const stopVideos = useVideoUploadStore.subscribe(() => { void resumeGate().catch(() => {}); });
+  const retryWaiting = () => { for (const dayId of gate.pendingDays()) void retryWaitingVideos(dayId).catch(() => {}); };
   const stopReceipts = queue.subscribe(() => { reconcileIds(); void resumeGate().catch(() => {}); });
   const stopNetwork = NetInfo.addEventListener(state => {
     const wasOnline = online;
@@ -70,20 +95,21 @@ export function accountSetSync(studentId: string): AccountSync {
     online = state.isConnected !== false;
     const internetRecovered = internetReachable === false && state.isInternetReachable === true;
     internetReachable = state.isInternetReachable;
-    if (online && (!wasOnline || internetRecovered)) { networkListeners.forEach(fn => fn()); void resumeGate().catch(() => {}); }
+    if (online && (!wasOnline || internetRecovered)) { networkListeners.forEach(fn => fn()); retryWaiting(); void resumeGate().catch(() => {}); }
   });
-  const appState = AppState.addEventListener('change', state => { if (state === 'active' && active()) { queue.sendNow(); void resumeGate().catch(() => {}); } });
+  const appState = AppState.addEventListener('change', state => { if (state === 'active' && active()) { queue.sendNow(); retryWaiting(); void resumeGate().catch(() => {}); } });
   const stopSession = useSessionStore.subscribe(state => { if (state.user?.id !== studentId) { accounts.get(studentId)?.stop(); accounts.delete(studentId); } });
-  const account = { queue, gate, setCompletionHandler: (handler: (dayId: string) => Promise<unknown>) => {
+  const account = { queue, gate, dayVideos, retryWaitingVideos, setCompletionHandler: (handler: (dayId: string) => Promise<unknown>) => {
     completionHandler = handler; return () => { if (completionHandler === handler) completionHandler = defaultCompletionHandler; };
-  }, stop: () => { disposed = true; queue.dispose(); gate.dispose(); stopReceipts(); stopNetwork(); appState.remove(); stopSession(); } };
+  }, stop: () => { disposed = true; queue.dispose(); gate.dispose(); stopVideos(); stopReceipts(); stopNetwork(); appState.remove(); stopSession(); } };
   accounts.set(studentId, account);
-  void resumeGate().catch(() => {});
+  void resumeGate().then(retryWaiting).catch(() => {});
   return account;
 }
 export function useSetSync(studentId: string) {
   const account = useMemo(() => accountSetSync(studentId), [studentId]);
   const snapshot = useSyncExternalStore(account.queue.subscribe, account.queue.snapshot);
+  useSyncExternalStore(account.gate.subscribe, account.gate.snapshot);
   return { ...account, snapshot };
 }
 

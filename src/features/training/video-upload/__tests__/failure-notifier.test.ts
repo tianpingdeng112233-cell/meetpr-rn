@@ -1,6 +1,6 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import * as Notifications from 'expo-notifications';
-import { notifyUploadFailures } from '../failure-notifier';
+import { notifyUploadFailures, notifyVideoCompletion } from '../failure-notifier';
 
 jest.mock('expo-notifications', () => ({
   AndroidImportance: { DEFAULT: 3, LOW: 2, NONE: 0 },
@@ -57,4 +57,35 @@ test('delivery clears the single outstanding aggregate', async () => {
   expect(Notifications.cancelScheduledNotificationAsync).toHaveBeenCalledWith('video-upload-failures');
   expect(Notifications.dismissNotificationAsync).toHaveBeenCalledWith('video-upload-failures');
   expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+});
+
+test('completion and timeout reuse the failure aggregate identifier and route to the waiting day', async () => {
+  await notifyVideoCompletion('timeout', 2, 'alice', 'day');
+  expect(Notifications.scheduleNotificationAsync).toHaveBeenLastCalledWith(expect.objectContaining({
+    identifier: 'video-upload-failures', content: expect.objectContaining({ title: 'MeetPR', body: "2 videos didn't upload. Tap to retry.", data: expect.objectContaining({ studentId: 'alice', dayId: 'day' }) }),
+  }));
+  await notifyVideoCompletion('complete', 1, 'alice', 'day');
+  expect(Notifications.scheduleNotificationAsync).toHaveBeenLastCalledWith(expect.objectContaining({
+    identifier: 'video-upload-failures', content: expect.objectContaining({ title: 'MeetPR', body: 'Workout complete. 1 video delivered.' }),
+  }));
+});
+
+test.each(['dismiss', 'schedule'])('a newer completion remains the aggregate when an older failure is suspended in %s', async boundary => {
+  jest.useFakeTimers();
+  let release!: () => void;
+  const blocked = new Promise<void>(resolve => { release = resolve; });
+  let count = 2;
+  const published: string[] = [];
+  const schedule = jest.mocked(Notifications.scheduleNotificationAsync);
+  schedule.mockImplementation(async request => { published.push(String(request.content.body)); return 'video-upload-failures'; });
+  if (boundary === 'dismiss') jest.mocked(Notifications.dismissNotificationAsync).mockImplementationOnce(() => blocked);
+  else schedule.mockImplementationOnce(async request => { await blocked; published.push(String(request.content.body)); return 'video-upload-failures'; });
+  notifyUploadFailures(() => count, 'alice');
+  await jest.advanceTimersByTimeAsync(1000);
+  count = 0;
+  const completion = notifyVideoCompletion('complete', 2, 'alice', 'day');
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+  release(); await completion;
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+  expect(published.at(-1)).toBe('Workout complete. 2 videos delivered.');
 });

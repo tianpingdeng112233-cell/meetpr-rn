@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { useSessionStore } from '@/api/session';
+import { plansRepository } from '@/api/domains/plans';
 import { setsRepository } from '@/api/domains/sets';
 import { accountSetSync } from '../../set-sync/runtime';
 import { uploadsRepository } from '@/api/domains/uploads';
@@ -13,6 +14,7 @@ const mockFiles = new Map<string, number>();
 const mockOperations: string[] = [];
 const mockCopyErrors: unknown[] = [];
 let mockSequence = 0;
+let mockCopyWait: Promise<void> | undefined;
 let mockCopyFailure: Error | null = null;
 let mockDeleteFailure: string | null = null;
 let mockOnCopied: (() => void) | undefined;
@@ -71,7 +73,8 @@ jest.mock('expo-file-system', () => {
     copy(destination: File) {
       mockOperations.push(`copy:${this.uri}`);
       // SDK 57 dispatches copy to an Android coroutine, after JS returns.
-      const pending = new Promise<void>((resolve, reject) => setTimeout(() => {
+      const pending = new Promise<void>((resolve, reject) => setTimeout(async () => {
+        await mockCopyWait;
         const failure = mockCopyFailure ?? (!this.exists ? new Error(`NoSuchFileException: ${this.uri}`) : null);
         if (failure) { mockCopyErrors.push(failure); reject(failure); return; }
         mockFiles.set(destination.uri, this.size);
@@ -115,6 +118,7 @@ test.each([
   });
 });
 afterEach(() => {
+  useSessionStore.setState({ user: null });
   jest.restoreAllMocks();
 });
 beforeEach(async () => {
@@ -124,6 +128,7 @@ beforeEach(async () => {
   mockOperations.length = 0;
   mockCopyErrors.length = 0;
   mockCopyFailure = null;
+  mockCopyWait = undefined;
   mockDeleteFailure = null;
   mockOnCopied = undefined;
   mockNeedsTranscode = false;
@@ -360,4 +365,30 @@ test.each(['retry', 'replaceMissing'] as const)('%s waits for the restored offli
     expect(useVideoUploadStore.getState().records['student:set']).toMatchObject({ status: 'uploaded', setLogId: 'restored-receipt' });
     expect(setsRepository.upsert).toHaveBeenCalledTimes(1);
   } finally { useSessionStore.setState({ user: null }); }
+});
+
+
+test.each(['success', 'copy failure', 'cancel', 'new video'])('a replacement copy blocks completion without overwriting the delivered source until %s', async outcome => {
+  const complete = jest.spyOn(plansRepository, 'completeDay').mockResolvedValue({} as never);
+  useSessionStore.setState({ user: { id: 'student', phone: '', role: 'coached_student', created_at: '2026-11-05T00:00:00Z' } });
+  const { gate } = accountSetSync('student'); await gate.ready;
+  const original = { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded' as const, localUri: 'file:///documents/original.mp4', setLogId: 'old-log', attachmentId: 'old' };
+  useVideoUploadStore.setState({ hydrated: true, records: { ...(outcome === 'new video' ? {} : { 'student:set': original }),
+    'student:other': { ...EMPTY_VIDEO_UPLOAD, status: 'uploading', setLogId: 'other-log' } } });
+  await gate.arm('day', { heldAt: Date.now(), sets: [{ stableSetId: 'other' }, ...(outcome === 'new video' ? [] : [{ stableSetId: 'set' }])], exerciseIds: ['exercise'] }); await gate.release('day');
+  let release!: () => void;
+  mockCopyWait = new Promise(resolve => { release = resolve; });
+  if (outcome === 'copy failure') mockCopyFailure = new Error('Copy rejected');
+  const attaching = videoUploadManager.attach(id, source, async () => 'old-log', () => ({ plan_exercise_id: 'exercise', set_index: 0, weight_kg: '80', reps: 5, completed: true })).catch(error => error);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  useVideoUploadStore.getState().dispatch('student', 'other', { type: 'succeeded', attachmentId: 'other' });
+  for (let i = 0; i < 150; i++) await Promise.resolve();
+  expect(useVideoUploadStore.getState().records['student:set']).toBe(outcome === 'new video' ? undefined : original);
+  const prematureCompletions = complete.mock.calls.length;
+  const cancellation = outcome === 'cancel' ? videoUploadManager.cancel(id) : Promise.resolve();
+  release(); await attaching; await cancellation;
+  for (let i = 0; i < 150; i++) await Promise.resolve();
+  expect(prematureCompletions).toBe(0);
+  expect(complete).toHaveBeenCalledTimes(1);
+  expect(useVideoUploadStore.getState().records['student:set']?.status ?? 'none').toBe(outcome === 'cancel' ? 'none' : 'uploaded');
 });

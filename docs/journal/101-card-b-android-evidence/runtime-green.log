@@ -1,0 +1,15 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/runtime.test.ts
+
+PASS src/features/training/set-sync/__tests__/runtime.test.ts
+  ✓ a restored completion intent proceeds when restored pending sets drain without another foreground event (4 ms)
+  ✓ connected networks retry the training API even when platform internet validation fails (1 ms)
+  ✓ internet validation recovery wakes a connected queue before its backoff timer (5 ms)
+  ✓ cold runtime waits for all current-day videos including a later addition without mounting training (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        0.547 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/runtime.test.ts/i.

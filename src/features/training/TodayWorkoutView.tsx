@@ -2,6 +2,8 @@ import { effortFields, type EffortKind } from './actual-effort';
 import { actualWeightText } from './set-log-input';
 import { StudentExercisePicker } from './StudentExercisePicker';
 import type { AccessoryEdits } from './AccessoryLogCard';
+import { completionVideoSummary } from './video-upload/completion-delivery';
+import { VideoCompletionControl } from './video-upload/VideoCompletionControl';
 import { useVideoUploadStore } from './video-upload/store';
 import { isAccessoryExercise } from './accessory-quick-log';
 import { readRestPreference } from '@/features/settings/storage';
@@ -46,6 +48,7 @@ import { studentChatKeys, useOpenCoachChat } from '@/features/chat/open-coach-ch
 import { StudentTodayRefreshThrottle } from './refresh-throttle';
 import {
   hydrateRemoteVideoAttachments,
+  hydrateVideoUploads,
   type VideoAttachmentSet,
 } from './video-upload/store';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -179,6 +182,14 @@ export function TodayWorkoutView() {
   const [requestedDayID, setRequestedDayID] = useState<string | null>(() =>
     handoff?.plan.trainee_id === studentId ? handoff.dayID : null,
   );
+  const notificationDay = useStudentTabsStore(store => store.videoNotificationDay);
+  useEffect(() => {
+    if (notificationDay?.studentId !== studentId) return;
+    void Promise.resolve().then(() => {
+      setRequestedDayID(notificationDay.dayId);
+      useStudentTabsStore.setState({ videoNotificationDay: null });
+    });
+  }, [notificationDay, studentId]);
   const [quickLogPlan, setQuickLogPlan] = useState<QuickLogPlan | null>(null);
   const quickLogAttempt = useRef<QuickLogAttempt | null>(null);
   const [quickLogContext, setQuickLogContext] = useState({ dayCode: '', subtitle: '' });
@@ -275,7 +286,7 @@ export function TodayWorkoutView() {
     if (planQuery.data && logsQuery.data && catalogQuery.data && profileQuery.isSuccess) void saveWorkoutSnapshot(studentId, planQuery.data, logsQuery.data.logs, catalogQuery.data.exercises, profileQuery.data).catch(() => {});
     else if (plansQuery.data && !selectCurrentPlan(plansQuery.data.plans)) void saveWorkoutSnapshot(studentId, null).catch(() => {});
   }, [studentId, planQuery.data, logsQuery.data, plansQuery.data, catalogQuery.data, profileQuery.data, profileQuery.isSuccess]);
-  const { queue: setSyncQueue, gate: completionGate, snapshot: syncSnapshot, setCompletionHandler } = useSetSync(studentId);
+  const { queue: setSyncQueue, gate: completionGate, snapshot: syncSnapshot, setCompletionHandler, dayVideos, retryWaitingVideos } = useSetSync(studentId);
   useEffect(() => {
     if (logsQuery.data) void setSyncQueue.reconcileServerLogs(logsQuery.data.logs).catch(() => {});
   }, [setSyncQueue, logsQuery.data]);
@@ -644,11 +655,26 @@ export function TodayWorkoutView() {
     try { await refresh(); }
     finally { setRefreshing(false); }
   };
+  const videoContext = { sets: liveDrafts.map(draft => ({ stableSetId: draft.stableSetId, setLogId: draft.sourceLog?.id })),
+    exerciseIds: planDay?.exercises.map(exercise => exercise.id) ?? [] };
+  const videoContextKey = JSON.stringify(videoContext);
+  useEffect(() => {
+    if (selectedDayID) void completionGate.updateVideoContext(selectedDayID, JSON.parse(videoContextKey)).catch(() => {});
+  }, [completionGate, selectedDayID, videoContextKey]);
+  useVideoUploadStore(store => store.records);
+  useVideoUploadStore(store => store.attachmentEditRevision);
+  const completionVideos = selectedDayID ? dayVideos(selectedDayID, videoContext).map(row => {
+    const draft = liveDrafts.find(draft => draft.stableSetId === row.stableSetId || draft.sourceLog?.id === row.upload.setLogId);
+    return { ...row, badge: draft ? { exerciseName: exerciseTitle(resolveExerciseMetadata(draft.exercise.exercise_id)),
+      setOrdinal: draft.setIndex + 1, weightKg: Number(draft.weightText) || null, reps: Number(draft.repsText) || null, rpe: Number(draft.rpeText) || null } : undefined };
+  }) : [];
+  const waitingForVideos = Boolean(selectedDayID && completionGate.videoIntent(selectedDayID)) && dayState?.kind !== 'completed';
   const completionCoordinator = useMemo(() => new SetCompletionCoordinator(setSyncQueue, completionGate, {
     reward: () => { setCompletionPhase('celebration'); },
-    videosDelivered: () => true, // 101 connects its delivery condition to the shared gate.
+    prepareVideos: hydrateVideoUploads,
+    videosDelivered: (dayId, context) => completionVideoSummary(dayVideos(dayId, context).map(row => row.upload)).delivered,
     error: error => { setCompletionPhase(null); Alert.alert(t('student.todayWorkoutScreen.copy001'), completionError(error, false)); },
-  }), [setSyncQueue, completionGate, setCompletionPhase]);
+  }), [setSyncQueue, completionGate, setCompletionPhase, dayVideos]);
   const syncCompletionState = useSyncExternalStore(completionCoordinator.subscribe, completionCoordinator.snapshot);
   useEffect(() => () => completionCoordinator.reset(), [completionCoordinator, selectedDayID]);
   useFocusEffect(useCallback(() => () => completionCoordinator.reset(), [completionCoordinator]));
@@ -661,7 +687,7 @@ export function TodayWorkoutView() {
   const completeDay = async (undo = false) => {
     if (!planDay || completion.isPending || undoCompletion.isPending) return;
     setRequestedDayID(planDay.id);
-    if (!undo) { endRest(); await completionCoordinator.begin(planDay.id, syncCompletionState === 'failed'); return; }
+    if (!undo) { endRest(); await completionCoordinator.begin(planDay.id, syncCompletionState === 'failed', videoContext); return; }
     try {
       await undoCompletion.mutateAsync(planDay.id);
       await completionGate.forget(planDay.id);
@@ -965,7 +991,7 @@ export function TodayWorkoutView() {
     realCount: realDrafts.length,
     remainingSets: remaining.length,
   });
-  const stickyCompletion = completionUI.sticky && (state.kind === 'loaded' || state.kind === 'recording');
+  const stickyCompletion = (completionUI.sticky || waitingForVideos) && (state.kind === 'loaded' || state.kind === 'recording');
   const readinessDone = Boolean(readinessQuery.data?.checkin);
   const readinessGate: ReadinessGateState = readinessQuery.isLoading
     ? 'unknown'
@@ -1215,7 +1241,7 @@ export function TodayWorkoutView() {
                 </Text>
               </View>
             ) : null}
-            {completionUI.button && !completionUI.sticky ? (
+            {completionUI.button && !completionUI.sticky && !waitingForVideos ? (
               <SetSyncCompletionControl state={syncCompletionState}
                 disabled={completion.isPending}
                 onComplete={() => void completeDay()}
@@ -1229,7 +1255,10 @@ export function TodayWorkoutView() {
         style={{ position: 'absolute', left: 0, right: 0, bottom: restSeconds !== null ? restOverlayHeight + spacing.xs : 0,
           paddingVertical: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.borderDefault, backgroundColor: colors.bgBase }}>
-        <SetSyncCompletionControl state={syncCompletionState} disabled={completion.isPending} onComplete={() => void completeDay()} />
+        <VideoCompletionControl studentId={studentId} videos={completionVideos} waiting={waitingForVideos}
+          showSummary={syncCompletionState === 'idle'}>
+          <SetSyncCompletionControl state={syncCompletionState} disabled={completion.isPending} onComplete={() => void completeDay()} />
+        </VideoCompletionControl>
       </View> : null}
       {quickLogPlan ? <QuickLogSheet isAccessory={id => isAccessoryExercise(resolveExerciseMetadata(id)?.exerciseType)} initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
         const outcome = await quickLogAttempt.current!.submit(input);
@@ -1331,6 +1360,10 @@ export function TodayWorkoutView() {
             await writeReview(studentId, selectedDayID!, next);
             setReviewState({ key: reviewKey, status: 'loaded', value: next });
             setCompletionPhase(null);
+            if (completionGate.videoIntent(selectedDayID!)) {
+              void retryWaitingVideos(selectedDayID!).catch(() => {});
+              return;
+            }
             const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan.id));
             setRequestedDayID(cursorDay(latest?.days ?? orderedDays)?.id ?? null);
             router.navigate('/(student)/today');

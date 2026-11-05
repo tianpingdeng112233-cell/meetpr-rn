@@ -1,0 +1,41 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/completion.test.ts
+
+FAIL src/features/training/set-sync/__tests__/completion.test.ts
+  ✓ successful completion removes the persisted day and later wakes cannot complete it again (2 ms)
+  ✓ restoring the gate prunes legacy completed days without losing waiting days (1 ms)
+  ✓ empty queue rewards directly without flashing syncing and completes once (1 ms)
+  ✓ pending sets finish before reward and completion (1 ms)
+  ✓ 20 seconds fails without reward or completion; late success does not celebrate (2 ms)
+  ✓ 4xx fails immediately and retry starts a new 20-second interval (1 ms)
+  ✓ reset on leaving restores the hold state and suppresses late rewards (1 ms)
+  ✓ gate waits for both inputs and survives rebuilding; concurrent wakes complete once (1 ms)
+  ✓ a completion response from a logged-out instance cannot erase new completion intents
+  ✓ video wait survives restart, times out once from the hold, and completes once after both inputs arrive (2 ms)
+  ✕ retrying a failed completion after adding a video persists the new delivery wait
+
+  ● retrying a failed completion after adding a video persists the new delivery wait
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: [{"stableSetId": "new-video"}]
+    Received: undefined
+
+      134 |   await s.gate.arm('day', { heldAt: Date.now(), sets: [{ stableSetId: 'new-video' }], exerciseIds: ['exercise'] });
+      135 |   const restored = new CompletionGate('alice', s.storage, s.complete); await restored.ready;
+    > 136 |   expect(restored.videoIntent('day')?.sets).toEqual([{ stableSetId: 'new-video' }]);
+          |                                             ^
+      137 |   restored.dispose(); s.stop();
+      138 | });
+      139 |
+
+      at Object.toEqual (src/features/training/set-sync/__tests__/completion.test.ts:136:45)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 10 passed, 11 total
+Snapshots:   0 total
+Time:        0.439 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/completion.test.ts/i.

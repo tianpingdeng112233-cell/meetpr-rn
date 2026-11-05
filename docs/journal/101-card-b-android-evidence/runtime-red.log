@@ -1,0 +1,36 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/runtime.test.ts
+
+FAIL src/features/training/set-sync/__tests__/runtime.test.ts
+  ✓ a restored completion intent proceeds when restored pending sets drain without another foreground event (4 ms)
+  ✓ connected networks retry the training API even when platform internet validation fails (1 ms)
+  ✓ internet validation recovery wakes a connected queue before its backoff timer (1 ms)
+  ✕ cold runtime waits for all current-day videos including a later addition without mounting training
+
+  ● cold runtime waits for all current-day videos including a later addition without mounting training
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: "day"
+
+      72 |   useSessionStore.setState({ user: { id, phone: '', role: 'coached_student', created_at: '2026-11-05T12:00:00Z' } });
+      73 |   const restored = accountSetSync(id); await restored.queue.ready; await flush();
+    > 74 |   expect(complete).not.toHaveBeenCalled();
+         |                        ^
+      75 |   useVideoUploadStore.setState({ records: {
+      76 |     [`${id}:video`]: { ...uploading, status: 'uploaded' },
+      77 |     [`${id}:new`]: { ...uploading, logRequest: { plan_exercise_id: 'exercise', set_index: 1, weight_kg: '80', reps: 5 } },
+
+      at Object.toHaveBeenCalled (src/features/training/set-sync/__tests__/runtime.test.ts:74:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Snapshots:   0 total
+Time:        0.561 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/runtime.test.ts/i.

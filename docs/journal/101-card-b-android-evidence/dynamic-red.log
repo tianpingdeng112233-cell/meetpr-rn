@@ -1,0 +1,27 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/video-upload/__tests__/completion-delivery.test.ts
+
+FAIL src/features/training/video-upload/__tests__/completion-delivery.test.ts
+  ✓ completion counts waiting-for-set and backoff as undelivered, separates failures from active uploads (1 ms)
+  ✕ waiting-day videos include later additions and replacements but never other days or accounts (1 ms)
+
+  ● waiting-day videos include later additions and replacements but never other days or accounts
+
+    TypeError: dayCompletionVideos is not a function
+
+      18 |   const record = (status: string, extra = {}) => ({ ...EMPTY_VIDEO_UPLOAD, status, ...extra });
+      19 |   const context = { sets: [{ stableSetId: 'original', setLogId: 'server-original' }], exerciseIds: ['exercise'] };
+    > 20 |   const rows = dayCompletionVideos('alice', 'day', context, {
+         |                ^
+      21 |     'alice:original': record('uploaded'),
+      22 |     'alice:new': record('pending', { logRequest: { plan_day_id: 'day' } }),
+      23 |     'alice:replacement': record('preparing', { logRequest: { plan_exercise_id: 'exercise' } }),
+
+      at Object.dayCompletionVideos (src/features/training/video-upload/__tests__/completion-delivery.test.ts:20:16)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.444 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/completion-delivery.test.ts/i.

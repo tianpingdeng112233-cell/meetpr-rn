@@ -1,0 +1,40 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/video-upload/__tests__/failure-notifier.test.ts
+
+FAIL src/features/training/video-upload/__tests__/failure-notifier.test.ts
+  ✓ failure notification requests normal permission and publishes one DEFAULT aggregate with retry copy (7 ms)
+  ✓ migrates legacy importance 2 to v2 importance 3 without reopening a disabled channel (3 ms)
+  ✓ migrates legacy importance 0 to v2 importance 0 without reopening a disabled channel (1 ms)
+  ✓ denied notification permission stays denied and does not publish (1 ms)
+  ✓ delivery clears the single outstanding aggregate (1 ms)
+  ✕ completion and timeout reuse the failure aggregate identifier and route to the waiting day (3 ms)
+  ✓ a newer completion remains the aggregate when an older failure is suspended in dismiss (1 ms)
+  ✓ a newer completion remains the aggregate when an older failure is suspended in schedule (1 ms)
+
+  ● completion and timeout reuse the failure aggregate identifier and route to the waiting day
+
+    expect(jest.fn()).toHaveBeenLastCalledWith(...expected)
+
+    Expected: ObjectContaining {"content": ObjectContaining {"body": "2 videos didn't upload. Tap to retry.", "data": ObjectContaining {"dayId": "day", "studentId": "alice"}, "title": "MeetPR"}, "identifier": "video-upload-failures"}
+    Received: {"content": {"body": "2 videos didn't upload. Tap to retry.", "data": {"category": "video-upload", "dayId": "day", "kind": "timeout", "screen": "training", "studentId": "alice"}, "sound": "default", "title": "Training video upload failed"}, "identifier": "video-upload-failures", "trigger": {"channelId": "video-upload-v2", "seconds": 1, "type": "timeInterval"}}
+
+    Number of calls: 1
+
+      62 | test('completion and timeout reuse the failure aggregate identifier and route to the waiting day', async () => {
+      63 |   await notifyVideoCompletion('timeout', 2, 'alice', 'day');
+    > 64 |   expect(Notifications.scheduleNotificationAsync).toHaveBeenLastCalledWith(expect.objectContaining({
+         |                                                   ^
+      65 |     identifier: 'video-upload-failures', content: expect.objectContaining({ title: 'MeetPR', body: "2 videos didn't upload. Tap to retry.", data: expect.objectContaining({ studentId: 'alice', dayId: 'day' }) }),
+      66 |   }));
+      67 |   await notifyVideoCompletion('complete', 1, 'alice', 'day');
+
+      at Object.toHaveBeenLastCalledWith (src/features/training/video-upload/__tests__/failure-notifier.test.ts:64:51)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+Snapshots:   0 total
+Time:        1.156 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/failure-notifier.test.ts/i.

@@ -1,0 +1,37 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/video-upload/__tests__/completion-delivery.test.ts
+
+FAIL src/features/training/video-upload/__tests__/completion-delivery.test.ts
+  ✓ completion counts waiting-for-set and backoff as undelivered, separates failures from active uploads (2 ms)
+  ✓ waiting-day videos include later additions and replacements but never other days or accounts
+  ✕ re-adding a set while waiting includes its replacement video after an older delete receipt (2 ms)
+
+  ● re-adding a set while waiting includes its replacement video after an older delete receipt
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "delivered": false,
+    -   "total": 1,
+    +   "delivered": true,
+    +   "total": 0,
+      }
+
+      34 |       { stableSetId: 'extra', dayId: 'day', remove: false, log: { id: 'new' } },
+      35 |     ]);
+    > 36 |   expect(completionVideoSummary(rows.map(row => row.upload))).toMatchObject({ total: 1, delivered: false });
+         |                                                               ^
+      37 | });
+      38 |
+
+      at Object.toMatchObject (src/features/training/video-upload/__tests__/completion-delivery.test.ts:36:63)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        0.748 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/video-upload\/__tests__\/completion-delivery.test.ts/i.

@@ -1,0 +1,21 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/set-sync/__tests__/completion.test.ts
+
+PASS src/features/training/set-sync/__tests__/completion.test.ts
+  ✓ successful completion removes the persisted day and later wakes cannot complete it again (3 ms)
+  ✓ restoring the gate prunes legacy completed days without losing waiting days
+  ✓ empty queue rewards directly without flashing syncing and completes once (1 ms)
+  ✓ pending sets finish before reward and completion (1 ms)
+  ✓ 20 seconds fails without reward or completion; late success does not celebrate (1 ms)
+  ✓ 4xx fails immediately and retry starts a new 20-second interval (1 ms)
+  ✓ reset on leaving restores the hold state and suppresses late rewards
+  ✓ gate waits for both inputs and survives rebuilding; concurrent wakes complete once (1 ms)
+  ✓ a completion response from a logged-out instance cannot erase new completion intents
+  ✓ video wait survives restart, times out once from the hold, and completes once after both inputs arrive (5 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        0.494 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/set-sync\/__tests__\/completion.test.ts/i.

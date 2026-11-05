@@ -1,0 +1,69 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/completion-entry.test.tsx -t undelivered videos
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 2 | import * as Notifications from 'expo-notifications';
+        | ^
+      3 | import { t } from '@/i18n';
+      4 | configureNotificationHandler();
+      5 | let revision = 0;
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:2:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:121:1)
+      at Object.require (src/features/training/__tests__/completion-entry.test.tsx:14:1)
+
+PASS src/features/training/__tests__/completion-entry.test.tsx
+  ✓ undelivered videos reward first, keep the training progress card after closing, and complete on delivery (290 ms)
+  ○ skipped successful settlement opens celebration and direct finish persists review and navigates to Today
+  ○ skipped completed-day banner opens review directly and reflection survives reopening
+  ○ skipped failed settlement leaves the completion flow closed
+  ○ skipped Ask coach opens the picker before navigating, then enters chat with a staged current set
+  ○ skipped Ask coach conversation failure uses the training share alert and stays on Training
+  ○ skipped completion immediately celebrates while sending, then acknowledges the coach after success
+  ○ skipped a 503 closes celebration, restores completion eligibility and keeps the recorded set for retry
+  ○ skipped 30 seconds without a response closes celebration and rolls back, ignoring late success
+  ○ skipped coach receipt follows the completion response without waiting for the plan refresh
+  ○ skipped failure after leaving celebration rolls back without reopening it or losing recorded sets
+  ○ skipped Chinese celebration shows sending until the completion response
+  ○ skipped training header shows cursor status on September 7
+  ○ skipped training header shows cursor status on September 8
+  ○ skipped training header shows cursor status on September 25
+  ○ skipped training header recalculates after 4am on focus without waiting for its minute tick
+  ○ skipped training header recalculates after 4am on foreground without waiting for its minute tick
+  ○ skipped browsing a completed week keeps Completed instead of the overdue cursor count
+  ○ skipped 090 all done docks exactly one completion control outside the scroll content
+  ○ skipped 090 undoing a recorded set restores the hero and returns the single completion control to the scroll content
+  ○ skipped 090 completed-row scroll: first completion
+  ○ skipped 090 completed-row scroll: batch completion in plan order, before a previously completed later row
+  ○ skipped 090 completed-row scroll: last exercise with no hero remaining
+  ○ skipped 090 completed-row scroll: reduced motion
+  ○ skipped 090 completed-row scroll: keyboard already open
+  ○ skipped 090 completed-row scroll: keyboard opens before layout
+  ○ skipped 090 completed-row scroll: user dragging
+  ○ skipped 090 completed-row scroll: user starts dragging before layout
+  ○ skipped 090 completed-row scroll: momentum scrolling
+  ○ skipped a day completed today shows one status row whose undo reopens the day
+  ○ skipped a day completed on an earlier day shows the status row without undo
+  ○ skipped 102: a hanging set request turns the row green immediately and leaves other rows available
+  ○ skipped 102: a hanging set request closes SetEntrySheet immediately after completing a set
+  ○ skipped 102 R1: source=log records use 2026-09-01 when saved after the day changes
+  ○ skipped 102 R1: source=null records use 2026-09-02 when saved after the day changes
+  ○ skipped 102 R1: source=local:one records use 2026-09-02 when saved after the day changes
+
+Test Suites: 1 passed, 1 total
+Tests:       35 skipped, 1 passed, 36 total
+Snapshots:   0 total
+Time:        1.519 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/completion-entry.test.tsx/i with tests matching "undelivered videos".
