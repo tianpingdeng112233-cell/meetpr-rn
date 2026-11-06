@@ -216,8 +216,8 @@
 "zh": "建议 · 同上组"
 },
 "student.progression.undoWindowPassed": {
-"en": "Completion can only be undone today",
-"zh": "只能在当天撤销"
+"en": "You can only undo workouts completed in the last 7 days",
+"zh": "只能撤销 7 天内完成的训练"
 },
 "student.rn.bind.incompleteRequest": {
 "en": "Your connection request is incomplete. Enter an invite code again.",

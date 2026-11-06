@@ -115,7 +115,7 @@ test('selects published_at newest, breaking ties by created_at then id, ignoring
   expect(selectCurrentPlan([a, { ...a, id: 'z' }])?.id).toBe('z');
   expect(selectCurrentPlan([{ ...a, status: 'draft' }])).toBeNull();
 });
-test('other weeks are read-only and only latest gym-day completion can undo', () => {
+test('other weeks are read-only and only latest completion within the undo window can undo', () => {
   const now = new Date(2026, 8, 5, 12);
   const days = [
     day('a', { completed_at: now.toISOString() }),
@@ -202,4 +202,35 @@ test('out-of-order completion can only undo the latest actual completion', () =>
   expect(completedToday(days, now)?.id).toBe('d2');
   expect(canUndoCompletion(days, 'd2', now)).toBe(true);
   expect(canUndoCompletion(days, 'd4', now)).toBe(false);
+});
+
+test('latest completion from three days ago can undo without counting as completed today', () => {
+  const now = new Date('2026-11-06T12:00:00Z');
+  const days = [day('latest', { completed_at: '2026-11-03T12:00:00Z' })];
+  expect(canUndoCompletion(days, 'latest', now)).toBe(true);
+  expect(completedToday(days, now)).toBeNull();
+});
+
+test.each([
+  ['same day', '2026-11-06T11:00:00Z', true],
+  ['6 days 23 hours', '2026-10-30T13:00:00Z', true],
+  ['one millisecond before 7 days', '2026-10-30T12:00:00.001Z', true],
+  ['exactly 7 days', '2026-10-30T12:00:00Z', false],
+  ['7 days and one minute', '2026-10-30T11:59:00Z', false],
+  ['8 days', '2026-10-29T12:00:00Z', false],
+  ['6 days 23 hours with a UTC offset', '2026-10-30T21:00:00+08:00', true],
+  ['exactly 7 days with a UTC offset', '2026-10-30T20:00:00+08:00', false],
+] as [string, string, boolean][])('latest completion at %s respects the rolling undo window', (_, completed_at, expected) => {
+  const days = [day('latest', { completed_at })];
+  expect(canUndoCompletion(days, 'latest', new Date('2026-11-06T12:00:00Z'))).toBe(expected);
+});
+
+test('an older completion within seven days cannot undo when another day was completed later', () => {
+  const days = [
+    day('latest', { completed_at: '2026-11-03T12:00:00Z' }),
+    day('older', { day_of_week: 4, completed_at: '2026-11-02T12:00:00Z' }),
+  ];
+  const now = new Date('2026-11-06T12:00:00Z');
+  expect(canUndoCompletion(days, 'older', now)).toBe(false);
+  expect(canUndoCompletion(days, 'latest', now)).toBe(true);
 });

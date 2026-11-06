@@ -58,6 +58,8 @@ export function completedToday(
       .pop() ?? null
   );
 }
+const COMPLETION_UNDO_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 export function canUndoCompletion(
   days: readonly PlanDay[],
   dayId: string,
@@ -67,7 +69,8 @@ export function canUndoCompletion(
     .filter((day) => day.completed_at != null)
     .sort((a, b) => Date.parse(a.completed_at!) - Date.parse(b.completed_at!))
     .pop();
-  return latest?.id === dayId && completedToday(days, now)?.id === dayId;
+  return latest?.id === dayId &&
+    now.getTime() - Date.parse(latest.completed_at!) < COMPLETION_UNDO_WINDOW_MS;
 }
 export function scheduledDate(
   plan: Pick<PlanSummary, 'start_date' | 'anchor_weekday'>,
