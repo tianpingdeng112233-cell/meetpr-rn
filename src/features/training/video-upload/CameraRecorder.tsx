@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, Camera } from 'expo-camera';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as MediaLibrary from 'expo-media-library';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { AppState, Linking, Modal, StatusBar, StyleSheet, Text, ToastAndroid, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Video from 'react-native-video';
@@ -53,6 +54,28 @@ export function CameraRecorder({
   const usingRef = useRef(false);
   const trimTouched = useRef(false);
   const [error, setError] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState !== 'background');
+  const keepAwake = foreground && permission !== 'denied' && !review && !error && !dismissed;
+  const keepAwakeId = useId();
+  const keepAwakeSequence = useRef(0);
+  const releaseKeepAwake = useRef(() => {});
+  useEffect(() => {
+    if (!keepAwake) return;
+    const tag = `training-camera:${keepAwakeId}:${++keepAwakeSequence.current}`;
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      void deactivateKeepAwake(tag).catch(() => {});
+    };
+    releaseKeepAwake.current = release;
+    void activateKeepAwakeAsync(tag).then(() => {
+      // A late native activation must not outlive this capture session.
+      if (released) void deactivateKeepAwake(tag).catch(() => {});
+    }).catch(release);
+    return release;
+  }, [keepAwakeId, keepAwake]);
   const { session, workingUri, thumbnails, status, playback } = useTrimSource(review, () => {}, 'review');
   const { player, selection, ready: trimReady, playing, setPlaying, move, toggle, onLoad, onSeek, onProgress, onEnd } = playback;
   const generation = useRef(0);
@@ -105,6 +128,7 @@ export function CameraRecorder({
       .then(value => { if (live) setTrimHintVisible(value !== 'true'); })
       .catch(() => { if (live) setTrimHintVisible(true); });
     const subscription = AppState.addEventListener('change', (state) => {
+      setForeground(state !== 'background');
       // Only interrupt an in-flight recording; completed reviews still own their local video.
       // Android also reports a transient 'background' while the camera / permission activity attaches,
       // so closing the recorder here would dismiss it before the user ever sees it.
@@ -146,12 +170,16 @@ export function CameraRecorder({
         Math.floor((Date.now() - startedAt.current) / 1000),
       );
       setElapsed(seconds);
-      if (seconds >= maxDurationSeconds) camera.current?.stopRecording();
+      if (seconds >= maxDurationSeconds) {
+        releaseKeepAwake.current();
+        camera.current?.stopRecording();
+      }
     }, 200);
     return () => clearInterval(timer);
   }, [recording, maxDurationSeconds]);
   const record = async () => {
     if (recordingActive.current) {
+      releaseKeepAwake.current();
       camera.current?.stopRecording();
       return;
     }
@@ -233,6 +261,8 @@ export function CameraRecorder({
   };
   const close = () => {
     if (usingRef.current) return;
+    releaseKeepAwake.current();
+    setDismissed(true);
     closed.current = true;
     generation.current++;
     camera.current?.stopRecording();
@@ -306,6 +336,8 @@ export function CameraRecorder({
               videoBitrate={2_750_000}
               onCameraReady={() => setReady(true)}
               onMountError={() => {
+                releaseKeepAwake.current();
+                setDismissed(true);
                 camera.current?.stopRecording();
                 closeRef.current();
               }}
