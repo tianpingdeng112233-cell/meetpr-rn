@@ -1,3 +1,4 @@
+import { enterNumber, numericCell } from '../accessory-pad.test-helpers';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { accountSetSync } from '../set-sync/runtime';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -361,7 +362,7 @@ test.each(['Competition Deadlift', undefined])('saved set supplies its exercise 
 
 
 const accessoryButton = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0];
-const accessoryInput = (label: string) => renderer.root.findAllByType(TextInput).find(node => node.props.accessibilityLabel === label)!;
+const accessoryInput = (label: string) => numericCell(renderer, label);
 function serveAccessories(rest: number | null = null) {
   jest.mocked(authenticatedRequest).mockClear();
   const exercise = plan.days[0].exercises[0];
@@ -398,7 +399,7 @@ test.each<[number | undefined, number | null, number]>([[undefined, null, 60], [
     return original(path, options);
   });
   await startAccessories();
-  await act(async () => accessoryInput('Set 2 weight').props.onChangeText('82,5'));
+  await enterNumber(renderer, 'Set 2 weight', '82,5');
   await act(async () => accessoryButton('Complete set 2').props.onPress());
   expect(accessoryButton('Undo set 2').props.disabled).toBe(false);
   expect(accessoryButton('Complete set 1').props.disabled).toBe(false);
@@ -408,7 +409,7 @@ test.each<[number | undefined, number | null, number]>([[undefined, null, 60], [
   expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(seconds);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
   await act(async () => renderer.root.findByType(RestTimer).props.onClose());
-  await act(async () => accessoryInput('Set 1 RPE').props.onChangeText('7.5'));
+  await enterNumber(renderer, 'Set 1 RPE', '7.5');
   await act(async () => accessoryButton('Complete set 1').props.onPress());
   expect(setBodies()[1]).toMatchObject({ set_index: 0, rpe: '7.5' });
   expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
@@ -427,20 +428,20 @@ test('an upgraded completed accessory row cancels with its exact kg value; edits
     return original(path, options);
   });
   await startAccessories();
-  expect(accessoryInput('Set 1 weight').props.value).toBe('176.6');
+  expect(accessoryInput('Set 1 weight').props.accessibilityValue.text).toBe('176.6');
   await act(async () => accessoryButton('Undo set 1').props.onPress());
   expect(setBodies()[0]).toMatchObject({ completed: false, failed: false, weight_kg: '80.123', reps: 10, rpe: null });
   expect(accessoryButton('Complete set 1')).toBeDefined();
   expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-  await act(async () => accessoryInput('Set 1 weight').props.onChangeText('55.1'));
+  await enterNumber(renderer, 'Set 1 weight', '55.1');
   await act(async () => accessoryButton('Complete set 1').props.onPress());
   expect(setBodies()[1]).toMatchObject({ completed: true, weight_kg: '25' });
-  await act(async () => accessoryInput('Set 1 reps').props.onChangeText('12'));
+  await enterNumber(renderer, 'Set 1 reps', '12');
   expect(accessoryButton('Complete set 1')).toBeDefined();
   failNext = true;
   await act(async () => accessoryButton('Complete set 1').props.onPress());
   expect(Alert.alert).not.toHaveBeenCalled();
-  expect(accessoryInput('Set 1 reps').props.value).toBe('12');
+  expect(accessoryInput('Set 1 reps').props.accessibilityValue.text).toBe('12');
   expect(accessoryButton('Undo set 1').props.disabled).toBe(false);
   await act(async () => { accountSetSync(studentId).queue.sendNow(); });
   expect(setBodies()[3]).toEqual(setBodies()[2]);
@@ -481,7 +482,7 @@ test.each([0, 1, 2])('complete all submits serially without rest, leaves %s empt
     return original(path, options);
   });
   await startAccessories();
-  await act(async () => accessoryInput('Set 1 RPE').props.onChangeText('7'));
+  await enterNumber(renderer, 'Set 1 RPE', '7');
   await act(async () => accessoryButton('Complete all as planned').props.onPress());
   if (skipped) {
     expect(accessoryButton('Complete all as planned').props.disabled).toBe(false);
@@ -508,7 +509,7 @@ test.each([0, 1, 2])('complete all submits serially without rest, leaves %s empt
     expect(accessoryButton('Undo set 2')).toBeDefined();
   }
   for (let index = 0; index < skipped; index++) {
-    await act(async () => accessoryInput(`Set ${index + 3} weight`).props.onChangeText('60'));
+    await enterNumber(renderer, `Set ${index + 3} weight`, '60');
     const copy = renderer.root.findAllByType(Text).map(n => n.props.children);
     expect(copy).not.toContain('2 sets still need a weight');
     if (skipped - index === 2) expect(copy).toContain('1 set still needs a weight');

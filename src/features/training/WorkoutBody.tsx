@@ -75,7 +75,7 @@ export function WorkoutBody({
   preparingShare = false,
   unit = 'kg',
   onAccessorySave,
-  onAccessoryInputFocus,
+  onAccessoryPadLayout,
   onExerciseCompleted,
   onCompletedRowLayout,
   onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, inlineEdits, completedDay,
@@ -91,7 +91,7 @@ export function WorkoutBody({
   onCompletedRowLayout?: (exerciseId: string, layout: LayoutRectangle) => void;
   unit?: 'kg' | 'lb';
   onAccessorySave?: ComponentProps<typeof AccessoryLogCard>['onSave'];
-  onAccessoryInputFocus?: ComponentProps<typeof AccessoryLogCard>['onInputFocus'];
+  onAccessoryPadLayout?: ComponentProps<typeof AccessoryLogCard>['onPadLayout'];
   preview?: { recommendedDate?: string; title: string; unlockMessage?: string };
   onAskCoach?: (draft: WorkoutSetDraft) => void;
   preparingShare?: boolean;
@@ -196,7 +196,7 @@ export function WorkoutBody({
     const last = [...relevant].sort((a, b) => b.logged_at.localeCompare(a.logged_at))[0];
     return last ? relevant.filter(log => log.logged_date === last.logged_date && log.plan_exercise_id === last.plan_exercise_id) : [];
   };
-  const inlineCard = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}><LoadTypeSummary sets={exercise.sets} /><AccessoryLogCard allowsRIR={isAccessoryExercise(resolveExerciseMetadata(exercise.exercise_id)?.exerciseType)} drafts={rows} previousLogs={previousFor(exercise)} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} readOnly={!editable}
+  const inlineCard = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}><LoadTypeSummary sets={exercise.sets} /><AccessoryLogCard exerciseName={exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))} allowsRIR={isAccessoryExercise(resolveExerciseMetadata(exercise.exercise_id)?.exerciseType)} drafts={rows} previousLogs={previousFor(exercise)} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onPadLayout={onAccessoryPadLayout} inlineEdits={inlineEdits} readOnly={!editable}
     onAddSet={editable && onAddSet ? () => onAddSet(exercise) : undefined} onRemoveSet={onRemoveSet} /></View>;
   const extrasFor = (exercise: PlanExercise, rows: readonly WorkoutSetDraft[]) => <View style={{ gap: spacing.sm }}>
     {rows.filter(row => row.kind === 'extra').map(draft => <View key={draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderWidth: spacing.point1, borderColor: colors.borderStrong, borderRadius: radius.inset, backgroundColor: isDraftTerminal(draft) ? colors.successTint : colors.surfaceCard }}>
@@ -542,7 +542,7 @@ export function WorkoutBody({
               </View>
               <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size15, 'medium'), lineHeight: fontMetrics.size21 }}>{coachNotes.exerciseNote}</Text>
             </View> : null}
-            {accessory ? <AccessoryLogCard allowsRIR={isAccessoryExercise(resolveExerciseMetadata(active.exercise.exercise_id)?.exerciseType)} key={active.exercise.id} drafts={accessoryDrafts} previousLogs={previousLogs} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onInputFocus={onAccessoryInputFocus} inlineEdits={inlineEdits} onAddSet={onAddSet ? () => onAddSet(active.exercise) : undefined} onRemoveSet={onRemoveSet} /> : <>
+            {accessory ? <AccessoryLogCard exerciseName={exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id))} allowsRIR={isAccessoryExercise(resolveExerciseMetadata(active.exercise.exercise_id)?.exerciseType)} key={active.exercise.id} drafts={accessoryDrafts} previousLogs={previousLogs} unit={unit} studentId={studentId} onRecord={onRecord} onSave={onAccessorySave} onPadLayout={onAccessoryPadLayout} inlineEdits={inlineEdits} onAddSet={onAddSet ? () => onAddSet(active.exercise) : undefined} onRemoveSet={onRemoveSet} /> : <>
             <View
               style={{
                 flexDirection: 'row',

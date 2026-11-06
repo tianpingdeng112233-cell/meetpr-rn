@@ -1,4 +1,8 @@
 {
+"student.accessory.pad.context": {"en": "{0} · Set {1} · {2}", "zh": "{0} · 第 {1} 组 · {2}"},
+"student.accessory.pad.weight": {"en": "Weight", "zh": "重量"},
+"student.accessory.pad.reps": {"en": "Reps", "zh": "次数"},
+"student.accessory.pad.next": {"en": "Next · {0}", "zh": "下一项 · {0}"},
 "student.rn.pendingBind.withoutName": { "en": "Waiting for your coach to accept", "zh": "等待教练接收" },
 "student.rn.pendingBind.namedCoach": { "en": "Waiting for {0} to accept", "zh": "等待{0}接收" },
 "student.rn.onboarding.stepProgress": { "en": "Step {0} of {1}", "zh": "第 {0} 步 / 共 {1} 步" },

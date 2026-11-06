@@ -1,19 +1,19 @@
 import { EffortHelpButton } from './EffortHelpButton';
 import { EffortToggleLabel } from './EffortToggleLabel';
-import { useRef, useState } from 'react';
-import { Text, TextInput, View, Vibration, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Modal, Text, View, Vibration, type ViewStyle } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppButton, font, fontMetrics, radius, spacing, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { showToast } from '@/design/Toast';
-import { append, type NumberPadField } from '@/design/number-pad';
+import { NumberPad } from '@/design/NumberPad';
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { t } from '@/i18n';
 import { effectiveLoadMode } from '@/domain/plan/prescription';
 import { accessoryLogRequest, accessoryRows, accessoryRowWritable, rowsToCompleteAll } from './accessory-quick-log';
 import type { SetLogInput } from './set-log-input';
 import type { WorkoutSetDraft } from './model';
-import { normalizeDecimalInput, gymDayText } from './policy';
+import { gymDayText } from './policy';
 import { studentAddedLogRequest } from './drafts';
 import { useVideoUploadStore } from './video-upload/store';
 
@@ -28,7 +28,7 @@ const fields = [
 
 export type AccessoryEdits = Record<string, { revision: string; input: SetLogInput; weightEdited: boolean }>;
 
-export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onRecord, onSave, onInputFocus, onAddSet, onRemoveSet, inlineEdits, readOnly = false, allowsRIR = false }: {
+export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onRecord, onSave, exerciseName = '', onPadLayout, onAddSet, onRemoveSet, inlineEdits, readOnly = false, allowsRIR = false }: {
   allowsRIR?: boolean;
   onAddSet?: () => void;
   onRemoveSet?: (draft: WorkoutSetDraft) => void;
@@ -39,16 +39,18 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
   unit: 'kg' | 'lb';
   studentId: string;
   onRecord: (draft: WorkoutSetDraft) => void;
-  onInputFocus?: (input: TextInput | null) => void;
+  exerciseName?: string;
+  onPadLayout?: (row: View | null, panel: { top: number; height: number } | null) => void;
   onSave?: (draft: WorkoutSetDraft, request: SetLogUpsertRequest, mode: 'single' | 'all') => Promise<unknown>;
 }) {
   const colors = useColors();
-  const inputs = useRef<Record<string, TextInput | null>>({});
+  const rowViews = useRef<Record<string, View | null>>({});
+  const [panelLayout, setPanelLayout] = useState<{ top: number; height: number } | null>(null);
   const batch = useRef(false);
   const [batchBusy, setBatchBusy] = useState(false);
   const [showSkipped, setShowSkipped] = useState(false);
   const [attempted, setAttempted] = useState<ReadonlySet<string>>(new Set());
-  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [active, setActive] = useState<{ index: number; field: typeof fields[number][0] } | null>(null);
   const saving = useRef(new Set<string>());
   const [busyRows, setBusyRows] = useState<ReadonlySet<string>>(new Set());
   const videos = useVideoUploadStore(state => state.records);
@@ -65,7 +67,39 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     if (inlineEdits) inlineEdits.onChange(id, next);
     else setLocalEdits(current => ({ ...current, [id]: next }));
   };
-  const filter = (value: string, field: NumberPadField) => [...normalizeDecimalInput(value)].reduce((text, character) => append(text, character, field), '');
+  const activeRowId = active ? rows[active.index]?.stableSetId : undefined;
+  useEffect(() => {
+    if (!activeRowId) return;
+    onPadLayout?.(rowViews.current[activeRowId], panelLayout);
+    return () => onPadLayout?.(null, null);
+  }, [active, activeRowId, panelLayout, onPadLayout]);
+  const fieldKind = (index: number, field: typeof fields[number][0]) => field === 'weightText' ? 'weight' : field === 'repsText' ? 'reps' : inputFor(index).effortKind === 'rir' ? 'rir' : 'rpe';
+  const fieldTitle = (index: number, field: typeof fields[number][0]) => {
+    const kind = fieldKind(index, field);
+    return kind === 'rpe' || kind === 'rir' ? kind.toUpperCase() : t(kind === 'weight' ? 'student.accessory.pad.weight' : 'student.accessory.pad.reps');
+  };
+  const editableCells = rows.flatMap((row, index) => readOnly || batchBusy || busyRows.has(row.stableSetId) ? []
+    : fields.filter(([field]) => field !== 'rpeText' || allowsRIR || effectiveLoadMode(drafts[index].planSet) !== 'free_weight').map(([field]) => ({ index, field })));
+  const nextCell = active ? editableCells[editableCells.findIndex(cell => cell.index === active.index && cell.field === active.field) + 1] : undefined;
+  const closePad = () => { setActive(null); setPanelLayout(null); };
+  const commitPad = (value: number | null, advance = false) => {
+    if (!active) return;
+    if (value !== null || active.field === 'rpeText') change(active.index, { [active.field]: value === null ? '' : String(value) });
+    if (advance && nextCell) setActive(nextCell);
+    else closePad();
+  };
+  const numericCell = (index: number, field: typeof fields[number][0], label: string, placeholder: string, style: ViewStyle) => {
+    const row = rows[index];
+    const focused = active?.index === index && active.field === field;
+    const value = inputFor(index)[field];
+    const compact = effectiveLoadMode(drafts[index].planSet) === 'free_weight' && !allowsRIR;
+    const size = compact ? fontMetrics.size13 : field === 'rpeText' && !value && typeof row.rpePlaceholder !== 'string' ? fontMetrics.size11 : fontMetrics.size15;
+    return <Pressable key={field} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{ text: value }} accessibilityHint={placeholder || undefined}
+      disabled={readOnly || batchBusy || busyRows.has(row.stableSetId)} onPress={() => setActive({ index, field })}
+      style={{ ...style, justifyContent: 'center', ...(focused ? { borderWidth: spacing.point2, borderColor: colors.gold500 } : {}) }}>
+      <Text style={{ ...font.mono(size, value && !compact ? 'bold' : 'regular'), textAlign: 'center', color: value ? colors.textPrimary : colors.textMuted }}>{value || placeholder}</Text>
+    </Pressable>;
+  };
   const isCancel = (index: number) => rows[index].status === 'complete' && fields.every(([field]) => inputFor(index)[field] === rows[index][field]);
   const saveRow = async (index: number) => {
     const row = rows[index];
@@ -125,28 +159,18 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
         const weightError = validation.invalidFields.includes('weightText') && (attempted.has(row.stableSetId) || showSkipped || weightEdited);
         const disabled = readOnly || batchBusy || busyRows.has(row.stableSetId);
         const weightLabel = t('loadTypes.requiredWeight', [unit]);
-        return <View key={row.stableSetId} style={{ gap: spacing.xs }}>
+        return <View key={row.stableSetId} ref={node => { rowViews.current[row.stableSetId] = node; }} collapsable={false} testID={`accessory-row-${row.stableSetId}`} style={{ gap: spacing.xs, borderRadius: radius.inset, backgroundColor: active?.index === index ? colors.goldSoft : undefined }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.details', [row.setIndex + 1])} disabled={disabled} onPress={() => onRecord(drafts[index])} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
               <Text style={{ ...font.body(fontMetrics.size12), color: colors.textPrimary }}>{t('loadTypes.set', [row.setIndex + 1])}</Text>
             </Pressable>
             <View style={{ flex: 2, gap: spacing.xs }}>
               <Text style={{ ...font.body(fontMetrics.size11), color: weightError ? colors.danger : colors.textMuted }}>{weightLabel}</Text>
-              <TextInput ref={node => { inputs.current[`${row.stableSetId}:weightText`] = node; }}
-                onFocus={() => { setFocusedInput(`${row.stableSetId}:weightText`); onInputFocus?.(inputs.current[`${row.stableSetId}:weightText`]); }}
-                onBlur={() => { setFocusedInput(null); onInputFocus?.(null); }} accessibilityLabel={weightLabel} value={input.weightText}
-                placeholder={t('loadTypes.requiredPlaceholder')}
-                placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" editable={!disabled}
-                onChangeText={value => change(index, { weightText: filter(value, 'weight') })}
-                style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.sm, ...font.mono(fontMetrics.size13), color: colors.textPrimary, backgroundColor: colors.surfaceCard, borderWidth: 1, borderRadius: radius.inset, borderColor: weightError ? colors.danger : colors.borderStrong }} />
+              {numericCell(index, 'weightText', weightLabel, t('loadTypes.requiredPlaceholder'), { minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.sm, backgroundColor: colors.surfaceCard, borderWidth: 1, borderRadius: radius.inset, borderColor: weightError ? colors.danger : colors.borderStrong })}
             </View>
             <View style={{ flex: 1, gap: spacing.xs }}>
               <Text style={{ ...font.body(fontMetrics.size11), color: colors.textMuted }}>{t('student.setEntrySheet.copy004')}</Text>
-              <TextInput ref={node => { inputs.current[`${row.stableSetId}:repsText`] = node; }}
-                onFocus={() => { setFocusedInput(`${row.stableSetId}:repsText`); onInputFocus?.(inputs.current[`${row.stableSetId}:repsText`]); }}
-                onBlur={() => { setFocusedInput(null); onInputFocus?.(null); }} accessibilityLabel={t('student.accessory.repsLabel', [row.setIndex + 1])} value={input.repsText}
-                keyboardType="number-pad" editable={!disabled} onChangeText={value => change(index, { repsText: filter(value, 'reps') })}
-                style={{ minHeight: spacing.minimumHitTarget, textAlign: 'center', ...font.mono(fontMetrics.size13), color: colors.textPrimary, backgroundColor: colors.surfaceCard, borderWidth: 1, borderRadius: radius.inset, borderColor: attempted.has(row.stableSetId) && validation.invalidFields.includes('repsText') ? colors.danger : colors.borderStrong }} />
+              {numericCell(index, 'repsText', t('student.accessory.repsLabel', [row.setIndex + 1]), '', { minHeight: spacing.minimumHitTarget, backgroundColor: colors.surfaceCard, borderWidth: 1, borderRadius: radius.inset, borderColor: attempted.has(row.stableSetId) && validation.invalidFields.includes('repsText') ? colors.danger : colors.borderStrong })}
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel={t(isCancel(index) ? 'student.accessory.undo' : 'student.accessory.complete', [row.setIndex + 1])} disabled={disabled}
               onPress={() => void saveRow(index)} style={{ minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.sm, justifyContent: 'center', borderRadius: radius.inset, backgroundColor: complete ? colors.success : colors.ctaFill }}>
@@ -157,9 +181,9 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
           {weightError && loadMode === 'free_weight' && !input.weightText.trim() ? <Text accessibilityLiveRegion="polite" style={{ ...font.body(fontMetrics.size12), color: colors.danger }}>{t('loadTypes.missingWeight', [row.setIndex + 1])}</Text> : null}
         </View>;
       }
-      return <View key={row.stableSetId} style={{ gap: spacing.xs }}>
+      return <View key={row.stableSetId} ref={node => { rowViews.current[row.stableSetId] = node; }} collapsable={false} testID={`accessory-row-${row.stableSetId}`} style={{ gap: spacing.xs, borderRadius: radius.inset, backgroundColor: active?.index === index ? colors.goldSoft : undefined }}>
         {input.effortKind !== headerKind ? <Text style={{ ...font.mono(fontMetrics.size10), color: colors.textSecondary }}>{drafts[index].sourceLog ? t('training.effort.saved', [row.setIndex + 1, input.effortKind?.toUpperCase() ?? 'RPE']) : input.effortKind?.toUpperCase()}</Text> : null}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point6, paddingVertical: spacing.xs, borderRadius: radius.inset, backgroundColor: complete ? colors.successTint : colors.bgInset }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.point6, paddingVertical: spacing.xs, borderRadius: radius.inset, backgroundColor: active?.index === index ? undefined : complete ? colors.successTint : colors.bgInset }}>
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.details', [row.setIndex + 1])} disabled={readOnly || added || batchBusy || busyRows.has(row.stableSetId)} onPress={() => onRecord(drafts[index])}
             style={{ ...column(0), minHeight: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceRaised, borderRadius: radius.inset }}>
             <Text style={{ ...font.mono(fontMetrics.size15, 'bold'), color: colors.textPrimary }}>{row.kind === 'extra' ? t('student.added.extra') : row.setIndex + 1}</Text>
@@ -170,14 +194,10 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
             style={{ ...column(1), minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
             <Text adjustsFontSizeToFit numberOfLines={1} style={{ ...font.mono(fontMetrics.size11), color: colors.textMuted, textAlign: 'center' }}>{row.previous ? `${row.previous.weightText} × ${row.previous.reps}` : '—'}</Text>
           </Pressable>
-          {fields.map(([field, kind, label], offset) => <TextInput key={field} ref={node => { inputs.current[`${row.stableSetId}:${field}`] = node; }}
-              onFocus={() => { setFocusedInput(`${row.stableSetId}:${field}`); onInputFocus?.(inputs.current[`${row.stableSetId}:${field}`]); }}
-              onBlur={() => { setFocusedInput(current => current === `${row.stableSetId}:${field}` ? null : current); onInputFocus?.(null); }} accessibilityLabel={field === 'rpeText' && input.effortKind === 'rir' ? t('training.effort.rirLabel', [row.setIndex + 1]) : t(label, [row.setIndex + 1])} value={input[field]}
-              placeholder={field === 'weightText' ? row.weightPlaceholder : field === 'rpeText' && !complete && input.effortKind === row.effortKind ? typeof row.rpePlaceholder === 'string' ? row.rpePlaceholder : t('student.accessory.rir', [row.rpePlaceholder.value]) : ''}
-              placeholderTextColor={colors.textMuted} keyboardType={kind === 'reps' || (field === 'rpeText' && input.effortKind === 'rir') ? 'number-pad' : 'decimal-pad'}
-              editable={!readOnly && !batchBusy && !busyRows.has(row.stableSetId)} onChangeText={value => change(index, { [field]: filter(value, field === 'rpeText' && input.effortKind === 'rir' ? 'rir' : kind) })}
-              style={{ ...column(offset + 2), minHeight: spacing.minimumHitTarget, paddingHorizontal: spacing.zero, paddingVertical: spacing.xs, textAlign: 'center', ...font.mono(field === 'rpeText' && !input[field] && typeof row.rpePlaceholder !== 'string' ? fontMetrics.size11 : fontMetrics.size15, input[field] ? 'bold' : 'regular'), color: colors.textPrimary, backgroundColor: complete ? undefined : colors.surfaceCard, borderRadius: radius.inset, borderWidth: complete && !invalidFields.includes(field) && focusedInput !== `${row.stableSetId}:${field}` ? 0 : spacing.point1, borderColor: invalidFields.includes(field) ? colors.danger : focusedInput === `${row.stableSetId}:${field}` ? colors.textPrimary : colors.borderStrong }} />)}
-          <Pressable accessibilityRole="button" accessibilityLabel={t(isCancel(index) ? 'student.accessory.undo' : 'student.accessory.complete', [row.setIndex + 1])}
+          {fields.map(([field, , label], offset) => numericCell(index, field,
+            field === 'rpeText' && input.effortKind === 'rir' ? t('training.effort.rirLabel', [row.setIndex + 1]) : t(label, [row.setIndex + 1]),
+            field === 'weightText' ? row.weightPlaceholder : field === 'rpeText' && !complete && input.effortKind === row.effortKind ? typeof row.rpePlaceholder === 'string' ? row.rpePlaceholder : t('student.accessory.rir', [row.rpePlaceholder.value]) : '',
+            { ...column(offset + 2), minHeight: spacing.minimumHitTarget, paddingVertical: spacing.xs, backgroundColor: complete ? undefined : colors.surfaceCard, borderRadius: radius.inset, borderWidth: complete && !invalidFields.includes(field) ? 0 : spacing.point1, borderColor: invalidFields.includes(field) ? colors.danger : colors.borderStrong }))}          <Pressable accessibilityRole="button" accessibilityLabel={t(isCancel(index) ? 'student.accessory.undo' : 'student.accessory.complete', [row.setIndex + 1])}
             accessibilityHint={!canAct ? t('student.accessory.needsWeightOne') : undefined} disabled={readOnly || batchBusy || !canAct || busyRows.has(row.stableSetId)} onPress={() => void saveRow(index)}
             accessibilityState={{ disabled: readOnly || batchBusy || !canAct || busyRows.has(row.stableSetId), busy: busyRows.has(row.stableSetId) }}
             style={{ ...column(5), aspectRatio: 1, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: spacing.point2, borderColor: !canAct ? colors.textGhost : complete ? colors.success : colors.textPrimary, backgroundColor: complete ? colors.success : colors.surfaceCard }}>
@@ -195,5 +215,13 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     </View> : null}
     {!readOnly && onAddSet ? <AppButton variant="link" label={t('student.added.addSet')} disabled={batchBusy || busyRows.size > 0 || (added ? rows.length : rows.filter(row => row.kind === 'extra').length) >= 10} onPress={onAddSet} /> : null}
     {!readOnly && !added && rows.some(row => !row.kind && row.status === 'pending') ? <AppButton label={t('student.accessory.completeAll')} labelStyle={{ textAlign: 'center' }}  disabled={batchBusy} onPress={() => void completeAll()} /> : null}
+    {active ? <Modal transparent visible animationType="none" onRequestClose={closePad}>
+      <NumberPad key={`${rows[active.index].stableSetId}:${active.field}`} mode="accessory" field={fieldKind(active.index, active.field)}
+        initialValue={inputFor(active.index)[active.field]} unit={unit}
+        onPanelLayout={(top, height) => setPanelLayout(current => current?.top === top && current.height === height ? current : { top, height })}
+        contextText={t('student.accessory.pad.context', [exerciseName, rows[active.index].setIndex + 1, fieldTitle(active.index, active.field)])}
+        nextTitle={nextCell ? t('student.accessory.pad.next', [fieldTitle(nextCell.index, nextCell.field)]) : undefined}
+        onNext={nextCell ? value => commitPad(value, true) : undefined} onCancel={closePad} onCommit={commitPad} />
+    </Modal> : null}
   </View>;
 }

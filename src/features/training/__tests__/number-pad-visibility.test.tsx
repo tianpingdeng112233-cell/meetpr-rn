@@ -2,12 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, DeviceEventEmitter, Platform, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
 import { spacing } from '@/design';
+import { NumberPad } from '@/design/NumberPad';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 
 const Commands = jest.requireActual<{ default: { scrollTo: (view: unknown, x: number, y: number, animated: boolean) => void } }>('react-native/Libraries/Components/ScrollView/ScrollViewCommands').default;
@@ -84,7 +85,6 @@ afterEach(async () => {
   client.clear();
   useSessionStore.setState({ user: null });
   setLocaleOverride(null);
-  DeviceEventEmitter.emit('keyboardDidHide', {});
   jest.restoreAllMocks();
   jest.useRealTimers();
   await AsyncStorage.clear();
@@ -121,103 +121,44 @@ async function mountCards(kind = 'accessory', position = 5) {
   if (position === 0) await press(t('student.todayWorkoutScreen.copy008'));
 }
 
-function nativeGeometry({ headerHeight = 120, initialOffset = 0, atEnd = false } = {}) {
-  const scroll = renderer.root.findAllByType(ScrollView)[0];
-  const nativeScroll = scroll.find(node => typeof node.instance?.getNativeScrollRef === 'function').instance.getNativeScrollRef();
-  jest.spyOn(nativeScroll, 'measureInWindow').mockImplementation((...args: unknown[]) => {
-    (args[0] as (x: number, y: number, width: number, height: number) => void)(0, headerHeight, 400, 680);
-  });
-  const inputs = renderer.root.findAllByType(TextInput);
-  expect(inputs.length).toBeGreaterThan(0);
-  const contentY = initialOffset + 600;
-  let offset = initialOffset;
-  const padding = () => StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom;
-  const scrollTo = jest.spyOn(Commands, 'scrollTo').mockImplementation((_view, _x, y) => {
-    offset = atEnd ? Math.min(y, Math.max(0, contentY + 120 + padding() - 680)) : y;
-    scroll.props.onScroll?.({ nativeEvent: { contentOffset: { x: 0, y: offset } } });
-  });
-  scroll.props.onScroll?.({ nativeEvent: { contentOffset: { x: 0, y: offset } } });
-  for (const input of inputs) {
-    jest.spyOn(input.instance, 'measureLayout').mockImplementation((...args: unknown[]) => {
-      (args[1] as (x: number, y: number, width: number, height: number) => void)(0, contentY, 80, 44);
+test.each(['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => ({ kind, position }))))(
+  '105 reveals the active row above the pad: $kind card $position, then removes its inset', async ({ kind, position }) => {
+    await mountCards(kind, position);
+    expect(renderer.root.findAllByType(TextInput).filter(node => node.props.editable !== false)).toHaveLength(0);
+    const scroll = renderer.root.findAllByType(ScrollView)[0];
+    const nativeScroll = scroll.find(node => typeof node.instance?.getNativeScrollRef === 'function').instance.getNativeScrollRef();
+    jest.spyOn(nativeScroll, 'measureInWindow').mockImplementation((...args: unknown[]) => {
+      (args[0] as (x: number, y: number, width: number, height: number) => void)(0, 120, 400, 680);
     });
-    jest.spyOn(input.instance, 'measureInWindow').mockImplementation((...args: unknown[]) => {
-      (args[0] as (x: number, y: number, width: number, height: number) => void)(0, headerHeight + contentY - offset, 80, 44);
+    const rows = renderer.root.findAllByType(View).filter(node => node.props.testID?.startsWith('accessory-row-'));
+    expect(rows.length).toBeGreaterThan(0);
+    const contentY = position * 400 + 600;
+    let offset = position * 400;
+    const padding = () => StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom;
+    const originalPadding = padding();
+    const scrollTo = jest.spyOn(Commands, 'scrollTo').mockImplementation((_view, _x, y) => {
+      offset = Math.min(y, Math.max(0, contentY + 120 + padding() - 680));
     });
-  }
-  return { inputs, scrollTo, padding, bottom: () => headerHeight + contentY + 44 - offset,
-    layout: () => scroll.props.onContentSizeChange?.(400, contentY + 120 + padding()),
-    resetScroll: () => { offset = initialOffset; scroll.props.onScroll?.({ nativeEvent: { contentOffset: { x: 0, y: offset } } }); } };
-}
-async function showKeyboard(top = 500) {
-  await act(async () => {
-    DeviceEventEmitter.emit('keyboardDidShow', { duration: 0, easing: 'keyboard', endCoordinates: { screenX: 0, screenY: top, width: 400, height: 800 - top } });
-    await new Promise(resolve => setTimeout(resolve, 10));
-  });
-}
-
-test.each([
-  { kind: 'accessory', position: 0, headerHeight: 0, atEnd: false },
-  ...['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => ({ kind, position, headerHeight: 120, atEnd: position === 5 }))),
-])('Android reveals every inline input: $kind card $position, header=$headerHeight, end=$atEnd', async ({ kind, position, headerHeight, atEnd }) => {
-  jest.replaceProperty(Platform, 'OS', 'android');
-  await mountCards(kind, position);
-  const scene = nativeGeometry({ headerHeight, atEnd, initialOffset: position * 400 });
-  const normalPadding = scene.padding();
-  for (const input of scene.inputs) {
-    scene.resetScroll();
-    await act(async () => { input.props.onFocus(); });
-    await showKeyboard();
-    await act(async () => { scene.layout(); });
-    expect(scene.bottom()).toBeLessThanOrEqual(500 - spacing.lg);
-    expect(scene.bottom() - 44).toBeGreaterThanOrEqual(headerHeight);
-    await act(async () => { input.props.onBlur(); });
-  }
-  await act(async () => { DeviceEventEmitter.emit('keyboardDidHide', {}); });
-  expect(scene.padding()).toBe(normalPadding);
-});
-
-test('Android reopens the keyboard on an input that retained focus after Back', async () => {
-  jest.replaceProperty(Platform, 'OS', 'android');
-  await mountCards();
-  const scene = nativeGeometry({ atEnd: true });
-  await act(async () => { scene.inputs[0].props.onFocus(); });
-  await showKeyboard();
-  await act(async () => { scene.layout(); });
-  await act(async () => { DeviceEventEmitter.emit('keyboardDidHide', {}); });
-  scene.resetScroll();
-  await showKeyboard();
-  await act(async () => { scene.layout(); });
-  expect(scene.bottom()).toBeLessThanOrEqual(476);
-});
-
-test('iOS retains its responder behavior and does not add Android keyboard padding', async () => {
-  jest.replaceProperty(Platform, 'OS', 'ios');
-  await mountCards();
-  const scene = nativeGeometry();
-  const normalPadding = scene.padding();
-  await act(async () => { scene.inputs[0].props.onFocus(); });
-  await showKeyboard();
-  // The existing iOS responder receives spacing.lg unchanged. iOS owns its insets.
-  expect(scene.scrollTo).toHaveBeenLastCalledWith(expect.anything(), 0, 168, true);
-  expect(scene.padding()).toBe(normalPadding);
-});
-
-test('overlapping native measurements do not scroll the focused field above the viewport', async () => {
-  jest.replaceProperty(Platform, 'OS', 'android');
-  await mountCards();
-  const scene = nativeGeometry();
-  const replies: (() => void)[] = [];
-  jest.spyOn(scene.inputs[0].instance, 'measureInWindow').mockImplementation((...args: unknown[]) => {
-    const callback = args[0] as (x: number, y: number, width: number, height: number) => void;
-    const measuredY = scene.bottom() - 44;
-    replies.push(() => callback(0, measuredY, 80, 44));
-  });
-  await act(async () => { scene.inputs[0].props.onFocus(); });
-  await showKeyboard(400);
-  await act(async () => { scene.layout(); });
-  expect(replies).toHaveLength(2);
-  await act(async () => { replies.forEach(reply => reply()); });
-  expect(scene.bottom() - 44).toBeGreaterThanOrEqual(120);
-  expect(scene.bottom()).toBeLessThanOrEqual(376);
-});
+    for (const row of rows) {
+      jest.spyOn(row.instance, 'measureLayout').mockImplementation((...args: unknown[]) => {
+        (args[1] as (x: number, y: number, width: number, height: number) => void)(0, contentY, 400, 52);
+      });
+      jest.spyOn(row.instance, 'measureInWindow').mockImplementation((...args: unknown[]) => {
+        (args[0] as (x: number, y: number, width: number, height: number) => void)(0, 120 + contentY - offset, 400, 52);
+      });
+    }
+    await press(kind === 'main_lift' ? t('loadTypes.requiredWeight', ['kg']) : t('student.accessory.weightLabel', [1]));
+    const pad = () => renderer.root.findByType(NumberPad);
+    await act(async () => pad().props.onPanelLayout(500, 300));
+    await act(async () => scroll.props.onContentSizeChange(400, contentY + 120 + padding()));
+    expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(500 - spacing.lg);
+    expect(120 + contentY - offset).toBeGreaterThanOrEqual(120);
+    await act(async () => pad().props.onNext(7.5));
+    await act(async () => pad().props.onPanelLayout(500, 300));
+    expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(500 - spacing.lg);
+    scrollTo.mockClear();
+    await act(async () => pad().props.onCancel());
+    expect(padding()).toBe(originalPadding);
+    expect(scrollTo).not.toHaveBeenCalled();
+  },
+);

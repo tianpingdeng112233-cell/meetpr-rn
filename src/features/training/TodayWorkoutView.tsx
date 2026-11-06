@@ -55,7 +55,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Alert, AppState, Keyboard, Platform, ScrollView, TextInput, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Keyboard, ScrollView, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -138,66 +138,48 @@ export function TodayWorkoutView() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const workoutScroll = useRef<ScrollView>(null);
-  const focusedAccessoryInput = useRef<TextInput | null>(null);
+  const accessoryPad = useRef<{ row: View; top: number; height: number } | null>(null);
   const workoutContent = useRef<View>(null!);
-  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+  const [accessoryPadHeight, setAccessoryPadHeight] = useState(0);
   const reducedMotion = useReducedMotion();
-  const keyboardVisible = useRef(false);
   const userScrolling = useRef(false);
   const completedRowToReveal = useRef<string | null>(null);
   const [completionDockHeight, setCompletionDockHeight] = useState(spacing.completionControlHeight + spacing.md * 2 + StyleSheet.hairlineWidth);
   const [restOverlayHeight, setRestOverlayHeight] = useState<number>(spacing.xxxl);
   const markExerciseCompleted = useCallback((exerciseId: string) => {
-    completedRowToReveal.current = !keyboardVisible.current && !Keyboard.isVisible() && !userScrolling.current ? exerciseId : null;
+    completedRowToReveal.current = !accessoryPad.current && !Keyboard.isVisible() && !userScrolling.current ? exerciseId : null;
   }, []);
   const revealCompletedRow = useCallback((exerciseId: string, layout: LayoutRectangle) => {
     if (completedRowToReveal.current !== exerciseId) return;
     completedRowToReveal.current = null;
-    if (keyboardVisible.current || Keyboard.isVisible() || userScrolling.current) return;
+    if (accessoryPad.current || Keyboard.isVisible() || userScrolling.current) return;
     workoutScroll.current?.scrollTo({ y: Math.max(0, layout.y - spacing.md), animated: !reducedMotion });
   }, [reducedMotion]);
-  const revealAccessoryInput = useCallback(() => {
-    const input = focusedAccessoryInput.current;
-    if (!input) return;
-    if (Platform.OS !== 'android') {
-      workoutScroll.current?.scrollResponderScrollNativeHandleToKeyboard(input, spacing.lg, true);
-      return;
-    }
-    const keyboard = Keyboard.metrics();
-    if (!keyboard) return;
+  const revealAccessoryRow = useCallback(() => {
+    const target = accessoryPad.current;
     const scroll = workoutScroll.current;
     const content = workoutContent.current;
     const viewport = scroll?.getNativeScrollRef();
-    if (!scroll || !content || !viewport) return;
-    const stillFocused = () => focusedAccessoryInput.current === input && Keyboard.metrics() === keyboard;
-    // RN's responder assumes a full-screen ScrollView. Measure this list's
-    // viewport too, and use an absolute content offset so overlapping native
-    // callbacks cannot add the same correction to a newer scroll position.
-    input.measureInWindow((_x, y, _width, height) => {
-      if (!stillFocused() || y + height + spacing.lg <= keyboard.screenY) return;
+    if (!target || !scroll || !content || !viewport) return;
+    const stillActive = () => accessoryPad.current === target;
+    target.row.measureInWindow((_x, y, _width, height) => {
+      if (!stillActive()) return;
       viewport.measureInWindow((_left, viewportTop) => {
-        if (!stillFocused()) return;
-        input.measureLayout(content, (_inputX, contentY, _inputWidth, inputHeight) => {
-          if (!stillFocused()) return;
-          scroll.scrollTo({ y: Math.max(0, viewportTop + contentY + inputHeight + spacing.lg - keyboard.screenY), animated: false });
+        if (!stillActive() || (y >= viewportTop && y + height + spacing.lg <= target.top)) return;
+        target.row.measureLayout(content, (_rowX, contentY, _rowWidth, rowHeight) => {
+          if (!stillActive()) return;
+          const offset = y < viewportTop ? contentY - spacing.lg : viewportTop + contentY + rowHeight + spacing.lg - target.top;
+          scroll.scrollTo({ y: Math.max(0, offset), animated: false });
         });
       });
     });
   }, []);
-  useEffect(() => {
-    const subscription = Keyboard.addListener('keyboardDidShow', event => {
-      if (Platform.OS === 'android') setAndroidKeyboardHeight(event.endCoordinates.height);
-      keyboardVisible.current = true;
-      completedRowToReveal.current = null;
-      revealAccessoryInput();
-    });
-    const hidden = Keyboard.addListener('keyboardDidHide', () => {
-      keyboardVisible.current = false;
-      if (Platform.OS === 'android') setAndroidKeyboardHeight(0);
-      else focusedAccessoryInput.current = null;
-    });
-    return () => { subscription.remove(); hidden.remove(); };
-  }, [revealAccessoryInput]);
+  const onAccessoryPadLayout = useCallback((row: View | null, panel: { top: number; height: number } | null) => {
+    accessoryPad.current = row && panel ? { row, ...panel } : null;
+    setAccessoryPadHeight(row && panel ? panel.height : 0);
+    if (row) completedRowToReveal.current = null;
+    revealAccessoryRow();
+  }, [revealAccessoryRow]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const savedWorkout = useWorkoutSnapshot(studentId);
   const catalogQuery = useExerciseCatalog(Boolean(studentId));
@@ -1130,14 +1112,14 @@ export function TodayWorkoutView() {
         </Pressable>
         </View>
       </View>
-      <ScrollView ref={workoutScroll} innerViewRef={workoutContent} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets
+      <ScrollView ref={workoutScroll} innerViewRef={workoutContent}
         onScrollBeginDrag={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
         onScrollEndDrag={() => { userScrolling.current = false; }}
         onMomentumScrollBegin={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
         onMomentumScrollEnd={() => { userScrolling.current = false; }}
-        onContentSizeChange={Platform.OS === 'android' ? revealAccessoryInput : undefined}
-        onLayout={Platform.OS === 'android' ? revealAccessoryInput : undefined}
-        contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding + (androidKeyboardHeight > 0 ? androidKeyboardHeight + spacing.lg : 0) }]}>
+        onContentSizeChange={revealAccessoryRow}
+        onLayout={revealAccessoryRow}
+        contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding + (accessoryPadHeight > 0 ? accessoryPadHeight + spacing.lg : 0) }]}>
         {state.kind !== 'loading' && plan ? (
           <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} />
         ) : null}
@@ -1227,7 +1209,7 @@ export function TodayWorkoutView() {
               )}
               studentId={studentId}
               unit={workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg'}
-              onAccessoryInputFocus={input => { focusedAccessoryInput.current = input; revealAccessoryInput(); }}
+              onAccessoryPadLayout={onAccessoryPadLayout}
               onAccessorySave={async (draft, request, mode) => {
                 const id = await commit({ stableSetId: draft.stableSetId, weightText: request.weight_kg, repsText: String(request.reps), rpeText: request.rpe ?? '', failed: request.failed ?? false, completed: request.completed, accessory: { request, mode } });
                 if (!id) throw new Error('Set unavailable');
