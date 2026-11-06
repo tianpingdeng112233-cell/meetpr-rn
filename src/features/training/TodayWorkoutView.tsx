@@ -55,7 +55,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Alert, AppState, Keyboard, ScrollView, TextInput, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Keyboard, Platform, ScrollView, TextInput, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { t } from '@/i18n';
@@ -139,6 +139,8 @@ export function TodayWorkoutView() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const workoutScroll = useRef<ScrollView>(null);
   const focusedAccessoryInput = useRef<TextInput | null>(null);
+  const workoutContent = useRef<View>(null!);
+  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
   const reducedMotion = useReducedMotion();
   const keyboardVisible = useRef(false);
   const userScrolling = useRef(false);
@@ -155,15 +157,45 @@ export function TodayWorkoutView() {
     workoutScroll.current?.scrollTo({ y: Math.max(0, layout.y - spacing.md), animated: !reducedMotion });
   }, [reducedMotion]);
   const revealAccessoryInput = useCallback(() => {
-    if (focusedAccessoryInput.current) workoutScroll.current?.scrollResponderScrollNativeHandleToKeyboard(focusedAccessoryInput.current, spacing.lg, true);
+    const input = focusedAccessoryInput.current;
+    if (!input) return;
+    if (Platform.OS !== 'android') {
+      workoutScroll.current?.scrollResponderScrollNativeHandleToKeyboard(input, spacing.lg, true);
+      return;
+    }
+    const keyboard = Keyboard.metrics();
+    if (!keyboard) return;
+    const scroll = workoutScroll.current;
+    const content = workoutContent.current;
+    const viewport = scroll?.getNativeScrollRef();
+    if (!scroll || !content || !viewport) return;
+    const stillFocused = () => focusedAccessoryInput.current === input && Keyboard.metrics() === keyboard;
+    // RN's responder assumes a full-screen ScrollView. Measure this list's
+    // viewport too, and use an absolute content offset so overlapping native
+    // callbacks cannot add the same correction to a newer scroll position.
+    input.measureInWindow((_x, y, _width, height) => {
+      if (!stillFocused() || y + height + spacing.lg <= keyboard.screenY) return;
+      viewport.measureInWindow((_left, viewportTop) => {
+        if (!stillFocused()) return;
+        input.measureLayout(content, (_inputX, contentY, _inputWidth, inputHeight) => {
+          if (!stillFocused()) return;
+          scroll.scrollTo({ y: Math.max(0, viewportTop + contentY + inputHeight + spacing.lg - keyboard.screenY), animated: false });
+        });
+      });
+    });
   }, []);
   useEffect(() => {
-    const subscription = Keyboard.addListener('keyboardDidShow', () => {
+    const subscription = Keyboard.addListener('keyboardDidShow', event => {
+      if (Platform.OS === 'android') setAndroidKeyboardHeight(event.endCoordinates.height);
       keyboardVisible.current = true;
       completedRowToReveal.current = null;
       revealAccessoryInput();
     });
-    const hidden = Keyboard.addListener('keyboardDidHide', () => { keyboardVisible.current = false; focusedAccessoryInput.current = null; });
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardVisible.current = false;
+      if (Platform.OS === 'android') setAndroidKeyboardHeight(0);
+      else focusedAccessoryInput.current = null;
+    });
     return () => { subscription.remove(); hidden.remove(); };
   }, [revealAccessoryInput]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
@@ -993,6 +1025,9 @@ export function TodayWorkoutView() {
     remainingSets: remaining.length,
   });
   const stickyCompletion = (completionUI.sticky || waitingForVideos) && (state.kind === 'loaded' || state.kind === 'recording');
+  const contentBottomPadding = stickyCompletion
+    ? completionDockHeight + (restSeconds !== null ? restOverlayHeight + spacing.xs : 0) + spacing.md
+    : styles.content.paddingBottom;
   const readinessDone = Boolean(readinessQuery.data?.checkin);
   const readinessGate: ReadinessGateState = readinessQuery.isLoading
     ? 'unknown'
@@ -1095,12 +1130,14 @@ export function TodayWorkoutView() {
         </Pressable>
         </View>
       </View>
-      <ScrollView ref={workoutScroll} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets
+      <ScrollView ref={workoutScroll} innerViewRef={workoutContent} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets
         onScrollBeginDrag={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
         onScrollEndDrag={() => { userScrolling.current = false; }}
         onMomentumScrollBegin={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
         onMomentumScrollEnd={() => { userScrolling.current = false; }}
-        contentContainerStyle={[styles.content, stickyCompletion && { paddingBottom: completionDockHeight + (restSeconds !== null ? restOverlayHeight + spacing.xs : 0) + spacing.md }]}>
+        onContentSizeChange={Platform.OS === 'android' ? revealAccessoryInput : undefined}
+        onLayout={Platform.OS === 'android' ? revealAccessoryInput : undefined}
+        contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding + (androidKeyboardHeight > 0 ? androidKeyboardHeight + spacing.lg : 0) }]}>
         {state.kind !== 'loading' && plan ? (
           <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} />
         ) : null}
