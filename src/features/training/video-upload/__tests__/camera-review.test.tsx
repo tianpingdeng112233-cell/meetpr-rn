@@ -6,7 +6,8 @@ import { AppState, Modal, Text, View, ToastAndroid, type AppStateStatus } from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ExpoModules from 'expo-modules-core';
 import * as MediaLibrary from 'expo-media-library';
-import { CameraView } from 'expo-camera';
+import { Camera, CameraView } from 'expo-camera';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import Video from 'react-native-video';
 import { setLocaleOverride, t } from '@/i18n';
 import { CameraRecorder } from '../CameraRecorder';
@@ -15,6 +16,10 @@ import { deleteLocalVideo } from '../native';
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('../native', () => ({ deleteLocalVideo: jest.fn() }));
+jest.mock('expo-keep-awake', () => ({
+  activateKeepAwakeAsync: jest.fn(async (_tag: string) => {}),
+  deactivateKeepAwake: jest.fn(async (_tag: string) => {}),
+}));
 const mockSeek = jest.fn();
 jest.mock('react-native-video', () => {
   const React = jest.requireActual<typeof import('react')>('react');
@@ -28,19 +33,21 @@ jest.mock('expo-media-library', () => ({
   Asset: { create: jest.fn() },
 }));
 let mockFinishRecording: ((video: { uri: string }) => void) | undefined;
+let mockFailRecording: ((error: Error) => void) | undefined;
 const mockStopRecording = jest.fn(() =>
   mockFinishRecording?.({ uri: 'file:///recorded.mp4' }));
 jest.mock('expo-camera', () => {
   const React = jest.requireActual<typeof import('react')>('react');
   return {
     Camera: {
-      requestCameraPermissionsAsync: async () => ({ granted: true }),
+      requestCameraPermissionsAsync: jest.fn(async () => ({ granted: true })),
       requestMicrophonePermissionsAsync: async () => ({ granted: true }),
     },
     CameraView: React.forwardRef(function MockCameraView(_props, ref) {
       React.useImperativeHandle(ref, () => ({
-        recordAsync: () => new Promise<{ uri: string }>(resolve => {
+        recordAsync: () => new Promise<{ uri: string }>((resolve, reject) => {
           mockFinishRecording = resolve;
+          mockFailRecording = reject;
         }),
         stopRecording: mockStopRecording,
       }));
@@ -84,6 +91,7 @@ beforeEach(async () => {
   jest.useFakeTimers();
   jest.mocked(deleteLocalVideo).mockClear();
   mockFinishRecording = undefined;
+  mockFailRecording = undefined;
   mockStopRecording.mockReset().mockImplementation(() => mockFinishRecording?.({ uri }));
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, callback) => {
     changeState = callback;
@@ -105,9 +113,9 @@ const press = async (label: string) => {
     node.props.onPress();
   });
 };
-const mountCamera = async (scheme: 'light' | 'dark' = 'light') => {
+const mountCamera = async (scheme: 'light' | 'dark' = 'light', unmountOnClose = true) => {
   const onUse = jest.fn();
-  const onClose = jest.fn(() => renderer.unmount());
+  const onClose = jest.fn(() => { if (unmountOnClose) renderer.unmount(); });
   await act(async () => {
     renderer = create(<ColorSchemeProvider scheme={scheme}><CameraRecorder onClose={onClose} onUse={onUse} /></ColorSchemeProvider>);
   });
@@ -127,6 +135,131 @@ const completeRecording = async () => {
 const changeAppState = async (...states: AppStateStatus[]) => {
   for (const state of states) await act(async () => { changeState(state); });
 };
+
+test('camera appearance keeps the screen awake through recording and Stop releases it before review', async () => {
+  await mountCamera();
+  expect(activateKeepAwakeAsync).toHaveBeenCalledTimes(1);
+  const tag = jest.mocked(activateKeepAwakeAsync).mock.calls[0][0];
+  expect(tag).toEqual(expect.stringMatching(/^training-camera:/));
+  await startRecording();
+  expect(deactivateKeepAwake).not.toHaveBeenCalled();
+  mockStopRecording.mockImplementationOnce(() => undefined);
+  await press(t('student.cameraRecorderComponents.copy003'));
+  expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(tag);
+  await act(async () => { mockFinishRecording?.({ uri }); });
+  expect(renderer.root.findByType(Video).props.source.uri).toBe(uri);
+  expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+});
+
+test.each(['Close camera', 'system back', 'camera error'])('%s releases keep-awake even before the parent unmounts', async action => {
+  const { onClose } = await mountCamera('light', false);
+  await startRecording();
+  const tag = jest.mocked(activateKeepAwakeAsync).mock.calls[0][0];
+  mockStopRecording.mockImplementationOnce(() => undefined);
+  if (action === 'Close camera') await press(t('student.cameraRecorderComponents.copy011'));
+  else if (action === 'system back') await act(async () => { renderer.root.findByType(Modal).props.onRequestClose(); });
+  else await act(async () => { renderer.root.findByType(CameraView).props.onMountError(); });
+  expect(onClose).toHaveBeenCalledTimes(1);
+  expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(tag);
+  await changeAppState('background', 'active');
+  expect(activateKeepAwakeAsync).toHaveBeenCalledTimes(1);
+});
+
+test.each([false, true])('background releases keep-awake and returning to capture acquires a new tag (recording: %s)', async recording => {
+  await mountCamera();
+  if (recording) await startRecording();
+  const tag = jest.mocked(activateKeepAwakeAsync).mock.calls[0][0];
+  await changeAppState('background');
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(tag);
+  await changeAppState('active');
+  expect(activateKeepAwakeAsync).toHaveBeenCalledTimes(2);
+  const nextTag = jest.mocked(activateKeepAwakeAsync).mock.calls[1][0];
+  expect(nextTag).not.toBe(tag);
+  await act(async () => { renderer.unmount(); });
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(nextTag);
+});
+
+test('denied camera permission releases keep-awake', async () => {
+  jest.mocked(Camera.requestCameraPermissionsAsync).mockResolvedValueOnce({ granted: false } as Awaited<ReturnType<typeof Camera.requestCameraPermissionsAsync>>);
+  await mountCamera();
+  expect(activateKeepAwakeAsync).toHaveBeenCalledTimes(1);
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(jest.mocked(activateKeepAwakeAsync).mock.calls[0][0]);
+});
+
+test('the recording time limit releases keep-awake before native completion', async () => {
+  await mountCamera();
+  await startRecording();
+  mockStopRecording.mockImplementationOnce(() => undefined);
+  act(() => jest.advanceTimersByTime(117_000));
+  expect(mockStopRecording).toHaveBeenCalledTimes(1);
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(jest.mocked(activateKeepAwakeAsync).mock.calls[0][0]);
+});
+
+test.each([false, true])('unmount releases the camera keep-awake tag (recording: %s)', async recording => {
+  await mountCamera();
+  if (recording) await startRecording();
+  const tag = jest.mocked(activateKeepAwakeAsync).mock.calls[0][0];
+  await act(async () => { renderer.unmount(); });
+  expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(tag);
+});
+
+test('a recording failure releases keep-awake and a new recording acquires a fresh tag', async () => {
+  await mountCamera();
+  await startRecording();
+  const tag = jest.mocked(activateKeepAwakeAsync).mock.calls[0][0];
+  await act(async () => { mockFailRecording?.(new Error('Camera interrupted')); });
+  expect(deactivateKeepAwake).toHaveBeenCalledTimes(1);
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(tag);
+  await startRecording();
+  const nextTag = jest.mocked(activateKeepAwakeAsync).mock.calls[1][0];
+  expect(nextTag).not.toBe(tag);
+  await press(t('student.cameraRecorderComponents.copy003'));
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(nextTag);
+});
+
+test('native completion releases keep-awake, review stays released, and Retry acquires a fresh tag', async () => {
+  await mountCamera();
+  await startRecording();
+  const tag = jest.mocked(activateKeepAwakeAsync).mock.calls[0][0];
+  await act(async () => { mockFinishRecording?.({ uri }); });
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(tag);
+  await changeAppState('background', 'active');
+  expect(activateKeepAwakeAsync).toHaveBeenCalledTimes(1);
+  await press(t('student.cameraRecorderView.copy009'));
+  expect(activateKeepAwakeAsync).toHaveBeenCalledTimes(2);
+  const nextTag = jest.mocked(activateKeepAwakeAsync).mock.calls[1][0];
+  expect(nextTag).not.toBe(tag);
+  await act(async () => { renderer.unmount(); });
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(nextTag);
+});
+
+test('activation completing after unmount is released without touching a reopened camera', async () => {
+  let finishActivation!: () => void;
+  jest.mocked(activateKeepAwakeAsync).mockImplementationOnce(() => new Promise<void>(resolve => { finishActivation = resolve; }));
+  await mountCamera();
+  const tag = jest.mocked(activateKeepAwakeAsync).mock.calls[0][0];
+  await act(async () => { renderer.unmount(); });
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(tag);
+  await mountCamera();
+  const nextTag = jest.mocked(activateKeepAwakeAsync).mock.calls[1][0];
+  expect(nextTag).not.toBe(tag);
+  await act(async () => { finishActivation(); });
+  expect(deactivateKeepAwake).toHaveBeenCalledTimes(2);
+  expect(deactivateKeepAwake).toHaveBeenLastCalledWith(tag);
+  expect(deactivateKeepAwake).not.toHaveBeenCalledWith(nextTag);
+  await act(async () => { renderer.unmount(); });
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(nextTag);
+});
+
+test('keep-awake native failures are handled and cleanup is attempted', async () => {
+  jest.mocked(activateKeepAwakeAsync).mockRejectedValueOnce(new Error('Activity unavailable'));
+  jest.mocked(deactivateKeepAwake).mockRejectedValueOnce(new Error('Activity unavailable'));
+  await mountCamera();
+  expect(deactivateKeepAwake).toHaveBeenCalledWith(jest.mocked(activateKeepAwakeAsync).mock.calls[0][0]);
+});
 
 test.each<[string, AppStateStatus[]]>([
   ['no interruption control', []],
