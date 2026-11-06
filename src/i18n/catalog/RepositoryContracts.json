@@ -16,7 +16,7 @@
 "zh": "暂时无法完成操作，请稍后重试。"
 },
 "repository.planDay.undoTodayOnly": {
-"en": "Completion can only be undone on the same day",
-"zh": "只能在当天撤销"
+"en": "You can only undo workouts completed in the last 7 days",
+"zh": "只能撤销 7 天内完成的训练"
 }
 }
