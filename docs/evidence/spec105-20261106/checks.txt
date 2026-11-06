@@ -1,0 +1,118 @@
+Branch: feat/105-in-app-keypad
+Base HEAD and local origin/main: 60f17019e3d3b517d821e7c8d9f5ac58d64bae41
+No commit / push / PR / emulator actions.
+npx tsc --noEmit: exit 0 (0 diagnostics)
+npm run lint: exit 0 (0 diagnostics)
+git diff --check: exit 0
+
+
+Rules RED
+    TypeError: (0 , _numberPad.accessoryValue) is not a function
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Time:        0.753 s
+Ran all test suites matching /src\/design\/__tests__\/number-pad.test.ts/i.
+
+Rules GREEN
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Time:        0.358 s, estimated 1 s
+Ran all test suites matching /src\/design\/__tests__\/number-pad.test.ts/i.
+
+Open pad RED
+    TypeError: Cannot read properties of undefined (reading 'props')
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 11 skipped, 12 total
+Time:        5.652 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i with tests matching "105 opens".
+
+Open pad GREEN
+Test Suites: 1 passed, 1 total
+Tests:       11 skipped, 1 passed, 12 total
+Time:        1.639 s, estimated 6 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i with tests matching "105 opens".
+
+Next RED
+    TypeError: pad(...).props.onNext is not a function
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 12 skipped, 13 total
+Time:        1.279 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i with tests matching "105 Next".
+
+Next GREEN
+Test Suites: 1 passed, 1 total
+Tests:       11 skipped, 2 passed, 13 total
+Time:        1.43 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i with tests matching "105".
+
+Scroll RED
+    Expected: > 0
+    Received:   0
+    Expected: > 0
+    Received:   0
+    Expected: > 0
+    Received:   0
+    Expected: > 0
+    Received:   0
+    Expected: > 0
+    Received:   0
+    Expected: > 0
+    Received:   0
+Test Suites: 1 failed, 1 total
+Tests:       6 failed, 6 total
+Time:        2.795 s
+Ran all test suites matching /src\/features\/training\/__tests__\/number-pad-visibility.test.tsx/i.
+
+Scroll GREEN
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Time:        1.85 s, estimated 3 s
+Ran all test suites matching /src\/features\/training\/__tests__\/number-pad-visibility.test.tsx/i.
+
+Full suite
+Test Suites: 207 passed, 207 total
+Tests:       2178 passed, 2178 total
+Time:        136.701 s
+Ran all test suites.
+
+Final focused suite
+Test Suites: 2 passed, 2 total
+Tests:       26 passed, 26 total
+Time:        14.425 s
+Ran all test suites matching /src\/design\/__tests__\/number-pad.test.ts|src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i.
+
+2026-11-06 reps 1–99 follow-up (Opus spec revision e19fcde)
+
+Rules RED
+    Received: 100
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Time:        0.407 s, estimated 1 s
+Ran all test suites matching /src\/design\/__tests__\/number-pad.test.ts/i.
+
+Component RED
+    Expected: true
+    Received: false
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 22 skipped, 23 total
+Time:        1.349 s, estimated 14 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i with tests matching "accessory reps reject".
+
+Focused GREEN
+Test Suites: 2 passed, 2 total
+Tests:       27 passed, 27 total
+Time:        1.6 s, estimated 2 s
+Ran all test suites matching /src\/design\/__tests__\/number-pad.test.ts|src\/features\/training\/__tests__\/accessory-log-card.test.tsx/i.
+
+Full suite GREEN
+Test Suites: 207 passed, 207 total
+Tests:       2179 passed, 2179 total
+Time:        33.366 s, estimated 119 s
+Ran all test suites.
+Jest did not exit one second after the test run has completed.
+
+npx tsc --noEmit: exit 0 (0 diagnostics)
+npm run lint: exit 0 (0 diagnostics)
+Full Jest process: exit 0 (self-exited after warning; no forced termination)
+git diff --check: exit 0
+Spec supplemental review: no new finding; prior P1 closed, P2 deferred to Opus.
