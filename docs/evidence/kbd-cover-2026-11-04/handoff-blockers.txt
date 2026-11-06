@@ -1,0 +1,27 @@
+2026-11-04 06:02 UTC — Codex handoff environment checks
+
+Command:
+export PATH="/opt/homebrew/bin:/opt/homebrew/share/android-commandlinetools/platform-tools:$PATH"
+perl -e 'alarm 15; exec @ARGV' adb -s emulator-5560 get-state
+
+Exit: 1
+Relevant output:
+* daemon not running; starting now at tcp:5037
+ADB server didn't ACK
+11-04 06:02:20.826 86943 10145081 F adb : could not install *smartsocket* listener: Operation not permitted
+* failed to start daemon
+error: cannot connect to daemon
+
+Command:
+defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+
+Exit: 1
+Output:
+2026-11-04 06:02:29.769 defaults[87166:10145705] Could not write domain com.apple.iphonesimulator; exiting
+
+Command (iOS worktree):
+git diff --exit-code HEAD -- Modules/StudentKit/Sources/StudentKit/Demo/TrainingFlowDemoScenario.swift
+
+Exit: 0; no diff.
+
+No device acceptance performed. No keyboard bounds or new screenshots obtained.

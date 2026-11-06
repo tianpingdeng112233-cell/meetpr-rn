@@ -60,3 +60,25 @@
 - 仓内缺少 `docs/agents/issue-tracker.md`，已告知后续 `/setup-matt-pocock-skills` 补配置；本次直接按用户需求审查，不阻塞修复。
 
 正典 PARITY/发布台账依既有职责留给 Opus，本卡仅 JOURNAL 与原始证据。本地 commit 的 message 记录已证实的坐标系假设错误和 Android 滚动余量缺失；未 push / PR / merge。
+
+## 2026-11-04 06:02 UTC 接棒验收：环境阻塞
+
+- David 本轮授权 Codex 收尾：安卓验收通过后提交、push、开 PR 到 main，不合并；取代上文原先「不 push / PR」的任务限制。现场 HEAD 仍为 `41d1131`，开始时工作区干净。
+- 已按指定 PATH 和 15 秒超时执行 `adb -s emulator-5560 get-state`。实际返回 `daemon not running`、`could not install *smartsocket* listener: Operation not permitted`、`cannot connect to daemon`（exit 1）。当前会话未能连接交接所述宿主 adb server；不能安装验收包、进入训练页或取得 uiautomator bounds。原始输出见 `docs/evidence/kbd-cover-2026-11-04/handoff-blockers.txt`。
+- 未执行 install/uninstall，未覆盖正式包 `com.meetpr.app`，未操作 emulator-5556/5558，未新建 AVD。首/中/末截图、输入框与键盘边界数字、收键盘后空白检查均未完成，不能宣布安卓验收通过；没有产品失败反馈，不启动返修轮次。
+- 生成目录 `android/app/build.gradle` 的临时 applicationId 已恢复为 `com.meetpr.app`；未重建，现存独立验收 APK 保留。该目录被 gitignore，不纳入提交。
+- iOS 对照检查：`defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false` 返回 `Could not write domain com.apple.iphonesimulator; exiting`（exit 1）。遵照 David「沙箱仍挡则停下，不绕过」，未继续重启或尝试其他键盘切换途径。iOS 需 David 在 iPhone 17e 按 ⌘K；本轮未取得系统键盘截图，是否同病仍未知。
+- 只读核实 iOS 分支 `fix/training-keyboard-covers-input-ios` @ `bfc0fdc8`；`git diff --exit-code HEAD -- Modules/StudentKit/Sources/StudentKit/Demo/TrainingFlowDemoScenario.swift` 返回 0，临时五动作源码已经还原。原 iOS JOURNAL 仍记录 1,091 tests 中 22 个既有本地化失败，本轮未重跑，不声称全绿。
+- 本会话仅允许写当前安卓 worktree 和临时目录，iOS worktree 不在可写范围内；未改写 iOS JOURNAL 或旧截图。其更新候选保存于 `/tmp/2026-11-04-kbd-cover-training-ios-handoff.md`，尚未写回目标仓。
+- 当前停留在设备验收门禁前，未 commit / push / PR / merge；无需新的产品决策，继续需要可连接宿主 adb 的执行环境、iPhone 17e 软件键盘和 iOS worktree 写权限。
+
+## 2026-11-06 Opus 模拟器收货（补上方环境阻塞）
+
+- AVD `meetpr-cn-accept`（emulator-5560，Android 15，软键盘），装独立包名 `com.meetpr.app.kbdverify` 的离线 DEMO 验收包（基于 41d1131，debug 签名，不可分发），正式包 `com.meetpr.app` 未动。
+- 今日训练页进入记录态，先把目标输入滚到屏幕下沿再聚焦（复现真机场景），uiautomator 读聚焦框 bounds，键盘上沿约 y=1632（截图 1360×1.2）：
+  - 第一张系统键盘卡 Leg Press 第 1 组重量：聚焦前 y=1745–1862 → 聚焦后 1454–1570，完整可见。`01-first-legpress-set1.png`
+  - 中间卡 Cable Row 第 2 组重量：1996–2113 → 1454–1570，可见。`02-middle-cable-row-set2.png`
+  - 最后一张卡 Pull-up 第 3 组重量（列表末尾，需靠新增底部余量才能滚上来）：1784–1900 → 1454–1570，可见。`03-last-pullup-set3.png`
+- 收起键盘后页面恢复，末尾无多余空白：`04-after-hide.png`。键盘打开时列表仍可手动上下滚动，未被拉回。
+- 主项（Squat/Bench）走应用内数字键盘，不涉及系统键盘。
+- 结论：安卓验收通过。
