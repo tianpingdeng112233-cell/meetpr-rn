@@ -134,7 +134,7 @@ test('056 bodyweight previous weight stays visible and copies the displayed valu
     weight_kg: '20', reps: 10, rpe: null, completed: true, failed: false, assumed: false, adhoc: false,
     logged_date: '2026-10-08', logged_at: '2026-10-08T12:00:00Z' };
   const save = await mount({ load_mode: 'bodyweight' }, undefined, [previous]);
-  expect(text()).toContain('20 × 10');
+  expect(text()).toContain('20×10');
   const useLast = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === '第 1 组填入上次数值')[0];
   await act(async () => useLast.props.onPress());
   expect(input('第 1 组重量').props.accessibilityValue.text).toBe('20');
