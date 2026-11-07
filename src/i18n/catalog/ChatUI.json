@@ -1,4 +1,5 @@
 {
+  "chat.timestampYesterday": { "en": "Yesterday", "zh": "昨天" },
 "chat.addAttachment": {
 "en": "Add attachment",
 "zh": "添加附件"

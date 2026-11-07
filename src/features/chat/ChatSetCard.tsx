@@ -1,3 +1,4 @@
+import { ChatVideoCover } from './ChatVideoCover';
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -18,8 +19,8 @@ export function ChatSetCard({ reference, note, message, outgoing, read, openVide
       <Pressable accessibilityRole="button" accessibilityLabel={attachment.hasVideo ? t('chat.playVideo') : attachment.subtitle}
         onPress={attachment.hasVideo ? openVideo : () => Alert.alert(attachment.title, displayFirstLine(reference))}
         style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, backgroundColor: colors.surfaceCard, borderRadius: radius.inset }}>
-        {attachment.hasVideo ? <View style={{ width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, borderRadius: radius.micro, backgroundColor: colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' }}>
-          <MaterialCommunityIcons name="play" size={spacing.lg} color={colors.textPrimary} />
+        {attachment.hasVideo ? <View style={{ width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, borderRadius: radius.micro, overflow: 'hidden', backgroundColor: colors.surfaceElevated, alignItems: 'center', justifyContent: 'center' }}>
+          <ChatVideoCover posterURL={message.poster_url} durationSeconds={message.duration_seconds} compact />
         </View> : null}
         <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 'auto', gap: spacing.xs }}>
           <Text style={{ ...font.body(fontMetrics.size14, 'semibold'), color: colors.textPrimary }}>{attachment.title}</Text>
@@ -36,7 +37,7 @@ export function ChatSetCard({ reference, note, message, outgoing, read, openVide
 }
 
 /** Shared-message playback renews the message URL, independently of feedback read/markers. */
-export function useChatSetPlayback(conversationId: string) {
+export function useChatSetPlayback(conversationId: string, updateMessage: (message: ChatMessage) => void) {
   const [selectedShare, setSelectedShare] = useState<ChatMessage | null>(null);
   const [shareVideoError, setShareVideoError] = useState(false);
   const focused = useRef(false);
@@ -47,10 +48,12 @@ export function useChatSetPlayback(conversationId: string) {
     return () => { focused.current = false; generation.current += 1; setSelectedShare(null); };
   }, []));
   async function refreshShareURL(message: ChatMessage) {
+    const requestGeneration = generation.current;
     const page = await chatRepository.messages(conversationId, { since_seq: message.seq - 1, limit: 1 });
-    const url = page.messages.find(item => item.id === message.id)?.video_url;
-    if (!url) throw new Error('Playback unavailable');
-    return url;
+    const fresh = page.messages.find(item => item.id === message.id);
+    if (fresh && focused.current && requestGeneration === generation.current) updateMessage(fresh);
+    if (!fresh?.video_url) throw new Error('Playback unavailable');
+    return fresh.video_url;
   }
   async function openShareVideo(message: ChatMessage) {
     const requestGeneration = generation.current;

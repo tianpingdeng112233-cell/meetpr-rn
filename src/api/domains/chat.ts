@@ -49,6 +49,7 @@ export const ChatMessageSchema = z.object({
   id: UuidSchema, conversation_id: UuidSchema, seq: z.number().int().positive(), sender_id: UuidSchema,
   kind: z.enum(['text', 'image', 'set_ref']), body: z.string().nullish(), client_id: z.string(), created_at: TimestampSchema,
   attachment_id: UuidSchema.nullish(), image_url: z.string().url().nullish(), image_expires_in: z.number().nullish(),
+  poster_url: z.string().nullish(), duration_seconds: z.number().nonnegative().nullish(),
   set_ref: ChatSetRefFromWireSchema.nullish().catch(null), video_url: z.string().url().nullish(), video_expires_in: z.number().nullish(),
 });
 export const ChatMessagesSchema = z.object({ messages: z.array(ChatMessageSchema), meta: z.object({ other_last_read: CursorSchema.nullish(), has_more: z.boolean() }) });
