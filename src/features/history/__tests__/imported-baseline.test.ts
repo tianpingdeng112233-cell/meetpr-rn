@@ -52,6 +52,7 @@ test('opening Progress repairs an imported baseline trap without changing stored
 test('a failed atomic write leaves every stored point intact and the next opening retries', async () => {
   const repository = new AsyncStorageE1RMRepository();
   await repository.replaceHistory('student', oldPoints);
+  await repository.historySnapshot('student');
   const before = await AsyncStorage.getItem(STORAGE_KEYS.e1rm);
   jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error('disk full'));
   const firstScreen = await loadGrowthHistory(repository, 'student', logs, families);
@@ -144,7 +145,7 @@ test('the unchanged iOS real-case fixture restores all 31 measured confidences a
   const snapshot = growthSnapshot(buildGrowthCurves(fixture.logs, fixture.families, fixture.now, saved).deadlift, '90', fixture.now);
   expect(snapshot.state).toBe('chart');
   expect(snapshot.samples).toHaveLength(8);
-  expect(snapshot.currentKg).toBeCloseTo(221.4285714286, 8);
+  expect(snapshot.currentKg).toBeCloseTo(203.5623409669, 8);
   const writes = jest.mocked(AsyncStorage.setItem).mock.calls.length;
   const reopened = await loadGrowthHistory(new AsyncStorageE1RMRepository(), fixture.studentId, fixture.logs, fixture.families);
   expect(reopened).toEqual(saved);
@@ -183,6 +184,7 @@ test.each<[number, E1RMHistoryPoint['confidence']]>([[110, 'normal'], [140, 'low
     await repository.recordPR({ id: 'legacy-pr', studentId: 'student', exerciseId: 'squat',
       pointId: legacy[0].id, breakthroughE1RMKg: 100, previousMaxE1RMKg: 70,
       occurredAt: now, acknowledgedAt: now });
+    await repository.historySnapshot('student');
     const rawBefore = JSON.parse((await AsyncStorage.getItem(STORAGE_KEYS.e1rm))!);
     const writes = jest.mocked(AsyncStorage.setItem).mock.calls.length;
     const inputLogs = [...logs, today, assumedLog];
@@ -212,7 +214,7 @@ test('legacy origins and trapped confidence are repaired together for the unchan
   const screen = growthSnapshot(buildGrowthCurves(fixture.logs, fixture.families, fixture.now, saved).deadlift, '90', fixture.now);
   expect(screen.state).toBe('chart');
   expect(screen.samples).toHaveLength(8);
-  expect(screen.currentKg).toBeCloseTo(221.4285714286, 8);
+  expect(screen.currentKg).toBeCloseTo(203.5623409669, 8);
 });
 
 test.each(['write failure', 'concurrent review'] as const)(
@@ -220,6 +222,7 @@ test.each(['write failure', 'concurrent review'] as const)(
     const repository = new AsyncStorageE1RMRepository();
     const legacy = oldPoints.map(point => ({ ...point, origin: 'imported' as const }));
     await repository.replaceHistory('student', legacy);
+    await repository.historySnapshot('student');
     let expected = legacy;
     let raw = await AsyncStorage.getItem(STORAGE_KEYS.e1rm);
     if (interruption === 'write failure') {

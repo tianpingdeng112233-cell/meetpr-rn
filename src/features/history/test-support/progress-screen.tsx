@@ -32,7 +32,7 @@ export function seedPoints(count = 3, families: readonly LiftFamily[] = LIFT_FAM
   const points = families.flatMap((family, familyIndex) => Array.from({ length: count }, (_, index): E1RMHistoryPoint => ({
     id: `${family}-${index}`, studentId: 'student', exerciseId: family, setLogId: `${family}-${index}`,
     computedAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() - (old ? 50 : 5) + index, 12),
-    e1RMKg: 100 + familyIndex * 50 + index * 5, sourceWeightKg: 100, sourceReps: 1, sourceRPE: 10,
+    e1RMKg: 100 + familyIndex * 50 + index * 5, sourceWeightKg: 100 + familyIndex * 50 + index * 5, sourceReps: 1, sourceRPE: 10,
     origin: 'logged', confidence: 'normal',
   })));
   jest.mocked(trainingE1RMRepository.historySnapshot).mockResolvedValue({ points, revision: 0 });

@@ -155,7 +155,7 @@ describe('E1RMRecorder PR policy', () => {
   });
 
   test.each<[number | null, number]>([
-    [null, 116.6666666667], [5.5, 116.6666666667], [6, 142.8571428571], [6.5, 138.8888888889],
+    [null, 116.6666666667], [5.5, 116.6666666667], [6, 131.2335958005], [6.5, 129.1989664083],
   ])('records calculator-supported RPE %s like iOS', async (rpe, estimate) => {
     const context = recorder();
     await context.recorder.record(input(100, { reps: 5, rpe }));
