@@ -206,7 +206,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.details', [row.setIndex + 1])} disabled={readOnly || added || batchBusy || busyRows.has(row.stableSetId)} onPress={() => onRecord(drafts[index])}
             style={{ ...column(0), minHeight: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceRaised, borderRadius: radius.inset }}>
             <Text style={{ ...font.mono(fontMetrics.size15, 'bold'), color: colors.textPrimary }}>{row.kind === 'extra' ? t('student.added.extra') : row.setIndex + 1}</Text>
-            {row.hasVideo ? <MaterialCommunityIcons name="video-outline" size={spacing.point14} color={colors.goldText} /> : null}
+            {row.hasVideo ? <MaterialCommunityIcons name="video-outline" size={spacing.point14} color={colors.success} /> : null}
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.useLast', [row.setIndex + 1])} disabled={readOnly || !row.previous || batchBusy || busyRows.has(row.stableSetId)}
             onPress={() => row.previous && change(index, { weightText: row.previous.weightText, repsText: String(row.previous.reps) })}

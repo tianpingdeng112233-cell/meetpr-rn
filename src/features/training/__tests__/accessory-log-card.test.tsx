@@ -123,6 +123,7 @@ test('catalog accessories render editable prescription rows, same-session histor
   expect(input('Set 3 RIR').props.accessibilityHint).toBe('2');
   expect(button('Use last time for set 3').props.disabled).toBe(true);
   expect(button('Set 1 details').findAll(n => n.props.name === 'video-outline').length).toBeGreaterThan(0);
+  expect(button('Set 1 details').findAll(n => n.props.name === 'video-outline')[0].props.color).toBe(colors.success);
   expect(heroText()).toContain('Tap a set number to record video or mark it failed');
   expect(heroText()).toContain('Slow down.');
   expect(heroText()).toContain('Pause');
