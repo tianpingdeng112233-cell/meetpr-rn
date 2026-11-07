@@ -23,6 +23,18 @@ function log(overrides: Partial<SetLog> = {}): SetLog {
     logged_date: '2026-10-08', logged_at: '2026-10-08T12:00:00Z', ...overrides };
 }
 
+test.each<[string, Partial<SetLog> | null, string]>([
+  ['RIR takes priority', { actual_rir: 2, rpe: '8.5' }, '30×10@2'],
+  ['RPE', { rpe: '8.50' }, '30×10@8.5'],
+  ['no effort', { actual_rir: null, rpe: null }, '30×10'],
+  ['no record', null, '—'],
+  ['zero RIR', { actual_rir: 0, rpe: '10' }, '30×10@0'],
+  ['long weight', { weight_kg: '102.50', rpe: '8.5' }, '102.5×10@8.5'],
+])('previous text preserves recorded effort: %s', (_, previous, expected) => {
+  const [row] = accessoryRows({ drafts: drafts([{}]), previousLogs: previous ? [log(previous)] : [], unit: 'kg' });
+  expect(row.previousText).toBe(expected);
+});
+
 test('fixed prescriptions prefill each row without inventing previous logs or student RPE', () => {
   const rows = accessoryRows({ drafts: drafts([{}, { load_mode: 'fixed_weight', target_weight: '27.5' }]), previousLogs: [], unit: 'kg' });
   expect(rows).toHaveLength(2);
@@ -75,7 +87,7 @@ test.each<[Partial<PlanSet>, boolean, string, string, string | null]>([
 test('lb rows convert prescriptions, saved weights and previous weights with existing metric formatting', () => {
   const rows = accessoryRows({ drafts: drafts([{}, {}, { target_value: '0' }], [log({ set_index: 1 })]),
     previousLogs: [log({ weight_kg: '20' }), log({ set_index: 2, weight_kg: '0' })], unit: 'lb' });
-  expect(rows[0]).toMatchObject({ weightText: '55.1', weightPlaceholder: '44.1', previous: { weightText: '44.1', reps: 10 } });
+  expect(rows[0]).toMatchObject({ weightText: '55.1', weightPlaceholder: '44.1', previous: { weightText: '44.1', reps: 10 }, previousText: '44.1×10@7.5' });
   expect(rows[1]).toMatchObject({ weightText: '66.1' });
   expect(rows[2]).toMatchObject({ weightText: '0', weightPlaceholder: '0' });
 });

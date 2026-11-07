@@ -25,7 +25,8 @@ export type AccessoryRow = {
   effortKind: EffortKind;
   rpePlaceholder: string | { kind: 'rir'; value: number };
   isBodyweight: boolean;
-  previous: { weightText: string; reps: number } | null;
+  previous: { weightText: string; reps: number; intensityText: string } | null;
+  previousText: string;
   extraNote: string | null;
   recorded: Pick<SetLog, 'weight_kg' | 'reps' | 'rpe' | 'actual_rir'> | null;
 };
@@ -43,7 +44,11 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {}, allo
   return drafts.map(draft => {
     const prescription = decodePrescription(draft.planSet);
     const prior = draft.kind === 'extra' ? undefined : previousLogs.find(log => log.set_index === draft.setIndex);
-    const previous = prior ? { weightText: weightText(Number(prior.weight_kg)), reps: prior.reps } : null;
+    const previous = prior ? {
+      weightText: weightText(Number(prior.weight_kg)), reps: prior.reps,
+      intensityText: prior.actual_rir != null ? String(prior.actual_rir)
+        : prior.rpe != null ? formatWeight(Number(prior.rpe)) : '',
+    } : null;
     const intensity = prescription.intensity;
     const source = draft.sourceLog;
     const note = draft.planSet.coach_note;
@@ -65,6 +70,7 @@ export function accessoryRows({ drafts, previousLogs, unit, videoById = {}, allo
         : intensity?.kind === 'rpe' ? formatWeight(intensity.value) : '',
       isBodyweight,
       previous,
+      previousText: previous ? `${previous.weightText}×${previous.reps}${previous.intensityText ? `@${previous.intensityText}` : ''}` : '—',
       extraNote: isBodyweight ? withoutBodyweightMarker(note) : note?.trim() ? note : null,
       recorded: source ? { weight_kg: source.weight_kg, reps: source.reps, rpe: source.rpe, actual_rir: source.actual_rir } : null,
     };

@@ -11,7 +11,8 @@ import { day, set } from '@/domain/plan/test-fixtures';
 import type { Exercise } from '@/api/domains/exercises';
 import type { SetLog } from '@/api/domains/sets';
 import { synthesizeDrafts, addStudentExercise } from '../drafts';
-import { AccessoryLogCard, type AccessoryEdits } from '../AccessoryLogCard';
+import { AccessoryLogCard, column, type AccessoryEdits } from '../AccessoryLogCard';
+import { EffortToggleLabel } from '../EffortToggleLabel';
 import { WorkoutBody } from '../WorkoutBody';
 import { createExerciseMetadataResolver } from '../exercise-metadata';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
@@ -42,6 +43,46 @@ async function mount(type: string | null, editable = true, recording = true, log
 const input = (label: string) => numericCell(renderer, label);
 const button = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0];
 const heroText = () => renderer.root.findAllByType(Card)[0].findAllByType(Text).map(n => n.props.children);
+
+test('effort and reps share a column width without the two-target minimum', () => {
+  expect(column(4)).toEqual(column(3));
+  expect(column(4).minWidth).toBe(0);
+});
+
+test('accessory header keeps the bordered effort toggle label', async () => {
+  await mount('accessory');
+  expect(button(t('training.effort.switch')).findAllByType(EffortToggleLabel)).toHaveLength(1);
+});
+
+test('accessory header keeps both RPE and RIR toggle text on one line', async () => {
+  await mount('accessory');
+  const label = () => button(t('training.effort.switch')).findByType(EffortToggleLabel).findByType(Text);
+  expect(label().props.children).toBe('RPE');
+  expect(label().props.numberOfLines).toBe(1);
+  await act(async () => button(t('training.effort.switch')).props.onPress());
+  expect(label().props.children).toBe('RIR');
+  expect(label().props.numberOfLines).toBe(1);
+});
+
+test('accessory header help borrows the gap without taking toggle width or overlapping its target', async () => {
+  await mount('accessory');
+  const helpStyle = StyleSheet.flatten(button(t('training.explainer.rpe.help')).props.style);
+  expect(helpStyle).toMatchObject({ position: 'absolute', left: '100%', top: 0, width: 14 });
+  expect(helpStyle.height).toBeGreaterThanOrEqual(44);
+  const toggle = button(t('training.effort.switch'));
+  expect(StyleSheet.flatten(toggle.props.style).flex).toBeUndefined();
+  expect(StyleSheet.flatten(toggle.parent!.props.style)).toMatchObject({ flexShrink: 0 });
+});
+
+test('previous text automatically fits its column without shrinking below 10', async () => {
+  await mount('accessory');
+  const previousText = () => button('Use last time for set 1').findByType(Text);
+  const fontSize = () => StyleSheet.flatten(previousText().props.style).fontSize;
+  act(() => previousText().props.onLayout({ nativeEvent: { layout: { width: 1 } } }));
+  expect(fontSize()).toBe(10);
+  act(() => previousText().props.onLayout({ nativeEvent: { layout: { width: 200 } } }));
+  expect(fontSize()).toBe(11);
+});
 
 test('105 opens an in-app pad with exercise, set, field and unit, without editable system inputs', async () => {
   await mount('accessory');
@@ -89,6 +130,7 @@ test('catalog accessories render editable prescription rows, same-session histor
   await act(async () => button('Use last time for set 2').props.onPress());
   expect(input('Set 2 weight').props.accessibilityValue.text).toBe('60');
   expect(input('Set 2 reps').props.accessibilityValue.text).toBe('10');
+  expect(input('Set 2 RPE').props.accessibilityValue.text).toBe('');
   expect(button('Complete set 2').props.disabled).toBe(false);
   await act(async () => button('Set 2 details').props.onPress());
   expect(onRecord).toHaveBeenLastCalledWith(expect.objectContaining({ stableSetId: 'two' }));
@@ -116,11 +158,11 @@ test('saving a set keeps every Last cell and unprescribed weight placeholder fro
   }
   await act(async () => { renderer = create(<TrainingSession />); });
   const lastText = () => [1, 2, 3].map(index => button(`Use last time for set ${index}`).findByType(Text).props.children);
-  expect(lastText()).toEqual(['70 × 10', '60 × 10', '50 × 10']);
+  expect(lastText()).toEqual(['70×10@7', '60×10@7', '50×10@7']);
   expect(input('Set 2 weight').props.accessibilityHint).toBe('60');
   await act(async () => button('Complete set 1').props.onPress());
   expect(button('Undo set 1')).toBeDefined();
-  expect(lastText()).toEqual(['70 × 10', '60 × 10', '50 × 10']);
+  expect(lastText()).toEqual(['70×10@7', '60×10@7', '50×10@7']);
   expect(input('Set 2 weight').props.accessibilityHint).toBe('60');
 });
 
@@ -169,12 +211,12 @@ test.each(['en', 'zh'] as const)('explicit RIR takes precedence over the legacy 
     const history = [{ ...prior(2, historicalWeight, '2026-09-01'), reps: 8 }, { ...prior(0, '0', '2026-09-01'), reps: 8 }];
     await mount('accessory', true, true, [], history);
     const rirLast = () => button(t('student.accessory.useLast', [3]));
-    expect(rirLast().findByType(Text).props.children).toBe(`${historicalWeight} × 8`);
+    expect(rirLast().findByType(Text).props.children).toBe(`${historicalWeight}×8@7`);
     await act(async () => rirLast().props.onPress());
     expect(input(t('student.accessory.repsLabel', [3])).props.accessibilityValue.text).toBe('8');
     expect(input(t('student.accessory.weightLabel', [3])).props.accessibilityValue.text).toBe(historicalWeight);
     const weightedLast = button(t('student.accessory.useLast', [1]));
-    expect(weightedLast.findByType(Text).props.children).toBe('0 × 8');
+    expect(weightedLast.findByType(Text).props.children).toBe('0×8@7');
     await act(async () => weightedLast.props.onPress());
     expect(input(t('student.accessory.weightLabel', [1])).props.accessibilityValue.text).toBe('0');
     expect(input(t('student.accessory.repsLabel', [1])).props.accessibilityValue.text).toBe('8');

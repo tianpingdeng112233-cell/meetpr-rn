@@ -1,7 +1,7 @@
 import { EffortHelpButton } from './EffortHelpButton';
 import { EffortToggleLabel } from './EffortToggleLabel';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Text, View, Vibration, type ViewStyle } from 'react-native';
+import { Modal, Text, View, Vibration, useWindowDimensions, type ViewStyle } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppButton, font, fontMetrics, radius, spacing, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
@@ -17,9 +17,14 @@ import { gymDayText } from './policy';
 import { studentAddedLogRequest } from './drafts';
 import { useVideoUploadStore } from './video-upload/store';
 
-// Keep columns aligned; reserve separate 44 dp targets for the effort toggle and help.
+// Move the old effort minimum into Last's basis, subtracting effort's share from
+// Last's growth. Only these two columns exchange space; all rows use this allocation.
 const columns = [fontMetrics.size36, spacing.xxxl + spacing.sm, spacing.xxxl, spacing.xxl, spacing.xxl, spacing.minimumHitTarget];
-const column = (index: number): Pick<ViewStyle, 'flex' | 'minWidth'> => ({ flex: columns[index], minWidth: index === 4 ? spacing.minimumHitTarget * 2 : 0 });
+export const column = (index: number): Pick<ViewStyle, 'flexGrow' | 'flexBasis' | 'minWidth'> => ({
+  flexGrow: index === 1 ? columns[1] - columns[4] : columns[index],
+  flexBasis: index === 1 ? spacing.minimumHitTarget * 2 : 0,
+  minWidth: 0,
+});
 const fields = [
   ['weightText', 'weight', 'student.accessory.weightLabel'],
   ['repsText', 'reps', 'student.accessory.repsLabel'],
@@ -27,6 +32,18 @@ const fields = [
 ] as const;
 
 export type AccessoryEdits = Record<string, { revision: string; input: SetLogInput; weightEdited: boolean }>;
+
+function PreviousLogText({ text }: { text: string }) {
+  const colors = useColors();
+  const { fontScale } = useWindowDimensions();
+  const [width, setWidth] = useState<number | null>(null);
+  // IBM Plex Mono's numeric/punctuation glyphs advance 600/1000 em. Fit in JS:
+  // RN 0.86 Android ignores minimumFontScale when adjustsFontSizeToFit is enabled.
+  const size = width === null ? fontMetrics.size11
+    : Math.max(fontMetrics.size10, Math.min(fontMetrics.size11, width / (text.length * 0.6 * fontScale)));
+  return <Text onLayout={event => setWidth(event.nativeEvent.layout.width)} numberOfLines={1}
+    style={{ ...font.mono(size), color: colors.textMuted, textAlign: 'center' }}>{text}</Text>;
+}
 
 export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onRecord, onSave, exerciseName = '', onPadLayout, onAddSet, onRemoveSet, inlineEdits, readOnly = false, allowsRIR = false }: {
   allowsRIR?: boolean;
@@ -141,10 +158,12 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     {rows.some(row => row.isBodyweight) ? <Text style={{ ...font.body(fontMetrics.size12), color: colors.textSecondary }}>{t('loadTypes.extraWeight', [unit])}</Text> : null}
     {rows.some((_, index) => allowsRIR || effectiveLoadMode(drafts[index].planSet) !== 'free_weight') ? <View style={{ flexDirection: 'row', gap: spacing.point6 }}>
       {[t('student.accessory.set'), t('student.accessory.last'), unit.toUpperCase(), t('student.setEntrySheet.copy003'), headerKind.toUpperCase(), t('student.workoutCompletionFlowView.copy003')].map((label, index) =>
-        index === 4 ? <View key={index} style={{ ...column(index), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-          {allowsRIR ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} accessibilityValue={{ text: label }} disabled={readOnly || batchBusy || busyRows.size > 0 || firstPending < 0} onPress={switchEffort} style={{ flex: 1, minWidth: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}><EffortToggleLabel label={label} /></Pressable>
-            : <Text style={{ ...font.mono(fontMetrics.size10), color: colors.textMuted }}>{label}</Text>}
-          <EffortHelpButton kind={headerKind} />
+        index === 4 ? <View key={index} style={{ ...column(index), flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexShrink: 0, minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
+            {allowsRIR ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} accessibilityValue={{ text: label }} disabled={readOnly || batchBusy || busyRows.size > 0 || firstPending < 0} onPress={switchEffort} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'center' }}><EffortToggleLabel label={label} compact /></Pressable>
+              : <Text style={{ ...font.mono(fontMetrics.size10), color: colors.textMuted }}>{label}</Text>}
+            <EffortHelpButton kind={headerKind} superscript />
+          </View>
         </View> : <Text key={index} style={{ ...column(index), ...font.mono(fontMetrics.size10), color: colors.textMuted, textAlign: 'center', alignSelf: 'center' }}>{label}</Text>)}
     </View> : null}
     {rows.map((row, index) => {
@@ -192,7 +211,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.accessory.useLast', [row.setIndex + 1])} disabled={readOnly || !row.previous || batchBusy || busyRows.has(row.stableSetId)}
             onPress={() => row.previous && change(index, { weightText: row.previous.weightText, repsText: String(row.previous.reps) })}
             style={{ ...column(1), minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={{ ...font.mono(fontMetrics.size11), color: colors.textMuted, textAlign: 'center' }}>{row.previous ? `${row.previous.weightText} × ${row.previous.reps}` : '—'}</Text>
+            <PreviousLogText text={row.previousText} />
           </Pressable>
           {fields.map(([field, , label], offset) => numericCell(index, field,
             field === 'rpeText' && input.effortKind === 'rir' ? t('training.effort.rirLabel', [row.setIndex + 1]) : t(label, [row.setIndex + 1]),
