@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { authenticatedRequest } from '../session';
 import { DateTextSchema, DecimalStringSchema, TimestampSchema, UuidSchema } from './shared';
 
-/** Metadata embedded by the feedback endpoint; no upload or signed-URL fields. */
+/** Metadata embedded by the feedback endpoint, including its optional signed poster URL. */
 export const FeedbackVideoSchema = z.object({
   id: UuidSchema,
   exercise_name: z.string().nullable().default(null),
@@ -13,6 +13,8 @@ export const FeedbackVideoSchema = z.object({
   weight_kg: DecimalStringSchema.nullable().default(null),
   reps: z.number().int().nullable().default(null),
   rpe: z.string().nullish(),
+  poster_url: z.string().nullish(),
+  duration_seconds: z.number().nonnegative().nullish(),
 });
 export type FeedbackVideo = z.infer<typeof FeedbackVideoSchema>;
 

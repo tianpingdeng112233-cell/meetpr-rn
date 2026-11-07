@@ -7,10 +7,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Alert, AppState, Pressable, Text, TextInput, ScrollView, type AppStateStatus } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
-import { chatRepository, ChatMessageSchema, type ChatMessage } from '@/api/domains/chat';
+import { chatRepository, ChatMessageSchema, toSetRefWire, type ChatMessage } from '@/api/domains/chat';
 import { setLocaleOverride, t } from '@/i18n';
 import { ApiError } from '@/api/client';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
+import { Image } from 'expo-image';
+import { FeedbackItemSchema } from '@/api/domains/feedback';
 import { StudentConversationScreen } from '../StudentConversationScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dashboardPlanSeenKey } from '@/features/dashboard/plan-seen';
@@ -285,7 +287,8 @@ test('returning to foreground drains all incremental pages and reads their lates
 test('a feedback video opens the shared player with W3-a markers and unknown duration', async () => {
   feedbackItems = [{ id: coachId, student_id: studentId, coach_id: coachId, video_id: studentId, text: 'Watch your brace', posted_at: '2026-09-05T09:04:00Z', read_at: null }];
   await renderScreen();
-  expect(copy()).toContain('—:—');
+  expect(copy()).not.toContain('—:—');
+  expect(renderer.root.findAllByProps({ testID: 'chat.videoDuration' })).toHaveLength(0);
   await act(async () => { await renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') })[0].props.onPress(); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
   const player = renderer.root.findByType(FeedbackVideoPlayer);
@@ -445,4 +448,113 @@ test('Traditional picker send failure keeps a Traditional preview and canonical 
   let retry = retryText.parent!; while (!retry.props.onPress) retry = retry.parent!;
   await act(async () => { await retry.props.onPress(); });
   expect(chatRepository.sendSetRef).toHaveBeenNthCalledWith(2, ...jest.mocked(chatRepository.sendSetRef).mock.calls[0]);
+});
+
+
+test('time separators include pending sends and collapse the old first separator when history arrives', async () => {
+  setLocaleOverride('zh');
+  const first = { ...message('recent', 2, 'other', 'Recent'), created_at: '2026-11-06T19:00:00' };
+  const next = { ...message('next', 3, 'other', 'Next'), created_at: '2026-11-06T19:05:00' };
+  jest.mocked(chatRepository.messages).mockResolvedValueOnce({ messages: [first, next], meta: { has_more: true } })
+    .mockResolvedValue({ messages: [{ ...message('older', 1, 'other', 'Older'), created_at: '2026-11-06T18:59:00' }], meta: { has_more: false } });
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'setImmediate', 'requestAnimationFrame'] });
+  jest.setSystemTime(new Date('2026-11-06T19:15:00'));
+  try {
+    await renderScreen();
+    expect(copy()).toContain('19:00');
+    expect(copy()).toContain('19:05');
+    await act(async () => {
+      const scroll = renderer.root.findByType(ScrollView);
+      scroll.props.onScrollBeginDrag();
+      scroll.props.onScroll({ nativeEvent: { contentOffset: { y: 0 }, layoutMeasurement: { height: 400 }, contentSize: { height: 900 } } });
+    });
+    expect(copy()).toContain('18:59');
+    expect(copy()).not.toContain('19:00');
+    expect(copy().filter(value => value === '19:05')).toHaveLength(1);
+    let complete!: (result: { message: ChatMessage }) => void;
+    jest.mocked(chatRepository.send).mockImplementation(() => new Promise(resolve => { complete = resolve; }));
+    await act(async () => { renderer.root.findByType(TextInput).props.onChangeText('Pending message'); });
+    await act(async () => { void renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('student.studentBlackGoldChatView.copy007')).props.onPress(); });
+    expect(copy()).toContain('19:15');
+    expect(copy()).toContain('Pending message');
+    await act(async () => { complete({ message: { ...message('sent', 4, studentId, 'Pending message'), created_at: '2026-11-06T19:15:01' } }); });
+    expect(copy().filter(value => value === '19:15')).toHaveLength(1);
+    expect(copy().filter(value => value === 'Pending message')).toHaveLength(1);
+  } finally { jest.useRealTimers(); }
+});
+
+
+test.each(['feedback', 'shared set'])('%s video uses wire poster and duration, falls back on failure, and accepts a refreshed URL', async kind => {
+  const poster = 'https://video.example/poster.jpg?signature=first';
+  const renderCard = (posterURL: string | null, duration: number | null) => {
+    if (kind === 'feedback') {
+      feedbackItems = [FeedbackItemSchema.parse({ id: coachId, student_id: studentId, coach_id: coachId, video_id: studentId,
+        day_date: null, plan_exercise_id: null, text: 'Watch your brace', posted_at: '2026-11-06T09:04:00Z', read_at: null,
+        video: { id: studentId, poster_url: posterURL, duration_seconds: duration } })];
+    } else {
+      const wire = toSetRefWire(staged.setRef);
+      jest.mocked(chatRepository.messages).mockResolvedValue({ messages: [ChatMessageSchema.parse({
+        ...message(coachId, 1, studentId, canonicalBody(staged.setRef)), set_ref: wire,
+        video_url: 'https://video.example/play.mp4', poster_url: posterURL, duration_seconds: duration,
+      })], meta: { has_more: false } });
+    }
+  };
+  renderCard(poster, 65);
+  await renderScreen();
+  const image = () => renderer.root.findByType(Image);
+  expect(image().props.source).toEqual({ uri: poster });
+  expect(image().props.contentFit).toBe('cover');
+  expect(image().props.cachePolicy).toBe('memory-disk');
+  expect(copy()).toContain('1:05');
+  await act(async () => { image().props.onError({ error: '403' }); });
+  expect(renderer.root.findAllByType(Image)).toHaveLength(0);
+  expect(renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') }).length).toBeGreaterThan(0);
+  expect(copy()).not.toContain('403');
+  // A newly fetched signed URL gets a fresh image request, without retaining the failed state.
+  renderCard(poster + '-renewed', 65);
+  if (kind === 'feedback') {
+    await act(async () => { await client.invalidateQueries({ queryKey: ['feedback', studentId] }); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  } else {
+    await act(async () => { await renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') })[0].props.onPress(); });
+  }
+  expect(image().props.source).toEqual({ uri: poster + '-renewed' });
+});
+
+test.each(['feedback', 'shared set'])('%s video with no poster or duration keeps playback and hides the badge', async kind => {
+  if (kind === 'feedback') feedbackItems = [{ id: coachId, student_id: studentId, coach_id: coachId, video_id: studentId,
+    text: 'Older feedback', posted_at: '2026-11-06T09:04:00Z', read_at: null,
+    video: { id: studentId, exercise_name: null, set_index: null, weight_kg: null, reps: null, poster_url: null, duration_seconds: null } }];
+  else jest.mocked(chatRepository.messages).mockResolvedValue({ messages: [{ ...message('share', 1, studentId, canonicalBody(staged.setRef)),
+    set_ref: staged.setRef, video_url: 'https://video.example/play.mp4' }], meta: { has_more: false } });
+  await renderScreen();
+  expect(renderer.root.findAllByType(Image)).toHaveLength(0);
+  expect(renderer.root.findAllByProps({ testID: 'chat.videoDuration' })).toHaveLength(0);
+  expect(copy()).not.toContain('—:—');
+  expect(renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') }).length).toBeGreaterThan(0);
+});
+
+
+test.each([
+  ['2026-11-06T19:04:59', '2026-11-06T19:05:01', false],
+  ['2026-11-06T19:05:01', '2026-11-06T19:04:59', true],
+])('acknowledging a send at %s keeps its group when the server clock crosses five minutes', async (localTime, serverTime, separate) => {
+  setLocaleOverride('zh');
+  const first = { ...message('first', 1, 'other', 'First'), created_at: '2026-11-06T19:00:00' };
+  jest.mocked(chatRepository.messages).mockResolvedValue({ messages: [first], meta: { has_more: false } });
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'setImmediate', 'requestAnimationFrame'] });
+  jest.setSystemTime(new Date(localTime));
+  let complete!: (result: { message: ChatMessage }) => void;
+  jest.mocked(chatRepository.send).mockImplementation(() => new Promise(resolve => { complete = resolve; }));
+  const times = () => copy().filter(value => /^19:\d{2}$/.test(value));
+  try {
+    await renderScreen();
+    await act(async () => { renderer.root.findByType(TextInput).props.onChangeText('Boundary send'); });
+    await act(async () => { void renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('student.studentBlackGoldChatView.copy007')).props.onPress(); });
+    expect(times()).toHaveLength(separate ? 2 : 1);
+    await act(async () => { complete({ message: { ...message('sent', 2, studentId, 'Boundary send'),
+      client_id: jest.mocked(chatRepository.send).mock.calls[0][2], created_at: serverTime } }); });
+    expect(times()).toHaveLength(separate ? 2 : 1);
+    if (separate) expect(times()).toEqual(['19:00', '19:04']);
+  } finally { jest.useRealTimers(); }
 });

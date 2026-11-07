@@ -5,15 +5,33 @@ import type { FeedbackItem, FeedbackVideo } from '@/api/domains/feedback';
 import type { DashboardPlanSignature } from '@/features/dashboard/plan-seen';
 
 export type StudentPlanNotice = { signature: DashboardPlanSignature; weekIndex: number };
+
+/** Local send times anchor grouping across acknowledgement; labels use current server timestamps. */
+export function chatTimeSeparators(timestamps: readonly string[], now: Date, locale: string, groupingTimestamps: readonly string[] = timestamps): { index: number; label: string }[] {
+  return timestamps.flatMap((timestamp, index) => {
+    if (index > 0 && Date.parse(groupingTimestamps[index]) - Date.parse(groupingTimestamps[index - 1]) < 5 * 60_000) return [];
+    const date = new Date(timestamp);
+    const time = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', ...(locale.startsWith('zh') ? { hourCycle: 'h23' as const } : {}) }).format(date);
+    // Calendar-day arithmetic avoids DST's 23/25-hour days and respects the device timezone.
+    const calendarDay = (value: Date) => Date.UTC(value.getFullYear(), value.getMonth(), value.getDate());
+    const daysAgo = (calendarDay(now) - calendarDay(date)) / 86_400_000;
+    const language = locale.startsWith('zh-Hant') ? 'zh-Hant' : locale.startsWith('zh') ? 'zh' : 'en';
+    const prefix = daysAgo === 0 ? '' : daysAgo === 1 ? t('chat.timestampYesterday', [], language)
+      : new Intl.DateTimeFormat(locale, daysAgo > 1 && daysAgo < 7
+        ? { weekday: 'short' }
+        : { month: 'short', day: 'numeric', ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' as const }) }).format(date);
+    return [{ index, label: prefix ? `${prefix} ${time}` : time }];
+  });
+}
 export type StudentTimelineItem = { id: string; occurredAt: string } & (
   | { kind: 'message'; message: ChatMessage }
   | { kind: 'plan'; notice: StudentPlanNotice }
   | { kind: 'feedback'; feedback: FeedbackItem }
 );
 
-export function mergeStudentTimeline(messages: readonly ChatMessage[], planNotice: StudentPlanNotice | null, feedback: readonly FeedbackItem[]): StudentTimelineItem[] {
+export function mergeStudentTimeline(messages: readonly ChatMessage[], planNotice: StudentPlanNotice | null, feedback: readonly FeedbackItem[], localSentAt?: ReadonlyMap<string, string>): StudentTimelineItem[] {
   const items: StudentTimelineItem[] = [
-    ...messages.map(message => ({ kind: 'message' as const, id: `message-${message.id}`, occurredAt: message.created_at, message })),
+    ...messages.map(message => ({ kind: 'message' as const, id: `message-${message.id}`, occurredAt: localSentAt?.get(message.client_id) ?? message.created_at, message })),
     ...feedback.map(item => ({ kind: 'feedback' as const, id: `feedback-${item.id}`, occurredAt: item.posted_at, feedback: item })),
   ];
   if (planNotice) items.push({ kind: 'plan', id: `plan-${planNotice.signature.planId}.${planNotice.signature.publishedAt}`, occurredAt: planNotice.signature.publishedAt, notice: planNotice });
@@ -31,8 +49,8 @@ export function videoLabel(video: Pick<FeedbackVideo, 'exercise_name' | 'exercis
   return [t('student.studentChatTimeline.copy002', [feedbackVideoName(video) || t('student.studentChatTimeline.copy001')]),
     video.set_index == null ? null : t('student.studentChatTimeline.copy003', [video.set_index + 1])].filter(Boolean).join(' · ');
 }
-export function videoDuration(seconds: number | null | undefined): string {
-  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return '—:—';
+export function videoDuration(seconds: number | null | undefined): string | null {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return null;
   const whole = Math.floor(seconds);
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }

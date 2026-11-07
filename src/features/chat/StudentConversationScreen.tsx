@@ -1,3 +1,5 @@
+import { ChatVideoCover } from './ChatVideoCover';
+import { ChatTimeSeparator, chatTimeLocale } from './ChatTimeSeparator';
 import { startConversationRealtime, useChatRealtime } from './realtime';
 import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
 import { canonicalBody, ChatSetCardPresentation, displayFirstLine, setRefBodyAllowed } from './set-ref';
@@ -12,7 +14,7 @@ import { freshPlaybackURL } from '@/features/feedback/use-feedback-playback';
 import { FeedbackVideoUnavailable, PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
@@ -22,7 +24,7 @@ import { feedbackKeys, feedbackRepository, type FeedbackResponse, type FeedbackI
 import { useQueryClient } from '@tanstack/react-query';
 import { markDashboardPlanSeen } from '@/features/dashboard/plan-seen';
 import { studentChatKeys, useStudentPlanNotice } from './open-coach-chat';
-import { mergeStudentTimeline, visibleFraction, videoLabel, videoDuration, type VerticalFrame, type StudentPlanNotice } from './student-timeline';
+import { chatTimeSeparators, mergeStudentTimeline, visibleFraction, videoLabel, type VerticalFrame, type StudentPlanNotice } from './student-timeline';
 import { useSessionStore } from '@/api/session';
 import { font, GradientFill, Screen, useColors } from '@/design';
 import { getLocale, t } from '@/i18n';
@@ -48,7 +50,10 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     void chatRepository.list().then(result => { if (live) setFetchedName(result.conversations.find(item => item.id === conversationId)?.other_party.display_name ?? ''); }).catch(() => {});
     return () => { live = false; };
   }, [coachName, conversationId]);
-  const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId);
+  const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId, message => {
+    messagesRef.current = mergeMessages(messagesRef.current, [message]);
+    setMessages(messagesRef.current);
+  });
   const frames = useRef(new Map<string, VerticalFrame>());
   const viewport = useRef<VerticalFrame>({ y: 0, height: 0 });
   const contentHeight = useRef(0);
@@ -78,8 +83,9 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   useEffect(() => () => { for (const operation of setOperations.current.values()) operation.controller.abort(); }, []);
   const [draft, setDraft] = useState('');
   const draftRef = useRef('');
-  const [pending, setPending] = useState<{ clientId: string; text: string; failed: boolean; setIntent?: SetRefSendIntent }[]>([]);
+  const [pending, setPending] = useState<{ clientId: string; text: string; createdAt: string; failed: boolean; setIntent?: SetRefSendIntent }[]>([]);
   const sending = useRef(new Set<string>());
+  const localSentAt = useRef(new Map<string, string>());
   const mounted = useRef(false);
   const focusGeneration = useRef(0);
   const alive = useRef(false);
@@ -166,10 +172,12 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     } catch { if (generation === focusGeneration.current) { historyAnchor.current = null; if (mounted.current) setHistoryError(true); } }
     finally { if (generation === focusGeneration.current) olderLoading.current = false; }
   }
-  async function send(intent: { clientId: string; text: string; setIntent?: SetRefSendIntent }) {
+  async function send(intent: { clientId: string; text: string; createdAt?: string; setIntent?: SetRefSendIntent }) {
     if (sending.current.has(intent.clientId)) return;
     sending.current.add(intent.clientId);
-    setPending(previous => [...previous.filter(item => item.clientId !== intent.clientId), { ...intent, failed: false }]);
+    const createdAt = localSentAt.current.get(intent.clientId) ?? intent.createdAt ?? new Date().toISOString();
+    localSentAt.current.set(intent.clientId, createdAt);
+    setPending(previous => [...previous.filter(item => item.clientId !== intent.clientId), { ...intent, createdAt, failed: false }]);
     try {
       const operation = setOperations.current.get(intent.clientId);
       let videoId: string | undefined;
@@ -222,7 +230,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     attemptedPickerIntents.current.add(staged.clientId);
     sendPickerIntent(staged);
   }, [staged]);
-  const items = useMemo(() => mergeStudentTimeline(messages, plan.planNotice, inbox.items), [messages, plan.planNotice, inbox.items]);
+  const items = useMemo(() => mergeStudentTimeline(messages, plan.planNotice, inbox.items, localSentAt.current), [messages, plan.planNotice, inbox.items]);
   const ready = !loading && !inbox.isLoading && !plan.isLoading;
   function markVisibleFeedback() {
     if (!initialPosition.current || !mounted.current || viewport.current.height <= 0) return;
@@ -269,6 +277,10 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     setPending(previous => previous.filter(item => item.clientId !== staged.clientId));
     useSetRefStagingStore.getState().discard(conversationId); setSendError('');
   }
+  const separators = new Map(chatTimeSeparators(
+    [...items.map(item => item.kind === 'message' ? item.message.created_at : item.occurredAt), ...pending.map(item => item.createdAt)],
+    new Date(), chatTimeLocale(), [...items.map(item => item.occurredAt), ...pending.map(item => item.createdAt)],
+  ).map(item => [item.index, item.label]));
   const empty = !loading && !inbox.isLoading && !plan.isLoading && !loadError && !items.length && !pending.length;
   return <Screen><KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <View style={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 14, borderBottomWidth: 1, borderColor: colors.borderHairline, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -291,15 +303,14 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}><Text style={{ ...font.body(13), color: colors.textMuted }}>{t('student.studentBlackGoldChatView.copy015')}</Text><MaterialCommunityIcons name="arrow-down" size={14} color={colors.gold500} /></View>
       </View> : !ready && !items.length && !pending.length ? <ActivityIndicator color={colors.gold500} style={{ flex: 1 }} /> : null}
       {hasOlder ? historyError ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy013')} onPress={() => void loadOlder()}><Text style={{ ...font.body(13), color: colors.textMuted, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy013')}</Text></Pressable> : <ActivityIndicator accessibilityLabel={t('student.studentBlackGoldChatView.copy024')} size="small" color={colors.gold500} style={{ paddingVertical: 8 }} /> : null}
-      {items[0] ? <Text style={{ ...font.body(11), color: colors.textDim, textAlign: 'center', paddingBottom: 4 }}>{chatTimestamp(items[0].occurredAt)}</Text> : null}
-      {items.map(item => <View key={item.id} testID={`student-chat-item-${item.id}`} onLayout={({ nativeEvent: { layout } }) => { frames.current.set(item.id, { y: layout.y, height: layout.height }); }}>
+      {items.map((item, index) => <Fragment key={item.id}><ChatTimeSeparator label={separators.get(index)} /><View testID={`student-chat-item-${item.id}`} onLayout={({ nativeEvent: { layout } }) => { frames.current.set(item.id, { y: layout.y, height: layout.height }); }}>
         {item.kind === 'message' ? <StudentChatMessageRow message={item.message} outgoing={item.message.sender_id === studentId} read={otherReadSeq >= item.message.seq} openVideo={() => void openShareVideo(item.message)} />
           : item.kind === 'feedback' ? <StudentFeedbackChatCard feedback={item.feedback} videos={videos.data?.videos ?? []} onPlay={() => { if (item.feedback.video_id) void playback.session.open(item.feedback.id, item.feedback.video_id); }} />
           : <StudentPlanChatCard notice={item.notice} onPress={async () => { await markDashboardPlanSeen(studentId, item.notice.signature); await client.cancelQueries({ queryKey: plan.queryKey }); client.setQueryData(plan.queryKey, true); router.navigate('/(student)/training'); }} />}
         {item.kind === 'feedback' && playback.errorFeedbackId === item.feedback.id ? <PlaybackLinkError /> : null}
-      </View>)}
+      </View></Fragment>)}
       {shareVideoError ? <PlaybackLinkError /> : null}
-      {pending.map(item => <View key={item.clientId} style={{ maxWidth: '76%', alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4 }}>
+      {pending.map((item, index) => <Fragment key={item.clientId}><ChatTimeSeparator label={separators.get(items.length + index)} /><View style={{ maxWidth: '76%', alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4 }}>
         <Text style={{ ...font.body(14, 'medium'), color: colors.bgBase, backgroundColor: `${colors.textPrimary}B8`, paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: 5 }}>{getLocale() === 'zh-Hant' && item.setIntent?.displayExerciseName
           ? displayFirstLine(item.setIntent.setRef, item.setIntent.displayExerciseName) + item.text.slice(canonicalBody(item.setIntent.setRef).length)
           : item.text}</Text>
@@ -307,7 +318,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
           <MaterialCommunityIcons name={item.failed ? 'refresh' : 'clock-outline'} size={10} color={item.failed ? colors.danger : colors.textDim} />
           <Text style={{ ...font.mono(10, item.failed ? 'bold' : 'regular'), color: item.failed ? colors.danger : colors.textDim }}>{t(item.failed ? 'student.studentBlackGoldChatView.copy026' : 'student.studentBlackGoldChatView.copy025')}</Text>
         </Pressable>
-      </View>)}
+      </View></Fragment>)}
     </ScrollView>
     <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, borderTopWidth: 1, borderColor: colors.borderHairline }}>
       {staged ? <View style={{ gap: 6, paddingBottom: 10 }}>
@@ -359,11 +370,10 @@ function StudentFeedbackChatCard({ feedback, videos, onPlay }: { feedback: Feedb
     </View>
     {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={onPlay} style={{ height: 150, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
       <GradientFill direction="diagonal" stops={[{ color: colors.borderStrong, offset: 0 }, { color: colors.surfaceCard, offset: 1 }]} />
-      <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.modalShadow.replace(/,[^,]+\)$/, ',0.45)'), borderWidth: 1.5, borderColor: `${colors.ctaTopHighlight}BF`, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="play" size={15} color={colors.ctaTopHighlight} /></View>
+      <ChatVideoCover posterURL={video?.poster_url} durationSeconds={video?.duration_seconds} />
       <View style={{ position: 'absolute', top: 8, left: 9, right: 9, alignItems: 'flex-start' }}>
         <Text style={{ ...font.mono(11), color: colors.textPrimary, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>{videoLabel(video)}</Text>
       </View>
-      <Text style={{ position: 'absolute', bottom: 8, right: 9, ...font.mono(10), color: colors.ctaTopHighlight, backgroundColor: colors.modalShadow.replace(/,[^,]+\)$/, ',0.6)'), paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 }}>{videoDuration(null)}</Text>
     </Pressable> : null}
     <Text style={{ ...font.body(14), color: colors.textPrimary, lineHeight: 21 }}>{feedback.text}</Text>
   </View>;
@@ -390,13 +400,6 @@ function StudentConversationLoadErrorState({ retry }: { retry: () => void }) {
     <Text style={{ ...font.body(13), color: colors.textMuted, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy012')}</Text>
     <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy013')} onPress={retry} style={{ minHeight: 38, justifyContent: 'center', paddingHorizontal: 18, borderRadius: 20, borderWidth: 1, borderColor: colors.borderStrong }}><Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.studentBlackGoldChatView.copy013')}</Text></Pressable>
   </View>;
-}
-
-function chatTimestamp(timestamp: string) {
-  const date = new Date(timestamp);
-  const time = new Intl.DateTimeFormat(getLocale(), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(date);
-  return date.toDateString() === new Date().toDateString() ? t('student.studentBlackGoldChatView.copy010', [time])
-    : `${new Intl.DateTimeFormat(getLocale(), { month: 'short', day: 'numeric' }).format(date)} ${time}`;
 }
 
 function useStudentChatPlayback() {

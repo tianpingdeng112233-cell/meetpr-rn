@@ -1,10 +1,12 @@
+import { ChatTimeSeparator, chatTimeLocale } from './ChatTimeSeparator';
+import { chatTimeSeparators } from './student-timeline';
 import { startConversationRealtime, useChatRealtime } from './realtime';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
 import { PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
 import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
 import { ChatSetCardPresentation } from './set-ref';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { ActivityIndicator, AppState, Image, Modal, KeyboardAvoidingView, ScrollView, Text, TextInput, View } from 'react-native';
@@ -20,13 +22,16 @@ import { receivingKeys } from '@/features/coach/receiving/use-coach-receiving';
 import { FullScreenDestination } from '@/features/coach/receiving/FullScreenDestination';
 import { applyReadState, feedbackVideoBadge, CONVERSATION_POLL_MS, conversationSubtitle, createConversationSync, mergeMessages } from './conversation-model';
 // Bubble colors follow CoachConversationDestination (outgoing textPrimary, incoming borderHairline), not ConversationView's defaults.
-type PendingMessage = { text: string; clientID: string; failed: boolean };
+type PendingMessage = { text: string; clientID: string; createdAt: string; failed: boolean };
 
 export function ConversationScreen({ conversationId, studentName, status, initialDraft }: { conversationId: string; studentName?: string; status?: string; initialDraft?: string }) {
   const { subscribe } = useChatRealtime();
   const colors = useColors();
   const [selectedImage, setSelectedImage] = useState<ChatMessage | null>(null);
-  const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId);
+  const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId, message => {
+    messagesRef.current = mergeMessages(messagesRef.current, [message]);
+    setMessages(messagesRef.current);
+  });
   const userID = useSessionStore(state => state.user?.id ?? '');
   const client = useQueryClient();
   const [otherReadSeq, setOtherReadSeq] = useState(0);
@@ -52,6 +57,7 @@ export function ConversationScreen({ conversationId, studentName, status, initia
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const [sending, setSending] = useState(false);
   const sendingLock = useRef(false);
+  const localSentAt = useRef(new Map<string, string>());
   const active = useRef(false);
   const scroll = useRef<ScrollView>(null);
   const followLatest = useRef(true);
@@ -111,7 +117,8 @@ export function ConversationScreen({ conversationId, studentName, status, initia
   async function send(retryIntent?: PendingMessage) {
     const text = retryIntent?.text ?? draft.trim();
     if (!text || sendingLock.current) return;
-    const intent = retryIntent ?? { text, clientID: createUUID(), failed: false };
+    const intent = retryIntent ?? { text, clientID: createUUID(), createdAt: new Date().toISOString(), failed: false };
+    localSentAt.current.set(intent.clientID, intent.createdAt);
     sendingLock.current = true;
     followLatest.current = true;
     setPending(previous => [...previous.filter(item => item.clientID !== intent.clientID), { ...intent, failed: false }]);
@@ -170,6 +177,10 @@ export function ConversationScreen({ conversationId, studentName, status, initia
     const frame = requestAnimationFrame(positionTimeline);
     return () => cancelAnimationFrame(frame);
   });
+  const separators = new Map(chatTimeSeparators(
+    [...messages.map(message => message.created_at), ...pending.map(item => item.createdAt)], new Date(), chatTimeLocale(),
+    [...messages.map(message => localSentAt.current.get(message.client_id) ?? message.created_at), ...pending.map(item => item.createdAt)],
+  ).map(item => [item.index, item.label]));
   const subtitleKey = conversationSubtitle(status);
   const subtitle = subtitleKey ? t(subtitleKey) : null;
   return <FullScreenDestination><Screen><KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
@@ -195,14 +206,14 @@ export function ConversationScreen({ conversationId, studentName, status, initia
           {!loadError ? <Text style={{ ...font.body(15), color: colors.textSecondary, textAlign: 'center' }}>{t('chat.noMessagesDescription')}</Text> : null}
         </>}
       </View> : null}
-      {messages.map(message => <View key={message.id} testID={`chat.message.${message.id}`} onLayout={({ nativeEvent: { layout } }) => { frames.current.set(message.id, { y: layout.y, height: layout.height }); }}><ChatMessageRow message={message} outgoing={message.sender_id === userID} read={otherReadSeq >= message.seq} openImage={() => setSelectedImage(message)} openVideo={() => openShareVideo(message)} /></View>)}
+      {messages.map((message, index) => <Fragment key={message.id}><ChatTimeSeparator label={separators.get(index)} /><View testID={`chat.message.${message.id}`} onLayout={({ nativeEvent: { layout } }) => { frames.current.set(message.id, { y: layout.y, height: layout.height }); }}><ChatMessageRow message={message} outgoing={message.sender_id === userID} read={otherReadSeq >= message.seq} openImage={() => setSelectedImage(message)} openVideo={() => openShareVideo(message)} /></View></Fragment>)}
       {shareVideoError ? <PlaybackLinkError /> : null}
-      {pending.map(item => <View key={item.clientID} style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingLeft: 32 }}>
+      {pending.map((item, index) => <Fragment key={item.clientID}><ChatTimeSeparator label={separators.get(messages.length + index)} /><View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingLeft: 32 }}>
         <View style={{ flexShrink: 1, alignItems: 'flex-end', gap: 4 }}>
           <Text style={{ ...font.body(14, 'medium'), color: colors.inkOnCTAFill, backgroundColor: colors.textPrimary, opacity: 0.72, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.xl, borderBottomRightRadius: 5, textAlign: 'right' }}>{item.text}</Text>
           {item.failed ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.retry')} accessibilityHint={t('chat.sendFailed')} disabled={sending} onPress={() => send(item)}><Text style={{ ...font.body(12, 'bold'), color: colors.goldCTA }}>{t('chat.retry')}</Text></Pressable> : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><MaterialCommunityIcons name="clock-outline" size={12} color={colors.textTertiary} /><Text style={{ ...font.body(12), color: colors.textTertiary }}>{t('chat.sending')}</Text></View>}
         </View>
-      </View>)}
+      </View></Fragment>)}
     </ScrollView>
 
     <View style={{ paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.surfaceCard, borderTopWidth: 1, borderColor: colors.borderDefault }}>

@@ -63,8 +63,7 @@ export function setLocaleOverride(locale: Locale | null = null): void {
   localeOverride = locale;
 }
 
-export function t(key: TranslationKey, params: readonly (string | number)[] = []): string {
-  const locale = getLocale();
+export function t(key: TranslationKey, params: readonly (string | number)[] = [], locale: Locale = getLocale()): string {
   const entries = catalog as Partial<Record<string, { en?: Translation; zh?: Translation }>>;
   const isOne = locale === 'en' && Number(params[PLURAL_COUNT_INDEX[key] ?? 0]) === 1;
   const entry = (isOne ? entries[`${key}.one`] : undefined) ?? entries[key];
