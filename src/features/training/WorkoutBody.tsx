@@ -119,6 +119,7 @@ export function WorkoutBody({
   const completedLabelColor = scheme === 'light' ? colors.textPrimary : colors.successSoft;
   const [accentSize, setAccentSize] = useState({ width: 0, height: 0 });
   const [expandedSummary, setExpandedSummary] = useState<Record<string, boolean>>({});
+  const [expandedHero, setExpandedHero] = useState<Record<string, boolean>>({});
   const hasCamera = useCameraAvailability();
   const progressFlow = recording && editable && !preview;
   const reducedMotion = useReducedMotion();
@@ -503,26 +504,36 @@ export function WorkoutBody({
                 {t('student.todayWorkoutScreen.copy019', [drafts.filter(draft => !draft.kind).length])}
               </>}
             </Text>
-            {groups.map((group, index) => (
-              <View key={group.exercise.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 11, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
-                <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>
-                <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: spacing.xs }}>
-                  <Text style={{ color: colors.textPrimary, ...font.body(14, 'bold'), flexShrink: 0, maxWidth: '100%' }}>
-                    {exerciseTitle(
-                      resolveExerciseMetadata(group.exercise.exercise_id),
-                    )}
-                  </Text>
-                  <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 0, maxWidth: '100%' }}>
-                    {prescriptionSummary(
-                      group.drafts.map((draft) => ({
-                        prescription: decodePrescription(draft.planSet),
-                        resolution: suggestionForDraft(draft).percentage,
-                      })),
-                    )}
-                  </Text>
-                </View>
-              </View>
-            ))}
+            {groups.map((group, index) => {
+              const open = Boolean(expandedHero[group.exercise.id]);
+              const title = exerciseTitle(resolveExerciseMetadata(group.exercise.exercise_id));
+              return <View key={group.exercise.id} style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, borderWidth: 1, borderColor: colors.borderSubtle }}>
+                <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ expanded: open }} onPress={() => setExpandedHero(current => ({ ...current, [group.exercise.id]: !current[group.exercise.id] }))}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingVertical: 11, minHeight: spacing.minimumHitTarget }}>
+                  <Text style={{ ...font.mono(11, 'bold'), color: colors.goldText, backgroundColor: `${colors.goldRGB}1F`, borderRadius: 7, width: 22, height: 22, textAlign: 'center', textAlignVertical: 'center' }}>{index + 1}</Text>
+                  <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: spacing.sm, rowGap: spacing.xs }}>
+                    <Text style={{ color: colors.textPrimary, ...font.body(14, 'bold'), flexShrink: 0, maxWidth: '100%' }}>
+                      {title}
+                    </Text>
+                    <Text style={{ color: colors.textTertiary, ...font.mono(12), flexShrink: 0, maxWidth: '100%' }}>
+                      {prescriptionSummary(
+                        group.drafts.map((draft) => ({
+                          prescription: decodePrescription(draft.planSet),
+                          resolution: suggestionForDraft(draft).percentage,
+                        })),
+                      )}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.textMuted }}>{open ? '⌄' : '›'}</Text>
+                </Pressable>
+                {open ? <View style={{ paddingHorizontal: 13, paddingBottom: 11, gap: spacing.xs }}>
+                  {group.drafts.filter(draft => !draft.kind).map(draft => <View key={draft.stableSetId} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                    <Text style={{ width: 36, color: colors.textMuted, ...font.mono(12) }}>{draft.setIndex + 1}</Text>
+                    <Text style={{ flex: 1, color: colors.textPrimary, ...font.mono(13) }}>{prescribed(decodePrescription(draft.planSet), suggestionForDraft(draft).percentage)}</Text>
+                  </View>)}
+                </View> : null}
+              </View>;
+            })}
             {preview?.unlockMessage ? <Text style={{ color: colors.textSecondary, ...font.body(13) }}>{preview.unlockMessage}</Text> : null}
             {editable && active ? (
               <AppButton
