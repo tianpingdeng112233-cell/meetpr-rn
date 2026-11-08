@@ -508,5 +508,6 @@
 "student.videoDelivery.complete": {"en": "Workout complete. {0} videos delivered.", "zh": "今日训练已完成，{0} 条视频已送达"},
 "student.videoDelivery.completeOne": {"en": "Workout complete. 1 video delivered.", "zh": "今日训练已完成，1 条视频已送达"},
 "student.videoDelivery.videoTimeout": {"en": "{0} videos didn't upload. Tap to retry.", "zh": "还有 {0} 条视频没传上，点击重试"},
-"student.videoDelivery.videoTimeoutOne": {"en": "1 video didn't upload. Tap to retry.", "zh": "还有 1 条视频没传上，点击重试"}
+"student.videoDelivery.videoTimeoutOne": {"en": "1 video didn't upload. Tap to retry.", "zh": "还有 1 条视频没传上，点击重试"},
+"training.numberPad.dismiss": {"en": "Done", "zh": "收起"}
 }

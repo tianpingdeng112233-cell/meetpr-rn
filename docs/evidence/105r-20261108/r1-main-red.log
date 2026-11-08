@@ -1,0 +1,129 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/set-entry-camera-presentation.test.tsx -t retains local input
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (../meetpr-rn-wt-106/node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (../meetpr-rn-wt-106/node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (../meetpr-rn-wt-106/node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/__tests__/set-entry-camera-presentation.test.tsx:7:1)
+
+FAIL src/features/training/__tests__/set-entry-camera-presentation.test.tsx
+  ✕ 105r main entry left retains local input until the record button submits (238 ms)
+  ✕ 105r main entry backdrop retains local input until the record button submits (72 ms)
+  ✕ 105r main entry back retains local input until the record button submits (31 ms)
+  ✕ 105r main entry confirm retains local input until the record button submits (41 ms)
+  ○ skipped 105r main untouched dismissal writes nothing
+  ○ skipped 105r main empty dismissal writes nothing
+  ○ skipped 105r main invalid reps dismissal restores the last valid value without saving
+  ○ skipped first Record entry waits for the native sheet to show before prompting and prompts only once
+  ○ skipped 056 single-set entry enforces free_weight weight semantics
+  ○ skipped 056 single-set entry enforces bodyweight weight semantics
+  ○ skipped 056 bodyweight entry does not select the projected RPE 10
+  ○ skipped 056 free_weight entry does not select the projected RPE 10
+
+  ● 105r main entry left retains local input until the record button submits
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"completed": false, "editOnly": true, "effortKind": "rpe", "failed": false, "repsText": "5", "rpeText": "8", "stableSetId": "set", "weightText": "82.25"}
+
+      35 |   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+      36 |   expect(field().props.accessibilityValue.text).toBe('82.25 KG');
+    > 37 |   expect(onSave).not.toHaveBeenCalled();
+         |                      ^
+      38 |   await act(async () => renderer.root.findAllByType(FeedbackPressable).find(node => node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))!.props.onPress!({} as never));
+      39 |   expect(onSave).toHaveBeenCalledTimes(1);
+      40 |   expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ weightText: '82.25', failed: false }));
+
+      at toHaveBeenCalled (src/features/training/__tests__/set-entry-camera-presentation.test.tsx:37:22)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r main entry backdrop retains local input until the record button submits
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"completed": false, "editOnly": true, "effortKind": "rpe", "failed": false, "repsText": "5", "rpeText": "8", "stableSetId": "set", "weightText": "82.25"}
+
+      35 |   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+      36 |   expect(field().props.accessibilityValue.text).toBe('82.25 KG');
+    > 37 |   expect(onSave).not.toHaveBeenCalled();
+         |                      ^
+      38 |   await act(async () => renderer.root.findAllByType(FeedbackPressable).find(node => node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))!.props.onPress!({} as never));
+      39 |   expect(onSave).toHaveBeenCalledTimes(1);
+      40 |   expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ weightText: '82.25', failed: false }));
+
+      at toHaveBeenCalled (src/features/training/__tests__/set-entry-camera-presentation.test.tsx:37:22)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r main entry back retains local input until the record button submits
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"completed": false, "editOnly": true, "effortKind": "rpe", "failed": false, "repsText": "5", "rpeText": "8", "stableSetId": "set", "weightText": "82.25"}
+
+      35 |   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+      36 |   expect(field().props.accessibilityValue.text).toBe('82.25 KG');
+    > 37 |   expect(onSave).not.toHaveBeenCalled();
+         |                      ^
+      38 |   await act(async () => renderer.root.findAllByType(FeedbackPressable).find(node => node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))!.props.onPress!({} as never));
+      39 |   expect(onSave).toHaveBeenCalledTimes(1);
+      40 |   expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ weightText: '82.25', failed: false }));
+
+      at toHaveBeenCalled (src/features/training/__tests__/set-entry-camera-presentation.test.tsx:37:22)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r main entry confirm retains local input until the record button submits
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"completed": false, "editOnly": true, "effortKind": "rpe", "failed": false, "repsText": "5", "rpeText": "8", "stableSetId": "set", "weightText": "82.25"}
+
+      35 |   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+      36 |   expect(field().props.accessibilityValue.text).toBe('82.25 KG');
+    > 37 |   expect(onSave).not.toHaveBeenCalled();
+         |                      ^
+      38 |   await act(async () => renderer.root.findAllByType(FeedbackPressable).find(node => node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))!.props.onPress!({} as never));
+      39 |   expect(onSave).toHaveBeenCalledTimes(1);
+      40 |   expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ weightText: '82.25', failed: false }));
+
+      at toHaveBeenCalled (src/features/training/__tests__/set-entry-camera-presentation.test.tsx:37:22)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 8 skipped, 12 total
+Snapshots:   0 total
+Time:        1.486 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/set-entry-camera-presentation.test.tsx/i with tests matching "retains local input".

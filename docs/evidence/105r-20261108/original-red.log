@@ -1,0 +1,38 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/accessory-rir-pad.test.tsx
+
+FAIL src/features/training/__tests__/accessory-rir-pad.test.tsx
+  ✕ 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR (184 ms)
+
+  ● 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "context": "颈后高位下拉 · 第 1 组 · RIR",
+    -   "disabled": false,
+    +   "context": "颈后高位下拉 · 第 1 组 · RPE",
+    +   "disabled": true,
+      }
+
+      58 |   const confirm = pad().findAllByType(FeedbackPressable).at(-1)!;
+      59 |   expect(pad().findAllByType(Text).map(node => node.props.children)).toContain('2');
+    > 60 |   expect({ context: pad().props.contextText, disabled: confirm.props.disabled }).toEqual({
+         |                                                                                  ^
+      61 |     context: '颈后高位下拉 · 第 1 组 · RIR', disabled: false,
+      62 |   });
+      63 |   await act(async () => confirm.props.onPress!({} as never));
+
+      at Object.toEqual (src/features/training/__tests__/accessory-rir-pad.test.tsx:60:82)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.789 s, estimated 3 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-rir-pad.test.tsx/i.

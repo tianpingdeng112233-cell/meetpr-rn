@@ -1,0 +1,48 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false archived-minimization-harness -t M5 remove exercise name
+
+FAIL archived-minimization-harness
+  ✕ 105r minimize M5 remove exercise name (131 ms)
+  ○ skipped 105r minimize M1 remove toggles
+  ○ skipped 105r minimize M2 remove completed status
+  ○ skipped 105r minimize M3 remove recorded RPE value
+  ○ skipped 105r minimize M4 remove Chinese locale
+  ○ skipped 105r minimize C1 remove second pending row from M5
+  ○ skipped 105r minimize C2 remove source log from M5
+  ○ skipped 105r minimize C3 remove RIR prescription from M5
+  ○ skipped 105r minimize C4 remove input from M5
+
+  ● 105r minimize M5 remove exercise name
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -3,7 +3,7 @@
+          "disabled": true,
+          "field": "rpe",
+          "header": "RIR",
+          "showsTwo": true,
+        },
+    -   "reproducesBlockedRIR": false,
+    +   "reproducesBlockedRIR": true,
+      }
+
+      79 |     observation: observed,
+      80 |     reproducesBlockedRIR: observed.header === 'RIR' && observed.field === 'rpe' && observed.disabled && observed.showsTwo,
+    > 81 |   }).toEqual({ observation: observed, reproducesBlockedRIR: false });
+         |      ^
+      82 | });
+      83 |
+
+      at toEqual (archived-minimization-harness:81:6)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 8 skipped, 9 total
+Snapshots:   0 total
+Time:        0.605 s, estimated 1 s
+Ran all test suites matching /archived-minimization-harness/i with tests matching "M5 remove exercise name".

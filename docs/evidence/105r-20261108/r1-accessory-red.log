@@ -1,0 +1,108 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/accessory-rir-pad.test.tsx -t only the checkmark|original
+
+FAIL src/features/training/__tests__/accessory-rir-pad.test.tsx
+  ✕ 105r left keeps RIR locally and only the checkmark submits it (169 ms)
+  ✕ 105r backdrop keeps RIR locally and only the checkmark submits it (20 ms)
+  ✕ 105r back keeps RIR locally and only the checkmark submits it (23 ms)
+  ✕ 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR (25 ms)
+  ○ skipped 105r every keystroke updates the visible cell without saving prematurely
+  ○ skipped 105r opening and dismissing does not create or rewrite records: undefined
+  ○ skipped 105r opening and dismissing does not create or rewrite records: {"rpe":"7","completed":true}
+  ○ skipped 105r opening and dismissing does not create or rewrite records: {"rpe":null,"completed":true}
+  ○ skipped 105r dismissing 3 RPE restores the last committed value without writing
+  ○ skipped 105r dismissing empty RPE restores the last committed value without writing
+  ○ skipped 105r editing a saved RIR in RPE mode clears RIR and preserves completion
+  ○ skipped 105r an empty saved effort edits in the header mode and repeated dismissal remains writable
+  ○ skipped 105r saving effort preserves the exact stored weight when pounds are rounded for display
+
+  ● 105r left keeps RIR locally and only the checkmark submits it
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"effortKind": "rpe", "exercise": {"exercise_id": "pulldown", "id": "exercise", "is_main_lift": false, "notes": null, "plan_day_id": "day", "sets": [{"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-2", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 2, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}], "sort_order": 0}, "exerciseOrdinal": 0, "planSet": {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, "repsText": "10", "rpeText": "", "setIndex": 0, "sourceLog": null, "stableSetId": "set-1", "status": "pending", "weightText": "57"}, {"actual_rir": 2, "completed": false, "failed": false, "plan_exercise_id": "exercise", "reps": 10, "rpe": null, "set_index": 0, "weight_kg": "57"}, "edit"
+
+      55 |   await closePad(action);
+      56 |   expect(button('Set 1 RIR').props.accessibilityValue.text).toBe('2');
+    > 57 |   expect(save).not.toHaveBeenCalled();
+         |                    ^
+      58 |   await act(async () => button('Complete set 1').props.onPress!({} as never));
+      59 |   expect(save).toHaveBeenCalledTimes(1);
+      60 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actual_rir: 2, rpe: null, completed: true }), 'single');
+
+      at toHaveBeenCalled (src/features/training/__tests__/accessory-rir-pad.test.tsx:57:20)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r backdrop keeps RIR locally and only the checkmark submits it
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"effortKind": "rpe", "exercise": {"exercise_id": "pulldown", "id": "exercise", "is_main_lift": false, "notes": null, "plan_day_id": "day", "sets": [{"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-2", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 2, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}], "sort_order": 0}, "exerciseOrdinal": 0, "planSet": {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, "repsText": "10", "rpeText": "", "setIndex": 0, "sourceLog": null, "stableSetId": "set-1", "status": "pending", "weightText": "57"}, {"actual_rir": 2, "completed": false, "failed": false, "plan_exercise_id": "exercise", "reps": 10, "rpe": null, "set_index": 0, "weight_kg": "57"}, "edit"
+
+      55 |   await closePad(action);
+      56 |   expect(button('Set 1 RIR').props.accessibilityValue.text).toBe('2');
+    > 57 |   expect(save).not.toHaveBeenCalled();
+         |                    ^
+      58 |   await act(async () => button('Complete set 1').props.onPress!({} as never));
+      59 |   expect(save).toHaveBeenCalledTimes(1);
+      60 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actual_rir: 2, rpe: null, completed: true }), 'single');
+
+      at toHaveBeenCalled (src/features/training/__tests__/accessory-rir-pad.test.tsx:57:20)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r back keeps RIR locally and only the checkmark submits it
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"effortKind": "rpe", "exercise": {"exercise_id": "pulldown", "id": "exercise", "is_main_lift": false, "notes": null, "plan_day_id": "day", "sets": [{"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-2", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 2, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}], "sort_order": 0}, "exerciseOrdinal": 0, "planSet": {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, "repsText": "10", "rpeText": "", "setIndex": 0, "sourceLog": null, "stableSetId": "set-1", "status": "pending", "weightText": "57"}, {"actual_rir": 2, "completed": false, "failed": false, "plan_exercise_id": "exercise", "reps": 10, "rpe": null, "set_index": 0, "weight_kg": "57"}, "edit"
+
+      55 |   await closePad(action);
+      56 |   expect(button('Set 1 RIR').props.accessibilityValue.text).toBe('2');
+    > 57 |   expect(save).not.toHaveBeenCalled();
+         |                    ^
+      58 |   await act(async () => button('Complete set 1').props.onPress!({} as never));
+      59 |   expect(save).toHaveBeenCalledTimes(1);
+      60 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actual_rir: 2, rpe: null, completed: true }), 'single');
+
+      at toHaveBeenCalled (src/features/training/__tests__/accessory-rir-pad.test.tsx:57:20)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"effortKind": "rpe", "exercise": {"exercise_id": "pulldown", "id": "exercise", "is_main_lift": false, "notes": null, "plan_day_id": "day", "sets": [{"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "load_mode": "rir", "plan_exercise_id": "exercise", "rest_seconds": null, "rir_target": 1, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "0"}, {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-2", "intensity_mode": "weight", "load_mode": "rir", "plan_exercise_id": "exercise", "rest_seconds": null, "rir_target": 1, "set_number": 2, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "0"}], "sort_order": 0}, "exerciseOrdinal": 0, "planSet": {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "load_mode": "rir", "plan_exercise_id": "exercise", "rest_seconds": null, "rir_target": 1, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "0"}, "repsText": "10", "rpeText": "7", "setIndex": 0, "sourceLog": {"actual_rir": null, "adhoc": false, "assumed": false, "completed": true, "exercise_id": "pulldown", "failed": false, "id": "log", "logged_at": "2026-11-08T14:00:00Z", "logged_date": "2026-11-08", "plan_exercise_id": "exercise", "reps": 10, "rpe": "7", "set_index": 0, "student_id": "student", "weight_kg": "57"}, "stableSetId": "set-1", "status": "complete", "weightText": "57"}, {"actual_rir": 2, "completed": true, "failed": false, "plan_exercise_id": "exercise", "reps": 10, "rpe": null, "set_index": 0, "weight_kg": "57"}, "edit"
+
+      170 |   });
+      171 |   await act(async () => confirm.props.onPress!({} as never));
+    > 172 |   expect(save).not.toHaveBeenCalled();
+          |                    ^
+      173 |   expect(pad().props.contextText).toBe('颈后高位下拉 · 第 2 组 · 重量');
+      174 |   await act(async () => pad().props.onCancel());
+      175 |   await act(async () => button(t('student.accessory.complete', [1])).props.onPress!({} as never));
+
+      at Object.toHaveBeenCalled (src/features/training/__tests__/accessory-rir-pad.test.tsx:172:20)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 9 skipped, 13 total
+Snapshots:   0 total
+Time:        1.036 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-rir-pad.test.tsx/i with tests matching "only the checkmark|original".

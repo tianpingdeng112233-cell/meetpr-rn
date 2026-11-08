@@ -1,0 +1,24 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/accessory-rir-pad.test.tsx
+
+PASS src/features/training/__tests__/accessory-rir-pad.test.tsx
+  ✓ 105r left retains and saves RIR without completing a new set (165 ms)
+  ✓ 105r backdrop retains and saves RIR without completing a new set (19 ms)
+  ✓ 105r back retains and saves RIR without completing a new set (17 ms)
+  ✓ 105r every keystroke updates the visible cell without saving prematurely (25 ms)
+  ✓ 105r opening and dismissing does not create or rewrite records: undefined (13 ms)
+  ✓ 105r opening and dismissing does not create or rewrite records: {"rpe":"7","completed":true} (16 ms)
+  ✓ 105r opening and dismissing does not create or rewrite records: {"rpe":null,"completed":true} (12 ms)
+  ✓ 105r dismissing 3 RPE restores the last committed value without writing (14 ms)
+  ✓ 105r dismissing empty RPE restores the last committed value without writing (14 ms)
+  ✓ 105r editing a saved RIR in RPE mode clears RIR and preserves completion (10 ms)
+  ✓ 105r an empty saved effort edits in the header mode and repeated dismissal remains writable (14 ms)
+  ✓ 105r saving effort preserves the exact stored weight when pounds are rounded for display (6 ms)
+  ✓ 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR (27 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        1.212 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-rir-pad.test.tsx/i.
