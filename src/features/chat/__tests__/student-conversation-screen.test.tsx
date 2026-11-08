@@ -5,7 +5,7 @@ import { day, plan, set } from '@/domain/plan/test-fixtures';
 import { isValidElement, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, AppState, Pressable, Text, TextInput, ScrollView, type AppStateStatus } from 'react-native';
+import { Alert, AppState, Pressable, StyleSheet, Text, TextInput, ScrollView, type AppStateStatus } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import { chatRepository, ChatMessageSchema, toSetRefWire, type ChatMessage } from '@/api/domains/chat';
 import { setLocaleOverride, t } from '@/i18n';
@@ -483,6 +483,48 @@ test('time separators include pending sends and collapse the old first separator
   } finally { jest.useRealTimers(); }
 });
 
+
+test('a loaded portrait feedback poster uses a left-aligned 240dp cover and remembers it on reentry', async () => {
+  const videoId = '40000000-0000-4000-8000-000000000001';
+  feedbackItems = [FeedbackItemSchema.parse({ id: coachId, student_id: studentId, coach_id: coachId, video_id: videoId,
+    day_date: null, plan_exercise_id: null, text: 'Watch your brace', posted_at: '2026-11-06T09:04:00Z', read_at: null,
+    video: { id: videoId, poster_url: 'https://video.example/portrait.jpg', duration_seconds: 65,
+      exercise_name: 'Very long low bar squat exercise name', set_index: 2 } })];
+  await renderScreen();
+  const cover = () => renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') })[0];
+  const coverStyle = () => StyleSheet.flatten(cover().props.style);
+  expect(coverStyle().height).toBe(150);
+  await act(async () => { renderer.root.findByType(Image).props.onLoad({ source: { width: 900, height: 1200 } }); });
+  expect(coverStyle()).toMatchObject({ height: 240, width: 180, alignSelf: 'flex-start' });
+  const label = renderer.root.findAllByType(Text).find(node => textContent(node.props.children).includes('Very long low bar'))!;
+  expect(label.props.numberOfLines).toBe(1);
+  expect(StyleSheet.flatten(label.props.style).maxWidth).toBe('100%');
+  expect(StyleSheet.flatten(label.props.style).color).toBe('#FFFFFF');
+  expect(copy()).toContain('1:05');
+  await act(async () => { renderer.unmount(); });
+  await renderScreen();
+  expect(coverStyle()).toMatchObject({ height: 240, width: 180 });
+  // Signed URL renewal still refers to the same video; the first render must retain its ratio.
+  feedbackItems = feedbackItems.map(item => {
+    const feedback = FeedbackItemSchema.parse(item);
+    return { ...feedback, video: { ...feedback.video, poster_url: 'https://video.example/portrait.jpg?renewed' } };
+  });
+  await act(async () => { await client.invalidateQueries({ queryKey: ['feedback', studentId] }); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(renderer.root.findByType(Image).props.source.uri).toContain('?renewed');
+  expect(coverStyle()).toMatchObject({ height: 240, width: 180 });
+  await act(async () => { renderer.root.findByType(Image).props.onError({ error: '403' }); });
+  expect(coverStyle().height).toBe(150);
+  expect(renderer.root.findAllByType(Image)).toHaveLength(0);
+  // Removing the poster must also ignore the remembered dimensions.
+  feedbackItems = feedbackItems.map(item => {
+    const feedback = FeedbackItemSchema.parse(item);
+    return { ...feedback, video: { ...feedback.video, poster_url: null } };
+  });
+  await act(async () => { await client.invalidateQueries({ queryKey: ['feedback', studentId] }); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(coverStyle().height).toBe(150);
+});
 
 test.each(['feedback', 'shared set'])('%s video uses wire poster and duration, falls back on failure, and accepts a refreshed URL', async kind => {
   const poster = 'https://video.example/poster.jpg?signature=first';

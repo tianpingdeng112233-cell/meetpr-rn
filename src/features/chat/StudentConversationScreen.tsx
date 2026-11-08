@@ -1,4 +1,4 @@
-import { ChatVideoCover } from './ChatVideoCover';
+import { ChatVideoCover, type PosterSize } from './ChatVideoCover';
 import { ChatTimeSeparator, chatTimeLocale } from './ChatTimeSeparator';
 import { startConversationRealtime, useChatRealtime } from './realtime';
 import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
@@ -24,7 +24,7 @@ import { feedbackKeys, feedbackRepository, type FeedbackResponse, type FeedbackI
 import { useQueryClient } from '@tanstack/react-query';
 import { markDashboardPlanSeen } from '@/features/dashboard/plan-seen';
 import { studentChatKeys, useStudentPlanNotice } from './open-coach-chat';
-import { chatTimeSeparators, mergeStudentTimeline, visibleFraction, videoLabel, type VerticalFrame, type StudentPlanNotice } from './student-timeline';
+import { feedbackCoverSize, chatTimeSeparators, mergeStudentTimeline, visibleFraction, videoLabel, type VerticalFrame, type StudentPlanNotice } from './student-timeline';
 import { useSessionStore } from '@/api/session';
 import { font, GradientFill, Screen, useColors } from '@/design';
 import { getLocale, t } from '@/i18n';
@@ -356,23 +356,42 @@ function StudentChatMessageRow({ message, outgoing, read, openVideo }: { message
   </View>;
 }
 
+// In-memory only: keep a video's ratio across card/screen remounts and signed URL renewal.
+const feedbackPosterSizes = new Map<string, PosterSize>();
+
 function StudentFeedbackChatCard({ feedback, videos, onPlay }: { feedback: FeedbackItem; videos: readonly StudentVideo[]; onPlay: () => void }) {
   const colors = useColors();
   const association = feedbackVideoAssociation(feedback.video_id, videos, feedback.video);
   const video = association.kind === 'available' ? association.video : null;
   const explicitlyUnavailable = feedback.video !== undefined && association.kind === 'unavailable';
-  return <View style={{ width: '88%', alignSelf: 'flex-start', backgroundColor: colors.surfaceCard, borderRadius: 16, borderTopLeftRadius: 5, borderBottomLeftRadius: 5, overflow: 'hidden', paddingHorizontal: 13, paddingVertical: 12, gap: 9 }}>
+  const videoId = video?.id;
+  const posterURL = video?.poster_url;
+  const [posterResult, setPosterResult] = useState<{ videoId: string; url: string; size: PosterSize | null } | null>(null);
+  const posterSize = videoId && posterURL
+    ? posterResult?.videoId === videoId && posterResult.url === posterURL ? posterResult.size : feedbackPosterSizes.get(videoId)
+    : null;
+  const [availableWidth, setAvailableWidth] = useState(0);
+  const coverSize = feedbackCoverSize(posterSize?.width, posterSize?.height, availableWidth);
+  function onPosterSize(size: PosterSize | null) {
+    if (!videoId || !posterURL) return;
+    if (size && Number.isFinite(size.width) && Number.isFinite(size.height) && size.width > 0 && size.height > 0) {
+      feedbackPosterSizes.set(videoId, size);
+    }
+    setPosterResult({ videoId, url: posterURL, size });
+  }
+  return <View onLayout={({ nativeEvent: { layout } }) => setAvailableWidth(Math.max(0, layout.width - 26))}
+    style={{ width: '88%', alignSelf: 'flex-start', backgroundColor: colors.surfaceCard, borderRadius: 16, borderTopLeftRadius: 5, borderBottomLeftRadius: 5, overflow: 'hidden', paddingHorizontal: 13, paddingVertical: 12, gap: 9 }}>
     <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: colors.gold500 }} />
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
       <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold500 }} />
       <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary, flex: 1 }}>{t('student.studentBlackGoldChatView.copy022')}</Text>
       {feedback.read_at == null ? <Text style={{ ...font.mono(9, 'bold'), letterSpacing: 0.72, color: colors.inkOnGold, backgroundColor: colors.goldText, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 20 }}>{t('student.studentBlackGoldChatView.copy023')}</Text> : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}><MaterialCommunityIcons name="check" size={11} color={colors.goldText} /><Text style={{ ...font.mono(11), color: colors.goldText }}>{t('student.studentBlackGoldChatView.copy016')}</Text></View>}
     </View>
-    {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={onPlay} style={{ height: 150, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+    {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={onPlay} style={{ height: coverSize.height, width: coverSize.width || '100%', alignSelf: 'flex-start', borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
       <GradientFill direction="diagonal" stops={[{ color: colors.borderStrong, offset: 0 }, { color: colors.surfaceCard, offset: 1 }]} />
-      <ChatVideoCover posterURL={video?.poster_url} durationSeconds={video?.duration_seconds} />
+      <ChatVideoCover posterURL={posterURL} durationSeconds={video?.duration_seconds} onPosterSize={onPosterSize} />
       <View style={{ position: 'absolute', top: 8, left: 9, right: 9, alignItems: 'flex-start' }}>
-        <Text style={{ ...font.mono(11), color: colors.textPrimary, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>{videoLabel(video)}</Text>
+        <Text numberOfLines={coverSize.height === 240 ? 1 : undefined} ellipsizeMode="tail" style={{ maxWidth: '100%', ...font.mono(11), color: colors.ctaTopHighlight, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>{videoLabel(video)}</Text>
       </View>
     </Pressable> : null}
     <Text style={{ ...font.body(14), color: colors.textPrimary, lineHeight: 21 }}>{feedback.text}</Text>

@@ -6,6 +6,13 @@ import type { DashboardPlanSignature } from '@/features/dashboard/plan-seen';
 
 export type StudentPlanNotice = { signature: DashboardPlanSignature; weekIndex: number };
 
+export function feedbackCoverSize(width: number | null | undefined, height: number | null | undefined, availableWidth: number): { width: number; height: number } {
+  if (width != null && height != null && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > width) {
+    return { width: Math.max(135, 240 * width / height), height: 240 };
+  }
+  return { width: availableWidth, height: 150 };
+}
+
 /** Local send times anchor grouping across acknowledgement; labels use current server timestamps. */
 export function chatTimeSeparators(timestamps: readonly string[], now: Date, locale: string, groupingTimestamps: readonly string[] = timestamps): { index: number; label: string }[] {
   return timestamps.flatMap((timestamp, index) => {

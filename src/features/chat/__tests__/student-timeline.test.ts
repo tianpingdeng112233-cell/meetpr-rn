@@ -1,9 +1,25 @@
 import { expect, test } from '@jest/globals';
 import type { ChatMessage } from '@/api/domains/chat';
 import type { FeedbackItem } from '@/api/domains/feedback';
-import { chatTimeSeparators, sharedSetAttachment, mergeStudentTimeline, visibleFraction, videoLabel, videoDuration, totalUnreadCount } from '../student-timeline';
+import { feedbackCoverSize, chatTimeSeparators, sharedSetAttachment, mergeStudentTimeline, visibleFraction, videoLabel, videoDuration, totalUnreadCount } from '../student-timeline';
 
 import { setLocaleOverride, t } from '@/i18n';
+
+test('portrait feedback covers use 240dp height and preserve the image ratio with a 135dp minimum width', () => {
+  expect(feedbackCoverSize(900, 1200, 300)).toEqual({ width: 180, height: 240 });
+  expect(feedbackCoverSize(400, 1200, 300)).toEqual({ width: 135, height: 240 });
+});
+
+test.each([
+  ['landscape', 1200, 900],
+  ['square', 900, 900],
+  ['missing', undefined, undefined],
+  ['empty', null, null],
+  ['zero width', 0, 1200],
+  ['invalid height', 900, Infinity],
+])('%s feedback covers keep the full available width and 150dp height', (_kind, width, height) => {
+  expect(feedbackCoverSize(width, height, 300)).toEqual({ width: 300, height: 150 });
+});
 
 test('interleaves messages, unseen plan and feedback chronologically with ID ties', () => {
   const messages = [{ id: 'z', created_at: '2026-09-05T09:03:00Z' }, { id: 'a', created_at: '2026-09-05T09:01:00Z' }] as ChatMessage[];
