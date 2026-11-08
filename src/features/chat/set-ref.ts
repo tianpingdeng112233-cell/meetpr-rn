@@ -126,7 +126,7 @@ export class SetRefPickerPresentation {
 }
 
 export const SetRefEntryVisibility = {
-  shouldShow: ({ isEditable, hasAvailableSet, hasActiveCoach, hasSharingContext }: {
-    isEditable: boolean; hasAvailableSet: boolean; hasActiveCoach: boolean; hasSharingContext: boolean;
-  }) => isEditable && hasAvailableSet && hasActiveCoach && hasSharingContext,
+  shouldShow: ({ isEditable, hasAvailableSet, hasActiveCoach, hasSharingContext, isDayCompleted }: {
+    isEditable: boolean; hasAvailableSet: boolean; hasActiveCoach: boolean; hasSharingContext: boolean; isDayCompleted: boolean;
+  }) => isEditable && !isDayCompleted && hasAvailableSet && hasActiveCoach && hasSharingContext,
 };

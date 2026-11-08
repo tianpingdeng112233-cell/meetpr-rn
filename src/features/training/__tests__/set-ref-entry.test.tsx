@@ -1,10 +1,14 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Text, TextInput } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeProvider } from '@/design/theme';
 import { SetRefEntryVisibility } from '@/features/chat/set-ref';
 import { WorkoutBody } from '../WorkoutBody';
 import { day, set } from '@/domain/plan/test-fixtures';
 import { synthesizeDrafts } from '../drafts';
+import { needsSetResult } from '../exercise-progress';
+import type { DraftStatus } from '../model';
 import { t } from '@/i18n';
 import { SetRefSharePicker } from '@/features/chat/SetRefSharePicker';
 import { useSetRefStagingStore } from '@/features/chat/set-ref-staging';
@@ -27,14 +31,58 @@ const cases = [
   [true, true, true, false, false], [true, true, true, true, true],
 ];
 test.each(cases)('entry visibility editable=%s sets=%s coach=%s context=%s => %s', (isEditable, hasAvailableSet, hasActiveCoach, hasSharingContext, expected) => {
-  expect(SetRefEntryVisibility.shouldShow({ isEditable, hasAvailableSet, hasActiveCoach, hasSharingContext })).toBe(expected);
+  expect(SetRefEntryVisibility.shouldShow({ isEditable, hasAvailableSet, hasActiveCoach, hasSharingContext, isDayCompleted: false })).toBe(expected);
+});
+test('a settled day hides Ask coach even while it remains editable', () => {
+  expect(SetRefEntryVisibility.shouldShow({ isEditable: true, hasAvailableSet: true,
+    hasActiveCoach: true, hasSharingContext: true, isDayCompleted: true })).toBe(false);
 });
 let renderer: ReactTestRenderer;
-afterEach(() => { act(() => renderer?.unmount()); jest.restoreAllMocks(); });
+afterEach(async () => { act(() => renderer?.unmount()); jest.restoreAllMocks(); await AsyncStorage.removeItem('meetpr.appearance'); });
 test.each([true, false])('hero Ask coach obeys editable=%s', async editable => {
   const planDay = day('day', { exercises: [{ id: 'exercise', plan_day_id: 'day', exercise_id: 'squat', sort_order: 0, is_main_lift: true, notes: null, sets: [set()] }] });
   await act(async () => { renderer = create(<WorkoutBody exercises={planDay.exercises} drafts={synthesizeDrafts(planDay, [])} editable={editable} recording={false} startLoading={false} onStart={() => {}} suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[]} studentId="student" onVideo={() => {}} onRecord={() => {}} onToggleComplete={() => {}} resolveExerciseMetadata={() => null} onAskCoach={() => {}} />); });
   expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.askCoach'))).toBe(editable);
+});
+
+const workoutStates: { name: string; statuses: DraftStatus[]; recording: boolean; visible: boolean }[] = [
+  { name: 'before starting', statuses: ['pending', 'pending'], recording: false, visible: true },
+  { name: 'during training', statuses: ['complete', 'pending'], recording: true, visible: true },
+  { name: 'all sets finished before settling', statuses: ['complete', 'failed'], recording: true, visible: false },
+  { name: 'all sets finished with recording off', statuses: ['complete', 'complete'], recording: false, visible: false },
+];
+test.each(workoutStates)('entry visibility $name', ({ statuses, visible }) => {
+  const planDay = day('day', { exercises: [{ id: 'exercise', plan_day_id: 'day', exercise_id: 'squat', sort_order: 0,
+    is_main_lift: true, notes: null, sets: [set(), set({ id: 'set-2', set_number: 2 })] }] });
+  const drafts = synthesizeDrafts(planDay, []).map((draft, index) => ({ ...draft, status: statuses[index] }));
+  expect(SetRefEntryVisibility.shouldShow({ isEditable: true, hasAvailableSet: drafts.some(needsSetResult),
+    hasActiveCoach: true, hasSharingContext: true, isDayCompleted: false })).toBe(visible);
+});
+test.each(['light', 'dark'] as const)('%s Ask coach follows workout progress and keeps its active-set action', async scheme => {
+  await AsyncStorage.setItem('meetpr.appearance', scheme);
+  const planDay = day('day', { exercises: [{ id: 'exercise', plan_day_id: 'day', exercise_id: 'squat', sort_order: 0,
+    is_main_lift: true, notes: null, sets: [set(), set({ id: 'set-2', set_number: 2 })] }] });
+  for (const state of workoutStates) {
+    const drafts = synthesizeDrafts(planDay, []).map((draft, index) => ({ ...draft, status: state.statuses[index] }));
+    const onAskCoach = jest.fn();
+    await act(async () => { renderer = create(<ThemeProvider><WorkoutBody exercises={planDay.exercises} drafts={drafts}
+      editable recording={state.recording} startLoading={false} onStart={() => {}}
+      suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[]} studentId="student"
+      onVideo={() => {}} onRecord={() => {}} onToggleComplete={() => {}} resolveExerciseMetadata={() => null}
+      onAskCoach={onAskCoach} /></ThemeProvider>); });
+    const buttons = renderer.root.findAll(node => node.props.accessibilityRole === 'button'
+      && node.props.accessibilityLabel === t('student.askCoach') && node.props.onPress);
+    expect({ state: state.name, visible: buttons.length > 0 }).toEqual({ state: state.name, visible: state.visible });
+    if (state.visible) {
+      const label = buttons[0].findByType(Text);
+      const background = buttons[0].findAllByType(View).map(node => StyleSheet.flatten(node.props.style)?.backgroundColor).find(Boolean);
+      expect(StyleSheet.flatten(label.props.style).color).toBe(scheme === 'dark' ? '#EDEDED' : '#111827');
+      expect(background).toBe(scheme === 'dark' ? '#141416' : '#FFFFFF');
+      act(() => buttons[0].props.onPress());
+      expect(onAskCoach).toHaveBeenCalledWith(drafts.find(needsSetResult));
+    }
+    act(() => renderer.unmount());
+  }
 });
 
 test('the current-set camera and Log actions deliver the same active draft to their respective callbacks', async () => {

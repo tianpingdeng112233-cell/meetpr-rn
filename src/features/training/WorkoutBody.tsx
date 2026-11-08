@@ -489,7 +489,7 @@ export function WorkoutBody({
               t('student.todayWorkoutPresentation.copy003', [active.exerciseOrdinal + 1, groups.length]),
             ].filter(Boolean).join(' · ')}</Text>}
           </View> : <Text style={{ color: colors.textPrimary, ...font.display(22), flex: 1 }}>{preview?.title ?? (recording && active ? exerciseTitle(resolveExerciseMetadata(active.exercise.exercise_id)) : t('student.todayWorkoutScreen.copy017'))}</Text>}
-          {editable && active && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
+          {editable && active && needsSetResult(active) && onAskCoach ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.askCoach')} disabled={preparingShare} onPress={() => onAskCoach(active)} style={{ minHeight: 44, justifyContent: 'center' }}>
             <View style={{ minHeight: 36, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard }}>
               {preparingShare ? <ActivityIndicator size="small" color={colors.textTertiary} /> : <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary }}>{t('student.askCoach')}</Text>}
             </View>

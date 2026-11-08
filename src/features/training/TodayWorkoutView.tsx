@@ -97,6 +97,7 @@ import { workoutCompletionPresentation, type CompletionReference } from './compl
 import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
 import { isDraftTerminal, synthesizeDrafts, studentAddedDrafts, addExtraDraft, addStudentExercise, addStudentSet } from './drafts';
 import { recordTrainingSetE1RM } from './e1rm-live';
+import { needsSetResult } from './exercise-progress';
 import {
   exerciseTitle,
   createExerciseMetadataResolver,
@@ -971,8 +972,9 @@ export function TodayWorkoutView() {
     setQuickLogPlan(initial);
   };
 
-  const showsSetRefEntry = SetRefEntryVisibility.shouldShow({ isEditable: editable, hasAvailableSet: liveDrafts.length > 0,
-    hasActiveCoach: binding.data?.bind_request?.status === 'accepted', hasSharingContext: Boolean(studentId) });
+  const showsSetRefEntry = SetRefEntryVisibility.shouldShow({ isEditable: editable, hasAvailableSet: liveDrafts.some(needsSetResult),
+    hasActiveCoach: binding.data?.bind_request?.status === 'accepted', hasSharingContext: Boolean(studentId),
+    isDayCompleted: dayState?.kind === 'completed' });
   async function openSetRefPicker(draft: WorkoutSetDraft) {
     const bound = binding.data?.bind_request;
     if (preparingShareRef.current || !showsSetRefEntry || bound?.status !== 'accepted') return;
