@@ -1,0 +1,179 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/accessory-rir-pad.test.tsx src/features/training/__tests__/set-save.test.tsx -t 105r
+
+FAIL src/features/training/__tests__/accessory-rir-pad.test.tsx
+  ● 105r left retains and saves RIR without completing a new set
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "2"
+    Received: ""
+
+      54 |   await pressKey('2');
+      55 |   await closePad(action);
+    > 56 |   expect(button('Set 1 RIR').props.accessibilityValue.text).toBe('2');
+         |                                                             ^
+      57 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actual_rir: 2, rpe: null, completed: false }), 'edit');
+      58 |   expect(button('Complete set 1')).toBeDefined();
+      59 | });
+
+      at toBe (src/features/training/__tests__/accessory-rir-pad.test.tsx:56:61)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r backdrop retains and saves RIR without completing a new set
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "2"
+    Received: ""
+
+      54 |   await pressKey('2');
+      55 |   await closePad(action);
+    > 56 |   expect(button('Set 1 RIR').props.accessibilityValue.text).toBe('2');
+         |                                                             ^
+      57 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actual_rir: 2, rpe: null, completed: false }), 'edit');
+      58 |   expect(button('Complete set 1')).toBeDefined();
+      59 | });
+
+      at toBe (src/features/training/__tests__/accessory-rir-pad.test.tsx:56:61)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r back retains and saves RIR without completing a new set
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "2"
+    Received: ""
+
+      54 |   await pressKey('2');
+      55 |   await closePad(action);
+    > 56 |   expect(button('Set 1 RIR').props.accessibilityValue.text).toBe('2');
+         |                                                             ^
+      57 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ actual_rir: 2, rpe: null, completed: false }), 'edit');
+      58 |   expect(button('Complete set 1')).toBeDefined();
+      59 | });
+
+      at toBe (src/features/training/__tests__/accessory-rir-pad.test.tsx:56:61)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r every keystroke updates the visible cell without saving prematurely
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "7"
+    Received: "57"
+
+      64 |   for (const [key, text] of [['7', '7'], [t('designSystem.numberPad.decimalPoint'), '7.'], ['5', '7.5'], [t('designSystem.numberPad.backspace'), '7.']]) {
+      65 |     await pressKey(key);
+    > 66 |     expect(button('Set 1 weight').props.accessibilityValue.text).toBe(text);
+         |                                                                  ^
+      67 |   }
+      68 |   expect(save).not.toHaveBeenCalled();
+      69 | });
+
+      at Object.toBe (src/features/training/__tests__/accessory-rir-pad.test.tsx:66:66)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r editing a saved RIR in RPE mode clears RIR and preserves completion
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: ""
+    Received: "2"
+
+      92 |   const save = await mountEntry({ actual_rir: 2, completed: true });
+      93 |   await act(async () => button('Set 1 RIR').props.onPress!({} as never));
+    > 94 |   expect(pad().props.initialValue).toBe('');
+         |                                    ^
+      95 |   await pressKey('8');
+      96 |   await closePad('left');
+      97 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ rpe: '8', actual_rir: null, completed: true }), 'edit');
+
+      at Object.toBe (src/features/training/__tests__/accessory-rir-pad.test.tsx:94:36)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r an empty saved effort edits in the header mode and repeated dismissal remains writable
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      104 |   await pressKey('2');
+      105 |   await closePad('backdrop');
+    > 106 |   await act(async () => button('Set 1 RIR').props.onPress!({} as never));
+          |                                            ^
+      107 |   await pressKey('0');
+      108 |   await closePad('left');
+      109 |   expect(save).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ rpe: null, actual_rir: 0, completed: true }), 'edit');
+
+      at src/features/training/__tests__/accessory-rir-pad.test.tsx:106:44
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at ../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at ../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (../meetpr-rn-wt-106/node_modules/react/cjs/react.development.js:814:22)
+      at Object.<anonymous> (src/features/training/__tests__/accessory-rir-pad.test.tsx:106:12)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "context": "颈后高位下拉 · 第 1 组 · RIR",
+    -   "disabled": false,
+    +   "context": "颈后高位下拉 · 第 1 组 · RPE",
+    +   "disabled": true,
+      }
+
+      156 |   });
+      157 |   expect(displayTexts.map(node => node.props.children)).toContain('2');
+    > 158 |   expect({ context: pad().props.contextText, disabled: confirm.props.disabled }).toEqual({
+          |                                                                                  ^
+      159 |     context: '颈后高位下拉 · 第 1 组 · RIR', disabled: false,
+      160 |   });
+      161 |   await act(async () => confirm.props.onPress!({} as never));
+
+      at Object.toEqual (src/features/training/__tests__/accessory-rir-pad.test.tsx:158:82)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/features/training/__tests__/set-save.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (../meetpr-rn-wt-106/node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (../meetpr-rn-wt-106/node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (../meetpr-rn-wt-106/node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/__tests__/set-save.test.tsx:16:1)
+
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       7 failed, 43 skipped, 7 passed, 57 total
+Snapshots:   0 total
+Time:        2.038 s, estimated 3 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-rir-pad.test.tsx|src\/features\/training\/__tests__\/set-save.test.tsx/i with tests matching "105r".

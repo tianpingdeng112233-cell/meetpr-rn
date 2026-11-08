@@ -1,0 +1,464 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/accessory-log-card.test.tsx src/features/training/__tests__/set-save.test.tsx src/features/training/__tests__/load-types-entry.test.tsx src/features/training/__tests__/number-pad-visibility.test.tsx src/features/training/__tests__/set-entry-camera-presentation.test.tsx src/features/training/__tests__/quick-log-entry.test.tsx
+
+FAIL src/features/training/__tests__/accessory-log-card.test.tsx
+  ● 105 Next commits in weight, reps, effort order across sets and the final commit closes
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Leg press · Set 3 · RIR"
+    Received: "Leg press · Set 3 · RPE"
+
+      102 |   ] as const) {
+      103 |     await act(async () => pad().props.onNext(value));
+    > 104 |     expect(pad().props.contextText).toBe(`Leg press · ${context}`);
+          |                                     ^
+      105 |   }
+      106 |   expect(pad().props.onNext).toBeUndefined();
+      107 |   await act(async () => pad().props.onCommit(2));
+
+      at toBe (src/features/training/__tests__/accessory-log-card.test.tsx:104:37)
+          at _loop.next (<anonymous>)
+      at Object._loop (src/features/training/__tests__/accessory-log-card.test.tsx:98:29)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● busy duplicate does not add tick vibration; batch retains button feedback without a 15ms tick and failures keep input
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 2
+
+      268 |   await enterNumber(renderer, 'Set 1 weight', '95');
+      269 |   await act(async () => { button('Complete set 1').props.onPress(); button('Complete set 1').props.onPress(); });
+    > 270 |   expect(save).toHaveBeenCalledTimes(1);
+          |                ^
+      271 |   expect(vibrate).toHaveBeenCalledTimes(1);
+      272 |   await act(async () => reject(new Error('Offline')));
+      273 |   expect(input('Set 1 weight').props.accessibilityValue.text).toBe('95');
+
+      at Object.toHaveBeenCalledTimes (src/features/training/__tests__/accessory-log-card.test.tsx:270:16)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105 cancel discards only the current field, leaving earlier Next commits intact
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "5"
+    Received: "9"
+
+      311 |   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+      312 |   expect(input('Set 1 weight').props.accessibilityValue.text).toBe('7.5');
+    > 313 |   expect(input('Set 1 reps').props.accessibilityValue.text).toBe('5');
+          |                                                             ^
+      314 | });
+      315 |
+      316 | test.each(['RPE', 'RIR'] as const)('105 deleting optional %s clears it while required fields retain committed values', async effort => {
+
+      at toBe (src/features/training/__tests__/accessory-log-card.test.tsx:313:61)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105 backdrop discards only the current field, leaving earlier Next commits intact
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "5"
+    Received: "9"
+
+      311 |   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+      312 |   expect(input('Set 1 weight').props.accessibilityValue.text).toBe('7.5');
+    > 313 |   expect(input('Set 1 reps').props.accessibilityValue.text).toBe('5');
+          |                                                             ^
+      314 | });
+      315 |
+      316 | test.each(['RPE', 'RIR'] as const)('105 deleting optional %s clears it while required fields retain committed values', async effort => {
+
+      at toBe (src/features/training/__tests__/accessory-log-card.test.tsx:313:61)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105 the keypad blocks invalid RPE commits and disables the decimal key for RIR
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      336 |   await act(async () => pad().props.onCancel());
+      337 |   await act(async () => input('Set 3 RIR').props.onPress());
+    > 338 |   expect(pad().findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('designSystem.numberPad.decimalPoint'))!.props.disabled).toBe(true);
+          |                                                                                                                                                           ^
+      339 | });
+      340 |
+      341 | test('105 accessory reps reject 100 without advancing or committing and accept 99', async () => {
+
+      at Object.toBe (src/features/training/__tests__/accessory-log-card.test.tsx:338:155)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● 105 accessory reps reject 100 without advancing or committing and accept 99
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "5"
+    Received: "100"
+
+      350 |   await act(async () => confirm.props.onPress!({} as never));
+      351 |   expect(pad().props.contextText).toBe('Leg press · Set 1 · Reps');
+    > 352 |   expect(input('Set 1 reps').props.accessibilityValue.text).toBe('5');
+          |                                                             ^
+      353 |   await act(async () => pad().props.onCancel());
+      354 |   await enterNumber(renderer, 'Set 1 reps', '99');
+      355 |   expect(input('Set 1 reps').props.accessibilityValue.text).toBe('99');
+
+      at Object.toBe (src/features/training/__tests__/accessory-log-card.test.tsx:352:61)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/features/training/__tests__/quick-log-entry.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (../meetpr-rn-wt-106/node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (../meetpr-rn-wt-106/node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (../meetpr-rn-wt-106/node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:122:1)
+      at Object.require (src/features/training/__tests__/quick-log-entry.test.tsx:11:1)
+
+PASS src/features/training/__tests__/load-types-entry.test.tsx
+PASS src/features/training/__tests__/number-pad-visibility.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (../meetpr-rn-wt-106/node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (../meetpr-rn-wt-106/node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (../meetpr-rn-wt-106/node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:122:1)
+      at Object.require (src/features/training/__tests__/number-pad-visibility.test.tsx:12:1)
+
+PASS src/features/training/__tests__/set-entry-camera-presentation.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (../meetpr-rn-wt-106/node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (../meetpr-rn-wt-106/node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (../meetpr-rn-wt-106/node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/__tests__/set-entry-camera-presentation.test.tsx:7:1)
+
+FAIL src/features/training/__tests__/set-save.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (../meetpr-rn-wt-106/node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (../meetpr-rn-wt-106/node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (../meetpr-rn-wt-106/node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (../meetpr-rn-wt-106/node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/SetEntrySheet.tsx:9:1)
+      at Object.require (src/features/training/__tests__/set-save.test.tsx:16:1)
+
+  ● accessory check saves ordinary data, prevents double taps and rests with preference undefined / coach null
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 13
+
+    @@ -1,10 +1,22 @@
+      Array [
+    -   ObjectContaining {
+    +   Object {
+    +     "actual_rir": null,
+    +     "completed": false,
+    +     "failed": false,
+    +     "logged_date": "2026-11-08",
+    +     "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+    +     "reps": 5,
+    +     "rpe": null,
+    +     "set_index": 1,
+    +     "weight_kg": "82.5",
+    +   },
+    +   Object {
+          "actual_rir": null,
+          "completed": true,
+          "failed": false,
+    +     "logged_date": "2026-11-08",
+          "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+          "reps": 5,
+          "rpe": null,
+          "set_index": 1,
+          "weight_kg": "82.5",
+
+      423 |   expect(accessoryButton('Complete set 1').props.disabled).toBe(false);
+      424 |   await act(async () => { release(); });
+    > 425 |   expect(setBodies()).toEqual([expect.objectContaining({ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, actual_rir: null, completed: true, failed: false })]);
+          |                       ^
+      426 |   expect(accessoryButton('Undo set 2')).toBeDefined();
+      427 |   expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(seconds);
+      428 |   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
+
+      at toEqual (src/features/training/__tests__/set-save.test.tsx:425:23)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accessory check saves ordinary data, prevents double taps and rests with preference 90 / coach null
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 13
+
+    @@ -1,10 +1,22 @@
+      Array [
+    -   ObjectContaining {
+    +   Object {
+    +     "actual_rir": null,
+    +     "completed": false,
+    +     "failed": false,
+    +     "logged_date": "2026-11-08",
+    +     "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+    +     "reps": 5,
+    +     "rpe": null,
+    +     "set_index": 1,
+    +     "weight_kg": "82.5",
+    +   },
+    +   Object {
+          "actual_rir": null,
+          "completed": true,
+          "failed": false,
+    +     "logged_date": "2026-11-08",
+          "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+          "reps": 5,
+          "rpe": null,
+          "set_index": 1,
+          "weight_kg": "82.5",
+
+      423 |   expect(accessoryButton('Complete set 1').props.disabled).toBe(false);
+      424 |   await act(async () => { release(); });
+    > 425 |   expect(setBodies()).toEqual([expect.objectContaining({ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, actual_rir: null, completed: true, failed: false })]);
+          |                       ^
+      426 |   expect(accessoryButton('Undo set 2')).toBeDefined();
+      427 |   expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(seconds);
+      428 |   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
+
+      at toEqual (src/features/training/__tests__/set-save.test.tsx:425:23)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● accessory check saves ordinary data, prevents double taps and rests with preference 90 / coach 75
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 13
+
+    @@ -1,10 +1,22 @@
+      Array [
+    -   ObjectContaining {
+    +   Object {
+    +     "actual_rir": null,
+    +     "completed": false,
+    +     "failed": false,
+    +     "logged_date": "2026-11-08",
+    +     "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+    +     "reps": 5,
+    +     "rpe": null,
+    +     "set_index": 1,
+    +     "weight_kg": "82.5",
+    +   },
+    +   Object {
+          "actual_rir": null,
+          "completed": true,
+          "failed": false,
+    +     "logged_date": "2026-11-08",
+          "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+          "reps": 5,
+          "rpe": null,
+          "set_index": 1,
+          "weight_kg": "82.5",
+
+      423 |   expect(accessoryButton('Complete set 1').props.disabled).toBe(false);
+      424 |   await act(async () => { release(); });
+    > 425 |   expect(setBodies()).toEqual([expect.objectContaining({ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, actual_rir: null, completed: true, failed: false })]);
+          |                       ^
+      426 |   expect(accessoryButton('Undo set 2')).toBeDefined();
+      427 |   expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(seconds);
+      428 |   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
+
+      at toEqual (src/features/training/__tests__/set-save.test.tsx:425:23)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and transport failures keep the latest local values
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "completed": true,
+    +   "completed": false,
+        "weight_kg": "25",
+      }
+
+      454 |   await enterNumber(renderer, 'Set 1 weight', '55.1');
+      455 |   await act(async () => accessoryButton('Complete set 1').props.onPress());
+    > 456 |   expect(setBodies()[1]).toMatchObject({ completed: true, weight_kg: '25' });
+          |                          ^
+      457 |   await enterNumber(renderer, 'Set 1 reps', '12');
+      458 |   expect(accessoryButton('Complete set 1')).toBeDefined();
+      459 |   failNext = true;
+
+      at Object.toMatchObject (src/features/training/__tests__/set-save.test.tsx:456:26)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● complete all submits serially without rest, leaves 0 empty rows and keeps all local completions on transport failure
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        0,
+    -   1,
+    +   0,
+      ]
+
+      509 |   expect(setBodies().map(body => body.set_index)).toEqual([0]);
+      510 |   await act(async () => release());
+    > 511 |   expect(setBodies().map(body => body.set_index)).toEqual([0, 1]);
+          |                                                   ^
+      512 |   expect(setBodies()[0]).toMatchObject({ completed: true, failed: false, rpe: '7' });
+      513 |   expect(setBodies()[1]).toMatchObject({ completed: true, failed: false, rpe: null });
+      514 |   expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
+
+      at toEqual (src/features/training/__tests__/set-save.test.tsx:511:51)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● complete all submits serially without rest, leaves 1 empty rows and keeps all local completions on transport failure
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        0,
+    -   1,
+    +   0,
+      ]
+
+      509 |   expect(setBodies().map(body => body.set_index)).toEqual([0]);
+      510 |   await act(async () => release());
+    > 511 |   expect(setBodies().map(body => body.set_index)).toEqual([0, 1]);
+          |                                                   ^
+      512 |   expect(setBodies()[0]).toMatchObject({ completed: true, failed: false, rpe: '7' });
+      513 |   expect(setBodies()[1]).toMatchObject({ completed: true, failed: false, rpe: null });
+      514 |   expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
+
+      at toEqual (src/features/training/__tests__/set-save.test.tsx:511:51)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● complete all submits serially without rest, leaves 2 empty rows and keeps all local completions on transport failure
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        0,
+    -   1,
+    +   0,
+      ]
+
+      509 |   expect(setBodies().map(body => body.set_index)).toEqual([0]);
+      510 |   await act(async () => release());
+    > 511 |   expect(setBodies().map(body => body.set_index)).toEqual([0, 1]);
+          |                                                   ^
+      512 |   expect(setBodies()[0]).toMatchObject({ completed: true, failed: false, rpe: '7' });
+      513 |   expect(setBodies()[1]).toMatchObject({ completed: true, failed: false, rpe: null });
+      514 |   expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
+
+      at toEqual (src/features/training/__tests__/set-save.test.tsx:511:51)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 2 failed, 4 passed, 6 total
+Tests:       13 failed, 103 passed, 116 total
+Snapshots:   0 total
+Time:        10.929 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-log-card.test.tsx|src\/features\/training\/__tests__\/set-save.test.tsx|src\/features\/training\/__tests__\/load-types-entry.test.tsx|src\/features\/training\/__tests__\/number-pad-visibility.test.tsx|src\/features\/training\/__tests__\/set-entry-camera-presentation.test.tsx|src\/features\/training\/__tests__\/quick-log-entry.test.tsx/i.
+Jest did not exit one second after the test run has completed.
+
+'This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue.

@@ -2504,5 +2504,6 @@
   "student.videoDelivery.complete": "今日訓練已完成，{0} 條影片已送達",
   "student.videoDelivery.completeOne": "今日訓練已完成，1 條影片已送達",
   "student.videoDelivery.videoTimeout": "還有 {0} 條影片沒傳上，點選重試",
-  "student.videoDelivery.videoTimeoutOne": "還有 1 條影片沒傳上，點選重試"
+  "student.videoDelivery.videoTimeoutOne": "還有 1 條影片沒傳上，點選重試",
+  "training.numberPad.dismiss": "收起"
 }

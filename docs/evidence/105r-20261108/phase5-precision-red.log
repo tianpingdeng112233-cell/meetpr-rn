@@ -1,0 +1,45 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/accessory-rir-pad.test.tsx -t exact stored weight
+
+FAIL src/features/training/__tests__/accessory-rir-pad.test.tsx
+  ✕ 105r saving effort preserves the exact stored weight when pounds are rounded for display (164 ms)
+  ○ skipped 105r left retains and saves RIR without completing a new set
+  ○ skipped 105r backdrop retains and saves RIR without completing a new set
+  ○ skipped 105r back retains and saves RIR without completing a new set
+  ○ skipped 105r every keystroke updates the visible cell without saving prematurely
+  ○ skipped 105r opening and dismissing does not create or rewrite records: undefined
+  ○ skipped 105r opening and dismissing does not create or rewrite records: {"rpe":"7","completed":true}
+  ○ skipped 105r opening and dismissing does not create or rewrite records: {"rpe":null,"completed":true}
+  ○ skipped 105r dismissing 3 RPE restores the last committed value without writing
+  ○ skipped 105r dismissing empty RPE restores the last committed value without writing
+  ○ skipped 105r editing a saved RIR in RPE mode clears RIR and preserves completion
+  ○ skipped 105r an empty saved effort edits in the header mode and repeated dismissal remains writable
+  ○ skipped 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR
+
+  ● 105r saving effort preserves the exact stored weight when pounds are rounded for display
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: Anything, ObjectContaining {"completed": true, "rpe": "8", "weight_kg": "80.123"}, "edit"
+    Received: {"effortKind": "rpe", "exercise": {"exercise_id": "pulldown", "id": "exercise", "is_main_lift": false, "notes": null, "plan_day_id": "day", "sets": [{"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-2", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 2, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}], "sort_order": 0}, "exerciseOrdinal": 0, "planSet": {"coach_note": null, "created_at": "2026-09-01T12:00:00Z", "id": "set-1", "intensity_mode": "weight", "plan_exercise_id": "exercise", "rest_seconds": null, "set_number": 1, "set_type": "working", "target_reps": 10, "target_reps_max": null, "target_value": "57"}, "repsText": "10", "rpeText": "7", "setIndex": 0, "sourceLog": {"actual_rir": null, "adhoc": false, "assumed": false, "completed": true, "exercise_id": "pulldown", "failed": false, "id": "log", "logged_at": "2026-11-08T14:00:00Z", "logged_date": "2026-11-08", "plan_exercise_id": "exercise", "reps": 10, "rpe": "7", "set_index": 0, "student_id": "student", "weight_kg": "80.123"}, "stableSetId": "set-1", "status": "complete", "weightText": "80.1"}, {"actual_rir": null, "completed": true, "failed": false, "plan_exercise_id": "exercise", "reps": 10, "rpe": "8", "set_index": 0, "weight_kg": "80.1"}, "edit"
+
+    Number of calls: 1
+
+      115 |   await pressKey('8');
+      116 |   await closePad('left');
+    > 117 |   expect(save).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ weight_kg: '80.123', rpe: '8', completed: true }), 'edit');
+          |                ^
+      118 | });
+      119 |
+      120 | test('105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR', async () => {
+
+      at Object.toHaveBeenCalledWith (src/features/training/__tests__/accessory-rir-pad.test.tsx:117:16)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 12 skipped, 13 total
+Snapshots:   0 total
+Time:        0.978 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-rir-pad.test.tsx/i with tests matching "exact stored weight".

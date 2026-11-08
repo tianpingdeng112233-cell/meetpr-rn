@@ -6,7 +6,8 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { AppButton, font, fontMetrics, radius, spacing, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { showToast } from '@/design/Toast';
-import { NumberPad } from '@/design/NumberPad';
+import { NumberPad, type NumberPadHandle } from '@/design/NumberPad';
+import type { NumberPadField } from '@/design/number-pad';
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { t } from '@/i18n';
 import { effectiveLoadMode } from '@/domain/plan/prescription';
@@ -67,7 +68,8 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
   const [batchBusy, setBatchBusy] = useState(false);
   const [showSkipped, setShowSkipped] = useState(false);
   const [attempted, setAttempted] = useState<ReadonlySet<string>>(new Set());
-  const [active, setActive] = useState<{ index: number; field: typeof fields[number][0] } | null>(null);
+  const pad = useRef<NumberPadHandle>(null);
+  const [active, setActive] = useState<{ index: number; field: typeof fields[number][0]; kind: NumberPadField; initialValue: string; preview?: string } | null>(null);
   const saving = useRef(new Set<string>());
   const [busyRows, setBusyRows] = useState<ReadonlySet<string>>(new Set());
   const videos = useVideoUploadStore(state => state.records);
@@ -89,8 +91,8 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     if (!activeRowId) return;
     onPadLayout?.(rowViews.current[activeRowId], panelLayout);
     return () => onPadLayout?.(null, null);
-  }, [active, activeRowId, panelLayout, onPadLayout]);
-  const fieldKind = (index: number, field: typeof fields[number][0]) => field === 'weightText' ? 'weight' : field === 'repsText' ? 'reps' : inputFor(index).effortKind === 'rir' ? 'rir' : 'rpe';
+  }, [active?.field, activeRowId, panelLayout, onPadLayout]);
+  const fieldKind = (index: number, field: typeof fields[number][0]) => field === 'weightText' ? 'weight' : field === 'repsText' ? 'reps' : (allowsRIR ? headerKind : inputFor(index).effortKind) === 'rir' ? 'rir' : 'rpe';
   const fieldTitle = (index: number, field: typeof fields[number][0]) => {
     const kind = fieldKind(index, field);
     return kind === 'rpe' || kind === 'rir' ? kind.toUpperCase() : t(kind === 'weight' ? 'student.accessory.pad.weight' : 'student.accessory.pad.reps');
@@ -99,25 +101,33 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     : fields.filter(([field]) => field !== 'rpeText' || allowsRIR || effectiveLoadMode(drafts[index].planSet) !== 'free_weight').map(([field]) => ({ index, field })));
   const nextCell = active ? editableCells[editableCells.findIndex(cell => cell.index === active.index && cell.field === active.field) + 1] : undefined;
   const closePad = () => { setActive(null); setPanelLayout(null); };
+  const openPad = (index: number, field: typeof fields[number][0]) => {
+    const kind = fieldKind(index, field);
+    const input = inputFor(index);
+    setActive({ index, field, kind, initialValue: field === 'rpeText' && kind !== input.effortKind ? '' : input[field] });
+  };
   const commitPad = (value: number | null, advance = false) => {
     if (!active) return;
-    if (value !== null || active.field === 'rpeText') change(active.index, { [active.field]: value === null ? '' : String(value) });
-    if (advance && nextCell) setActive(nextCell);
+    const { index, field, kind } = active;
+    if (value !== null || (field === 'rpeText' && active.preview !== undefined)) {
+      change(index, { [field]: value === null ? '' : String(value), ...(field === 'rpeText' ? { effortKind: kind as 'rpe' | 'rir' } : {}) });
+    }
+    if (advance && nextCell) openPad(nextCell.index, nextCell.field);
     else closePad();
   };
   const numericCell = (index: number, field: typeof fields[number][0], label: string, placeholder: string, style: ViewStyle) => {
     const row = rows[index];
     const focused = active?.index === index && active.field === field;
-    const value = inputFor(index)[field];
+    const value = focused && active.preview !== undefined ? active.preview : inputFor(index)[field];
     const compact = effectiveLoadMode(drafts[index].planSet) === 'free_weight' && !allowsRIR;
     const size = compact ? fontMetrics.size13 : field === 'rpeText' && !value && typeof row.rpePlaceholder !== 'string' ? fontMetrics.size11 : fontMetrics.size15;
     return <Pressable key={field} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{ text: value }} accessibilityHint={placeholder || undefined}
-      disabled={readOnly || batchBusy || busyRows.has(row.stableSetId)} onPress={() => setActive({ index, field })}
+      disabled={readOnly || batchBusy || busyRows.has(row.stableSetId)} onPress={() => openPad(index, field)}
       style={{ ...style, justifyContent: 'center', ...(focused ? { borderWidth: spacing.point2, borderColor: colors.gold500 } : {}) }}>
       <Text style={{ ...font.mono(size, value && !compact ? 'bold' : 'regular'), textAlign: 'center', color: value ? colors.textPrimary : colors.textMuted }}>{value || placeholder}</Text>
     </Pressable>;
   };
-  const isCancel = (index: number) => rows[index].status === 'complete' && fields.every(([field]) => inputFor(index)[field] === rows[index][field]);
+  const isCancel = (index: number) => rows[index].status === 'complete' && inputFor(index).effortKind === rows[index].effortKind && fields.every(([field]) => inputFor(index)[field] === rows[index][field]);
   const saveRow = async (index: number) => {
     const row = rows[index];
     if (readOnly || !onSave || batch.current || saving.current.has(row.stableSetId)) return;
@@ -147,7 +157,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     finally { batch.current = false; setBatchBusy(false); }
   };
   const firstPending = rows.findIndex((_, index) => !drafts[index].sourceLog);
-  const headerKind = inputFor(firstPending < 0 ? 0 : firstPending)?.effortKind ?? 'rpe';
+  const headerKind = effortOverride ?? inputFor(firstPending < 0 ? 0 : firstPending)?.effortKind ?? 'rpe';
   const switchEffort = () => {
     const effortKind = headerKind === 'rpe' ? 'rir' : 'rpe';
     setEffortOverride(effortKind);
@@ -160,7 +170,7 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
       {[t('student.accessory.set'), t('student.accessory.last'), unit.toUpperCase(), t('student.setEntrySheet.copy003'), headerKind.toUpperCase(), t('student.workoutCompletionFlowView.copy003')].map((label, index) =>
         index === 4 ? <View key={index} style={{ ...column(index), flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flexShrink: 0, minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
-            {allowsRIR ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} accessibilityValue={{ text: label }} disabled={readOnly || batchBusy || busyRows.size > 0 || firstPending < 0} onPress={switchEffort} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'center' }}><EffortToggleLabel label={label} compact /></Pressable>
+            {allowsRIR ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.effort.switch')} accessibilityValue={{ text: label }} disabled={readOnly || batchBusy || busyRows.size > 0} onPress={switchEffort} style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center', alignItems: 'center' }}><EffortToggleLabel label={label} compact /></Pressable>
               : <Text style={{ ...font.mono(fontMetrics.size10), color: colors.textMuted }}>{label}</Text>}
             <EffortHelpButton kind={headerKind} superscript />
           </View>
@@ -234,11 +244,13 @@ export function AccessoryLogCard({ drafts, previousLogs, unit, studentId, onReco
     </View> : null}
     {!readOnly && onAddSet ? <AppButton variant="link" label={t('student.added.addSet')} disabled={batchBusy || busyRows.size > 0 || (added ? rows.length : rows.filter(row => row.kind === 'extra').length) >= 10} onPress={onAddSet} /> : null}
     {!readOnly && !added && rows.some(row => !row.kind && row.status === 'pending') ? <AppButton label={t('student.accessory.completeAll')} labelStyle={{ textAlign: 'center' }}  disabled={batchBusy} onPress={() => void completeAll()} /> : null}
-    {active ? <Modal transparent visible animationType="none" onRequestClose={closePad}>
-      <NumberPad key={`${rows[active.index].stableSetId}:${active.field}`} mode="accessory" field={fieldKind(active.index, active.field)}
-        initialValue={inputFor(active.index)[active.field]} unit={unit}
+    {active ? <Modal transparent visible animationType="none" onRequestClose={() => pad.current?.dismiss()}>
+      <NumberPad ref={pad} key={`${rows[active.index].stableSetId}:${active.field}`} mode="accessory" field={active.kind}
+        initialValue={active.initialValue} unit={unit}
+        onChangeText={preview => setActive(current => current ? { ...current, preview } : null)}
+        onDismiss={value => value === undefined ? closePad() : commitPad(value)}
         onPanelLayout={(top, height) => setPanelLayout(current => current?.top === top && current.height === height ? current : { top, height })}
-        contextText={t('student.accessory.pad.context', [exerciseName, rows[active.index].setIndex + 1, fieldTitle(active.index, active.field)])}
+        contextText={t('student.accessory.pad.context', [exerciseName, rows[active.index].setIndex + 1, active.field === 'rpeText' ? active.kind.toUpperCase() : fieldTitle(active.index, active.field)])}
         nextTitle={nextCell ? t('student.accessory.pad.next', [fieldTitle(nextCell.index, nextCell.field)]) : undefined}
         onNext={nextCell ? value => commitPad(value, true) : undefined} onCancel={closePad} onCommit={commitPad} />
     </Modal> : null}

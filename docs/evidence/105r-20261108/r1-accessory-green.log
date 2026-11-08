@@ -1,0 +1,24 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false src/features/training/__tests__/accessory-rir-pad.test.tsx -t only the checkmark|original
+
+PASS src/features/training/__tests__/accessory-rir-pad.test.tsx
+  ✓ 105r left keeps RIR locally and only the checkmark submits it (118 ms)
+  ✓ 105r backdrop keeps RIR locally and only the checkmark submits it (23 ms)
+  ✓ 105r back keeps RIR locally and only the checkmark submits it (20 ms)
+  ✓ 105r original: RIR header accepts 2 over a previously recorded RPE and saves RIR (27 ms)
+  ○ skipped 105r every keystroke updates the visible cell without saving prematurely
+  ○ skipped 105r opening and dismissing does not create or rewrite records: undefined
+  ○ skipped 105r opening and dismissing does not create or rewrite records: {"rpe":"7","completed":true}
+  ○ skipped 105r opening and dismissing does not create or rewrite records: {"rpe":null,"completed":true}
+  ○ skipped 105r dismissing 3 RPE restores the last committed value without writing
+  ○ skipped 105r dismissing empty RPE restores the last committed value without writing
+  ○ skipped 105r editing a saved RIR in RPE mode clears RIR and preserves completion
+  ○ skipped 105r an empty saved effort edits in the header mode and repeated dismissal remains writable
+  ○ skipped 105r saving effort preserves the exact stored weight when pounds are rounded for display
+
+Test Suites: 1 passed, 1 total
+Tests:       9 skipped, 4 passed, 13 total
+Snapshots:   0 total
+Time:        0.728 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/accessory-rir-pad.test.tsx/i with tests matching "only the checkmark|original".

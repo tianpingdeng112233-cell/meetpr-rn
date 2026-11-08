@@ -18,6 +18,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { resolveColors } from '@/design';
 import { FeedbackPressable } from '@/design/FeedbackPressable';
+import { NumberPad } from '@/design/NumberPad';
 import { Toast } from '@/design/Toast';
 import { RestTimer } from '../RestTimer';
 import { writeRestPreference } from '@/features/settings/storage';
@@ -130,6 +131,25 @@ const openSet = async () => {
 };
 const saveButton = (failed = false) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t(failed ? 'student.setEntrySheet.copy009' : 'student.setEntrySheet.copy012')))[0];
 const loadFailedTitle = () => renderer.root.findAll(node => node.type === Text && node.props.children === t('student.todayWorkoutScreen.copy001'));
+test('105r main dismissal stays local until the record button submits', async () => {
+  await openSet();
+  const field = () => renderer.root.findByType(SetEntrySheet).findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('student.setEntrySheet.copy001'))!;
+  await act(async () => field().props.onPress!({} as never));
+  for (const key of ['8', '2', t('designSystem.numberPad.decimalPoint'), '2', '5']) {
+    await act(async () => renderer.root.findByType(NumberPad).findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === key)!.props.onPress!({} as never));
+  }
+  await act(async () => renderer.root.findByType(NumberPad).findAllByType(FeedbackPressable)[0].props.onPress!({} as never));
+  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(1);
+  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toBeNull();
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toEqual([]);
+  expect(field().props.accessibilityValue.text).toBe('82.25 KG');
+  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
+  await act(async () => saveButton().props.onPress());
+  const requests = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log');
+  expect(requests).toHaveLength(1);
+  expect(requests[0][1]?.body).toMatchObject({ weight_kg: '82.25', completed: true, failed: false });
+});
+
 test('102: an already loaded workout survives an offline cold start with its pending completed set', async () => {
   const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
@@ -376,7 +396,7 @@ function serveAccessories(rest: number | null = null) {
     if (path === '/sets/log') {
       const body = options?.body as SetLogUpsertRequest;
       writes++;
-      const log: SetLog = { id: `saved-${body.set_index}`, student_id: studentId, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id, set_index: body.set_index, weight_kg: body.weight_kg, reps: body.reps, rpe: body.rpe ?? null, completed: body.completed, failed: body.failed ?? false, assumed: false, adhoc: false, logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' };
+      const log: SetLog = { id: `saved-${body.set_index}`, student_id: studentId, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id, set_index: body.set_index, weight_kg: body.weight_kg, reps: body.reps, rpe: body.rpe ?? null, actual_rir: body.actual_rir ?? null, completed: body.completed, failed: body.failed ?? false, assumed: false, adhoc: false, logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' };
       storedLogs = [...storedLogs.filter(item => item.set_index !== log.set_index), log];
       return { id: log.id, logged_at: log.logged_at } as never;
     }
@@ -388,6 +408,51 @@ async function startAccessories() {
   await act(async () => renderer.root.findByType(WorkoutBody).props.onStart());
 }
 const setBodies = () => jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').map(([, options]) => options?.body as SetLogUpsertRequest);
+
+test.each(['left', 'backdrop'] as const)('105r untouched RIR %s dismissal creates no record and can reopen', async action => {
+  serveAccessories();
+  await startAccessories();
+  await act(async () => accessoryButton(t('training.effort.switch')).props.onPress());
+  await act(async () => accessoryInput('Set 1 RIR').props.onPress!({} as never));
+  const pad = () => renderer.root.findByType(NumberPad);
+  const controls = pad().findAllByType(FeedbackPressable);
+  await act(async () => (action === 'left' ? controls.at(-2)! : controls[0]).props.onPress!({} as never));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(setBodies()).toEqual([]);
+  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toBeNull();
+  await act(async () => accessoryInput('Set 1 RIR').props.onPress!({} as never));
+  await act(async () => pad().findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === '2')!.props.onPress!({} as never));
+  expect(pad().props.field).toBe('rir');
+  expect(pad().findAllByType(FeedbackPressable).at(-1)!.props.disabled).toBe(false);
+});
+
+test.each([true, false])('105r RIR dismissal stays local with completed=%s until the checkmark submits', async completed => {
+  serveAccessories();
+  storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId,
+    plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id,
+    set_index: 0, weight_kg: '80', reps: 10, rpe: '7', actual_rir: null, completed, failed: false, assumed: false, adhoc: false,
+    logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' }];
+  await startAccessories();
+  await act(async () => accessoryButton(t('training.effort.switch')).props.onPress());
+  expect(setBodies()).toEqual([]);
+  await act(async () => accessoryInput('Set 1 RPE').props.onPress!({} as never));
+  const pad = () => renderer.root.findByType(NumberPad);
+  await act(async () => pad().findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === '2')!.props.onPress!({} as never));
+  await act(async () => pad().findAllByType(FeedbackPressable)[0].props.onPress!({} as never));
+  expect(setBodies()).toEqual([]);
+  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toMatchObject({ rpe: '7', actual_rir: null, completed });
+  expect(accessoryInput('Set 1 RIR').props.accessibilityValue.text).toBe('2');
+  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
+  await act(async () => accessoryButton('Complete set 1').props.onPress());
+  expect(setBodies()).toEqual([expect.objectContaining({ rpe: null, actual_rir: 2, completed: true, weight_kg: '80' })]);
+  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toMatchObject({ rpe: null, actual_rir: 2, completed: true });
+  await enterNumber(renderer, 'Set 1 RIR', '0');
+  expect(setBodies()).toHaveLength(1);
+  expect(accessoryInput('Set 1 RIR').props.accessibilityValue.text).toBe('0');
+  await act(async () => accessoryButton('Complete set 1').props.onPress());
+  expect(setBodies()).toHaveLength(2);
+  expect(setBodies().at(-1)).toMatchObject({ rpe: null, actual_rir: 0, completed: true });
+});
 
 test.each<[number | undefined, number | null, number]>([[undefined, null, 60], [90, null, 90], [90, 75, 75]])('accessory check saves ordinary data, prevents double taps and rests with preference %s / coach %s', async (accessory, rest, seconds) => {
   serveAccessories(rest);
@@ -591,7 +656,7 @@ test('extra and student-added saves retain their identities and card date across
       const log: SetLog = { id, student_id: studentId, plan_exercise_id: 'plan_exercise_id' in body ? body.plan_exercise_id : null,
         plan_day_id: 'plan_day_id' in body ? body.plan_day_id : null,
         exercise_id: 'exercise_id' in body ? body.exercise_id : plan.days[0].exercises[0].exercise_id,
-        set_index: body.set_index, weight_kg: body.weight_kg, reps: body.reps, rpe: body.rpe ?? null, completed: body.completed, failed: body.failed ?? false,
+        set_index: body.set_index, weight_kg: body.weight_kg, reps: body.reps, rpe: body.rpe ?? null, actual_rir: body.actual_rir ?? null, completed: body.completed, failed: body.failed ?? false,
         adhoc: 'exercise_id' in body, assumed: false, logged_date: body.logged_date ?? '2026-10-14', logged_at: new Date().toISOString() };
       storedLogs.push(log);
       return { id, logged_at: log.logged_at } as never;

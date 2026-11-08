@@ -22,6 +22,7 @@ import { t } from '@/i18n';
 import { AnalyticsEvent, track } from '@/analytics';
 import { NumberPad, PlateVisual, useColors, type Colors, font, fontMetrics, radius, spacing, typography } from '@/design';
 import type { NumberPadField } from '@/design/number-pad';
+import type { NumberPadHandle } from '@/design/NumberPad';
 import { SetEntryRPEScale } from './SetEntryRPEScale';
 import { TRAINING_LIMITS } from './constants';
 import type { WeightSuggestion, WorkoutSetDraft } from './model';
@@ -161,6 +162,8 @@ export function SetEntrySheet({
   const [rpeGestureActive, setRpeGestureActive] = useState(false);
   const scrolledToVideo = useRef(false);
   const [numberPad, setNumberPad] = useState<NumberPadField | null>(null);
+  const pad = useRef<NumberPadHandle>(null);
+  const [padPreview, setPadPreview] = useState<string>();
   const [showsRPEPlaceholder, setShowsRPEPlaceholder] = useState(prescription.intensity?.kind !== 'rpe');
   const { activeSuggestion, weightText } = weightEntry;
 
@@ -189,6 +192,15 @@ export function SetEntrySheet({
 
   const updateWeight = (next: string) => {
     dispatchWeightEntry({ type: 'userChanged', value: next });
+  };
+  const closeNumberPad = () => { setPadPreview(undefined); setNumberPad(null); };
+  const commitNumberPad = (value: number) => {
+    // The shared main keypad can produce 100; set records accept at most 99 reps.
+    if (numberPad === 'reps' && value > 99) { closeNumberPad(); return; }
+    if (numberPad === 'weight') updateWeight(String(value));
+    else if (numberPad === 'rpe') setRpeText(String(value));
+    else { setRepsText(String(value)); updateWeight(weightText); }
+    closeNumberPad();
   };
   const save = async (failed: boolean) => {
     if (!editable || savingRef.current) return;
@@ -222,7 +234,7 @@ export function SetEntrySheet({
     <Modal animationType="slide" visible transparent={false} statusBarTranslucent navigationBarTranslucent onShow={() => setPresented(true)} onRequestClose={() => {
       if (overlayHost.current?.requestClose()) return;
       if (videoHost.current?.requestClose()) return;
-      if (numberPad) setNumberPad(null);
+      if (numberPad) pad.current?.dismiss();
       else close();
     }}>
       <OverlayHostProvider ref={overlayHost}>
@@ -262,13 +274,13 @@ export function SetEntrySheet({
               <View style={styles.controls}>
                 <LoadTypeSummary sets={[draft.planSet]} />
                 <View style={{ gap: spacing.space2 }}>
-                  <Stepper label={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg']) : t('student.setEntrySheet.copy001')} invalid={attempted && !validWeight} placeholder={bodyweight || freeWeight ? bodyweight ? '0' : t('loadTypes.requiredPlaceholder') : undefined} stepLabel="± 2.5" unit="KG" value={weightText}
+                  <Stepper label={bodyweight || freeWeight ? t(bodyweight ? 'loadTypes.optionalWeight' : 'loadTypes.requiredWeight', ['kg']) : t('student.setEntrySheet.copy001')} invalid={attempted && !validWeight} placeholder={bodyweight || freeWeight ? bodyweight ? '0' : t('loadTypes.requiredPlaceholder') : undefined} stepLabel="± 2.5" unit="KG" value={numberPad === 'weight' ? padPreview ?? weightText : weightText}
                     editable={editable} automatic={isAutomatic} onOpenPad={() => setNumberPad('weight')}
                     onChange={direction => updateWeight(String(direction < 0 ? Math.max(weightFloor, parsedWeight - TRAINING_LIMITS.weightStepKg) : parsedWeight + TRAINING_LIMITS.weightStepKg))} />
                   {caption ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.caption}>{caption}</Text> : null}
                 </View>
                 <Stepper label={t('student.setEntrySheet.copy003')} stepLabel="± 1" unit={t('student.setEntrySheet.copy004')}
-                  value={repsText} editable={editable} onOpenPad={() => setNumberPad('reps')}
+                  value={numberPad === 'reps' ? padPreview ?? repsText : repsText} editable={editable} onOpenPad={() => setNumberPad('reps')}
                   onChange={direction => setRepsText(String(Math.max(0, (Number(repsText) || 0) + direction * TRAINING_LIMITS.repsStep)))} />
                 <View style={{ gap: spacing.space2 }}>
                   <View style={styles.sectionHeader}>
@@ -278,7 +290,7 @@ export function SetEntrySheet({
                     </View>
                     <Text style={styles.stepLabel}>{effortKind === 'rir' ? '0–9 · 1' : '5–10 · 0.5'}</Text>
                   </View>
-                  {effortKind === 'rir' ? <View style={{ gap: spacing.space2 }}><Stepper label="RIR" stepLabel="± 1" value={rpeText} unit="" editable={editable} onOpenPad={() => setNumberPad('rpe')} onChange={direction => setRpeText(String(Math.min(9, Math.max(0, (Number(rpeText) || 0) + direction))))} />
+                  {effortKind === 'rir' ? <View style={{ gap: spacing.space2 }}><Stepper label="RIR" stepLabel="± 1" value={numberPad === 'rpe' ? padPreview ?? rpeText : rpeText} unit="" editable={editable} onOpenPad={() => setNumberPad('rpe')} onChange={direction => setRpeText(String(Math.min(9, Math.max(0, (Number(rpeText) || 0) + direction))))} />
                     {rirHint !== null ? <Text style={{ ...font.body(13), color: colors.textSecondary, textAlign: 'center' }}>{rirHint}</Text> : null}
                     </View> : <SetEntryRPEScale value={rpe} onChange={changeRPE} onGestureActive={setRpeGestureActive}
                     placeholder={showsRPEPlaceholder || !rpeText ? t('student.todayWorkoutTypes.copy028') : undefined} />}
@@ -337,16 +349,9 @@ export function SetEntrySheet({
               </Pressable>
             </View>
           </View>
-          {numberPad ? <NumberPad key={numberPad} field={numberPad === 'rpe' && effortKind === 'rir' ? 'rir' : numberPad} initialValue={numberPad === 'weight' ? weightText : numberPad === 'rpe' ? rpeText : repsText}
-            minimumWeight={weightFloor} onCancel={() => setNumberPad(null)} onCommit={value => {
-              if (numberPad === 'weight') updateWeight(String(value));
-              else if (numberPad === 'rpe') setRpeText(String(value));
-              else {
-                setRepsText(String(value));
-                updateWeight(weightText);
-              }
-              setNumberPad(null);
-            }} /> : null}
+          {numberPad ? <NumberPad ref={pad} key={numberPad} field={numberPad === 'rpe' && effortKind === 'rir' ? 'rir' : numberPad} initialValue={numberPad === 'weight' ? weightText : numberPad === 'rpe' ? rpeText : repsText}
+            minimumWeight={weightFloor} onCancel={closeNumberPad} onCommit={commitNumberPad}
+            onChangeText={setPadPreview} onDismiss={value => value === undefined ? closeNumberPad() : commitNumberPad(value)} /> : null}
         </SafeAreaView>
         </SetVideoPlayerHost>
       </OverlayHostProvider>

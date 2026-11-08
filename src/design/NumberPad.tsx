@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
@@ -20,6 +20,9 @@ type NumberPadProps = {
   onPanelLayout?: (top: number, height: number) => void;
   onSync?: (value: number) => void;
   onCancel: () => void;
+  /** Training entry keeps a live preview and commits valid, edited values on dismissal. */
+  onChangeText?: (text: string) => void;
+  onDismiss?: (value: number | undefined) => void;
 } & ({
   mode?: 'main';
   onNext?: (value: number) => void;
@@ -30,15 +33,23 @@ type NumberPadProps = {
   onCommit: (value: number | null) => void;
 });
 
-export function NumberPad(props: NumberPadProps) {
+export type NumberPadHandle = { dismiss: () => void };
+
+export const NumberPad = forwardRef<NumberPadHandle, NumberPadProps>(function NumberPad(props, ref) {
   const { field, initialValue, minimumWeight = 20, contextText, syncTitle, nextTitle, commitTitle, unit = 'kg', onPanelLayout, onSync, onNext, onCancel, onCommit } = props;
   const accessory = props.mode === 'accessory';
   const panel = useRef<View>(null);
   const colors = useColors();
-  const [text, setText] = useState(accessory ? initialValue : '');
+  const [text, setText] = useState(accessory || props.onDismiss ? initialValue : '');
   const [pristine, setPristine] = useState(true);
   const invalid = accessory && accessoryValue(text, field) === undefined;
   const resolvedValue = () => snapped(text && Number.isFinite(Number(text)) ? Number(text) : Number(initialValue), field, minimumWeight);
+  const dismiss = () => {
+    if (!props.onDismiss) { onCancel(); return; }
+    const value = accessory ? accessoryValue(text, field) : text && Number.isFinite(Number(text)) ? Number(text) : undefined;
+    props.onDismiss(!pristine && value != null ? accessory ? value : snapped(value, field, minimumWeight) : undefined);
+  };
+  useImperativeHandle(ref, () => ({ dismiss }));
   const confirm = () => {
     if (props.mode === 'accessory') {
       const value = accessoryValue(text, field);
@@ -51,8 +62,8 @@ export function NumberPad(props: NumberPadProps) {
   const keys = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['.', '0', '⌫']];
   return (
     <View accessibilityViewIsModal style={[StyleSheet.absoluteFill, { zIndex: 100, justifyContent: 'flex-end' }]}>
-      <Pressable feedback="none" accessibilityRole="button" accessibilityLabel={t('student.setEntrySheet.copy008')}
-        onPress={onCancel} style={[StyleSheet.absoluteFill, { backgroundColor: colors.numberPadScrim }]} />
+      <Pressable feedback="none" accessibilityRole="button" accessibilityLabel={props.onDismiss ? t('training.numberPad.dismiss') : t('student.setEntrySheet.copy008')}
+        onPress={dismiss} style={[StyleSheet.absoluteFill, { backgroundColor: colors.numberPadScrim }]} />
       <View ref={panel} onLayout={onPanelLayout ? () => panel.current?.measureInWindow((_x, top, _width, height) => onPanelLayout(top, height)) : undefined} style={{ backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.modal,
         borderTopRightRadius: radius.modal, borderTopColor: colors.borderDefault, borderTopWidth: 1,
         paddingHorizontal: spacing.space4, paddingTop: 14, paddingBottom: 22 }}>
@@ -81,8 +92,10 @@ export function NumberPad(props: NumberPadProps) {
                   <Pressable haptic="selection" key={ch} accessibilityRole="button" disabled={disabled}
                     accessibilityLabel={ch === '.' ? t('designSystem.numberPad.decimalPoint') : ch === '⌫' ? t('designSystem.numberPad.backspace') : ch}
                     onPress={() => {
-                      setText(previous => ch === '⌫' ? previous.slice(0, -1) : accessory ? appendAccessory(pristine ? '' : previous, ch, field) : append(previous, ch, field));
+                      const next = ch === '⌫' ? text.slice(0, -1) : accessory ? appendAccessory(pristine ? '' : text, ch, field) : append(pristine ? '' : text, ch, field);
+                      setText(next);
                       setPristine(false);
+                      props.onChangeText?.(next);
                     }}
                     style={({ pressed }) => ({ flex: 1, height: 52, borderRadius: radius.control,
                       backgroundColor: colors.surfaceKey, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.25 : pressed ? 0.85 : 1, transform: [{ scale: pressed && !disabled ? 0.97 : 1 }] })}>
@@ -94,9 +107,9 @@ export function NumberPad(props: NumberPadProps) {
           ))}
         </View>
         <View style={{ flexDirection: 'row', gap: spacing.space2, marginTop: spacing.space2 }}>
-          <Pressable accessibilityRole="button" onPress={onCancel}
+          <Pressable accessibilityRole="button" onPress={dismiss}
             style={({ pressed }) => ({ flex: 1, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
-            <Text style={{ ...font.body(15, 'semibold'), color: colors.textSecondary }}>{t('designSystem.action.cancel')}</Text>
+            <Text style={{ ...font.body(15, 'semibold'), color: colors.textSecondary }}>{t(props.onDismiss ? 'training.numberPad.dismiss' : 'designSystem.action.cancel')}</Text>
           </Pressable>
           <Pressable haptic="light" accessibilityRole="button" disabled={invalid} accessibilityState={{ disabled: invalid }} onPress={confirm}
             style={({ pressed }) => ({ flex: 2, height: 48, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, overflow: 'hidden', backgroundColor: accessory ? colors.gold500 : undefined, opacity: invalid ? 0.4 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
@@ -107,4 +120,4 @@ export function NumberPad(props: NumberPadProps) {
       </View>
     </View>
   );
-}
+});

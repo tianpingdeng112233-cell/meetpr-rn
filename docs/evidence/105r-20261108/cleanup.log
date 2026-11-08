@@ -1,0 +1,4 @@
+Debug prefix search: no matches (rg exit 1)
+Deleted minimization harness path search: no matches (rg exit 1)
+Temporary harness absent; David screenshot retained
+git diff --check: exit 0

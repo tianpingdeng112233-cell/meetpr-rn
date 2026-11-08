@@ -1,0 +1,20 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false archived-minimization-harness -t C3 remove
+
+PASS archived-minimization-harness
+  ✓ 105r minimize C3 remove RIR prescription from M5 (100 ms)
+  ○ skipped 105r minimize M1 remove toggles
+  ○ skipped 105r minimize M2 remove completed status
+  ○ skipped 105r minimize M3 remove recorded RPE value
+  ○ skipped 105r minimize M4 remove Chinese locale
+  ○ skipped 105r minimize M5 remove exercise name
+  ○ skipped 105r minimize C1 remove second pending row from M5
+  ○ skipped 105r minimize C2 remove source log from M5
+  ○ skipped 105r minimize C4 remove input from M5
+
+Test Suites: 1 passed, 1 total
+Tests:       8 skipped, 1 passed, 9 total
+Snapshots:   0 total
+Time:        0.444 s, estimated 1 s
+Ran all test suites matching /archived-minimization-harness/i with tests matching "C3 remove".

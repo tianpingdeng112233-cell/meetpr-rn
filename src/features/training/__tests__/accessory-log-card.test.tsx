@@ -98,13 +98,13 @@ test('105 Next commits in weight, reps, effort order across sets and the final c
   for (const [value, context] of [
     [7.5, 'Set 1 · Reps'], [12, 'Set 1 · RPE'], [9.5, 'Set 2 · Weight'],
     [0, 'Set 2 · Reps'], [8, 'Set 2 · RPE'], [null, 'Set 3 · Weight'],
-    [0, 'Set 3 · Reps'], [10, 'Set 3 · RIR'],
+    [0, 'Set 3 · Reps'], [10, 'Set 3 · RPE'],
   ] as const) {
     await act(async () => pad().props.onNext(value));
     expect(pad().props.contextText).toBe(`Leg press · ${context}`);
   }
   expect(pad().props.onNext).toBeUndefined();
-  await act(async () => pad().props.onCommit(2));
+  await act(async () => pad().props.onCommit(7));
   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
   expect(button('Set 1 weight').props.accessibilityValue.text).toBe('7.5');
   expect(button('Set 1 RPE').props.accessibilityValue.text).toBe('9.5');
@@ -300,21 +300,22 @@ test('inline drafts survive switching cards and preserve values in both days', a
 });
 
 
-test.each(['cancel', 'backdrop'] as const)('105 %s discards only the current field, leaving earlier Next commits intact', async action => {
+test.each(['done', 'backdrop'] as const)('105 %s retains the current field and earlier Next commits', async action => {
   await mount('accessory');
   await act(async () => button('Set 1 weight').props.onPress());
   await act(async () => renderer.root.findByType(NumberPad).props.onNext(7.5));
   const pad = renderer.root.findByType(NumberPad);
   const keys = pad.findAllByType(FeedbackPressable);
   await act(async () => keys.find(node => node.props.accessibilityLabel === '9')!.props.onPress!({} as never));
-  await act(async () => (action === 'cancel' ? keys.at(-2)! : keys[0]).props.onPress!({} as never));
+  await act(async () => (action === 'done' ? keys.at(-2)! : keys[0]).props.onPress!({} as never));
   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
   expect(input('Set 1 weight').props.accessibilityValue.text).toBe('7.5');
-  expect(input('Set 1 reps').props.accessibilityValue.text).toBe('5');
+  expect(input('Set 1 reps').props.accessibilityValue.text).toBe('9');
 });
 
 test.each(['RPE', 'RIR'] as const)('105 deleting optional %s clears it while required fields retain committed values', async effort => {
   await mount('accessory');
+  if (effort === 'RIR') await act(async () => button(t('training.effort.switch')).props.onPress());
   const label = `Set ${effort === 'RPE' ? 1 : 3} ${effort}`;
   await enterNumber(renderer, label, effort === 'RPE' ? '9.5' : '2');
   await enterNumber(renderer, label, '');
@@ -334,6 +335,7 @@ test('105 the keypad blocks invalid RPE commits and disables the decimal key for
   }
   expect(pad().findAllByType(FeedbackPressable).at(-1)!.props.disabled).toBe(true);
   await act(async () => pad().props.onCancel());
+  await act(async () => button(t('training.effort.switch')).props.onPress());
   await act(async () => input('Set 3 RIR').props.onPress());
   expect(pad().findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('designSystem.numberPad.decimalPoint'))!.props.disabled).toBe(true);
 });
@@ -349,8 +351,9 @@ test('105 accessory reps reject 100 without advancing or committing and accept 9
   expect(confirm.props.disabled).toBe(true);
   await act(async () => confirm.props.onPress!({} as never));
   expect(pad().props.contextText).toBe('Leg press · Set 1 · Reps');
-  expect(input('Set 1 reps').props.accessibilityValue.text).toBe('5');
+  expect(input('Set 1 reps').props.accessibilityValue.text).toBe('100');
   await act(async () => pad().props.onCancel());
+  expect(input('Set 1 reps').props.accessibilityValue.text).toBe('5');
   await enterNumber(renderer, 'Set 1 reps', '99');
   expect(input('Set 1 reps').props.accessibilityValue.text).toBe('99');
 });
@@ -366,6 +369,7 @@ test.each<['en' | 'zh' | 'zh-Hant', string, string]>([
   const pad = renderer.root.findByType(NumberPad);
   expect(pad.props.contextText).toBe(context);
   expect(pad.props.nextTitle).toBe(next);
+  expect(pad.findAllByType(Text).map(node => node.props.children)).toContain(locale === 'en' ? 'Done' : '收起');
   expect(pad.findAllByType(Text).map(node => node.props.children)).toContain('LB');
   const cell = input(t('student.accessory.weightLabel', [1]));
   expect(StyleSheet.flatten(cell.props.style)).toMatchObject({ borderWidth: 2, borderColor: colors.gold500 });

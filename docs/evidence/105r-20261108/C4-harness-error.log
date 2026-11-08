@@ -1,0 +1,47 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --watchman=false archived-minimization-harness -t C4 remove
+
+FAIL archived-minimization-harness
+  ✕ 105r minimize C4 remove input from M5 (102 ms)
+  ○ skipped 105r minimize M1 remove toggles
+  ○ skipped 105r minimize M2 remove completed status
+  ○ skipped 105r minimize M3 remove recorded RPE value
+  ○ skipped 105r minimize M4 remove Chinese locale
+  ○ skipped 105r minimize M5 remove exercise name
+  ○ skipped 105r minimize C1 remove second pending row from M5
+  ○ skipped 105r minimize C2 remove source log from M5
+  ○ skipped 105r minimize C3 remove RIR prescription from M5
+
+  ● 105r minimize C4 remove input from M5
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "disabled": false,
+        "field": "rpe",
+        "header": "RIR",
+    -   "showsTwo": false,
+    +   "showsTwo": true,
+      }
+
+      73 |       input: { header: 'RIR', field: 'rpe', disabled: false, showsTwo: false },
+      74 |     };
+    > 75 |     expect(observed).toEqual(expected[scenario.remove]);
+         |                      ^
+      76 |   }
+      77 |   // Same user symptom predicate for every deletion; red cases are deliberately retained.
+      78 |   expect({
+
+      at toEqual (archived-minimization-harness:75:22)
+      at asyncGeneratorStep (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-106/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 8 skipped, 9 total
+Snapshots:   0 total
+Time:        0.45 s, estimated 1 s
+Ran all test suites matching /archived-minimization-harness/i with tests matching "C4 remove".
