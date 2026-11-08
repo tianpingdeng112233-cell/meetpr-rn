@@ -134,7 +134,7 @@ describe('training recorder family wiring', () => {
       },
     });
 
-    expect(result.currentKg).toBeCloseTo(128.205_128, 6);
+    expect(result.currentKg).toBeCloseTo(123.304_562, 6);
     expect(result.refreshed).toBe(true);
   });
 });

@@ -104,7 +104,7 @@ test('Total alone shows the legacy breakthrough comparison when estimates exceed
 
 
 test.each([false, true])('Total headline matches stats and comparison across ranges, including declining=%s', async declining => {
-  const points = seedPoints().map((point, index) => declining ? { ...point, e1RMKg: [150, 130, 140][index % 3] } : point);
+  const points = seedPoints().map((point, index) => declining ? { ...point, e1RMKg: [150, 130, 140][index % 3], sourceWeightKg: [150, 130, 140][index % 3] } : point);
   jest.mocked(trainingE1RMRepository.historySnapshot).mockResolvedValue({ points, revision: 0 });
   const curves = buildGrowthCurves([], new Map(LIFT_FAMILIES.map(family => [family, family])), new Date(), points);
   const stats = buildGrowthStats([], curves);

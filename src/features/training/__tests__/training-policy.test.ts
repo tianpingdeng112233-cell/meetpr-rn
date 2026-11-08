@@ -124,7 +124,7 @@ describe('suggested-weight selector', () => {
         historyLogs: [],
         e1RMKg: 200,
       }),
-    ).toEqual({ weightKg: 155, label: '建议 · 基于 e1RM 200' });
+    ).toEqual({ weightKg: 160, label: '建议 · 基于 e1RM 200' });
   });
 
   test('accessory prefers same-day recent log, then the 84-day history input', () => {

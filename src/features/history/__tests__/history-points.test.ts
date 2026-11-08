@@ -1,15 +1,18 @@
-import { expect, test } from '@jest/globals';
+import { beforeEach, expect, jest, test } from '@jest/globals';
 import { InMemoryE1RMRepository, type E1RMHistoryPoint } from '@/domain/e1rm';
 import { replayE1RMHistoryPoints } from '@/features/dashboard/model';
 import { loadGrowthHistory } from '../history-points';
 import { buildGrowthCurves, growthSnapshot } from '../model';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AsyncStorageE1RMRepository } from '@/features/training/storage';
+import { STORAGE_KEYS } from '@/features/training/constants';
 import type { SetLog } from '@/api/domains';
 
 test('growth displays stored points even when their source logs are missing, retaining equal-valued days', async () => {
   const points: E1RMHistoryPoint[] = ['2026-09-10', '2026-09-12', '2026-09-14'].map((date, index) => ({
     id: `saved-${index}`, studentId: 'student', exerciseId: 'squat', setLogId: `missing-${index}`,
     computedAt: new Date(`${date}T12:00:00Z`), e1RMKg: index === 2 ? 195 : 190,
-    sourceWeightKg: 152, sourceReps: 5, sourceRPE: 8, confidence: 'normal', origin: 'imported',
+    sourceWeightKg: index === 2 ? 156 : 152, sourceReps: 5, sourceRPE: 8, confidence: 'normal', origin: 'imported',
   }));
   const repository = new InMemoryE1RMRepository(points);
   const families = new Map([['squat', 'squat' as const]]);
@@ -28,7 +31,7 @@ test('replayed server calibration retains both RPE sources and an existing saved
   const repository = new InMemoryE1RMRepository();
   const families = new Map([['squat', 'squat' as const]]);
   const points = await loadGrowthHistory(repository, 'student', [log], families);
-  expect(points[0].e1RMKg).toBeCloseTo(194.8718, 4);
+  expect(points[0].e1RMKg).toBeCloseTo(187.423, 3);
   expect(points[0].origin).toBe('logged');
   expect(points[0].sourceRPE).toBe(9);
   expect(points[0].sourceCoachRPE).toBe(8);
@@ -58,3 +61,24 @@ test('replay admits only eligible real logs and breaks equal timestamps by set i
   expect(points.map(point => [point.setLogId, point.origin, point.confidence]))
     .toEqual([['a', 'logged', 'normal'], ['b', 'logged', 'low']]);
 });
+
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+
+beforeEach(async () => {
+  await AsyncStorage.clear();
+  jest.clearAllMocks();
+});
+
+test.each(['not-json', '{"points":null,"prs":[]}', '{"points":[],"prs":[],"rpeTableVersions":null}'])(
+  'unreadable storage is never overwritten by migration (%s)', async raw => {
+    await AsyncStorage.setItem(STORAGE_KEYS.e1rm, raw);
+    const log: SetLog = { id: 'server', student_id: 'student', plan_exercise_id: null, exercise_id: 'squat', set_index: 0,
+      weight_kg: '100', reps: 5, rpe: '8', coach_rpe: null, completed: true, failed: false, assumed: false, adhoc: true,
+      logged_date: '2026-09-14', logged_at: '2026-09-14T12:00:00Z' };
+    const saved = await loadGrowthHistory(new AsyncStorageE1RMRepository(), 'student', [log], new Map([['squat', 'squat']]));
+    expect(saved).toHaveLength(1);
+    expect(saved[0].e1RMKg).toBe(100 / 0.811);
+    expect(await AsyncStorage.getItem(STORAGE_KEYS.e1rm)).toBe(raw);
+  },
+);

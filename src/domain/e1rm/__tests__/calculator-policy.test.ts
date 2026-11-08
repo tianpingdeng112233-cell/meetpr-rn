@@ -11,18 +11,18 @@ import {
 } from '..';
 
 const specRTSTable = [
-  [0.84, 0.86, 0.88, 0.9, 0.92, 0.94, 0.96, 0.98, 1],
-  [0.8, 0.82, 0.84, 0.86, 0.88, 0.9, 0.92, 0.94, 0.96],
-  [0.76, 0.78, 0.8, 0.82, 0.84, 0.86, 0.88, 0.9, 0.92],
-  [0.72, 0.74, 0.76, 0.78, 0.8, 0.82, 0.84, 0.86, 0.88],
-  [0.7, 0.72, 0.74, 0.76, 0.78, 0.8, 0.82, 0.84, 0.86],
-  [0.68, 0.7, 0.72, 0.74, 0.76, 0.78, 0.8, 0.82, 0.84],
-  [0.66, 0.68, 0.7, 0.72, 0.74, 0.76, 0.78, 0.8, 0.82],
-  [0.64, 0.66, 0.68, 0.7, 0.72, 0.74, 0.76, 0.78, 0.8],
-  [0.62, 0.64, 0.66, 0.68, 0.7, 0.72, 0.74, 0.76, 0.78],
-  [0.6, 0.62, 0.64, 0.66, 0.68, 0.7, 0.72, 0.74, 0.76],
-  [0.58, 0.6, 0.62, 0.64, 0.66, 0.68, 0.7, 0.72, 0.74],
-  [0.56, 0.58, 0.6, 0.62, 0.64, 0.66, 0.68, 0.7, 0.72],
+  [0.863, 0.878, 0.892, 0.907, 0.922, 0.939, 0.955, 0.978, 1],
+  [0.837, 0.85, 0.863, 0.878, 0.892, 0.907, 0.922, 0.939, 0.955],
+  [0.811, 0.824, 0.837, 0.85, 0.863, 0.878, 0.892, 0.907, 0.922],
+  [0.786, 0.799, 0.811, 0.824, 0.837, 0.85, 0.863, 0.878, 0.892],
+  [0.762, 0.774, 0.786, 0.799, 0.811, 0.824, 0.837, 0.85, 0.863],
+  [0.739, 0.751, 0.762, 0.774, 0.786, 0.799, 0.811, 0.824, 0.837],
+  [0.707, 0.723, 0.739, 0.751, 0.762, 0.774, 0.786, 0.799, 0.811],
+  [0.68, 0.694, 0.707, 0.723, 0.739, 0.751, 0.762, 0.774, 0.786],
+  [0.653, 0.667, 0.68, 0.694, 0.707, 0.723, 0.739, 0.751, 0.762],
+  [0.626, 0.64, 0.653, 0.667, 0.68, 0.694, 0.707, 0.723, 0.739],
+  [0.599, 0.6125, 0.626, 0.64, 0.653, 0.667, 0.68, 0.694, 0.707],
+  [0.572, 0.5855, 0.599, 0.6125, 0.626, 0.64, 0.653, 0.667, 0.68],
 ];
 
 describe('RTS and e1RM calculation', () => {
@@ -31,17 +31,21 @@ describe('RTS and e1RM calculation', () => {
       row.forEach((intensity, rpeIndex) => {
         const reps = repsIndex + 1;
         const rpe = 6 + rpeIndex * 0.5;
-        expect(rtsIntensity(reps, rpe)).toBeCloseTo(intensity, 10);
+        expect(rtsIntensity(reps, rpe)).toBe(intensity);
         expect(calculateE1RM(100, reps, rpe)).toBeCloseTo(100 / intensity, 10);
       });
     });
-    expect(calculateE1RM(100, 5, 8)).toBeCloseTo(128.205_128, 6);
+    expect(calculateE1RM(100, 5, 8)).toBeCloseTo(123.304_562, 6);
+  });
+
+  test.each([[3, 9, 112.11], [1, 10, 100], [5, 7.75, 124.22], [11, 8, 153.14], [12, 8, 159.74]])('matches spec 106: 100 kg × %s @%s', (reps, rpe, expected) => {
+    expect(calculateE1RM(100, reps, rpe)).toBeCloseTo(expected, 2);
   });
 
   test('interpolates only along RPE', () => {
-    expect(rtsIntensity(5, 8.25)).toBeCloseTo(0.79, 10);
-    expect(calculateE1RM(100, 5, 7.25)).toBeCloseTo(100 / 0.75, 10);
-    expect(calculateE1RM(100, 5, 9.25)).toBeCloseTo(100 / 0.83, 10);
+    expect(rtsIntensity(5, 8.25)).toBeCloseTo(0.8175, 10);
+    expect(calculateE1RM(100, 5, 7.25)).toBeCloseTo(100 / 0.7925, 10);
+    expect(calculateE1RM(100, 5, 9.25)).toBeCloseTo(100 / 0.8435, 10);
   });
 
   test('uses Epley for missing or sub-6 RPE and enforces its boundary', () => {
@@ -63,16 +67,21 @@ describe('RTS and e1RM calculation', () => {
 
 describe('suggested weight reversal', () => {
   test('extrapolates RPE 5.0–5.5 and rounds down to 2.5 kg', () => {
-    expect(rtsIntensity(5, 5.5)).toBeCloseTo(0.68, 10);
-    expect(rtsIntensity(5, 5)).toBeCloseTo(0.66, 10);
+    expect(rtsIntensity(5, 5.5)).toBeCloseTo(0.75, 10);
+    expect(rtsIntensity(5, 5)).toBeCloseTo(0.738, 10);
     expect(suggestedWeightKg(100, 5, 10)).toBe(85);
-    expect(suggestedWeightKg(100, 5, 5.5)).toBe(67.5);
-    expect(suggestedWeightKg(100, 5, 5)).toBe(65);
+    expect(suggestedWeightKg(100, 5, 5.5)).toBe(75);
+    expect(suggestedWeightKg(100, 5, 5)).toBe(72.5);
   });
 
   test('applies the +1e-6 correction at a floating step boundary', () => {
     expect(suggestedWeightKg(99.999_999, 1, 10)).toBe(100);
     expect(suggestedWeightKg(102.499, 1, 10)).toBe(100);
+  });
+
+  test('uses the extended table for prescriptions and preserves an exact round trip', () => {
+    expect(suggestedWeightKg(123.3, 2, 9)).toBe(112.5);
+    expect(suggestedWeightKg(calculateE1RM(100, 5, 8)!, 5, 8)).toBe(100);
   });
 
   test('rejects inputs outside the reverse table', () => {

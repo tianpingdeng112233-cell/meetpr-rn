@@ -1,4 +1,5 @@
 import { test, expect } from '@jest/globals';
+import { calculateE1RM } from '../calculator';
 import { resolvePctAnchor, type PctAnchorInput } from '../pct-anchor';
 const input: PctAnchorInput = {
   percentage: 72.5,
@@ -72,3 +73,10 @@ test.each([0, -1, 0.1])(
   (percentage) =>
     expect(resolvePctAnchor({ ...input, percentage }).resolvedKg).toBeNull(),
 );
+
+test('an 80% e1RM prescription uses the recalibrated current estimate', () => {
+  const result = resolvePctAnchor({ ...input, anchor: 'e1rm', percentage: 80,
+    currentE1RMKg: calculateE1RM(100, 5, 8) });
+  expect(result.anchorKg).toBeCloseTo(123.30, 2);
+  expect(result.resolvedKg).toBe(97.5);
+});

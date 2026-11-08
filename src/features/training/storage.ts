@@ -1,5 +1,6 @@
 import AsyncStorage from '@/demo/storage';
 
+import { calculateE1RM } from '@/domain/e1rm';
 import type {
   E1RMConfidence,
   E1RMHistoryPoint,
@@ -13,6 +14,7 @@ import type { SessionReview } from './model';
 
 type StoredE1RM = {
   revision?: number;
+  rpeTableVersions?: Record<string, string>;
   points: (Omit<E1RMHistoryPoint, 'computedAt'> & { computedAt: string })[];
   prs: (
     Omit<PRBreakthroughEvent, 'occurredAt' | 'acknowledgedAt'> & {
@@ -30,6 +32,11 @@ async function readE1RM(): Promise<StoredE1RM> {
   if (!value || !Array.isArray(value.points) || !Array.isArray(value.prs) ||
       (value.revision !== undefined && (!Number.isSafeInteger(value.revision) || value.revision < 0))) {
     throw new Error('Invalid e1RM store');
+  }
+  if (value.rpeTableVersions !== undefined &&
+      (value.rpeTableVersions === null || typeof value.rpeTableVersions !== 'object' ||
+       Array.isArray(value.rpeTableVersions) || Object.values(value.rpeTableVersions).some(version => typeof version !== 'string'))) {
+    throw new Error('Invalid e1RM table versions');
   }
   return { ...value, points: value.points, prs: value.prs, revision: value.revision ?? 0 };
 }
@@ -63,6 +70,8 @@ function dehydratePR(
     acknowledgedAt: pr.acknowledgedAt?.toISOString() ?? null,
   };
 }
+
+const EXTENDED_RPE_TABLE_VERSION = 'e1rm-extended-rpe-table-v1';
 
 let mutationChain: Promise<void> = Promise.resolve();
 
@@ -102,8 +111,22 @@ export class AsyncStorageE1RMRepository implements E1RMRepository {
   }
 
   async historySnapshot(studentId: string): Promise<E1RMHistorySnapshot> {
-    await mutationChain;
-    const stored = await readE1RM();
+    let snapshot!: StoredE1RM;
+    await mutate(stored => {
+      snapshot = stored;
+      if (stored.rpeTableVersions?.[studentId] === EXTENDED_RPE_TABLE_VERSION) return false;
+      stored.points = stored.points.map(point => {
+        if (point.studentId !== studentId) return point;
+        const rpe = point.sourceCoachRPE ?? point.sourceRPE;
+        // Epley and imported baselines do not depend on the RPE table.
+        if (rpe == null || !(rpe >= 6 && rpe <= 10)) return point;
+        const e1RMKg = calculateE1RM(point.sourceWeightKg, point.sourceReps, rpe);
+        return e1RMKg === null ? point : { ...point, e1RMKg };
+      });
+      // Serialize with live recordings and commit estimates + version in one durable write.
+      stored.rpeTableVersions = { ...stored.rpeTableVersions, [studentId]: EXTENDED_RPE_TABLE_VERSION };
+    });
+    const stored = snapshot;
     return {
       points: stored.points.filter(point => point.studentId === studentId).map(hydratePoint),
       revision: stored.revision ?? 0,
@@ -186,9 +209,8 @@ export class AsyncStorageE1RMRepository implements E1RMRepository {
     studentId: string,
     exerciseId: string,
   ): Promise<E1RMHistoryPoint[]> {
-    const stored = await readE1RM();
-    return stored.points
-      .map(hydratePoint)
+    const snapshot = await this.historySnapshot(studentId);
+    return snapshot.points
       .filter(
         (point) =>
           point.studentId === studentId && point.exerciseId === exerciseId,
