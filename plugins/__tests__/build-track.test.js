@@ -3,7 +3,7 @@ import { getAndroidBuildConfig } from '../build-track';
 
 describe('Android build track', () => {
   test.each([
-    ['china', 'com.meetpr.app', 9],
+    ['china', 'com.meetpr.app', 10],
     ['global', 'com.meetpr.global', 1],
     [undefined, 'com.meetpr.global', 1],
     ['unexpected', 'com.meetpr.global', 1],
