@@ -99,20 +99,26 @@ afterEach(async () => {
   await AsyncStorage.clear();
 });
 
-test('107 retired training entry points are unreachable and all rows are visible', async () => {
+test('107 retired training entry points are unreachable and all exercise rows start collapsed', async () => {
   await mount();
   const labels = renderer.root.findAll(node => node.props.onPress).map(node => node.props.accessibilityLabel);
   expect(labels).not.toContain(t('student.trainingHistoryView.copy024'));
   expect(labels).not.toContain(t('student.todayWorkoutScreen.copy008'));
   expect(renderer.root.findAllByType(Modal)).toHaveLength(0);
-  expect(labels).toContain('Edit set 1');
+  expect(labels).not.toContain('Edit set 1');
+  const exerciseRows = renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress);
+  expect(exerciseRows.length).toBeGreaterThan(0);
+  expect(exerciseRows.every(node => node.props.accessibilityState.expanded === false)).toBe(true);
 });
 
 test('107 a future week is read only and previous week returns to editable rows', async () => {
   servedPlan = { ...plan, days: [plan.days[0], { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', week_number: 2 }] };
   await mount();
   await press('Next week');
+  await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === true).length).toBeGreaterThan(0);
   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false)).toHaveLength(0);
   await press('Previous week');
+  await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false).length).toBeGreaterThan(0);
 });

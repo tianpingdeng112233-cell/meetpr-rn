@@ -17,7 +17,7 @@ test('all-day sheet preserves old actuals and prefills only RPE-only weights fro
   expect(sheet.exercises[0].rows.map(row => [row.weightText, row.repsText, row.rpeText])).toEqual([
     ['92.5', '4', ''], ['110', '5', '8'], ['', '5', '7'],
   ]);
-  expect(sheet.exercises[0]).toMatchObject({ collapsed: false, node: 'current' });
+  expect(sheet.exercises[0]).toMatchObject({ collapsed: true, node: 'current' });
 });
 
 
@@ -61,15 +61,15 @@ test('upgrade and exercise completion retain precise saved weight and effort', (
   expect(completionWrites(sheet, 'exercise')[0].request).toMatchObject({ weight_kg: '92.25', rpe: '8.25' });
 });
 
-test('only the first unfinished exercise expands by default, independent of completion and repeated names', () => {
+test('all exercises start collapsed while the first unfinished remains current, independent of viewing', () => {
   const second = { ...exercise, id: 'second', sort_order: 1 };
   const third = { ...exercise, id: 'third', exercise_id: 'bench', sort_order: 2 };
   const planned = day('day', { exercises: [exercise, second, third] });
   expect(buildAllDaySheet(planned, [], []).exercises.map(block => [block.collapsed, block.node, block.repeatName]))
-    .toEqual([[false, 'current', false], [true, 'pending', true], [true, 'pending', false]]);
+    .toEqual([[true, 'current', false], [true, 'pending', true], [true, 'pending', false]]);
   const checked = new Set(['exercise']);
   expect(buildAllDaySheet(planned, [], [], { completedExercises: checked }).exercises.map(block => [block.collapsed, block.node]))
-    .toEqual([[true, 'complete'], [false, 'current'], [true, 'pending']]);
+    .toEqual([[true, 'complete'], [true, 'current'], [true, 'pending']]);
   expect(buildAllDaySheet(planned, [], [], { completedExercises: checked, expandedExerciseId: 'exercise' }).exercises.map(block => [block.collapsed, block.node]))
     .toEqual([[false, 'complete'], [true, 'current'], [true, 'pending']]);
   expect(buildAllDaySheet(planned, [], [], { expandedExerciseId: null }).exercises.every(block => block.collapsed)).toBe(true);

@@ -1,3 +1,4 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
@@ -95,4 +96,22 @@ test.each([false, true])('retry keeps failure visible until delivery (saved sess
     });
   }
   expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Delivered to coach');
+});
+
+
+test('all-day capture button uses a video camera before, during and after delivery', async () => {
+  await act(async () => {
+    renderer = create(<VideoAttachmentControls compact studentId="student" stableSetId="set" editable
+      ensureSetLog={async () => 'set-log'} buildLogRequest={() => { throw new Error('unused'); }} />);
+  });
+  const camera = () => renderer.root.findAllByType(MaterialCommunityIcons)[0];
+  expect(camera().props.name).toBe('video-outline');
+  const idleColor = camera().props.color;
+  act(() => { useVideoUploadStore.getState().dispatch('student', 'set', { type: 'uploadStarted', attachmentId: 'attachment' }); });
+  expect(camera().props.name).toBe('video-outline');
+  const uploadingColor = camera().props.color;
+  expect(uploadingColor).not.toBe(idleColor);
+  act(() => { useVideoUploadStore.setState({ records: { 'student:set': { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded', attachmentId: 'attachment' } } }); });
+  expect(camera().props.name).toBe('video-outline');
+  expect(camera().props.color).not.toBe(uploadingColor);
 });

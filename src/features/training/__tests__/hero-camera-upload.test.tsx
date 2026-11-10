@@ -130,6 +130,7 @@ const record = () => useVideoUploadStore.getState().records[`${studentId}:${plan
 const openCamera = async () => {
   await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
   await mount();
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${plan.days[0].exercises[0].id}` && node.props.onPress)[0].props.onPress());
   await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001') && node.props.onPress)[0].props.onPress());
   expect(renderer.root.findAllByType(CameraRecorder)).toHaveLength(1);
 };

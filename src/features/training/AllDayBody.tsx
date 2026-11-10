@@ -38,7 +38,8 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
       <Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t('training.allDay.summary', [title, sheet.exercises.length])}</Text>
       <Text style={{ ...font.body(12), color: colors.textMuted, flexShrink: 1 }}>{t(editable ? 'training.allDay.hint' : 'training.allDay.setCount', [count])}</Text>
     </View>
-    {sheet.exercises.map(block => {
+    <View testID="all-day-timeline" style={{ gap: 0 }}>
+    {sheet.exercises.map((block, index) => {
       const name = exerciseName(block.exercise.exercise_id);
       const done = block.node === 'complete';
       const expanded = !block.collapsed;
@@ -51,14 +52,14 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
       const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
       return <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ width: 22, alignItems: 'center' }}>
+          {index < sheet.exercises.length - 1 ? <View testID={`all-day-line-${block.exercise.id}`} style={{ position: 'absolute', top: 16, bottom: -16, width: 3, backgroundColor: nodeColor, overflow: 'hidden' }}>{current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}</View> : null}
           <View style={{ width: 22, height: 22, borderRadius: 11, overflow: 'hidden', backgroundColor: nodeColor, alignItems: 'center', justifyContent: 'center', marginTop: 5, outlineColor: colors.goldSoft, outlineWidth: current ? 4 : 0 }}>
             {current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}
             {done ? <MaterialCommunityIcons name="check" size={15} color={colors.inkOnCTAFill} /> : null}
           </View>
-          <View style={{ flex: 1, width: 3, backgroundColor: nodeColor, minHeight: 12, overflow: 'hidden' }}>{current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}</View>
         </View>
         <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded ? colors.gold500 : 'transparent', backgroundColor: expanded ? colors.goldSoft : undefined }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: expanded || current ? colors.goldSoft : undefined }}>
             <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 {!block.repeatName ? <Text numberOfLines={2} testID={`all-day-name-${block.exercise.id}`} style={{ ...font.body(15, 'bold'), color: done ? colors.textSecondary : colors.textPrimary }}>{name}{block.rows[0]?.kind === 'added' ? ` · ${t('student.added.added')}` : ''}</Text> : null}
@@ -105,7 +106,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                         <Text style={{ ...font.mono(15, 'semibold'), color: short ? colors.danger : differences?.reps ? colors.goldText : colors.textPrimary }}>× {short ? `${display.repsText}/${prescription.reps}` : display.repsText || '—'}</Text>
                         {differences?.reps && !short ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.reps])}</Text> : null}
                       </View>
-                      <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{display.rpeText ? `${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText}` : '—'}</Text>{differences?.effort ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
+                      <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{`${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText || '—'}`}</Text>{differences?.effort ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
                     </Pressable>
                     {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(row)} ensureSetLog={() => ensureSetLog(row)} /> : null}
                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
@@ -122,6 +123,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
         </View>
       </View>;
     })}
+    </View>
     {editable ? <Pressable accessibilityRole="button" onPress={onAddExercise}><Text style={{ color: colors.goldText, ...font.body(14) }}>{t('student.added.addExercise')}</Text></Pressable> : null}
 
   </>;

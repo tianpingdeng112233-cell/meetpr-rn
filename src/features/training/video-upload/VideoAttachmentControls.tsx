@@ -210,12 +210,12 @@ export function VideoAttachmentControls({
     : t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007');
   if (cameraOnly) return <>
     <Pressable accessibilityRole="button" accessibilityLabel={t(playable ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy001')} onPress={() => { if (playable || failed) setDetailVisible(true); else void choose('camera'); }} style={{ width: 40, minHeight: 38, justifyContent: 'center', alignItems: 'center' }}>
-      <MaterialCommunityIcons name="camera-outline" size={20} color={record.status === 'uploaded' ? colors.success : record.status !== 'none' || isPreparing ? colors.gold500 : colors.textMuted} />
+      <MaterialCommunityIcons name="video-outline" size={20} color={record.status === 'uploaded' ? colors.success : record.status !== 'none' || isPreparing ? colors.gold500 : colors.textMuted} />
     </Pressable>
     {detailVisible ? <Modal visible animationType="slide" onRequestClose={() => setDetailVisible(false)}><View style={{ flex: 1, backgroundColor: colors.bgBase, padding: 16, paddingTop: 48 }}>
       <VideoAction icon="close" label={t('training.allDay.done')} disabled={false} onPress={() => setDetailVisible(false)} />
       {playable ? <VideoPlayback inline localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => setDetailVisible(false)} /> : null}
-      <VideoAction icon="camera" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('camera')} />
+      <VideoAction icon="video" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('camera')} />
       {failed ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable} onPress={() => void retry([{ stableSetId }])} /> : null}
       <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable} onPress={() => void remove().then(() => setDetailVisible(false))} />
     </View></Modal> : null}

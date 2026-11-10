@@ -215,7 +215,7 @@ export function TodayWorkoutView() {
     : null;
   const editable = Boolean(plan && selectedDayID && canWriteTrainingDay(plan, selectedDayID));
   const reviewKey = `${studentId}:${selectedDayID}`;
-  const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null | undefined>>({});
+  const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null>>({});
   const review =
     reviewState.key === reviewKey && reviewState.status === 'loaded'
       ? reviewState.value
@@ -239,11 +239,13 @@ export function TodayWorkoutView() {
   const synthesizedIDs = new Set(synthesizedDrafts.map(draft => draft.stableSetId));
   synthesizedDrafts.push(...Object.values({ ...syncSnapshot.drafts, ...draftOverrides }).filter(draft => draft.kind && draft.exercise.plan_day_id === selectedDayID && !synthesizedIDs.has(draft.stableSetId) && (syncSnapshot.drafts?.[draft.stableSetId] || (!syncSnapshot.pending.some(entry => entry.stableSetId === draft.stableSetId && entry.remove) && !syncSnapshot.confirmed[draft.stableSetId]?.remove)) &&
     (draft.kind === 'added' || planDay?.exercises.some(exercise => exercise.id === draft.exercise.id))));
-  const baseDrafts = synthesizedDrafts.map((draft) =>
-    draftOverrides[draft.stableSetId] && !draftOverrides[draft.stableSetId].sourceLog && !draft.sourceLog
-      ? draftOverrides[draft.stableSetId]
-      : draft,
-  );
+  const baseDrafts = synthesizedDrafts.map(draft => {
+    const local = draftOverrides[draft.stableSetId];
+    if (local && !local.sourceLog && !draft.sourceLog) return local;
+    // Empty effort has no RPE/RIR discriminator on the wire; retain this session's choice.
+    return local && !local.rpeText && !draft.rpeText
+      ? { ...draft, effortKind: local.effortKind } : draft;
+  });
   const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', editable);
   const prefilledDrafts = baseDrafts.map(draft => {
     const prescription = decodePrescription(draft.planSet);
@@ -605,7 +607,7 @@ export function TodayWorkoutView() {
                 weightText: input.weightText,
                 repsText: input.repsText,
                 rpeText: actualRIR == null ? input.rpeText : String(actualRIR),
-                effortKind: actualRIR == null ? 'rpe' : 'rir',
+                effortKind: input.effortKind ?? (actualRIR == null ? 'rpe' : 'rir'),
                 sourceLog: {
                   id: response.id,
                   student_id: studentId,
@@ -706,7 +708,7 @@ export function TodayWorkoutView() {
     const old = checkedExercises[reviewKey] ?? new Set<string>();
     const next = new Set(old);
     if (next.has(id)) { next.delete(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next })); setExpandedExercises(current => ({ ...current, [reviewKey]: id })); return; }
-    setExpandedExercises(current => ({ ...current, [reviewKey]: undefined }));
+    setExpandedExercises(current => ({ ...current, [reviewKey]: null }));
     next.add(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next }));
     try { for (const { row, request } of completionWrites(sheet, id)) await saveRow(row, request); }
     catch { setCheckedExercises(current => ({ ...current, [reviewKey]: old })); }
