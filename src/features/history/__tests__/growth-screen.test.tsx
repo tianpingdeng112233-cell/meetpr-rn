@@ -4,6 +4,8 @@ import { RefreshControl, Text } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { exercisesRepository, feedbackRepository, onboardingRepository, plansRepository, setKeys, setsRepository } from '@/api/domains';
+import { ApiError } from '@/api/client';
+import { bodyWeightsRepository } from '@/api/domains/body-weights';
 import { t, setLocaleOverride } from '@/i18n';
 import { Eyebrow, StatTile } from '@/design';
 import { GrowthE1RMChart } from '../GrowthE1RMChart';
@@ -39,6 +41,7 @@ beforeEach(() => {
   mockChatUnread = 0;
   mockNavigate.mockReset();
   mockOpenCoachChat.mockReset();
+  jest.spyOn(bodyWeightsRepository, 'list').mockResolvedValue({ records: [] });
   jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [] });
   jest.spyOn(setsRepository, 'range').mockResolvedValue({ logs: [] });
   jest.spyOn(exercisesRepository, 'list').mockResolvedValue({ exercises: [] });
@@ -53,23 +56,22 @@ afterEach(() => {
 });
 
 
-const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.feedbackInboxView.copy006'), t('student.progressMenu.intensity')];
+const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.feedbackInboxView.copy006'), t('student.dashboardProfileMetricsView.copy001'), t('student.progressMenu.intensity')];
 function expectRows() {
   const rows = buttons().filter(node => rowLabels().some(label => node.props.accessibilityLabel?.startsWith(label)));
   expect(rows.map(node => node.props.accessibilityLabel)).toEqual(rowLabels());
-  expect(texts()).not.toContain('Body weight');
   expect(renderer.root.findAllByType(GrowthE1RMChart)).toHaveLength(0);
   expect(renderer.root.findAllByType(VolumeIntensityChart)).toHaveLength(0);
   expect(renderer.root.findAllByType(StatTile)).toHaveLength(0);
   return rows;
 }
 
-test('four ordered rows remain tappable without charts, tiles or Body weight in both languages', async () => {
+test('five ordered rows remain tappable without charts or tiles in both languages', async () => {
   await render();
   const rows = expectRows();
-  const routes = ['/progress/e1rm', '/training-history', '/(student)/feedback', '/progress/intensity'];
+  const routes = ['/progress/e1rm', '/training-history', '/(student)/feedback', '/progress/body-weight', '/progress/intensity'];
   rows.forEach((row, index) => { act(() => row.props.onPress()); expect(mockNavigate).toHaveBeenLastCalledWith(routes[index]); });
-  expect(texts().filter(text => text === '—')).toHaveLength(4);
+  expect(texts().filter(text => text === '—')).toHaveLength(5);
   setLocaleOverride('zh');
   act(() => renderer.update(<QueryClientProvider client={client}><GrowthScreen /></QueryClientProvider>));
   expectRows();
@@ -91,6 +93,7 @@ test('header retains wordmark and chat badge without subtitle or Eyebrow', async
 });
 
 test('pending and failed requests keep blank tappable rows, with retry and pull-to-refresh recovery', async () => {
+  jest.mocked(bodyWeightsRepository.list).mockReturnValue(new Promise(() => {}));
   jest.mocked(exercisesRepository.list).mockReturnValue(new Promise(() => {}));
   await render();
   expectRows();
@@ -101,6 +104,7 @@ test('pending and failed requests keep blank tappable rows, with retry and pull-
   expectRows().forEach(row => act(() => row.props.onPress()));
   expect(texts()).toContain(t('student.trainingHistoryView.copy022'));
   expect(texts()).not.toContain('—');
+  jest.mocked(bodyWeightsRepository.list).mockResolvedValue({ records: [] });
   jest.mocked(setsRepository.range).mockResolvedValue({ logs: [] });
   jest.mocked(exercisesRepository.list).mockResolvedValue({ exercises: [] });
   await act(async () => { await client.cancelQueries(); button(t('student.trainingHistoryView.copy023')).props.onPress(); });
@@ -125,4 +129,24 @@ test('feedback navigates to the existing inbox and focus refresh updates its unr
   expect(texts()).not.toContain('1 new');
   expect(button(t('student.feedbackInboxView.copy006')).props.accessibilityLabel).toBe(`${t('student.feedbackInboxView.copy006')}, 1`);
   expect(button(t('student.trainingHistoryView.copy012')).props.accessibilityValue).toEqual({ text: '1' });
+});
+
+test('weight row reads the newest record with two decimals independently of other Progress data', async () => {
+  jest.mocked(bodyWeightsRepository.list).mockResolvedValue({ records: [{ recorded_on: '2026-10-08', weight_kg: '84.00' }, { recorded_on: '2026-10-09', weight_kg: '83.00' }] });
+  await render();
+  expect(button('Body weight').props.accessibilityLabel).toBe('Body weight, 83.00 kg');
+  expect(texts()).not.toContain('84.00 kg');
+});
+
+test('a missing weight endpoint shows a dash and retry, without blocking other rows', async () => {
+  jest.mocked(bodyWeightsRepository.list).mockRejectedValue(new ApiError('server', 'Not found', { status: 404 }));
+  await render();
+  expect(texts().filter(text => text === '—')).toHaveLength(5);
+  expect(texts()).toContain(t('student.trainingHistoryView.copy022'));
+  act(() => button('Body weight').props.onPress());
+  expect(mockNavigate).toHaveBeenLastCalledWith('/progress/body-weight');
+  jest.mocked(bodyWeightsRepository.list).mockResolvedValue({ records: [{ recorded_on: '2026-10-09', weight_kg: '83.00' }] });
+  await act(async () => { button(t('student.trainingHistoryView.copy023')).props.onPress(); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(texts()).toContain('83.00 kg');
 });

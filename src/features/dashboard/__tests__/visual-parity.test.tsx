@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Modal, StyleSheet, Text, TextInput } from 'react-native';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
+import { ApiError } from '@/api/client';
 import { FeedbackResponseSchema } from '@/api/domains/feedback';
 import { bindKeys, type MineBindRequestResponse } from '@/api/domains/bind';
 import type { OnboardingProfile } from '@/api/domains/onboarding';
@@ -66,6 +67,7 @@ let servedBinding: MineBindRequestResponse['bind_request'];
 let servedPlan: PlanDetail | null;
 let servedFirstPlan: PlanDetail | null;
 let servedProfile: OnboardingProfile | null;
+let missingWeightEndpoint = false;
 let servedExercises: import('@/api/domains').Exercise[];
 let feedbackItems: import('@/api/domains').FeedbackItem[];
 
@@ -86,6 +88,7 @@ beforeEach(async () => {
   servedFirstPlan = null;
   servedExercises = [];
   servedProfile = null;
+  missingWeightEndpoint = false;
   feedbackItems = [];
   mockPush.mockClear();
   mockNavigate.mockClear();
@@ -97,6 +100,12 @@ beforeEach(async () => {
     if (servedFirstPlan && path === `/plans/${servedFirstPlan.id}`) return servedFirstPlan as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: servedExercises } as never;
+    if (path.startsWith('/students/me/body-weights/')) {
+      if (missingWeightEndpoint) throw new ApiError('server', 'Missing endpoint', { status: 404 });
+      const weight = (options?.body as { weight_kg: string }).weight_kg;
+      if (servedProfile) servedProfile = { ...servedProfile, weight_kg: weight };
+      return { record: { recorded_on: path.split('/').at(-1), weight_kg: weight }, current_weight_kg: weight } as never;
+    }
     if (path.endsWith('/onboarding')) {
       if (options?.method === 'PUT' && servedProfile) servedProfile = { ...servedProfile, ...options.body as Partial<OnboardingProfile> };
       return servedProfile as never;
@@ -240,7 +249,8 @@ test('a bound student with no plan can message the coach from the Dashboard wait
   expect(mockNavigate).not.toHaveBeenCalledWith('/(student)/feedback');
 });
 
-test.each([false, true])('Today metric cards open the existing Profile editors (has values: %s)', async (hasValues) => {
+test.each([[false, false], [true, false], [true, true]])('Today metric cards save and return through the existing editor (has values: %s, missing endpoint: %s)', async (hasValues, missingEndpoint) => {
+  missingWeightEndpoint = missingEndpoint;
   if (hasValues) servedProfile = {
     user_id: '10000000-0000-4000-8000-000000000000', unit_preference: 'kg', gender: 'male',
     birth_date: '2000-01-01', height_cm: '180', weight_kg: '83', training_years: 3,

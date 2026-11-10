@@ -1,4 +1,14 @@
 {
+"student.bodyWeight.latest": {"en": "Latest", "zh": "最新"},
+"student.bodyWeight.empty": {"en": "No weight records yet", "zh": "还没有体重记录"},
+"student.bodyWeight.single": {"en": "Log on another day to see the trend", "zh": "换一天再记一次就能看到趋势"},
+"student.bodyWeight.log": {"en": "Log today's weight", "zh": "记录今天的体重"},
+"student.bodyWeight.update": {"en": "Update today's weight", "zh": "修改今天的体重"},
+"student.bodyWeight.records": {"en": "Records", "zh": "记录"},
+"student.bodyWeight.delete": {"en": "Delete record for {0}", "zh": "删除 {0} 的记录"},
+"student.bodyWeight.confirmDelete": {"en": "Delete this record? This cannot be undone.", "zh": "删除这条记录？此操作无法撤销。"},
+"student.bodyWeight.deleteAction": {"en": "Delete", "zh": "删除"},
+
 "student.accessory.pad.context": {"en": "{0} · Set {1} · {2}", "zh": "{0} · 第 {1} 组 · {2}"},
 "student.accessory.pad.weight": {"en": "Weight", "zh": "重量"},
 "student.accessory.pad.reps": {"en": "Reps", "zh": "次数"},

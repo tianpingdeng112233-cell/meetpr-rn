@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Alert, Text } from 'react-native';
 import { useUpsertOnboarding, type OnboardingProfile } from '@/api/domains/onboarding';
+import { useSaveBodyWeight } from '@/api/domains/body-weights';
+import { useSessionStore } from '@/api/session';
 import { ApiError } from '@/api/client';
 import { AppButton, font, spacing, typography, useColors } from '@/design';
 import { FeedbackPressable } from '@/design/FeedbackPressable';
@@ -26,13 +28,20 @@ export function ProfileEditor({ section, profile, onClose }: { section: ProfileS
     const initial = formFromServer(profile);
     return section === 'competition' ? { ...initial, isCompeting: true, competitionDate: profile?.is_competing && profile.competition_date ? profile.competition_date : formFromServer(null).competitionDate } : initial;
   });
+  const [initialWeightKg] = useState(() => form.weightKg);
+  const [weightEdited, setWeightEdited] = useState(false);
   const [errorFields, setErrorFields] = useState<Set<OnboardingErrorField>>(new Set());
   const [error, setError] = useState('');
   const save = useUpsertOnboarding();
+  const studentId = useSessionStore(state => state.user?.id ?? profile?.user_id ?? '');
+  const saveWeight = useSaveBodyWeight(studentId);
+  const busy = save.isPending || saveWeight.isPending;
   const Content = sections[section];
   const submit = async () => {
     let invalid = invalidFieldsForStep(form, profileSteps[section]);
     if (section === 'injuries' || section === 'note') invalid = [];
+    const weightChanged = Number(form.weightKg) !== Number(initialWeightKg);
+    if (section === 'basics' && !weightChanged && !weightEdited) invalid = invalid.filter(field => field !== 'weightKg');
     if (section === 'weight') invalid = invalid.filter(field => field === 'weightKg');
     setErrorFields(new Set(invalid));
     if (invalid.length) {
@@ -41,7 +50,16 @@ export function ProfileEditor({ section, profile, onClose }: { section: ProfileS
       return;
     }
     setError('');
-    try { await save.mutateAsync(profilePatch(profileSteps[section], form, section)); onClose(); }
+    try {
+      const patch = profilePatch(profileSteps[section], form, section);
+      if (section === 'weight' && patch.weight_kg) await saveWeight.mutateAsync(patch.weight_kg);
+      else if (section === 'basics') {
+        const { weight_kg: weightKg, ...basics } = patch;
+        await save.mutateAsync(basics);
+        if (weightChanged && weightKg) await saveWeight.mutateAsync(weightKg);
+      } else await save.mutateAsync(patch);
+      onClose();
+    }
     catch (failure) { setError(t(failure instanceof ApiError && failure.code === 'ONE_RM_LOCKED' ? 'student.myProfileViewModel.copy001' : 'student.myProfileViewModel.copy002')); }
   };
   const removeMeet = () => Alert.alert(t('student.rn.meet.confirmRemove'), undefined, [
@@ -51,12 +69,15 @@ export function ProfileEditor({ section, profile, onClose }: { section: ProfileS
       catch { setError(t('student.myProfileViewModel.copy002')); }
     } },
   ]);
-  return <ProfileModal title={t(profileEditorTitles[section])} onClose={onClose} busy={save.isPending}>
-    <Content key={section === 'basics' ? form.unitPreference ?? 'unset' : section} showHelp={section === 'weight'} profileLayout errorFields={errorFields} form={form} update={(patch) => setForm((current) => ({ ...current, ...patch }))} />
+  return <ProfileModal title={t(profileEditorTitles[section])} onClose={onClose} busy={busy}>
+    <Content key={section === 'basics' ? form.unitPreference ?? 'unset' : section} showHelp={section === 'weight'} profileLayout errorFields={errorFields} form={form} update={(patch) => {
+      if (patch.weightKg !== undefined) setWeightEdited(true);
+      setForm((current) => ({ ...current, ...patch }));
+    }} />
     {error ? <ProfileText error>{error}</ProfileText> : null}
     {section === 'injuries' ? <Text style={{ ...font.body(12), color: colors.textMuted, textAlign: 'center' }}>{t('student.rn.profile.notify')}</Text> : null}
-    <AppButton label={t('student.profileCardsSection.copy013')} disabled={save.isPending} onPress={() => void submit()} />
-    {section === 'competition' && profile?.is_competing && profile.competition_date ? <FeedbackPressable accessibilityRole="button" disabled={save.isPending} onPress={removeMeet} style={{ padding: spacing.sm, alignItems: 'center' }}>
+    <AppButton label={t('student.profileCardsSection.copy013')} disabled={busy} onPress={() => void submit()} />
+    {section === 'competition' && profile?.is_competing && profile.competition_date ? <FeedbackPressable accessibilityRole="button" disabled={busy} onPress={removeMeet} style={{ padding: spacing.sm, alignItems: 'center' }}>
       <Text style={{ color: colors.danger, ...typography.bodyEmphasis }}>{t('student.rn.meet.remove')}</Text>
     </FeedbackPressable> : null}
   </ProfileModal>;

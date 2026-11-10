@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Alert, Text, TextInput } from 'react-native';
+import { bodyWeightsRepository } from '@/api/domains/body-weights';
 import { onboardingRepository, type OnboardingProfile } from '@/api/domains/onboarding';
 import { setLocaleOverride, t } from '@/i18n';
 import { GENDER_LABELS, UNIT_LABELS } from '@/features/onboarding/catalog';
@@ -35,6 +36,10 @@ beforeEach(() => {
   onClose.mockClear();
   storedProfile = { ...initialProfile };
   client = new QueryClient({ defaultOptions: { mutations: { retry: false, gcTime: Infinity } } });
+  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+    storedProfile = { ...storedProfile, weight_kg: weight };
+    return { record: { recorded_on: '2026-11-08', weight_kg: weight }, current_weight_kg: weight };
+  });
   jest.spyOn(onboardingRepository, 'upsert').mockImplementation(async (patch) => {
     storedProfile = { ...storedProfile, ...patch };
     return storedProfile;
@@ -78,11 +83,12 @@ test('basics saves units, gender and birthday, preserves metric measurements and
   await press(GENDER_LABELS.female);
   await press(1995);
   await save();
-  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180', weight_kg: '80.00' });
+  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180' });
+  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
   expect(onClose).toHaveBeenCalledTimes(1);
   await reopen('basics');
   await save();
-  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180', weight_kg: '80.00' });
+  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'female', birth_date: '1995-01-01', height_cm: '180' });
 });
 
 test('switching units after metric edits initializes imperial text from the current measurements', async () => {
@@ -95,7 +101,8 @@ test('switching units after metric edits initializes imperial text from the curr
   expect(input('70').props.value).toBe('74.8');
   expect(input('183').props.value).toBe('198.42');
   await save();
-  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'male', birth_date: '2000-01-01', height_cm: '190', weight_kg: '90.00' });
+  expect(lastPatch()).toEqual({ unit_preference: 'lb', gender: 'male', birth_date: '2000-01-01', height_cm: '190' });
+  expect(jest.mocked(bodyWeightsRepository.saveToday).mock.calls.at(-1)?.[0]).toBe('90.00');
 });
 
 test('basics requires the same gender selection as onboarding before saving', async () => {
@@ -155,11 +162,13 @@ test.each(['kg', 'lb'] as const)('weight editor has one input, filters two decim
   act(() => field().props.onChangeText(unit === 'kg' ? '83.256' : '183.256'));
   expect(field().props.value).toBe(unit === 'kg' ? '83.25' : '183.25');
   await save();
-  expect(lastPatch()).toEqual({ weight_kg: unit === 'kg' ? '83.25' : '83.12' });
+  expect(jest.mocked(bodyWeightsRepository.saveToday).mock.calls.at(-1)?.[0]).toBe(unit === 'kg' ? '83.25' : '83.12');
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
   await reopen('weight');
   expect(field().props.value).toBe(unit === 'kg' ? '83.25' : '183.25');
   await save();
-  expect(lastPatch()).toEqual({ weight_kg: unit === 'kg' ? '83.25' : '83.12' });
+  expect(jest.mocked(bodyWeightsRepository.saveToday).mock.calls.at(-1)?.[0]).toBe(unit === 'kg' ? '83.25' : '83.12');
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
 });
 
 test.each(['', '0', '500'])('weight editor blocks invalid kg input %j', async (value) => {
@@ -252,4 +261,37 @@ test('profile editor registry excludes environment, recovery and materials', asy
   for (const title of ['Training environment', 'Recovery capacity', 'Training materials', 'Muscles to improve']) expect(copy).not.toContain(title);
   await save();
   expect(storedProfile).toMatchObject({ training_days: ['mon', 'wed'], gym_tier: 'commercial', daily_life_intensity: 3, life_stress: 2, recovery_speed: 4, sleep_hours: 8 });
+});
+
+test('basics with no current weight can change another field without creating a record', async () => {
+  storedProfile.weight_kg = null;
+  await mount('basics');
+  await press(GENDER_LABELS.female);
+  await save();
+  expect(lastPatch()).toEqual({ unit_preference: 'kg', gender: 'female', birth_date: '2000-01-01', height_cm: '180' });
+  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
+  expect(storedProfile.weight_kg).toBeNull();
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+test('a profile refresh during basics editing does not treat untouched weight as a user edit', async () => {
+  await mount('basics');
+  await press(GENDER_LABELS.female);
+  storedProfile = { ...storedProfile, weight_kg: '81.00' };
+  act(() => renderer.update(<QueryClientProvider client={client}><ProfileEditor section="basics" profile={storedProfile} onClose={onClose} /></QueryClientProvider>));
+  await save();
+  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
+  expect(storedProfile.weight_kg).toBe('81.00');
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+test.each(['0', '0.00', '500'])('basics rejects invalid weight %s even when the current profile weight is empty', async value => {
+  storedProfile.weight_kg = null;
+  await mount('basics');
+  act(() => input('83').props.onChangeText(value));
+  await save();
+  expect(onboardingRepository.upsert).not.toHaveBeenCalled();
+  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+  expect(renderer.root.findAll(node => node.props.error === true).length).toBeGreaterThan(0);
 });
