@@ -5,9 +5,12 @@ import { day, set } from '@/domain/plan/test-fixtures';
 import type { ExecutionDay } from '@/domain/coach/detail-week';
 import type { SetLog } from '@/api/domains/sets';
 import { setLocaleOverride, t } from '@/i18n';
+import { CoachVideoPlayer } from '../CoachVideoPlayer';
 import { CoachDayDetailView } from '../CoachDayDetailView';
 
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+jest.mock('@/features/training/video-upload/VideoPlayback', () => ({ VideoPlayback: () => null }));
+jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }), SafeAreaView: 'SafeAreaView' }));
 let renderer: ReactTestRenderer;
 afterEach(() => { act(() => renderer?.unmount()); setLocaleOverride(); });
 const log = (id: string, index: number, added = false): SetLog => ({ id, student_id: 'student', plan_exercise_id: added ? null : 'squat', exercise_id: added ? 'curl' : 'squat', plan_day_id: added ? 'd4' : null, set_index: index, weight_kg: '100', reps: 5, rpe: '8', completed: true, failed: false, assumed: false, adhoc: added, logged_date: '2026-09-07', logged_at: '2026-09-07T12:00:00Z' });
@@ -65,4 +68,14 @@ test('day header displays its plan day code and individual settlement status', (
   expect(texts()).toContain(`W1D2 · ${t('coach.detail.completed')}`);
   act(() => renderer.update(<CoachDayDetailView day={{ ...execution, planDay: earlier }} planDays={days} exerciseName={id => id} onClose={() => {}} />));
   expect(texts()).toContain(`W1D1 · ${t('coach.detail.notStarted')}`);
+});
+
+
+test('coach playback honors explicitly cleared weight over a stale video snapshot', () => {
+  const video = { id: 'video', set_log_id: 'first', plan_exercise_id: 'squat', exercise_name: 'Squat', set_index: 0,
+    weight_kg: '100', reps: 5, logged_at: '2026-09-07T12:00:00Z', created_at: '2026-09-07T12:00:00Z', content_type: 'video/mp4', size_bytes: 10, filename: null };
+  act(() => { renderer = create(<CoachVideoPlayer video={video} log={{ ...log('first', 0), weight_kg: null }} title="Squat" coachName="Coach" onClose={() => {}} />); });
+  const copy = texts().map(value => [value].flat().join('')).join(' ');
+  expect(copy).toContain('— kg');
+  expect(copy).not.toContain('100 kg');
 });

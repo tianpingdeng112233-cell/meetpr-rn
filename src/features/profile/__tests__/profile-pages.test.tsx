@@ -1,26 +1,26 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Text, TextInput, Modal, StyleSheet, Platform, ScrollView } from 'react-native';
-import * as Application from 'expo-application';
-import { onboardingRepository, OnboardingProfileSchema, type OnboardingProfile } from '@/api/domains/onboarding';
 import { bindRepository } from '@/api/domains/bind';
+import { OnboardingProfileSchema, onboardingRepository, type OnboardingProfile } from '@/api/domains/onboarding';
+import { readinessRepository } from '@/api/domains/readiness';
 import { useSessionStore } from '@/api/session';
+import { ThemeProvider, resolveColors } from '@/design';
+import { ProgressPageHeader } from '@/features/history/ProgressPageHeader';
+import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
+import { writeReminderPreference } from '@/features/settings/storage';
+import { TrainingReminderSettingsScreen } from '@/features/settings/TrainingReminderSettingsScreen';
 import { setLocaleOverride, t, type Locale } from '@/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as Application from 'expo-application';
+import type { ReactNode } from 'react';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { ProfileModal } from '../components';
+import { MyProfileScreen } from '../MyProfileScreen';
 import { ProfileAboutScreen } from '../ProfileAboutScreen';
+import { ProfileEditor } from '../ProfileEditor';
 import { ProfileHealthScreen } from '../ProfileHealthScreen';
 import { ProfileSettingsScreen } from '../ProfileSettingsScreen';
-import { MyProfileScreen } from '../MyProfileScreen';
-import { readinessRepository } from '@/api/domains/readiness';
-import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
-import { TrainingReminderSettingsScreen } from '@/features/settings/TrainingReminderSettingsScreen';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThemeProvider, resolveColors } from '@/design';
-import { writeReminderPreference } from '@/features/settings/storage';
-import { ProfileModal } from '../components';
-import type { ReactNode } from 'react';
-import { ProfileEditor } from '../ProfileEditor';
-import { ProgressPageHeader } from '@/features/history/ProgressPageHeader';
 
 jest.mock('expo-application', () => ({ nativeApplicationVersion: '0.1.0', nativeBuildVersion: '4' }));
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -102,13 +102,11 @@ test.each(['today', 'onboarding', 'empty'])('Health hides recovery summaries and
   expect(texts()).not.toContain('Notify coach');
   await press('Injury history'); expect(renderer.root.findByType(ProfileEditor).props.section).toBe('injuries');
 });
-test('Settings switches appearance persistently and opens both existing preference screens', async () => {
+test('Settings persists appearance and keeps reminders while hiding retired rest preferences', async () => {
   await mount(<ProfileSettingsScreen />);
   await press('Dark');
   expect(renderer.root.findAll(node => node.props.accessibilityState?.selected && typeof node.props.onPress === 'function').some(node => node.findAllByType(Text).some(text => text.props.children === 'Dark'))).toBe(true);
-  expect(texts()).toContain('Automatic (by RPE)'); expect(texts()).toContain('Off');
-  await press('Rest between sets'); expect(renderer.root.findAllByType(RestTimerSettingsScreen)).toHaveLength(1);
-  act(() => renderer.root.findByType(RestTimerSettingsScreen).props.onClose());
+  expect(texts()).not.toContain('Rest between sets'); expect(texts()).toContain('Off');
   await press('Training reminders'); expect(renderer.root.findAllByType(TrainingReminderSettingsScreen)).toHaveLength(1);
   act(() => renderer.root.findByType(TrainingReminderSettingsScreen).props.onClose());
   act(() => renderer.unmount()); await mount(<ProfileSettingsScreen />);
@@ -138,12 +136,12 @@ test('iOS main settings do not show an Android version row', async () => {
   await mount(<ProfileSettingsScreen />);
   expect(texts()).not.toContain('Version 0.1.0 (4)');
 });
-test('rest timer subpage does not show the app version', async () => {
+test('reminders subpage does not show the app version', async () => {
   jest.replaceProperty(Platform, 'OS', 'android');
   await mount(<ProfileSettingsScreen />);
-  await press('Rest between sets');
+  await press('Training reminders');
   const subpage = renderer.root.findByType(Modal);
-  expect(subpage.findAllByType(Text).map(node => node.props.children)).toContain('Rest between sets');
+  expect(subpage.findAllByType(Text).map(node => node.props.children)).toContain('Training reminders');
   expect(subpage.findAllByType(Text).map(node => node.props.children)).not.toContain('Version 0.1.0 (4)');
 });
 test.each(['Change password', 'Export training data', 'Delete account'])('Settings opens the unchanged %s modal', async label => {
@@ -158,7 +156,7 @@ test('Settings can sign out and clear cached data even when the profile request 
   await mount(<ProfileSettingsScreen />); await press('Sign out'); expect(clear).toHaveBeenCalled(); expect(logout).toHaveBeenCalledTimes(1);
 });
 
-test.each(['Rest between sets', 'Training reminders'])('%s storage failure retains the existing retry behavior', async label => {
+test.each(['Training reminders'])('%s storage failure retains the existing retry behavior', async label => {
   const getItem = jest.spyOn(AsyncStorage, 'getItem');
   const original = getItem.getMockImplementation()!;
   const prefix = label === 'Rest between sets' ? 'meetpr.rest-timer.v2.' : 'meetpr.training-reminder.v1.';
@@ -206,7 +204,7 @@ test.each<['en' | 'zh', 'light' | 'dark']>([['en', 'light'], ['en', 'dark'], ['z
 test.each([
   { Component: ProfileAboutScreen, retained: '178 cm · 83.50 kg' },
   { Component: ProfileHealthScreen, retained: 'Knees injuries' },
-  { Component: ProfileSettingsScreen, retained: 'Automatic (by RPE)' },
+  { Component: ProfileSettingsScreen, retained: 'Off' },
 ])('secondary $Component.name retains cached content and exposes retry after refresh failure', async ({ Component, retained }) => {
   await mount(<Component />);
   expect(texts()).toContain(retained);

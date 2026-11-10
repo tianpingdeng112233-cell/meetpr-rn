@@ -10,7 +10,7 @@ export function csvFileName(now = new Date()): string {
 export function trainingLogCSV(logs: readonly SetLog[], names: ReadonlyMap<string, { name: string; name_en: string | null }>): string {
   const rows = [...logs].sort((a, b) => Date.parse(a.logged_at) - Date.parse(b.logged_at)).map((log) => {
     const exercise = names.get(log.exercise_id);
-    return [dateText(new Date(log.logged_at)), exercise?.name ?? log.exercise_id, exercise?.name_en ?? '', String(log.set_index), log.weight_kg, String(log.reps), log.rpe ?? '', String(log.completed), String(log.failed), String(log.adhoc)].map(csvField).join(',');
+    return [dateText(new Date(log.logged_at)), exercise?.name ?? log.exercise_id, exercise?.name_en ?? '', String(log.set_index), log.weight_kg ?? '', String(log.reps), log.rpe ?? '', String(log.completed), String(log.failed), String(log.adhoc)].map(csvField).join(',');
   });
   return [CSV_HEADER, ...rows].join('\n');
 }

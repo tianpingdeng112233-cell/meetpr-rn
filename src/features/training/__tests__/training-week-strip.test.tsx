@@ -15,7 +15,7 @@ beforeEach(() => setLocaleOverride('en'));
 afterEach(() => { act(() => renderer?.unmount()); setLocaleOverride(null); });
 const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
 
-test('training cells show dates or Behind without D ordinals; rest cells expose only weekday and Rest', () => {
+test('all seven cells show date numbers while retaining day selection and rest accessibility', () => {
   const fixture = plan([
     day('done', { completed_at: '2026-09-07T12:00:00Z' }),
     day('behind', { day_of_week: 2 }),
@@ -24,7 +24,7 @@ test('training cells show dates or Behind without D ordinals; rest cells expose 
   ]);
   act(() => { renderer = create(<TrainingWeekStrip plan={fixture} strip={trainingWeekStrip(fixture, null, '2026-09-09')} onSelect={jest.fn()} />); });
   expect(copy().filter(text => /^D\d+$/.test(text))).toEqual([]);
-  expect(copy()).toEqual(expect.arrayContaining(['9/7', 'Behind', '9/9', '9/10', 'Rest']));
+  expect(copy()).toEqual(expect.arrayContaining(['7', '8', '9', '10', '11', '12', '13']));
   expect(copy()).not.toEqual(expect.arrayContaining(['9/8']));
   for (const restDate of ['9/11', '9/12', '9/13']) expect(copy()).not.toContain(restDate);
   for (const label of ['W1D1, Mon 9/7', 'W1D2, Tue, behind schedule', 'W1D3, Wed 9/9', 'Fri, rest day']) {

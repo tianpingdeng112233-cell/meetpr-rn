@@ -1,0 +1,25 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+FAIL src/features/training/__tests__/exercise-summary.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../exercise-summary' from 'src/features/training/__tests__/exercise-summary.test.ts'
+
+      2 | import { set } from '@/domain/plan/test-fixtures';
+      3 | import type { PlanSet } from '@/api/domains/plans';
+    > 4 | import { summarizeExercise } from '../exercise-summary';
+        | ^
+      5 |
+      6 | const sets = (count: number, fields: Partial<PlanSet>) => Array.from({ length: count }, (_, index) => set({ ...fields, id: `set-${index}`, set_number: index + 1 }));
+      7 |
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (src/features/training/__tests__/exercise-summary.test.ts:4:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.374 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

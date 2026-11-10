@@ -1,0 +1,34 @@
+
+> meetpr-rn@1.0.0 lint
+> expo lint
+
+
+/Users/david/Projects/apps/meetpr-rn-wt-107/src/features/training/AllDayBody.tsx
+  113:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/david/Projects/apps/meetpr-rn-wt-107/src/features/training/AllDayBody.tsx:113:5
+  111 |   useLayoutEffect(() => {
+  112 |     input.current = null;
+> 113 |     setEditing(null);
+      |     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  114 |     onPadLayout(null, null);
+  115 |   }, [scopeKey, onPadLayout]);
+  116 |   const rowViews = useRef(new Map<string, View>());  react-hooks/set-state-in-effect
+
+/Users/david/Projects/apps/meetpr-rn-wt-107/src/features/training/__tests__/hero-camera-upload.test.tsx
+  8:17  warning  'Text' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/david/Projects/apps/meetpr-rn-wt-107/src/features/training/__tests__/number-pad-visibility.test.tsx
+  9:29  warning  't' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/david/Projects/apps/meetpr-rn-wt-107/src/features/training/__tests__/set-save.test.tsx
+  13:10  warning  'numericCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 4 problems (1 error, 3 warnings)
+

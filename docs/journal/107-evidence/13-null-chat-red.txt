@@ -1,0 +1,53 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/chat/__tests__/student-timeline.test.ts src/features/chat/__tests__/set-ref.test.ts
+
+FAIL src/features/chat/__tests__/set-ref.test.ts
+  ● null weight uses a dash in display copy without rewriting the frozen historical protocol
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "—kg"
+    Received string:    "[Training share] Squat Set 2 of 3 -kg×5 @RPE8 (2026-09-05)"
+
+      129 |
+      130 | test('null weight uses a dash in display copy without rewriting the frozen historical protocol', () => {
+    > 131 |   expect(displayFirstLine({ ...logged, weightKg: null })).toContain('—kg');
+          |                                                           ^
+      132 |   expect(canonicalFirstLine({ ...logged, weightKg: null })).toContain('-kg');
+      133 | });
+      134 |
+
+      at Object.toContain (src/features/chat/__tests__/set-ref.test.ts:131:59)
+
+FAIL src/features/chat/__tests__/student-timeline.test.ts
+  ● shared-set attachment presents the note before compact metrics and omits unavailable fields
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "hasVideo": false,
+        "note": null,
+    -   "subtitle": "Set 2 · —kg",
+    +   "subtitle": "Set 2",
+        "title": "Squat",
+      }
+
+      56 |   const ref = { v: 1 as const, source: 'logged' as const, exerciseName: 'Squat', setNumber: 2, setTotal: 3, weightKg: '50', reps: 5, rpe: '8', dayDate: '2026-10-02', setLogId: null };
+      57 |   expect(sharedSetAttachment(ref, 'Check depth', 'https://video')).toEqual({ note: 'Check depth', title: 'Squat', subtitle: 'Set 2 of 3 · 50kg × 5 · RPE 8', hasVideo: true });
+    > 58 |   expect(sharedSetAttachment({ ...ref, setTotal: null, weightKg: null, reps: null, rpe: null }, '', null)).toEqual({ note: null, title: 'Squat', subtitle: 'Set 2 · —kg', hasVideo: false });
+         |                                                                                                            ^
+      59 |   expect(sharedSetAttachment({ ...ref, weightKg: null, repsMax: 8, rpe: null }, null, null).subtitle).toBe('Set 2 of 3 · —kg × 5–8');
+      60 |   expect(sharedSetAttachment({ ...ref, reps: null, rpe: null }, null, null).subtitle).toBe('Set 2 of 3 · 50kg');
+      61 | });
+
+      at Object.toEqual (src/features/chat/__tests__/student-timeline.test.ts:58:108)
+
+Test Suites: 2 failed, 2 total
+Tests:       2 failed, 30 passed, 32 total
+Snapshots:   0 total
+Time:        0.6 s, estimated 1 s
+Ran all test suites matching /src\/features\/chat\/__tests__\/student-timeline.test.ts|src\/features\/chat\/__tests__\/set-ref.test.ts/i.

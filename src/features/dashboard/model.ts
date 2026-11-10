@@ -1,13 +1,5 @@
 import { exerciseDisplayName, getLocale, t } from '@/i18n';
-import type {
-  Exercise,
-  FeedbackItem,
-  OnboardingProfile,
-  PlanDay,
-  PlanDetail,
-  SetLog,
-  SetLogRange,
-} from '@/api/domains';
+import type { Exercise, FeedbackItem, OnboardingProfile, PlanDay, PlanDetail, SetLog, SetLogRange } from '@/api/domains';
 import { cursorDay, progressSegments, recommendedDate, selectCurrentPlan } from '@/domain/plan/sequence';
 import type { FeedbackVideo } from '@/api/domains/feedback';
 import { feedbackVideoName } from '@/features/feedback/video-presentation';
@@ -27,11 +19,7 @@ import {
   type OnboardingLiftProfile,
 } from '@/domain/e1rm';
 
-import type {
-  DashboardLift,
-  DashboardNotification,
-  DashboardWeekDay,
-} from './types';
+import type { DashboardLift, DashboardNotification, DashboardWeekDay } from './types';
 
 const DATE_TEXT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const FAMILY_INITIAL: Record<LiftFamily, DashboardLift['initial']> = {
@@ -212,6 +200,7 @@ export function replayE1RMHistoryPoints(
     .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime() || left.id.localeCompare(right.id));
 
   for (const log of sorted) {
+    if (log.weight_kg == null) continue;
     const effectiveRPE = log.coach_rpe ?? log.rpe;
     if (!isE1RMEligible({ reps: log.reps, rpe: effectiveRPE == null ? null : Number(effectiveRPE), family })) continue;
     const value = calculateE1RM(

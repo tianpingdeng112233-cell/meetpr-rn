@@ -1,0 +1,123 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+FAIL src/features/training/__tests__/exercise-summary.test.ts
+  ✓ per-set weights compress only consecutive equal weights (1 ms)
+  ✓ different rep sections keep weights paired in prescription order
+  ✓ weight range preserves the written prescription
+  ✓ rep range preserves the written prescription
+  ✓ AMRAP preserves the written prescription
+  ✓ bodyweight preserves the written prescription
+  ✓ bodyweight plus load preserves the written prescription
+  ✓ free weight and effort uses the intensity style
+  ✓ uniform RPE uses the intensity style
+  ✓ RPE range uses the intensity style
+  ✓ RIR uses the intensity style
+  ✓ 2A varying RPE stays verbatim even when historical weight suggestions exist
+  ✓ 1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets
+  ✓ percentage one_rm shows resolved weight and original percent, or only percent if unresolved (1 ms)
+  ✓ percentage e1rm shows resolved weight and original percent, or only percent if unresolved
+  ✓ top-set percent waits for the top set and then shows its calculated weight
+  ✕ student-added exercise shows unrecorded until entered, then its actual values (1 ms)
+  ✕ recorded values override prescription and suggestions, flag edits and short reps, and preserve explicit nulls (1 ms)
+  ✕ recorded RPE-only groups show actual weights and effort instead of the untouched RPE summary
+  ✓ warmups count as ordinary sets and advanced settings do not appear
+  107 one-line prescription table
+    ✓ uniform weight: 4×8 130 (1 ms)
+
+  ● student-added exercise shows unrecorded until entered, then its actual values
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 6
+    + Received  + 1
+
+    - Array [
+    -   Object {
+    -     "load": "未记录",
+    -     "setsReps": "",
+    -   },
+    - ]
+    + Array []
+
+      69 | const actual = (index: number, weight: string | null, reps: number, rpe: string | null = null) => ({ set_index: index, weight_kg: weight, reps, rpe });
+      70 | test('student-added exercise shows unrecorded until entered, then its actual values', () => {
+    > 71 |   expect(summarizeExercise([], [], [])).toMatchObject([{ setsReps: '', load: '未记录' }]);
+         |                                         ^
+      72 |   expect(summarizeExercise([], [actual(0, '20', 10), actual(1, '20', 10)], []))
+      73 |     .toMatchObject([{ setsReps: '2×10', load: '20' }]);
+      74 | });
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:71:41)
+
+  ● recorded values override prescription and suggestions, flag edits and short reps, and preserve explicit nulls
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 10
+    + Received  +  6
+
+      Array [
+        Object {
+    -     "load": "90",
+    -     "loadChanged": true,
+    -     "repsChanged": true,
+    -     "setsReps": "1×4/6",
+    -     "short": true,
+    -   },
+    -   Object {
+    -     "load": "— / 100",
+    -     "loadChanged": true,
+    -     "setsReps": "2×6",
+    +     "intensityOnly": false,
+    +     "load": "100",
+    +     "loadChanged": false,
+    +     "repsChanged": false,
+    +     "setsReps": "3×6",
+    +     "short": false,
+        },
+      ]
+
+      76 |   const planned = sets(3, { target_reps: 6, target_value: '100' });
+      77 |   expect(summarizeExercise(planned, [actual(0, '90', 4), actual(1, null, 6)], []))
+    > 78 |     .toMatchObject([
+         |      ^
+      79 |       { setsReps: '1×4/6', load: '90', short: true, repsChanged: true, loadChanged: true },
+      80 |       { setsReps: '2×6', load: '— / 100', loadChanged: true },
+      81 |     ]);
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:78:6)
+
+  ● recorded RPE-only groups show actual weights and effort instead of the untouched RPE summary
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        Object {
+    -     "intensityOnly": false,
+    -     "load": "92.5 · RPE 8",
+    +     "intensityOnly": true,
+    +     "load": "RPE 8",
+          "setsReps": "2×5",
+        },
+      ]
+
+      84 |   const planned = sets(2, { load_mode: 'rpe', target_rpe: '8' });
+      85 |   expect(summarizeExercise(planned, [actual(0, '92.5', 5, '8'), actual(1, '92.5', 5, '8')], []))
+    > 86 |     .toMatchObject([{ setsReps: '2×5', load: '92.5 · RPE 8', intensityOnly: false }]);
+         |      ^
+      87 | });
+      88 | test('warmups count as ordinary sets and advanced settings do not appear', () => {
+      89 |   const planned = sets(2, { target_reps: 8, target_value: '60', rest_seconds: 120 });
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:86:6)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 18 passed, 21 total
+Snapshots:   0 total
+Time:        0.382 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

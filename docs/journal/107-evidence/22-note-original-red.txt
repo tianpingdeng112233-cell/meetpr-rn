@@ -1,0 +1,66 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-view.test.tsx -t wire body preserves
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/AllDayBody.tsx:14:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:31:1)
+      at Object.require (src/features/training/__tests__/all-day-view.test.tsx:10:1)
+
+FAIL src/features/training/__tests__/all-day-view.test.tsx
+  ✕ exercise note wire body preserves the original student text after the canonical header (6 ms)
+  ○ skipped 107 tapping a row edits in place and checking an exercise collapses its rows
+  ○ skipped 107 long hold records untouched prescriptions before completing the day
+  ○ skipped 107 row fields remain reachable while the keypad is open and only the edited row changes
+  ○ skipped 107 exercise note queues offline and retries canonical text plus exercise_ref without set_ref or video
+  ○ skipped changing the selected day closes the old row editor
+  ○ skipped switching accounts drains the new outbox while the previous account request is pending
+
+  ● exercise note wire body preserves the original student text after the canonical header
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 1
+
+      Object {
+        "body": "[Exercise note] Squat · 11/10
+    -   My original text  
+    - ",
+    +   My original text",
+      }
+
+      216 |   jest.mocked(authenticatedRequest).mockResolvedValueOnce({ message: {} } as never);
+      217 |   await chatRepository.sendExerciseNote('20000000-0000-4000-8000-000000000000', { body, clientID: 'note', exerciseRef: contract.exerciseRef });
+    > 218 |   expect(jest.mocked(authenticatedRequest).mock.calls.at(-1)?.[1]?.body).toMatchObject({ body });
+          |                                                                          ^
+      219 | });
+      220 |
+
+      at Object.toMatchObject (src/features/training/__tests__/all-day-view.test.tsx:218:74)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 skipped, 7 total
+Snapshots:   0 total
+Time:        0.982 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-view.test.tsx/i with tests matching "wire body preserves".

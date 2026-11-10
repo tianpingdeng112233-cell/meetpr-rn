@@ -1,14 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { training22 } from '../build22-strings';
-import type { SetLog } from '@/api/domains/sets';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, Modal, Text } from 'react-native';
-import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
-import { setLocaleOverride, t } from '@/i18n';
+import type { SetLog } from '@/api/domains/sets';
+import { authenticatedRequest, useSessionStore } from '@/api/session';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+import { setLocaleOverride, t } from '@/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Alert, Modal } from 'react-native';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('expo-media-library', () => ({}));
 jest.mock('react-native-compressor', () => ({}));
@@ -50,14 +49,13 @@ let client: QueryClient;
 let servedPlan: PlanDetail;
 let failCompletion = false;
 let storedLogs: SetLog[] = [];
-let writes = 0;
 
 beforeEach(() => {
   setLocaleOverride('en');
   mockNavigate.mockClear();
   mockPush.mockClear();
   failCompletion = false;
-  storedLogs = []; writes = 0;
+  storedLogs = [];
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   servedPlan = plan;
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
@@ -69,7 +67,6 @@ beforeEach(() => {
     if (path.endsWith('/onboarding')) return null as never;
     if (path.endsWith('/feedback')) return { items: [] } as never;
     if (path === '/sets/log') {
-      writes += 1;
       const body = options?.body as { logged_date?: string; weight_kg: string; reps: number; rpe: string | null; set_index: number };
       storedLogs.push({ id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: body.set_index, weight_kg: body.weight_kg, reps: body.reps, rpe: body.rpe, completed: true, failed: false, assumed: false, adhoc: false, logged_date: body.logged_date ?? '2026-09-21', logged_at: '2026-09-21T10:00:00Z' });
       return { id: storedLogs[0].id, logged_at: storedLogs[0].logged_at } as never;
@@ -90,7 +87,6 @@ const mount = async () => {
   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
 };
-const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
 const press = async (label: string) => {
   await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0].props.onPress(); });
 };
@@ -103,126 +99,20 @@ afterEach(async () => {
   await AsyncStorage.clear();
 });
 
-test('quick-log from the summary records the plan and completes without celebration', async () => {
+test('107 retired training entry points are unreachable and all rows are visible', async () => {
   await mount();
-  await press(training22.entry);
-  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: training22.hold })[0].props.onAccessibilityAction(); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(writes).toBe(1);
-  expect(storedLogs[0]).toMatchObject({ weight_kg: '80', reps: 5, assumed: false, completed: true });
-  expect(servedPlan.days[0].completed_at).toBeTruthy();
-  expect(copy()).not.toContain(t('student.workoutCompletionFlowView.copy001'));
+  const labels = renderer.root.findAll(node => node.props.onPress).map(node => node.props.accessibilityLabel);
+  expect(labels).not.toContain(t('student.trainingHistoryView.copy024'));
+  expect(labels).not.toContain(t('student.todayWorkoutScreen.copy008'));
+  expect(renderer.root.findAllByType(Modal)).toHaveLength(0);
+  expect(labels).toContain('Edit set 1');
 });
 
-test('a failed completion can retry without posting the already-saved set twice', async () => {
-  failCompletion = true;
-  await mount(); await press(training22.entry);
-  const submit = async () => { await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: training22.hold })[0].props.onAccessibilityAction(); }); };
-  await submit();
-  expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), training22.completionFailed);
-  expect(writes).toBe(1);
-  failCompletion = false;
-  await submit();
-  expect(writes).toBe(1);
-  expect(servedPlan.days[0].completed_at).toBeTruthy();
-});
-
-test('Android Back closes the number pad and preserves the quick-log draft', async () => {
-  await mount(); await press(training22.entry);
-  const weight = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && String(node.props.accessibilityLabel).includes('set 1, weight'))[0];
-  await act(async () => { weight.props.onPress(); });
-  expect(copy()).toContain(training22.next);
-  await act(async () => { renderer.root.findAllByType(Modal).find(node => node.props.presentationStyle === 'fullScreen' && node.props.visible)?.props.onRequestClose(); });
-  expect(copy()).not.toContain(training22.next);
-  expect(copy()).toContain(training22.title('W1D1'));
-  expect(writes).toBe(0);
-});
-
-test('training history has a visible text entry and opens the history stack', async () => {
-  await mount();
-  expect(copy()).toContain(training22.history);
-  await press(training22.history);
-  expect(mockPush).toHaveBeenCalledWith('/training-history');
-});
-
-test('browsing a future week is read-only and Back to today restores the current workout', async () => {
-  jest.useFakeTimers({ now: new Date(2026, 8, 7, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
-  const futureDay = { ...plan.days[0], id: 'future-day', week_number: 2,
-    exercises: plan.days[0].exercises.map(exercise => ({ ...exercise, id: 'future-exercise', plan_day_id: 'future-day',
-      sets: exercise.sets.map(set => ({ ...set, id: 'future-set', plan_exercise_id: 'future-exercise' })),
-    })),
-  };
-  servedPlan = { ...plan, days: [...plan.days, futureDay] };
-  await mount();
-  expect(copy()).toContain('W1D1');
-  expect(copy()).toContain(t('student.todayWorkoutScreen.copy008'));
-  await press('Next week');
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(copy()).toContain('W2D1');
-  expect(copy()).toContain('Back to today');
-  expect(copy()).not.toContain(t('student.todayWorkoutScreen.copy008'));
-  expect(copy()).not.toContain(training22.entry);
-  expect(copy()).not.toContain('Plan summary');
-  expect(copy()).toContain('1 exercise total · 1 set');
-  expect(copy()).toContain(t('student.dashboardPrimaryAction.copy009', ['Tue, 9/8']));
-  expect(copy()).toContain('This session unlocks after W1 · D1 · Training day is completed.');
-  expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy005') })).toHaveLength(0);
-  await press('Back to today');
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(copy()).toContain('W1D1');
-  expect(copy()).toContain(t('student.todayWorkoutScreen.copy008'));
-  expect(copy()).not.toContain('Back to today');
-});
-
-test('an overdue future preview hides its old recommended date while keeping its unlock message', async () => {
-  jest.useFakeTimers({ now: new Date(2026, 8, 25, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
-  servedPlan = { ...plan, days: [...plan.days, { ...plan.days[0], id: 'overdue-preview', week_number: 2 }] };
+test('107 a future week is read only and previous week returns to editable rows', async () => {
+  servedPlan = { ...plan, days: [plan.days[0], { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', week_number: 2 }] };
   await mount();
   await press('Next week');
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(copy()).toContain('Upcoming');
-  expect(copy().some(text => text.includes('days behind'))).toBe(false);
-  expect(copy()).not.toContain(t('student.dashboardPrimaryAction.copy009', ['Tue, 9/8']));
-  expect(copy()).toContain('This session unlocks after W1 · D1 · Training day is completed.');
-});
-
-test('Chinese training history text and accessibility label open the existing history route', async () => {
-  setLocaleOverride('zh');
-  await mount();
-  expect(copy()).toContain('训练历史');
-  expect(copy()).not.toContain('Training history');
-  await press('训练历史');
-  expect(mockPush).toHaveBeenCalledWith('/training-history');
-  expect(training22.history).toBe('训练历史');
-});
-
-test.each(['free_weight', 'bodyweight'] as const)('056 quick-log UI communicates %s and reports missing chosen weight', async load_mode => {
-  setLocaleOverride('zh');
-  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: exercise.sets.map(set => ({ ...set, load_mode, intensity_mode: 'rpe', target_value: '10.00' })) })) })) };
-  await mount();
-  await press(training22.entry);
-  expect(copy()).not.toContain('10');
-  expect(copy().join(' ')).not.toContain('目标 RPE 10');
-  const label = load_mode === 'bodyweight' ? '额外负重 kg' : '重量 kg · 必填';
-  expect(copy()).toContain(label);
-  expect(copy()).toContain(load_mode === 'bodyweight' ? '0' : '填实际重量');
-  await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: training22.hold })[0].props.onAccessibilityAction(); });
-  if (load_mode === 'bodyweight') {
-    expect(storedLogs).toEqual([expect.objectContaining({ weight_kg: '0', completed: true })]);
-  } else {
-    expect(writes).toBe(0);
-    expect(copy()).toContain('第 1 组还没填重量——自选重量的组要填实际用的重量才能完成。');
-  }
-});
-
-test('056 mixed-mode quick log retains the percentage and RPE-range targets of older rows', async () => {
-  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [
-    { ...exercise.sets[0], load_mode: 'free_weight', intensity_mode: null, target_value: null },
-    { ...exercise.sets[0], id: 'pct', set_number: 2, load_mode: 'pct', target_pct: '75' },
-    { ...exercise.sets[0], id: 'range', set_number: 3, load_mode: 'rpe_range', rpe_low: '7', rpe_high: '8' },
-  ] })) })) };
-  await mount();
-  await press(training22.entry);
-  expect(copy().join(' ')).toContain('75%');
-  expect(copy().join(' ')).toContain('RPE 7–8');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false)).toHaveLength(0);
+  await press('Previous week');
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false).length).toBeGreaterThan(0);
 });

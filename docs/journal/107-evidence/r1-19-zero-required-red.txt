@@ -1,0 +1,103 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-sheet.test.ts src/features/training/__tests__/all-day-view.test.tsx
+
+FAIL src/features/training/__tests__/all-day-view.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/AllDayBody.tsx:14:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:31:1)
+      at Object.require (src/features/training/__tests__/all-day-view.test.tsx:10:1)
+
+  ● acceptance 14: free weight, RPE without history, and an empty added exercise finish without input
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 2
+    Received length: 3
+    Received array:  [{"actual_rir": null, "completed": true, "failed": false, "logged_date": "2026-11-10", "plan_exercise_id": "50000000-0000-4000-8000-000000000000", "reps": 5, "rpe": null, "set_index": 0, "weight_kg": null}, {"actual_rir": null, "completed": true, "failed": false, "logged_date": "2026-11-10", "plan_exercise_id": "50000000-0000-4000-8000-000000000000", "reps": 5, "rpe": "8", "set_index": 1, "weight_kg": null}, {"actual_rir": null, "completed": true, "exercise_id": "60000000-0000-4000-8000-000000000009", "failed": false, "logged_date": "2026-11-10", "plan_day_id": "40000000-0000-4000-8000-000000000000", "reps": 0, "rpe": null, "set_index": 0, "weight_kg": null}]
+
+      263 |   await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
+      264 |   const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').map(([, options]) => options?.body);
+    > 265 |   expect(writes).toHaveLength(2);
+          |                  ^
+      266 |   expect(writes).toEqual(expect.arrayContaining([
+      267 |     expect.objectContaining({ weight_kg: null, rpe: null, reps: 5 }),
+      268 |     expect.objectContaining({ weight_kg: null, rpe: '8', reps: 5 }),
+
+      at Object.toHaveLength (src/features/training/__tests__/all-day-view.test.tsx:265:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/training/__tests__/all-day-sheet.test.ts
+  ● zero required fields: null planned weights are saved, wholly empty added and extra rows are skipped
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  0
+    + Received  + 22
+
+    @@ -17,6 +17,28 @@
+          "reps": 5,
+          "rpe": "8",
+          "set_index": 1,
+          "weight_kg": null,
+        },
+    +   Object {
+    +     "actual_rir": null,
+    +     "completed": true,
+    +     "failed": false,
+    +     "plan_exercise_id": "exercise",
+    +     "reps": 0,
+    +     "rpe": null,
+    +     "set_index": 2,
+    +     "weight_kg": null,
+    +   },
+    +   Object {
+    +     "actual_rir": null,
+    +     "completed": true,
+    +     "exercise_id": "other",
+    +     "failed": false,
+    +     "logged_date": "",
+    +     "plan_day_id": "day",
+    +     "reps": 0,
+    +     "rpe": null,
+    +     "set_index": 0,
+    +     "weight_kg": null,
+    +   },
+      ]
+
+      83 |   const extra = { ...addExtraDraft(planned.exercises[0], base)!, weightText: '', repsText: '', rpeText: '' };
+      84 |   const sheet = buildAllDaySheet(planned, [], [], { drafts: [...base, added, extra] });
+    > 85 |   expect(completionWrites(sheet).map(write => write.request)).toEqual([
+         |                                                               ^
+      86 |     { plan_exercise_id: 'exercise', set_index: 0, weight_kg: null, reps: 5, rpe: null, actual_rir: null, completed: true, failed: false },
+      87 |     { plan_exercise_id: 'exercise', set_index: 1, weight_kg: null, reps: 5, rpe: '8', actual_rir: null, completed: true, failed: false },
+      88 |   ]);
+
+      at Object.toEqual (src/features/training/__tests__/all-day-sheet.test.ts:85:63)
+
+Test Suites: 2 failed, 2 total
+Tests:       2 failed, 16 passed, 18 total
+Snapshots:   0 total
+Time:        1.922 s, estimated 3 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-sheet.test.ts|src\/features\/training\/__tests__\/all-day-view.test.tsx/i.

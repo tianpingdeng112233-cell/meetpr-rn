@@ -1,0 +1,106 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+FAIL src/features/training/__tests__/exercise-summary.test.ts
+  ✓ per-set weights compress only consecutive equal weights
+  ✓ different rep sections keep weights paired in prescription order
+  ✓ weight range preserves the written prescription
+  ✓ rep range preserves the written prescription
+  ✓ AMRAP preserves the written prescription
+  ✓ bodyweight preserves the written prescription
+  ✓ bodyweight plus load preserves the written prescription
+  ✓ free weight and effort uses the intensity style
+  ✓ uniform RPE uses the intensity style
+  ✓ RPE range uses the intensity style
+  ✓ RIR uses the intensity style
+  ✓ 2A varying RPE stays verbatim even when historical weight suggestions exist
+  ✓ 1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets
+  ✕ percentage one_rm shows resolved weight and original percent, or only percent if unresolved (2 ms)
+  ✕ percentage e1rm shows resolved weight and original percent, or only percent if unresolved
+  ✕ top-set percent waits for the top set and then shows its calculated weight (1 ms)
+  107 one-line prescription table
+    ✓ uniform weight: 4×8 130 (1 ms)
+
+  ● percentage one_rm shows resolved weight and original percent, or only percent if unresolved
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+          "intensityOnly": true,
+    -     "load": "75%",
+    +     "load": "—",
+          "setsReps": "5×5",
+        },
+      ]
+
+      56 | test.each(['one_rm', 'e1rm'] as const)('percentage %s shows resolved weight and original percent, or only percent if unresolved', anchor => {
+      57 |   const planned = sets(5, { target_reps: 5, load_mode: 'pct', pct_anchor: anchor, target_pct: '75' });
+    > 58 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '5×5', load: '75%', intensityOnly: true }]);
+         |                                              ^
+      59 |   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '112.5' }))))
+      60 |     .toMatchObject([{ setsReps: '5×5', load: '112.5 (75%)', intensityOnly: false }]);
+      61 | });
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:58:46)
+
+  ● percentage e1rm shows resolved weight and original percent, or only percent if unresolved
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+          "intensityOnly": true,
+    -     "load": "75%",
+    +     "load": "—",
+          "setsReps": "5×5",
+        },
+      ]
+
+      56 | test.each(['one_rm', 'e1rm'] as const)('percentage %s shows resolved weight and original percent, or only percent if unresolved', anchor => {
+      57 |   const planned = sets(5, { target_reps: 5, load_mode: 'pct', pct_anchor: anchor, target_pct: '75' });
+    > 58 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '5×5', load: '75%', intensityOnly: true }]);
+         |                                              ^
+      59 |   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '112.5' }))))
+      60 |     .toMatchObject([{ setsReps: '5×5', load: '112.5 (75%)', intensityOnly: false }]);
+      61 | });
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:58:46)
+
+  ● top-set percent waits for the top set and then shows its calculated weight
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+    -     "load": "60% 顶组",
+    +     "load": "—",
+          "setsReps": "3×5",
+        },
+      ]
+
+      62 | test('top-set percent waits for the top set and then shows its calculated weight', () => {
+      63 |   const planned = sets(3, { target_reps: 5, load_mode: 'pct', pct_anchor: 'top_set', target_pct: '60' });
+    > 64 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '3×5', load: '60% 顶组' }]);
+         |                                              ^
+      65 |   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '90' }))))
+      66 |     .toMatchObject([{ setsReps: '3×5', load: '90' }]);
+      67 | });
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:64:46)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 14 passed, 17 total
+Snapshots:   0 total
+Time:        0.406 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

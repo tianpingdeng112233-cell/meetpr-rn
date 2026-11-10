@@ -1,3 +1,5 @@
+import { startExerciseNoteOutbox } from '@/features/chat/exercise-note-outbox';
+import { restTimerNotifications } from '@/features/training/rest-timer-notification';
 import { VideoUploadNotificationSession } from '@/features/training/video-upload/VideoUploadNotificationSession';
 import { MinimumVersionGate } from '@/features/updates/MinimumVersionGate';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider as NavigationThemeProvider } from 'expo-router';
@@ -22,16 +24,8 @@ import { authTypography } from '@/features/auth/auth-typography';
 import { BUILD_TRACK } from '@/config/build-track';
 import { Toast } from '@/design/Toast';
 
-import {
-  AnalyticsEvent,
-  configure,
-  flushNow,
-  isPrivacyNoticeConfirmed,
-  PrivacyNoticeSheet,
-  track,
-} from '@/analytics';
+import { AnalyticsEvent, configure, flushNow, isPrivacyNoticeConfirmed, PrivacyNoticeSheet, track } from '@/analytics';
 import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
-import { RestTimerNotificationSession } from '@/features/training/RestTimerNotificationSession';
 import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
 import { AndroidUpdateSession } from '@/features/updates/AndroidUpdateSession';
 import { QueryProvider } from '@/api/query';
@@ -133,6 +127,7 @@ function ThemedRoot() {
     ) {
       return;
     }
+    const stopOutbox = startExerciseNoteOutbox(user.id);
     let disposed = false;
     let stop: (() => void) | undefined;
     void import('@/features/training/set-sync/runtime').then(({ accountSetSync }) => { if (!disposed) accountSetSync(user.id); }).catch(() => undefined);
@@ -140,7 +135,7 @@ function ThemedRoot() {
       .then(({ videoUploadManager }) => disposed ? undefined : videoUploadManager.start(user.id))
       .then(cleanup => { if (disposed) cleanup?.(); else stop = cleanup; })
       .catch(() => undefined);
-    return () => { disposed = true; stop?.(); };
+    return () => { disposed = true; stopOutbox(); stop?.(); };
   }, [user?.id, user?.role]);
 
   useEffect(() => {
@@ -174,7 +169,6 @@ function ThemedRoot() {
         <TrainingReminderSession />
         <PlanNotificationSession />
         <VideoUploadNotificationSession />
-        <RestTimerNotificationSession />
         <Toast />
         <PrivacyNoticeSheet
           onConfirmed={() => setPrivacyNoticeVisible(false)}
@@ -186,6 +180,7 @@ function ThemedRoot() {
 }
 
 export default function RootLayout() {
+  useEffect(() => { restTimerNotifications.hide(); }, []);
   const [loaded, error] = useFonts(fontAssets);
   useEffect(() => {
     if (loaded || error) void SplashScreen.hideAsync();

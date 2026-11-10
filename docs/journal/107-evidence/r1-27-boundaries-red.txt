@@ -1,0 +1,82 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts src/features/training/__tests__/all-day-sheet.test.ts
+
+FAIL src/features/training/__tests__/exercise-summary.test.ts
+  ● 1A differing RPE across rep sections is omitted across the entire exercise
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        Object {
+    -     "load": "150",
+    +     "load": "150 · RPE 8",
+          "setsReps": "1×1",
+        },
+        Object {
+    -     "load": "135",
+    +     "load": "135 · RPE 7",
+          "setsReps": "1×3",
+        },
+      ]
+
+      101 | test('1A differing RPE across rep sections is omitted across the entire exercise', () => {
+      102 |   const planned = [set({ set_number: 1, target_reps: 1, load_mode: 'fixed_weight', target_weight: '150', target_rpe: '8' }), set({ set_number: 2, target_reps: 3, load_mode: 'fixed_weight', target_weight: '135', target_rpe: '7' })];
+    > 103 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '1×1', load: '150' }, { setsReps: '1×3', load: '135' }]);
+          |                                              ^
+      104 | });
+      105 | test('only changed load tokens get emphasis when one set differs from the prescription', () => {
+      106 |   expect(summarizeExercise(sets(3, { target_value: '100' }), [actual(1, '90', 5)], [])[0].loadParts).toEqual([
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:103:46)
+
+  ● only changed load tokens get emphasis when one set differs from the prescription
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: [{"changed": false, "text": "100"}, {"changed": false, "text": " / "}, {"changed": true, "text": "90"}, {"changed": false, "text": " / "}, {"changed": false, "text": "100"}]
+    Received: undefined
+
+      104 | });
+      105 | test('only changed load tokens get emphasis when one set differs from the prescription', () => {
+    > 106 |   expect(summarizeExercise(sets(3, { target_value: '100' }), [actual(1, '90', 5)], [])[0].loadParts).toEqual([
+          |                                                                                                      ^
+      107 |     { text: '100', changed: false }, { text: ' / ', changed: false },
+      108 |     { text: '90', changed: true }, { text: ' / ', changed: false }, { text: '100', changed: false },
+      109 |   ]);
+
+      at Object.toEqual (src/features/training/__tests__/exercise-summary.test.ts:106:102)
+
+FAIL src/features/training/__tests__/all-day-sheet.test.ts
+  ● a completed day stays complete even if its local optional checks were never selected
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "collapsed": true,
+    -   "node": "complete",
+    +   "collapsed": false,
+    +   "node": "current",
+      }
+
+      94 | test('a completed day stays complete even if its local optional checks were never selected', () => {
+      95 |   const sheet = buildAllDaySheet({ ...selected, completed_at: '2026-11-10T13:00:00Z' }, [], [], { completedExercises: new Set() });
+    > 96 |   expect(sheet.exercises[0]).toMatchObject({ node: 'complete', collapsed: true });
+         |                              ^
+      97 |   expect(buildAllDaySheet({ ...selected, completed_at: '2026-11-10T13:00:00Z' }, [], [], { expandedExerciseId: exercise.id }).exercises[0])
+      98 |     .toMatchObject({ node: 'complete', collapsed: false });
+      99 | });
+
+      at Object.toMatchObject (src/features/training/__tests__/all-day-sheet.test.ts:96:30)
+
+Test Suites: 2 failed, 2 total
+Tests:       3 failed, 30 passed, 33 total
+Snapshots:   0 total
+Time:        0.596 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts|src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

@@ -7,23 +7,18 @@ import { useSessionStore } from '@/api/session';
 import { font, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { AccountSecuritySection } from '@/features/account/AccountSecuritySection';
-import { RestTimerSettingsScreen } from '@/features/settings/RestTimerSettingsScreen';
 import { TrainingReminderSettingsScreen } from '@/features/settings/TrainingReminderSettingsScreen';
-import { useRestPreference, useReminderPreference } from '@/features/settings/storage';
-import { restSummary } from '@/features/settings/rest-timer';
+import { useReminderPreference } from '@/features/settings/storage';
 import { reminderSummary } from '@/features/settings/training-reminder';
 import { MyProfileAppearanceRow } from './MyProfileAppearanceRow';
 import { MyProfileDivider, MyProfileGroupCard } from './components';
 import { ProfilePage, ProfilePageRow, ProfilePageStatus } from './ProfilePage';
 function PreferenceRows({ studentId, trainingDays }: { studentId: string; trainingDays?: readonly string[] | null }) {
-  const [page, setPage] = useState<'rest' | 'reminder' | null>(null);
-  const rest = useRestPreference(studentId);
+  const [page, setPage] = useState<'reminder' | null>(null);
   const reminder = useReminderPreference(studentId, trainingDays);
   return <>
     <MyProfileAppearanceRow /><MyProfileDivider inset />
-    <ProfilePageRow singleLine title={t('student.restTimerPreferenceRow.copy001')} value={rest.isError ? t('student.myProfileView.copy002') : restSummary(rest.data ?? { mode: 'automatic' })} onPress={() => { if (rest.isError) void rest.refetch(); else if (!rest.isPending) setPage('rest'); }} /><MyProfileDivider inset />
     <ProfilePageRow singleLine title={t('student.trainingReminderPreferenceRow.copy001')} value={reminder.isError ? t('student.myProfileView.copy002') : reminderSummary(reminder.settings)} onPress={() => { if (reminder.isError) void reminder.refetch(); else if (!reminder.isPending) setPage('reminder'); }} />
-    {page === 'rest' ? <RestTimerSettingsScreen studentId={studentId} initial={rest.data ?? { mode: 'automatic' }} onClose={() => setPage(null)} /> : null}
     {page === 'reminder' ? <TrainingReminderSettingsScreen studentId={studentId} initial={reminder.settings} onClose={() => setPage(null)} /> : null}
   </>;
 }

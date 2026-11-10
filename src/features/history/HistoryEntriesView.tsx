@@ -147,7 +147,7 @@ function HistoryDayCard({ day }: { day: HistoryDay }) {
     <Card style={styles.dayCard}>
       <VideoFailureSummary history studentId={day.exercises.flatMap(exercise => exercise.logs)[0]?.student_id ?? ''}
         sets={day.exercises.flatMap(exercise => exercise.logs.map(log => ({ stableSetId: historyStableSetId(log, exercise), setLogId: log.id,
-          badge: { exerciseName: exercise.name, setOrdinal: log.set_index + 1, weightKg: Number(log.weight_kg), reps: log.reps, rpe: log.rpe === null ? null : Number(log.rpe) } })))} />
+          badge: { exerciseName: exercise.name, setOrdinal: log.set_index + 1, weightKg: log.weight_kg == null ? null : Number(log.weight_kg), reps: log.reps, rpe: log.rpe === null ? null : Number(log.rpe) } })))} />
       <View style={styles.dayHeader}>
         <View><Text style={styles.dayDate}>{chineseMonthDay(day.date)}</Text><Text style={styles.weekday}>{new Intl.DateTimeFormat(getLocale(), { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day.date}T12:00:00Z`))}</Text></View>
         {!day.isRest ? (
@@ -171,7 +171,7 @@ function HistoryDayCard({ day }: { day: HistoryDay }) {
 
 /** iOS `StudentFormatting.result`: "142.5kg × 5 @ RPE 7.5". */
 function recordedSetText(row: SetLog): string {
-  return `${formatKg(Number(row.weight_kg))}kg × ${row.reps}${row.actual_rir != null ? ` @ RIR ${row.actual_rir}` : row.rpe === null ? '' : ` @ RPE ${formatKg(Number(row.rpe))}`}`;
+  return `${row.weight_kg == null ? '—' : formatKg(Number(row.weight_kg))}kg × ${row.reps}${row.actual_rir != null ? ` @ RIR ${row.actual_rir}` : row.rpe === null ? '' : ` @ RPE ${formatKg(Number(row.rpe))}`}`;
 }
 
 /** iOS `HistorySetRow`: one row shape for prescribed, extra and student-added sets. */
@@ -245,7 +245,7 @@ function HistoryExerciseBlock({ exercise }: { exercise: HistoryExercise }) {
 function HistorySetVideo({ row, exercise }: { row: SetLog; exercise: HistoryExercise }) {
   const stableSetId = historyStableSetId(row, exercise);
   return <CompletedSetVideo setLogId={row.id} stableSetId={stableSetId} badge={{ exerciseName: exercise.name, setOrdinal: row.set_index + 1,
-    weightKg: Number(row.weight_kg), reps: row.reps, rpe: row.rpe === null ? null : Number(row.rpe) }} />;
+    weightKg: row.weight_kg == null ? null : Number(row.weight_kg), reps: row.reps, rpe: row.rpe === null ? null : Number(row.rpe) }} />;
 }
 
 function historyStableSetId(row: SetLog, exercise: HistoryExercise) {

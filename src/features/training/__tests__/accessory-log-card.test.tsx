@@ -1,5 +1,5 @@
-import { enterNumber, numericCell } from '../accessory-pad.test-helpers';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { enterNumber, numericCell } from '../accessory-pad.test-helpers';
 import { useState } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { StyleSheet, Text, TextInput, Vibration } from 'react-native';
@@ -155,7 +155,7 @@ test('saving a set keeps every Last cell and unprescribed weight placeholder fro
     return <WorkoutBody exercises={planDay.exercises} drafts={synthesizeDrafts(planDay, logs)} editable recording startLoading={false} onStart={() => {}}
       suggestionForDraft={() => ({ suggestion: null, reason: null })} historyLogs={[...history, ...logs]}
       studentId="student" onRecord={onRecord} onVideo={() => {}} onToggleComplete={() => {}} resolveExerciseMetadata={createExerciseMetadataResolver(catalog, null)}
-      onAccessorySave={async (draft, request) => { setLogs([{ ...prior(draft.setIndex, request.weight_kg, '2026-10-10'), plan_exercise_id: draft.exercise.id, reps: request.reps, rpe: request.rpe ?? null }]); }} />;
+      onAccessorySave={async (draft, request) => { setLogs([{ ...prior(draft.setIndex, request.weight_kg ?? '', '2026-10-10'), plan_exercise_id: draft.exercise.id, reps: request.reps, rpe: request.rpe ?? null }]); }} />;
   }
   await act(async () => { renderer = create(<TrainingSession />); });
   const lastText = () => [1, 2, 3].map(index => button(`Use last time for set ${index}`).findByType(Text).props.children);

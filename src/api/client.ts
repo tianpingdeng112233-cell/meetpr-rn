@@ -143,6 +143,7 @@ export async function apiRequest<T = unknown>(
   const headers: Record<string, string> = {
     accept: 'application/json',
     'X-MeetPR-Locale': getLocaleHeader(),
+    'X-MeetPR-Caps': 'set-weight-nullable',
   };
 
   if (options.body !== undefined) {

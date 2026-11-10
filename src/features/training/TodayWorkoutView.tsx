@@ -1,137 +1,72 @@
-import { effortFields, type EffortKind } from './actual-effort';
-import { actualWeightText } from './set-log-input';
-import { StudentExercisePicker } from './StudentExercisePicker';
-import type { AccessoryEdits } from './AccessoryLogCard';
-import { completionVideoSummary } from './video-upload/completion-delivery';
-import { VideoCompletionControl } from './video-upload/VideoCompletionControl';
-import { useVideoUploadStore } from './video-upload/store';
-import { isAccessoryExercise } from './accessory-quick-log';
-import { readRestPreference } from '@/features/settings/storage';
-import { restSecondsForRPE } from '@/features/settings/rest-timer';
-import type { SetLogUpsertRequest, SetLog } from '@/api/domains/sets';
-import { localDateText } from '@/domain/plan/workout-date-policy';
-import { chatRepository, type Conversation } from '@/api/domains/chat';
-import { SetRefEntryVisibility } from '@/features/chat/set-ref';
-import { SetRefSharePicker, loadTodaySetRefCandidates } from '@/features/chat/SetRefSharePicker';
-import {
-  cursorDay,
-  canWriteTrainingDay,
-  defaultTrainingDay,
-  recommendedDate,
-  sequenceDays,
-  selectCurrentPlan,
-  planLogRange,
-  workoutDayState,
-  dayCode,
-} from '@/domain/plan/sequence';
-import { dayName, recommendedDateText } from '@/domain/plan/presentation';
-import { trainingWeekStrip } from '@/domain/plan/week-strip';
-import { prescriptionRestRPE } from '@/domain/plan/prescription';
-import { useOnboardingProfile } from '@/api/domains/onboarding';
-import { useExerciseCatalog } from '@/api/domains/exercises';
+import { decodePrescription } from '@/domain/plan/prescription';
+import { weightSuggestionOutcome } from './suggestion-gating';
 import { useMineBindRequest } from '@/api/domains/bind';
+import { useExerciseCatalog } from '@/api/domains/exercises';
+import { useOnboardingProfile } from '@/api/domains/onboarding';
+import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import {
-  weightSuggestionOutcome,
-  type SuggestionOutcome,
-} from './suggestion-gating';
-import { useSetSync, onSyncedDayCompletion } from './set-sync/runtime';
-import { overlaySetLogs } from './set-sync/overlay';
-import { isLocalSetId } from './set-sync/queue';
-import { SetCompletionCoordinator } from './set-sync/completion';
-import { SetSyncCompletionControl } from './set-sync/SetSyncCompletionControl';
-import { saveWorkoutSnapshot, useWorkoutSnapshot } from './set-sync/workout-snapshot';
-import { completionAvailability } from './hold-to-complete';
-import { completionError } from './completion-errors';
-import { replayE1RMSeries } from '@/features/dashboard/model';
-import { TrainingWeekStrip } from './TrainingWeekStrip';
-import { studentChatKeys, useOpenCoachChat } from '@/features/chat/open-coach-chat';
-import { StudentTodayRefreshThrottle } from './refresh-throttle';
-import {
-  hydrateRemoteVideoAttachments,
-  hydrateVideoUploads,
-  type VideoAttachmentSet,
-} from './video-upload/store';
+  canWriteTrainingDay,
+  cursorDay,
+  dayCode,
+  defaultTrainingDay,
+  planLogRange,
+  recommendedDate,
+  selectCurrentPlan,
+  sequenceDays,
+  workoutDayState,
+} from '@/domain/plan/sequence';
+import { trainingWeekStrip } from '@/domain/plan/week-strip';
+import { localDateText } from '@/domain/plan/workout-date-policy';
+import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
+import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { ActivityIndicator, Alert, AppState, Keyboard, ScrollView, StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
-import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { isAccessoryExercise } from './accessory-quick-log';
+import { effortFields, type EffortKind } from './actual-effort';
+import { allDayLogRequest, buildAllDaySheet, completionWrites } from './all-day-sheet';
+import { AllDayBody, useAllDayEditor } from './AllDayBody';
+import { completionError } from './completion-errors';
+import { StudentTodayRefreshThrottle } from './refresh-throttle';
+import { SetCompletionCoordinator } from './set-sync/completion';
+import { overlaySetLogs } from './set-sync/overlay';
+import { isLocalSetId } from './set-sync/queue';
+import { onSyncedDayCompletion, useSetSync } from './set-sync/runtime';
+import { SetSyncCompletionControl } from './set-sync/SetSyncCompletionControl';
+import { saveWorkoutSnapshot, useWorkoutSnapshot } from './set-sync/workout-snapshot';
+import { StudentExercisePicker } from './StudentExercisePicker';
+import { TrainingWeekStrip } from './TrainingWeekStrip';
+import { completionVideoSummary } from './video-upload/completion-delivery';
+import { hydrateRemoteVideoAttachments, hydrateVideoUploads, useVideoUploadStore, type VideoAttachmentSet } from './video-upload/store';
+import { VideoCompletionControl } from './video-upload/VideoCompletionControl';
 
-import { t } from '@/i18n';
-import { showToast } from '@/design/Toast';
-import { QuickLogSheet } from './QuickLogSheet';
-import { QuickLogAttempt, makeQuickLogPlan, localNoon, type QuickLogPlan } from './quick-log';
-import { training22 } from './build22-strings';
 import { AnalyticsEvent, track } from '@/analytics';
-import {
-  usePlan,
-  usePlans,
-  useDayCompletion,
-  planKeys,
-  type PlanDetail,
-} from '@/api/domains/plans';
-import { readinessKeys, useReadiness } from '@/api/domains/readiness';
-import { useSetLogs, useUpsertSetLog, setKeys } from '@/api/domains/sets';
+import { planKeys, useDayCompletion, usePlan, usePlans, type PlanDetail } from '@/api/domains/plans';
+import { setKeys, useSetLogs, useUpsertSetLog, useWeightSuggestions } from '@/api/domains/sets';
 import { useSessionStore } from '@/api/session';
-import {
-  AppButton,
-  Card,
-  MeetPRMark,
-  font,
-  radius,
-  useColors,
-  type Colors,
-  Screen,
-  spacing,
-  typography,
-} from '@/design';
-import {
-  buildE1RMSeries,
-  E1RMRecorder,
-} from '@/domain/e1rm';
+import { AppButton, Card, Screen, font, radius, spacing, typography, useColors, type Colors } from '@/design';
+import { showToast } from '@/design/Toast';
+import { E1RMRecorder, buildE1RMSeries } from '@/domain/e1rm';
 import { useStudentTabsStore } from '@/features/student-tabs';
+import { t } from '@/i18n';
+import { localNoon } from './quick-log';
 
-import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
 import { workoutCompletionPresentation, type CompletionReference } from './completion-presentation';
-import { STORAGE_KEYS, TRAINING_LIMITS } from './constants';
-import { isDraftTerminal, synthesizeDrafts, studentAddedDrafts, addExtraDraft, addStudentExercise, addStudentSet } from './drafts';
+import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
+import { TRAINING_LIMITS } from './constants';
+import { addExtraDraft, addStudentExercise, addStudentSet, studentAddedDrafts, synthesizeDrafts } from './drafts';
 import { recordTrainingSetE1RM } from './e1rm-live';
-import { needsSetResult } from './exercise-progress';
-import {
-  exerciseTitle,
-  createExerciseMetadataResolver,
-} from './exercise-metadata';
+import { createExerciseMetadataResolver, exerciseTitle } from './exercise-metadata';
 import { LoadGeneration } from './load-generation';
-import type {
-  ReadinessGateState,
-  SessionReview,
-  TrainingLoadState,
-  WorkoutSetDraft,
-} from './model';
-import {
-  gymDayText,
-  historyRangeStart,
-  parseFiniteDecimal,
-  resolveRestSeconds,
-  resolveAccessoryRestSeconds,
-} from './policy';
-import { ReadinessSheet } from './ReadinessSheet';
-import { RestTimer } from './RestTimer';
+import type { SessionReview, TrainingLoadState, WorkoutSetDraft } from './model';
+import { gymDayText, parseFiniteDecimal } from './policy';
 import { saveErrorCopy } from './save-errors';
 import { SerialTaskQueue } from './serial-task-queue';
-import { SetEntrySheet } from './SetEntrySheet';
-import {
-  readBoolean,
-  readNumber,
-  readReview,
-  trainingE1RMRepository,
-  writeBoolean,
-  writeReview,
-} from './storage';
+import { readReview, trainingE1RMRepository, writeReview } from './storage';
 import { trackTrainingTabVisit } from './training-analytics';
-import { WorkoutBody } from './WorkoutBody';
-import { useReducedMotion } from '@/design/useReducedMotion';
 
 const EMPTY_E1RM_BY_EXERCISE: Record<string, number | null> = {};
 
@@ -142,20 +77,9 @@ export function TodayWorkoutView() {
   const accessoryPad = useRef<{ row: View; top: number; height: number } | null>(null);
   const workoutContent = useRef<View>(null!);
   const [accessoryPadHeight, setAccessoryPadHeight] = useState(0);
-  const reducedMotion = useReducedMotion();
   const userScrolling = useRef(false);
   const completedRowToReveal = useRef<string | null>(null);
   const [completionDockHeight, setCompletionDockHeight] = useState(spacing.completionControlHeight + spacing.md * 2 + StyleSheet.hairlineWidth);
-  const [restOverlayHeight, setRestOverlayHeight] = useState<number>(spacing.xxxl);
-  const markExerciseCompleted = useCallback((exerciseId: string) => {
-    completedRowToReveal.current = !accessoryPad.current && !Keyboard.isVisible() && !userScrolling.current ? exerciseId : null;
-  }, []);
-  const revealCompletedRow = useCallback((exerciseId: string, layout: LayoutRectangle) => {
-    if (completedRowToReveal.current !== exerciseId) return;
-    completedRowToReveal.current = null;
-    if (accessoryPad.current || Keyboard.isVisible() || userScrolling.current) return;
-    workoutScroll.current?.scrollTo({ y: Math.max(0, layout.y - spacing.md), animated: !reducedMotion });
-  }, [reducedMotion]);
   const revealAccessoryRow = useCallback(() => {
     const target = accessoryPad.current;
     const scroll = workoutScroll.current;
@@ -185,12 +109,6 @@ export function TodayWorkoutView() {
   const savedWorkout = useWorkoutSnapshot(studentId);
   const catalogQuery = useExerciseCatalog(Boolean(studentId));
   const { totalUnread: unreadCount, openCoachChat, isOpening } = useOpenCoachChat(studentId);
-  const [shareRoute, setShareRoute] = useState<{ conversationId: string; initialSetLogID?: string; coachName: string } | null>(null);
-  const [preparingShare, setPreparingShare] = useState(false);
-  const preparingShareRef = useRef(false);
-  const shareGeneration = useRef(0);
-  useFocusEffect(useCallback(() => () => { shareGeneration.current += 1; setShareRoute(null); }, []));
-  const loadShareCandidates = useCallback(() => loadTodaySetRefCandidates(studentId), [studentId]);
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
   const handoff = useStudentTabsStore((state) => state.trainingHandoff);
@@ -205,11 +123,6 @@ export function TodayWorkoutView() {
       useStudentTabsStore.setState({ videoNotificationDay: null });
     });
   }, [notificationDay, studentId]);
-  const [quickLogPlan, setQuickLogPlan] = useState<QuickLogPlan | null>(null);
-  const quickLogAttempt = useRef<QuickLogAttempt | null>(null);
-  const [quickLogContext, setQuickLogContext] = useState({ dayCode: '', subtitle: '' });
-  const [startedDays, setStartedDays] = useState<Record<string, boolean>>({});
-  const [startedLoaded, setStartedLoaded] = useState<string | null>(null);
   const router = useRouter();
   const throttle = useRef(new StudentTodayRefreshThrottle());
   const bumpCompletion = useStudentTabsStore(
@@ -221,51 +134,31 @@ export function TodayWorkoutView() {
   const coachName =
     binding.data?.bind_request?.coach_display_name ??
     t('student.dashboardView.copy003');
+  const [noteRow, setNoteRow] = useState<WorkoutSetDraft | null>(null);
+  const [checkedExercises, setCheckedExercises] = useState<Record<string, ReadonlySet<string>>>({});
   const [draftOverrides, setDraftOverrides] = useState<
     Record<string, WorkoutSetDraft>
   >({});
-  const [accessoryEdits, setAccessoryEdits] = useState<AccessoryEdits>({});
   const pinnedDates = useRef(new Map<string, string>());
   const [removedLogs, setRemovedLogs] = useState<ReadonlySet<string>>(new Set());
   const [pickerVisible, setPickerVisible] = useState(false);
   const [draftOwner, setDraftOwner] = useState(studentId);
   if (draftOwner !== studentId) {
-    setDraftOwner(studentId); setRequestedDayID(null); setDraftOverrides({}); setAccessoryEdits({}); setRemovedLogs(new Set()); setPickerVisible(false);
+    setDraftOwner(studentId); setRequestedDayID(null); setDraftOverrides({}); setRemovedLogs(new Set()); setPickerVisible(false);
   }
   useEffect(() => { pinnedDates.current.clear(); }, [studentId]);
-  const [editingPlan, setEditingPlan] = useState<PlanDetail | null>(null);
-  const [recordingSetId, setRecordingSetId] = useState<string | null>(null);
-  const [collarState, setCollarState] = useState({
-    studentId: '',
-    value: false,
-  });
-  const [restSeconds, setRestSeconds] = useState<number | null>(null);
-  const [accessoryRest, setAccessoryRest] = useState(false);
-  const [restExerciseName, setRestExerciseName] = useState('');
-  const [restGeneration, setRestGeneration] = useState(0);
-  const trainingFocused = useRef(true);
+  const [editingPlan, setEditingPlan] = useState<PlanDetail | null>(handoff?.plan.trainee_id === studentId ? handoff.plan : null);
   const [trainingVisible, setTrainingVisible] = useState(true);
-  const restRevision = useRef(0);
-  const endRest = useCallback(() => {
-    restRevision.current += 1;
-    setRestSeconds(null);
-  }, []);
   const [reviewState, setReviewState] = useState<{
     key: string;
     status: 'loading' | 'loaded';
     value: SessionReview | null;
   }>(() => ({ key: '', status: 'loading', value: null }));
   const [completionPhase, setCompletionPhase] = useState<WorkoutCompletionFlowPhase | null>(null);
-  const [readinessVisible, setReadinessVisible] = useState(false);
-  const [readinessSkipState, setReadinessSkipState] = useState({
-    key: '',
-    value: false,
-  });
   const [e1rmState, setE1rmState] = useState<{
     key: string;
     values: Record<string, number | null>;
   }>({ key: '', values: {} });
-  const [initialCamera, setInitialCamera] = useState(false);
   const [videoRefresh, setVideoRefresh] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const saveQueue = useRef(new SerialTaskQueue());
@@ -315,10 +208,6 @@ export function TodayWorkoutView() {
   if (trainingVisible && requestedDayID === null && serverLogs && initialDayID) setRequestedDayID(initialDayID);
   const weekStrip = trainingWeekStrip(plan, requestedDayID ?? initialDayID, today);
   const viewedWeek = weekStrip.week;
-  const weekIsBehind = viewedWeek?.status === 'current' && weekStrip.daysBehind > 0;
-  const weekStatus = weekIsBehind ? t('student.trainingWeekStrip.daysBehind', [weekStrip.daysBehind])
-    : t(viewedWeek?.status === 'current' ? 'student.trainingWeekStrip.current'
-      : viewedWeek?.status === 'upcoming' ? 'student.trainingWeekStrip.upcoming' : 'student.trainingWeekStrip.completed');
   const planDay = weekStrip.selectedDay;
   const selectedDayID = planDay?.id ?? null;
   const dayState = planDay
@@ -326,23 +215,18 @@ export function TodayWorkoutView() {
     : null;
   const editable = Boolean(plan && selectedDayID && canWriteTrainingDay(plan, selectedDayID));
   const reviewKey = `${studentId}:${selectedDayID}`;
+  const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null | undefined>>({});
   const review =
     reviewState.key === reviewKey && reviewState.status === 'loaded'
       ? reviewState.value
       : null;
   const reviewLoaded =
     reviewState.key === reviewKey && reviewState.status === 'loaded';
-  const collarOn =
-    collarState.studentId === studentId ? collarState.value : false;
-  const readinessSkipKey = `${studentId}:${today}`;
-  const readinessSkipped =
-    readinessSkipState.key === readinessSkipKey && readinessSkipState.value;
   const historyQuery = useSetLogs(
     studentId,
     { from: '1970-01-01', to: localDateText(clockNow), scope: 'all' },
     Boolean(plan),
   );
-  const readinessQuery = useReadiness(studentId, today);
   const upsert = useUpsertSetLog();
   const completion = useDayCompletion(plan?.id ?? '');
   useEffect(() => setCompletionHandler(completion.mutateAsync), [setCompletionHandler, completion.mutateAsync]);
@@ -355,11 +239,27 @@ export function TodayWorkoutView() {
   const synthesizedIDs = new Set(synthesizedDrafts.map(draft => draft.stableSetId));
   synthesizedDrafts.push(...Object.values({ ...syncSnapshot.drafts, ...draftOverrides }).filter(draft => draft.kind && draft.exercise.plan_day_id === selectedDayID && !synthesizedIDs.has(draft.stableSetId) && (syncSnapshot.drafts?.[draft.stableSetId] || (!syncSnapshot.pending.some(entry => entry.stableSetId === draft.stableSetId && entry.remove) && !syncSnapshot.confirmed[draft.stableSetId]?.remove)) &&
     (draft.kind === 'added' || planDay?.exercises.some(exercise => exercise.id === draft.exercise.id))));
-  const liveDrafts = synthesizedDrafts.map((draft) =>
+  const baseDrafts = synthesizedDrafts.map((draft) =>
     draftOverrides[draft.stableSetId] && !draftOverrides[draft.stableSetId].sourceLog && !draft.sourceLog
       ? draftOverrides[draft.stableSetId]
       : draft,
   );
+  const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', editable);
+  const prefilledDrafts = baseDrafts.map(draft => {
+    const prescription = decodePrescription(draft.planSet);
+    if (draft.sourceLog || draft.kind || draft.weightText || prescription.intensity?.kind !== 'pct') return draft;
+    const family = resolveExerciseMetadata(draft.exercise.exercise_id)?.competitionFamily ?? null;
+    const registered = family ? workoutProfile?.[`${family}_1rm_kg`] : null;
+    const outcome = weightSuggestionOutcome({ planSet: draft.planSet, exercise: draft.exercise,
+      priorDrafts: baseDrafts.slice(0, baseDrafts.indexOf(draft)), sameDayLogs: availableLogs,
+      historyLogs: historyQuery.data?.logs ?? [], e1RMKg: e1rmByExercise[draft.exercise.exercise_id] ?? null,
+      registeredOneRMKg: registered == null ? null : Number(registered), family });
+    return outcome.suggestion ? { ...draft, weightText: String(outcome.suggestion.weightKg) } : draft;
+  });
+  const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, suggestionsQuery.data?.suggestions ?? [], {
+    drafts: prefilledDrafts, completedExercises: checkedExercises[reviewKey], expandedExerciseId: expandedExercises[reviewKey],
+  }) : { exercises: [] };
+  const liveDrafts = sheet.exercises.flatMap(block => block.rows);
   const accessoryDraftsRef = useRef(liveDrafts);
   useEffect(() => { accessoryDraftsRef.current = liveDrafts; }, [liveDrafts]);
   // Drafts are rebuilt each render; only changes to log identities need a fetch.
@@ -387,16 +287,6 @@ export function TodayWorkoutView() {
       if (interval) clearInterval(interval);
     };
   }, []);
-
-  useEffect(() => {
-    const generation = loadGeneration.current.begin('collar');
-    if (!studentId) return;
-    void readBoolean(STORAGE_KEYS.collar(studentId)).then((stored) => {
-      if (loadGeneration.current.isCurrent('collar', generation)) {
-        setCollarState({ studentId, value: stored });
-      }
-    });
-  }, [studentId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -431,21 +321,6 @@ export function TodayWorkoutView() {
   }, [selectedDayID, studentId]);
 
   useEffect(() => {
-    const generation = loadGeneration.current.begin('readiness-skip');
-    if (!studentId) return;
-    void readBoolean(STORAGE_KEYS.readinessSkip(studentId, today)).then(
-      (skipped) => {
-        if (loadGeneration.current.isCurrent('readiness-skip', generation)) {
-          setReadinessSkipState({
-            key: `${studentId}:${today}`,
-            value: skipped,
-          });
-        }
-      },
-    );
-  }, [studentId, today]);
-
-  useEffect(() => {
     const generation = loadGeneration.current.begin('e1rm');
     if (!studentId || !planDay) return;
     const key = `${studentId}:${planDay.id}`;
@@ -469,7 +344,7 @@ export function TodayWorkoutView() {
 
   const refresh = useCallback(
     async (mode: 'full' | 'volatileOnly' = 'full') => {
-      const requests: Promise<unknown>[] = [readinessQuery.refetch()];
+      const requests: Promise<unknown>[] = [];
       if (mode === 'full') {
         throttle.current.recordFullRefresh();
         requests.push(plansQuery.refetch());
@@ -489,7 +364,6 @@ export function TodayWorkoutView() {
       logsQuery,
       planQuery,
       plansQuery,
-      readinessQuery,
       selectedPlan,
     ],
   );
@@ -499,17 +373,14 @@ export function TodayWorkoutView() {
   }, [refresh]);
   useFocusEffect(
     useCallback(() => {
-      trainingFocused.current = true;
       setTrainingVisible(true);
       setClockNow(new Date());
       void refreshRef.current(throttle.current.refreshWhenReturning());
       return () => {
-        trainingFocused.current = false;
         setTrainingVisible(false);
-        endRest();
         setRequestedDayID(null);
       };
-    }, [endRest, setRequestedDayID]),
+    }, [setRequestedDayID]),
   );
   useEffect(() => {
     const listener = AppState.addEventListener('change', (state) => {
@@ -535,39 +406,20 @@ export function TodayWorkoutView() {
         );
         setRequestedDayID(handoff.dayID);
       } else setRequestedDayID(null);
-      endRest();
-      setRecordingSetId(null);
-      setEditingPlan(null);
+      setEditingPlan(handoff?.plan.trainee_id === studentId ? handoff.plan : null);
       void refreshRef.current(throttle.current.refreshWhenReturning());
     });
-  }, [endRest, handoff, jumpToken, queryClient, studentId]);
+  }, [handoff, jumpToken, queryClient, studentId]);
   useEffect(() => {
     if (planRevision === previousRevision.current) return;
     previousRevision.current = planRevision;
     void refreshRef.current();
   }, [planRevision]);
   const startKey = `${studentId}:${selectedDayID}`;
-  useEffect(() => {
-    completedRowToReveal.current = null;
-    let cancelled = false;
-    if (!selectedDayID) return;
-    void readBoolean(`training.started.${startKey}`).then((started) => {
-      if (cancelled) return;
-      if (started)
-        setStartedDays((current) => ({ ...current, [startKey]: true }));
-      setStartedLoaded(startKey);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedDayID, startKey]);
-  const selectedDraft =
-    liveDrafts.find((draft) => draft.stableSetId === recordingSetId) ?? null;
   const state: TrainingLoadState =
     (!savedWorkout.ready && !plansQuery.data) ||
     (!selectedPlan && plansQuery.isLoading) ||
-    (selectedPlan && ((!plan && planQuery.isLoading) || (!serverLogs && logsQuery.isLoading))) ||
-    (Boolean(planDay) && startedLoaded !== startKey)
+    (selectedPlan && ((!plan && planQuery.isLoading) || (!serverLogs && logsQuery.isLoading)))
       ? { kind: 'loading' }
       // A failed background refetch keeps the loaded day; only a load with nothing to show is an error.
       : (!selectedPlan && plansQuery.isLoadingError) || (!plan && planQuery.isLoadingError) || (!serverLogs && logsQuery.isLoadingError)
@@ -577,54 +429,7 @@ export function TodayWorkoutView() {
           }
         : !planDay
           ? { kind: 'noPlan' }
-          : selectedDraft
-            ? {
-                kind: 'recording',
-                planDay,
-                drafts: liveDrafts,
-                rowIndex: liveDrafts.indexOf(selectedDraft),
-              }
-            : { kind: 'loaded', planDay, drafts: liveDrafts };
-
-  const outcomeForDraft = (draft: WorkoutSetDraft): SuggestionOutcome => {
-    if (draft.kind) return { suggestion: null, reason: null };
-    const family =
-      resolveExerciseMetadata(draft.exercise.exercise_id)?.competitionFamily ??
-      null;
-    const registered = family ? workoutProfile?.[`${family}_1rm_kg`] : null;
-    return weightSuggestionOutcome({
-      planSet: draft.planSet,
-      exercise: draft.exercise,
-      priorDrafts: liveDrafts.slice(0, liveDrafts.indexOf(draft)),
-      sameDayLogs: liveDrafts
-        .slice(0, liveDrafts.indexOf(draft))
-        .flatMap((prior) =>
-          prior.sourceLog && !prior.sourceLog.assumed ? [prior.sourceLog] : [],
-        ),
-      historyLogs: (historyQuery.data?.logs ?? []).filter(
-        (log) =>
-          log.logged_date >= historyRangeStart(today) &&
-          !planDay?.exercises.some(
-            (exercise) => exercise.id === log.plan_exercise_id,
-          ),
-      ),
-      e1RMKg:
-        e1rmByExercise[draft.exercise.exercise_id] ??
-        (family
-          ? replayE1RMSeries(
-              historyQuery.data?.logs ?? [],
-              new Map([[draft.exercise.exercise_id, family]]),
-              family,
-            ).currentKg
-          : null),
-      registeredOneRMKg: registered == null ? null : Number(registered),
-      family,
-    });
-  };
-  const suggestionOutcome = selectedDraft
-    ? outcomeForDraft(selectedDraft)
-    : null;
-  const suggestion = suggestionOutcome?.suggestion ?? null;
+          : { kind: 'loaded', planDay, drafts: liveDrafts };
   const removeRecordedE1RM = async (draft: WorkoutSetDraft, setLogId: string) => {
     await trainingE1RMRepository.removeSetLog(studentId, setLogId);
     const exerciseId = draft.exercise.exercise_id;
@@ -634,21 +439,12 @@ export function TodayWorkoutView() {
     const key = `${studentId}:${draft.exercise.plan_day_id}`;
     setE1rmState(current => current.key === key ? { key, values: { ...current.values, [exerciseId]: value } } : current);
   };
-  const openDraft = (draft: WorkoutSetDraft) => {
-    if (editable && plan) {
-      endRest();
-      setEditingPlan(plan);
-      setRequestedDayID(draft.exercise.plan_day_id);
-      setRecordingSetId(draft.stableSetId);
-    }
-  };
   const selectDay = (id: string | null) => {
     // Re-selecting the current day must not clear data whose load key is unchanged.
     if ((id ?? weekStrip.todayDay?.id) === selectedDayID) {
       setRequestedDayID(id ?? cursor?.id ?? null);
       return;
     }
-    endRest();
     loadGeneration.current.begin('review');
     loadGeneration.current.begin('e1rm');
     setReviewState({
@@ -659,7 +455,6 @@ export function TodayWorkoutView() {
     setCompletionPhase(null);
     setPickerVisible(false);
     setE1rmState({ key: '', values: {} });
-    setRecordingSetId(null);
     setEditingPlan(null);
     setRequestedDayID(id ?? cursor?.id ?? null);
   };
@@ -703,7 +498,13 @@ export function TodayWorkoutView() {
   const completeDay = async (undo = false) => {
     if (!planDay || completion.isPending || undoCompletion.isPending) return;
     setRequestedDayID(planDay.id);
-    if (!undo) { endRest(); await completionCoordinator.begin(planDay.id, syncCompletionState === 'failed', videoContext); return; }
+    if (!undo) {
+      try {
+        for (const { row, request } of completionWrites(sheet)) await saveRow(row, request);
+        await completionCoordinator.begin(planDay.id, syncCompletionState === 'failed', videoContext);
+      } catch (error) { Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error)); }
+      return;
+    }
     try {
       await undoCompletion.mutateAsync(planDay.id);
       await completionGate.forget(planDay.id);
@@ -723,14 +524,12 @@ export function TodayWorkoutView() {
     accessory?: { request: SetLogUpsertRequest; mode: 'single' | 'all' };
     quickLogDate?: string;
   }): Promise<string | undefined> => {
-    let restRevisionAtSave = restRevision.current;
     const operation = async () => {
       const currentDrafts = input.accessory ? accessoryDraftsRef.current : liveDrafts;
       const draft = currentDrafts.find(
         (candidate) => candidate.stableSetId === input.stableSetId,
       );
       if (!draft) return;
-      const usesAccessoryRest = !input.quickLogDate && isAccessoryExercise(resolveExerciseMetadata(draft.exercise.exercise_id)?.exerciseType);
       if (useSessionStore.getState().user?.id !== studentId) throw new Error('Session changed');
       const latestPlan = queryClient.getQueryData<PlanDetail>(
         planKeys.detail(plan?.id ?? ''),
@@ -747,7 +546,6 @@ export function TodayWorkoutView() {
         );
         throw new Error('Selected day is no longer current');
       }
-      if (input.accessory?.mode === 'single' && input.completed) { endRest(); restRevisionAtSave = restRevision.current; }
       const logDate = !input.quickLogDate && draft.sourceLog && !isLocalSetId(draft.sourceLog.id)
         ? draft.sourceLog.logged_date
         : draft.kind === 'added'
@@ -755,14 +553,14 @@ export function TodayWorkoutView() {
           : input.quickLogDate ?? gymDayText(new Date());
       if (draft.kind === 'added') pinnedDates.current.set(draft.exercise.id, logDate);
       const completed = input.completed ?? true;
-      const weight = parseFiniteDecimal(actualWeightText(input.weightText, draft.planSet));
+      const weight = parseFiniteDecimal(input.weightText);
       const reps = Number(input.repsText);
       const actualEffort = input.accessory?.request ?? effortFields(input.effortKind ?? 'rpe', input.rpeText);
       const rpe = actualEffort.rpe == null ? null : Number(actualEffort.rpe);
       const actualRIR = actualEffort.actual_rir ?? null;
       if (
-        weight === null ||
-        weight < 0 ||
+        (input.weightText.trim() !== '' && weight === null) ||
+        (weight !== null && weight < 0) ||
         !Number.isInteger(reps) ||
         reps < 0 ||
         reps > 99 ||
@@ -782,7 +580,7 @@ export function TodayWorkoutView() {
           plan_exercise_id: draft.exercise.id,
           ...(input.quickLogDate ? { logged_date: input.quickLogDate } : {}),
           set_index: draft.setIndex,
-          weight_kg: String(weight),
+          weight_kg: weight === null ? null : String(weight),
           reps,
           rpe: rpe === null ? null : String(rpe),
           actual_rir: actualRIR,
@@ -815,7 +613,7 @@ export function TodayWorkoutView() {
                   plan_day_id: draft.kind === 'added' ? draft.exercise.plan_day_id : null,
                   exercise_id: draft.exercise.exercise_id,
                   set_index: draft.setIndex,
-                  weight_kg: String(weight),
+                  weight_kg: weight === null ? null : String(weight),
                   reps,
                   rpe: rpe === null ? null : String(rpe),
                   actual_rir: actualRIR,
@@ -839,21 +637,20 @@ export function TodayWorkoutView() {
             ...Object.fromEntries(nextDrafts.filter(candidate => candidate.stableSetId === updatedDraft.stableSetId || (draft.kind === 'added' && candidate.exercise.id === draft.exercise.id)).map(candidate => [candidate.stableSetId, candidate])),
           }));
         }
-        if (draft.kind && (!completed || input.failed)) {
+        if (weight === null || (draft.kind && (!completed || input.failed))) {
           if (draft.sourceLog) await removeRecordedE1RM(draft, draft.sourceLog.id);
           await removeRecordedE1RM(draft, response.id);
           await removeRecordedE1RM(draft, `local:${draft.stableSetId}`);
         }
         if (input.attachmentOnly) return response.id;
-        setRecordingSetId(null);
-        setEditingPlan(null);
+          setEditingPlan(null);
         void track(AnalyticsEvent.SetLogged, {
           failed: input.failed,
           set_index: draft.setIndex,
           date: logDate,
         });
 
-        if (!input.failed && completed) {
+        if (!input.failed && completed && weight !== null) {
           const e1rm = await recordTrainingSetE1RM({
             recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!), resolveFamily: resolveE1RMFamily }) : recorder,
             repository: trainingE1RMRepository,
@@ -883,28 +680,7 @@ export function TodayWorkoutView() {
           if (e1rm.pr && !input.quickLogDate) {
             await trainingE1RMRepository.acknowledgePR(e1rm.pr.id).catch(() => undefined);
           }
-          if (
-            trainingFocused.current && !input.quickLogDate && (usesAccessoryRest || draft.status !== 'complete') &&
-            (draft.kind ? input.accessory?.mode !== 'all' : usesAccessoryRest ? input.accessory?.mode !== 'all' && nextDrafts.some(candidate => candidate.exercise.id === draft.exercise.id && !isDraftTerminal(candidate)) : nextDrafts.some((candidate) => !isDraftTerminal(candidate)))
-          ) {
-            const accessoryPreference = usesAccessoryRest ? await readRestPreference(studentId) : null;
-            const addedPreference = draft.kind && !usesAccessoryRest ? await readRestPreference(studentId) : null;
-            const preference = usesAccessoryRest || addedPreference ? null : await readNumber(
-              STORAGE_KEYS.restPreference(studentId),
-            );
-            if (!trainingFocused.current || restRevision.current !== restRevisionAtSave) return response.id;
-            const restExercise = resolveExerciseMetadata(draft.exercise.exercise_id);
-            setAccessoryRest(usesAccessoryRest);
-            setRestExerciseName(restExercise ? exerciseTitle(restExercise) : '');
-            setRestGeneration(value => value + 1);
-            setRestSeconds(
-              accessoryPreference ? resolveAccessoryRestSeconds({ prescribed: draft.planSet.rest_seconds, preference: accessoryPreference }) : addedPreference ? restSecondsForRPE(addedPreference, rpe) : resolveRestSeconds({
-                prescribed: draft.planSet.rest_seconds,
-                preference,
-                rpe: draft.kind ? rpe : prescriptionRestRPE(draft.planSet),
-              }),
-            );
-          }
+
         }
         return response.id;
       } catch (error) {
@@ -918,6 +694,23 @@ export function TodayWorkoutView() {
     return input.attachmentOnly ? saved.then(id => id ? setSyncQueue.waitForSet(input.stableSetId) : undefined) : saved;
   };
 
+  const saveRow = async (row: WorkoutSetDraft, request = allDayLogRequest(row)) => {
+    const id = await commit({ stableSetId: row.stableSetId, weightText: row.weightText, repsText: row.repsText,
+      rpeText: row.rpeText, effortKind: row.effortKind, failed: false, completed: true,
+      accessory: { request, mode: 'all' } });
+    if (!id) throw new Error('Set unavailable');
+    return id;
+  };
+  const editor = useAllDayEditor(row => { void saveRow(row).catch(() => undefined); }, id => exerciseTitle(resolveExerciseMetadata(id)), onAccessoryPadLayout, `${reviewKey}:${trainingVisible}:${editable}:${workoutProfile?.unit_preference}`, workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg');
+  const toggleExercise = async (id: string) => {
+    const old = checkedExercises[reviewKey] ?? new Set<string>();
+    const next = new Set(old);
+    if (next.has(id)) { next.delete(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next })); setExpandedExercises(current => ({ ...current, [reviewKey]: id })); return; }
+    setExpandedExercises(current => ({ ...current, [reviewKey]: undefined }));
+    next.add(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next }));
+    try { for (const { row, request } of completionWrites(sheet, id)) await saveRow(row, request); }
+    catch { setCheckedExercises(current => ({ ...current, [reviewKey]: old })); }
+  };
   const requestRemoval = (rows: readonly WorkoutSetDraft[], wholeExercise: boolean) => {
     if (!editable || rows.some(row => !row.kind)) return;
     const remove = async () => {
@@ -938,7 +731,6 @@ export function TodayWorkoutView() {
               queryClient.setQueriesData<{ logs: SetLog[] }>({ queryKey: setKeys.all }, previous => previous ? { ...previous, logs: previous.logs.filter(log => log.id !== draft.sourceLog!.id) } : previous);
             }
             await setSyncQueue.discardDraft(draft.stableSetId);
-            setAccessoryEdits(current => { const next = { ...current }; delete next[draft.stableSetId]; return next; });
             accessoryDraftsRef.current = accessoryDraftsRef.current.filter(row => row.stableSetId !== draft.stableSetId);
             if (draft.kind === 'added' && !accessoryDraftsRef.current.some(row => row.exercise.id === draft.exercise.id)) pinnedDates.current.delete(draft.exercise.id);
             setDraftOverrides(current => { const next = { ...current }; delete next[draft.stableSetId]; return next; });
@@ -954,167 +746,23 @@ export function TodayWorkoutView() {
     ]);
   };
 
-  const openQuickLog = () => {
-    if (!plan || !planDay || !editable) return;
-    const initial = makeQuickLogPlan({ plan, day: planDay, drafts: liveDrafts, logs: logsQuery.data?.logs ?? [], suggestedWeight: draft => outcomeForDraft(draft).suggestion?.weightKg ?? null });
-    setQuickLogContext({ dayCode: dayCode(planDay, orderedDays), subtitle: dayName(planDay, resolveExerciseMetadata) });
-    quickLogAttempt.current = new QuickLogAttempt({
-      persist: async (row, date) => {
-        const id = await commit({ stableSetId: row.draft.stableSetId, weightText: row.draft.weightText, repsText: row.draft.repsText, rpeText: row.draft.rpeText, effortKind: row.draft.effortKind, failed: false, quickLogDate: date });
-        if (!id) throw new Error('Set unavailable');
-      },
-      complete: async dayId => {
-        if (useSessionStore.getState().user?.id !== studentId) throw new Error('Session changed');
-        await completion.mutateAsync(dayId);
-        bumpCompletion();
-      },
-    });
-    setQuickLogPlan(initial);
-  };
-
-  const showsSetRefEntry = SetRefEntryVisibility.shouldShow({ isEditable: editable, hasAvailableSet: liveDrafts.some(needsSetResult),
-    hasActiveCoach: binding.data?.bind_request?.status === 'accepted', hasSharingContext: Boolean(studentId),
-    isDayCompleted: dayState?.kind === 'completed' });
-  async function openSetRefPicker(draft: WorkoutSetDraft) {
-    const bound = binding.data?.bind_request;
-    if (preparingShareRef.current || !showsSetRefEntry || bound?.status !== 'accepted') return;
-    preparingShareRef.current = true; setPreparingShare(true);
-    const generation = shareGeneration.current;
-    try {
-      const { conversation } = await chatRepository.open(bound.coach_id);
-      if (generation !== shareGeneration.current) return;
-      const queryKey = studentChatKeys.conversations(studentId);
-      await queryClient.cancelQueries({ queryKey });
-      queryClient.setQueryData<{ conversations: Conversation[] }>(queryKey, previous => ({ conversations: [...(previous?.conversations ?? []).filter(item => item.id !== conversation.id), conversation] }));
-      if (generation === shareGeneration.current) setShareRoute({ conversationId: conversation.id, initialSetLogID: draft.sourceLog?.id ?? draft.exercise.sets.find(set => set.set_number === draft.setIndex + 1)?.id, coachName: bound.coach_display_name ?? conversation.other_party.display_name });
-    } catch {
-      if (generation === shareGeneration.current) Alert.alert(t('student.trainingShareConversationFailed'));
-    } finally { preparingShareRef.current = false; setPreparingShare(false); }
-  }
   const realDrafts = liveDrafts.filter(
     (draft) => draft.sourceLog && !draft.sourceLog.assumed,
   );
-  const recording =
-    dayState?.kind === 'completed' ||
-    (editable &&
-      (Boolean(startedDays[startKey]) || realDrafts.length > 0));
-  const remaining = liveDrafts.filter(
-    (draft) =>
-      !draft.kind && (!draft.sourceLog || draft.sourceLog.assumed || !isDraftTerminal(draft)),
-  );
-  const completionUI = completionAvailability({
-    editable,
-    recording,
-    realCount: realDrafts.length,
-    remainingSets: remaining.length,
-  });
-  const stickyCompletion = (completionUI.sticky || waitingForVideos) && (state.kind === 'loaded' || state.kind === 'recording');
+  const stickyCompletion = (editable || waitingForVideos) && (state.kind === 'loaded');
   const contentBottomPadding = stickyCompletion
-    ? completionDockHeight + (restSeconds !== null ? restOverlayHeight + spacing.xs : 0) + spacing.md
+    ? completionDockHeight + spacing.md
     : styles.content.paddingBottom;
-  const readinessDone = Boolean(readinessQuery.data?.checkin);
-  const readinessGate: ReadinessGateState = readinessQuery.isLoading
-    ? 'unknown'
-    : readinessDone
-      ? 'done'
-      : readinessSkipped
-        ? 'skippedToday'
-        : 'needed';
-  const readinessLabel =
-    readinessGate === 'done'
-      ? t('student.todayWorkoutScreen.copy006')
-      : readinessGate === 'skippedToday'
-        ? t('student.todayWorkoutScreen.copy006')
-        : t('coach.detail.todayStatus');
-
   return (
     <Screen style={styles.screen}>
-      <View style={styles.nav}>
-        <MeetPRMark />
-        <View style={styles.navRow}>
-          <Text style={styles.navTitle}>
-            {planDay
-              ? dayCode(planDay, orderedDays)
-              : plan
-                ? t('student.todayWorkoutView.copy011')
-                : 'W—'}
-          </Text>
-          <View style={styles.navActions}>
-            {weekStrip.showBackToToday ? (
-              <AppButton
-                variant="link"
-                label={t('student.trainingWeekStrip.backToToday')}
-                onPress={() => selectDay(null)}
-              />
-            ) : <>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('student.todayWorkoutScreen.copy005')}
-              onPress={() => void refreshToday()}
-              style={styles.navButton}
-            >
-              <View style={styles.navButtonFace}>
-                <MaterialCommunityIcons
-                  color={colors.textSecondary}
-                  name="refresh"
-                  size={18}
-                />
-              </View>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={readinessLabel}
-              onPress={() => setReadinessVisible(true)}
-              style={styles.navButton}
-            >
-              <View style={styles.navButtonFace}>
-                <MaterialCommunityIcons
-                  color={readinessDone ? colors.success : colors.textSecondary}
-                  name={readinessDone ? 'heart' : 'heart-outline'}
-                  size={18}
-                />
-              </View>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('student.todayWorkoutScreen.copy007')}
-              disabled={isOpening}
-              onPress={() => void openCoachChat()}
-              style={styles.navButton}
-            >
-              <View style={styles.navButtonFace}>
-                <MaterialCommunityIcons
-                  color={colors.textPrimary}
-                  name="message-outline"
-                  size={18}
-                />
-              </View>
-              {unreadCount > 0 ? (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadCount}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              ) : null}
-            </Pressable>
-            </>}
-          </View>
-        </View>
-        <View style={styles.weekHistoryRow}>
-          {state.kind !== 'loading' && plan && viewedWeek ? <View style={styles.weekHeading}>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.weekNumber}>W{viewedWeek.number}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}
-              accessibilityLabel={weekIsBehind ? t('student.trainingWeekStrip.daysBehindAccessibility', [weekStrip.daysBehind]) : weekStatus}
-              style={[styles.weekBadge, viewedWeek.status === 'current' && styles.currentWeekBadge]}>{weekStatus}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.weekCount}>{viewedWeek.completed} / {viewedWeek.cells.length}</Text>
-          </View> : <View style={styles.weekHeading} />}
-        <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingHistoryView.copy024')} onPress={() => router.push('/training-history')} style={styles.historyLink}>
-          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.historyLabel}>{t('student.trainingHistoryView.copy024')}</Text>
-          <MaterialCommunityIcons name="chevron-right" size={spacing.base} color={colors.goldText} />
+      <View style={[styles.nav, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+        <Text style={{ ...font.display(30), color: colors.textPrimary }}>W{viewedWeek?.number ?? '—'}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('student.todayWorkoutScreen.copy007')} disabled={isOpening} onPress={() => void openCoachChat()} style={styles.navButton}>
+          <MaterialCommunityIcons name="message-outline" size={22} color={colors.textPrimary} />
+          {unreadCount > 0 ? <View style={styles.unreadBadge}><Text style={styles.unreadCount}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View> : null}
         </Pressable>
-        </View>
       </View>
-      <ScrollView ref={workoutScroll} innerViewRef={workoutContent}
+      <View style={{ flex: 1 }} onTouchEnd={() => editor.pad.current?.dismiss()}><ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshToday()} tintColor={colors.gold500} />} ref={workoutScroll} innerViewRef={workoutContent}
         onScrollBeginDrag={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
         onScrollEndDrag={() => { userScrolling.current = false; }}
         onMomentumScrollBegin={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
@@ -1169,112 +817,39 @@ export function TodayWorkoutView() {
             />
           </Card>
         ) : null}
-        {state.kind === 'loaded' || state.kind === 'recording' ? (
+        {state.kind === 'loaded' ? (
           <>
-            <WorkoutBody
-              key={startKey}
-              completedDay={dayState?.kind === 'completed' ? { canUndo: dayState.canUndo, undoing: undoCompletion.isPending, onUndo: () => void completeDay(true) } : undefined}
-              inlineEdits={{ values: accessoryEdits, onChange: (id, edit) => setAccessoryEdits(current => ({ ...current, [id]: edit })) }}
-              onAddSet={exercise => {
-                if (!editable) return;
-                const next = exercise.id.startsWith('added:') ? addStudentSet(exercise, liveDrafts) : addExtraDraft(exercise, liveDrafts);
-                if (next) { setDraftOverrides(current => ({ ...current, [next.stableSetId]: next })); void setSyncQueue.saveDraft(next); }
-              }}
-              onRemoveSet={draft => requestRemoval([draft], false)}
+            {dayState?.kind === 'completed' ? <View testID="training.completedDay"><Text style={styles.emptySub}>{t('student.trainingWeekStrip.completed')}</Text>{dayState.canUndo ? <AppButton variant="link" label={t('student.todayWorkoutScreen.copy023')} disabled={undoCompletion.isPending} onPress={() => void completeDay(true)} /> : null}</View> : null}
+            <AllDayBody key={startKey} sheet={sheet} editable={editable} studentId={studentId} unit={workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg'}
+              title={planDay && recommendedDate(plan!, planDay) !== today ? dayCode(planDay, orderedDays) : t('training.allDay.today')}
+              exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))}
+              allowsRIR={id => isAccessoryExercise(resolveExerciseMetadata(id)?.exerciseType)}
+              editor={editor}
+              onSave={row => { void saveRow(row).catch(() => undefined); }}
+              onExpand={id => { editor.close(); setExpandedExercises(current => ({ ...current, [reviewKey]: sheet.exercises.find(block => block.exercise.id === id)?.collapsed ? id : null })); }}
+              onToggle={id => void toggleExercise(id)}
+              onNote={binding.data?.bind_request?.status === 'accepted' ? row => setNoteRow(row) : undefined}
+              onAddSet={exercise => { if (!editable) return; const next = exercise.id.startsWith('added:') ? addStudentSet(exercise, liveDrafts) : addExtraDraft(exercise, liveDrafts); if (next) { setDraftOverrides(current => ({ ...current, [next.stableSetId]: next })); void setSyncQueue.saveDraft(next); } }}
+              onRemoveSet={row => requestRemoval([row], false)}
+              onRemoveExercise={exercise => requestRemoval(liveDrafts.filter(row => row.exercise.id === exercise.id), true)}
               onAddExercise={() => setPickerVisible(true)}
-              onRemoveExercise={exercise => requestRemoval(liveDrafts.filter(draft => draft.exercise.id === exercise.id), true)}
-              onExerciseCompleted={markExerciseCompleted}
-              onCompletedRowLayout={revealCompletedRow}
-              preview={dayState?.kind === 'upcoming' && plan ? {
-                recommendedDate: weekStrip.week?.cells.find(cell => cell.isSelected)?.isBehind
-                  ? undefined : recommendedDateText(recommendedDate(plan, state.planDay)),
-                title: dayName(state.planDay, resolveExerciseMetadata),
-                unlockMessage: cursor ? t('student.trainingCalendarLogic.copy012', [
-                  cursor.week_number, `D${dayCode(cursor, orderedDays).split('D')[1]} · ${dayName(cursor, resolveExerciseMetadata)}`,
-                ]) : undefined,
-              } : undefined}
-              onAskCoach={showsSetRefEntry ? draft => void openSetRefPicker(draft) : undefined}
-              preparingShare={preparingShare}
-              exercises={state.planDay.exercises}
-              drafts={state.drafts}
-              editable={editable}
-              recording={recording}
-              startLoading={startedLoaded !== startKey}
-              onQuickLog={editable && !recording && realDrafts.length === 0 ? openQuickLog : undefined}
-              onStart={() => {
-                setStartedDays((current) => ({ ...current, [startKey]: true }));
-                void writeBoolean(`training.started.${startKey}`, true);
-              }}
-              suggestionForDraft={outcomeForDraft}
-              historyLogs={(historyQuery.data?.logs ?? []).filter(
-                (log) => log.logged_date < today,
-              )}
-              studentId={studentId}
-              unit={workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg'}
-              onAccessoryPadLayout={onAccessoryPadLayout}
-              onAccessorySave={async (draft, request, mode) => {
-                const id = await commit({ stableSetId: draft.stableSetId, weightText: request.weight_kg, repsText: String(request.reps), rpeText: request.rpe ?? '', failed: request.failed ?? false, completed: request.completed, accessory: { request, mode } });
-                if (!id) throw new Error('Set unavailable');
-                return id;
-              }}
-              onRecord={(draft) => { setInitialCamera(false); openDraft(draft); }}
-              onVideo={(draft) => { setInitialCamera(true); openDraft(draft); }}
-              onToggleComplete={(draft) => {
-                void commit({
-                  stableSetId: draft.stableSetId,
-                  weightText: draft.weightText,
-                  repsText: draft.repsText,
-                  rpeText: draft.rpeText,
-                  failed: false,
-                  completed: draft.status !== 'complete',
-                }).catch(() => undefined);
-              }}
-              resolveExerciseMetadata={resolveExerciseMetadata}
-            />
+              ensureSetLog={async row => {
+                if (setSyncQueue.pending().some(entry => entry.stableSetId === row.stableSetId)) return setSyncQueue.waitForSet(row.stableSetId);
+                if (row.sourceLog && !isLocalSetId(row.sourceLog.id)) return row.sourceLog.id;
+                await saveRow(row); return setSyncQueue.waitForSet(row.stableSetId);
+              }} />
             {dayState?.kind === 'completed' ? (
               <DayCompletionBanner
                 count={realDrafts.length}
                 onPress={() => setCompletionPhase('review')}
               />
             ) : null}
-            {completionUI.pill ? (
-              <View
-                style={{
-                  borderWidth: 1,
-                  borderStyle: 'dashed',
-                  borderColor: colors.borderStrong,
-                  borderRadius: 999,
-                  padding: 14,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="timer-outline"
-                  size={16}
-                  color={colors.textMuted}
-                />
-                <Text style={styles.emptySub}>
-                  {t('student.todayWorkoutPresentation.copy001', [
-                    new Set(remaining.map((draft) => draft.exercise.id)).size,
-                    remaining.length,
-                  ])}
-                </Text>
-              </View>
-            ) : null}
-            {completionUI.button && !completionUI.sticky && !waitingForVideos ? (
-              <SetSyncCompletionControl state={syncCompletionState}
-                disabled={completion.isPending}
-                onComplete={() => void completeDay()}
-              />
-            ) : null}
           </>
         ) : null}
-      </ScrollView>
+      </ScrollView></View>
       {stickyCompletion ? <View testID="workout-completion-dock"
         onLayout={event => setCompletionDockHeight(event.nativeEvent.layout.height)}
-        style={{ position: 'absolute', left: 0, right: 0, bottom: restSeconds !== null ? restOverlayHeight + spacing.xs : 0,
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0,
           paddingVertical: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.borderDefault, backgroundColor: colors.bgBase }}>
         <VideoCompletionControl studentId={studentId} videos={completionVideos} waiting={waitingForVideos}
@@ -1282,71 +857,13 @@ export function TodayWorkoutView() {
           <SetSyncCompletionControl state={syncCompletionState} disabled={completion.isPending} onComplete={() => void completeDay()} />
         </VideoCompletionControl>
       </View> : null}
-      {quickLogPlan ? <QuickLogSheet isAccessory={id => isAccessoryExercise(resolveExerciseMetadata(id)?.exerciseType)} initialPlan={quickLogPlan} dayCode={quickLogContext.dayCode} subtitle={quickLogContext.subtitle} exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))} onClose={() => { setQuickLogPlan(null); quickLogAttempt.current = null; }} onSubmit={async input => {
-        const outcome = await quickLogAttempt.current!.submit(input);
-        if (outcome.kind === 'completed') {
-          const completed = plan?.days.find(day => day.id === input.dayId);
-          setQuickLogPlan(null); quickLogAttempt.current = null;
-          endRest(); setRecordingSetId(null); setCompletionPhase(null);
-          const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan?.id ?? ''));
-          setRequestedDayID(latest ? cursorDay(latest.days)?.id ?? input.dayId : null);
-          showToast(training22.saved(completed ? dayCode(completed, orderedDays) : ''), true);
-          await refresh();
-        }
-        return outcome;
-      }} /> : null}
-      {shareRoute ? <SetRefSharePicker conversationId={shareRoute.conversationId} initialSetLogID={shareRoute.initialSetLogID} loadCandidates={loadShareCandidates} onClose={() => setShareRoute(null)} onStaged={() => router.navigate({ pathname: '/(student)/chat', params: { conversationId: shareRoute.conversationId, coachName: shareRoute.coachName } })} /> : null}
+      {noteRow && binding.data?.bind_request?.status === 'accepted' ? <ExerciseNoteSheet studentId={studentId} coachId={binding.data.bind_request.coach_id}
+        reference={{ v: 1, exercise_name: exerciseTitle(resolveExerciseMetadata(noteRow.exercise.exercise_id)), day_date: noteRow.sourceLog?.logged_date ?? today, plan_day_id: noteRow.exercise.plan_day_id, plan_exercise_id: noteRow.kind === 'added' ? null : noteRow.exercise.id, exercise_id: noteRow.exercise.exercise_id }} onClose={() => setNoteRow(null)} /> : null}
       {pickerVisible && editable && planDay ? <StudentExercisePicker planned={planDay.exercises.map(exercise => exercise.exercise_id)} added={liveDrafts.filter(draft => draft.kind === 'added').map(draft => draft.exercise.exercise_id)} onClose={() => setPickerVisible(false)} onSelect={exerciseId => {
         if (availableLogs.some(log => log.adhoc && log.exercise_id === exerciseId && log.logged_date === today && log.plan_day_id && log.plan_day_id !== planDay.id)) { showToast(t('student.added.dayConflict')); return; }
         const draft = addStudentExercise(planDay, exerciseId, liveDrafts);
         if (draft) { setDraftOverrides(current => ({ ...current, [draft.stableSetId]: draft })); void setSyncQueue.saveDraft(draft); setPickerVisible(false); }
       }} /> : null}
-      {selectedDraft ? (
-        <SetEntrySheet
-          key={selectedDraft.stableSetId}
-          studentId={studentId}
-          initialCamera={initialCamera}
-          allowsRIR={isAccessoryExercise(resolveExerciseMetadata(selectedDraft.exercise.exercise_id)?.exerciseType)}
-          ensureSetLog={async (input) => {
-            if (setSyncQueue.pending().some(entry => entry.stableSetId === input.stableSetId)) return setSyncQueue.waitForSet(input.stableSetId);
-            if (selectedDraft.sourceLog && !isLocalSetId(selectedDraft.sourceLog.id)) return selectedDraft.sourceLog.id;
-            const id = await commit({ ...input, completed: selectedDraft.status === 'complete', attachmentOnly: true });
-            if (!id) throw new Error('Set log unavailable');
-            return id;
-          }}
-          collarOn={collarOn}
-          draft={selectedDraft}
-          editable={editable}
-          exerciseName={exerciseTitle(
-            resolveExerciseMetadata(selectedDraft.exercise.exercise_id),
-          )}
-          suggestion={suggestion}
-          suggestionReason={suggestionOutcome?.reason ?? null}
-          onChangeCollar={(value) => {
-            setCollarState({ studentId, value });
-            void writeBoolean(STORAGE_KEYS.collar(studentId), value);
-          }}
-          onClose={() => {
-            setRecordingSetId(null);
-            setEditingPlan(null);
-          }}
-          onSave={async (input) => { await commit(input); }}
-        />
-      ) : null}
-      {readinessVisible ? (
-        <ReadinessSheet
-          date={today}
-          studentId={studentId}
-          onComplete={() => {
-            setReadinessVisible(false);
-            void queryClient.invalidateQueries({ queryKey: readinessKeys.all });
-          }}
-          onSkip={() => {
-            setReadinessSkipState({ key: readinessSkipKey, value: true });
-            setReadinessVisible(false);
-          }}
-        />
-      ) : null}
       {completionPhase && reviewLoaded && planDay && plan ? (
         <WorkoutCompletionFlowView
           key={reviewKey}
@@ -1396,17 +913,7 @@ export function TodayWorkoutView() {
           }}
         />
       ) : null}
-      {restSeconds !== null ? (
-        <RestTimer
-          key={restGeneration}
-          durationSeconds={restSeconds}
-          onOverlayLayout={event => setRestOverlayHeight(event.nativeEvent.layout.height)}
-          showRPEExplanation={!accessoryRest}
-          exerciseName={restExerciseName}
-          studentId={studentId}
-          onClose={endRest}
-        />
-      ) : null}
+      {editor.panel}
     </Screen>
   );
 }

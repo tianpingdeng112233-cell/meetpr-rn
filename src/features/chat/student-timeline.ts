@@ -70,8 +70,8 @@ export function totalUnreadCount({ hasPlanNotice, feedbackUnread, chatUnread }: 
 export function sharedSetAttachment(reference: import('@/api/domains/chat').ChatSetRef, note: string | null, videoURL?: string | null) {
   const position = reference.setTotal == null ? t('chat.setPosition %@', [reference.setNumber]) : t('chat.setPosition %@ of %@', [reference.setNumber, reference.setTotal]);
   const reps = reference.reps == null ? null : reference.repsMax == null ? `${reference.reps}` : `${reference.reps}–${reference.repsMax}`;
-  const weight = reference.weightKg == null ? null : `${reference.weightKg}kg`;
-  const metrics = weight && reps ? `${weight} × ${reps}` : weight ?? (reps ? t('chat.attachmentReps', [reps]) : null);
+  const weight = `${reference.weightKg ?? '—'}kg`;
+  const metrics = reps ? `${weight} × ${reps}` : weight;
   return { note: note?.trim() ? note : null, title: reference.exerciseName,
     subtitle: [position, metrics, reference.rpe == null ? null : `RPE ${reference.rpe}`].filter(Boolean).join(' · '), hasVideo: Boolean(videoURL) };
 }

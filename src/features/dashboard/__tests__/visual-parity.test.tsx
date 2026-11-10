@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as analytics from '@/analytics/client';
 import { AnalyticsEvent } from '@/analytics/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -111,19 +111,19 @@ beforeEach(async () => {
   });
 });
 
-test.each(['list', 'recording'] as const)('the training tab in %s mode renders no eyebrows and only the list hero has a title', async (mode) => {
+test.each(['list', 'recording'] as const)('the training tab in %s mode renders the all-day sheet without the retired hero', async (mode) => {
   if (mode === 'recording') servedPlan = { ...plan, days: plan.days.map((day) => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
   await act(async () => {
     renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>);
   });
   const loaded = () => mode === 'list'
-    ? textCopy().includes("Today's workout")
+    ? renderer.root.findAllByProps({ accessibilityLabel: 'Edit set 1' }).length > 0
     : renderer.root.findAllByProps({ testID: 'training.completedDay' }).length > 0;
   await waitUntil(loaded);
   expect(loaded()).toBe(true);
   // A completed day reuses the overview card layout, so it keeps the one title; no set hero either way.
   const heroTitles = renderer.root.findAllByType(Text).filter((node) => node.props.children === "Today's workout");
-  expect(heroTitles).toHaveLength(1);
+  expect(heroTitles).toHaveLength(0);
   if (mode === 'recording') expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
   const queryAllByTestId = (testID: string) => renderer.root.findAllByProps({ testID });
   expect(queryAllByTestId('eyebrow')).toHaveLength(0);

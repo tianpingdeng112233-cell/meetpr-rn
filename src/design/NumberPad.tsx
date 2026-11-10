@@ -9,6 +9,7 @@ import { useColors } from './theme';
 import { font, radius, spacing } from './tokens';
 
 type NumberPadProps = {
+  layout?: 'allDay';
   field: NumberPadField;
   initialValue: string;
   minimumWeight?: number;
@@ -59,6 +60,25 @@ export const NumberPad = forwardRef<NumberPadHandle, NumberPadProps>(function Nu
     if (!text || !Number.isFinite(Number(text))) onCancel();
     else onCommit(snapped(Number(text), field, minimumWeight));
   };
+  if (props.layout === 'allDay') {
+    const key = (ch: string, flex = 1) => <Pressable key={ch} accessibilityRole="button" accessibilityLabel={ch === '⌫' ? t('designSystem.numberPad.backspace') : ch === '.' ? t('designSystem.numberPad.decimalPoint') : ch}
+      disabled={ch === '.' && (field === 'reps' || field === 'rir')} onPress={() => {
+        const next = ch === '⌫' ? text.slice(0, -1) : appendAccessory(pristine ? '' : text, ch, field);
+        setText(next); setPristine(false); props.onChangeText?.(next);
+      }} style={{ flex, height: 52, backgroundColor: colors.surfaceKey, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' }}><Text style={{ ...font.mono(21, 'bold'), color: colors.textPrimary }}>{ch}</Text></Pressable>;
+    return <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', zIndex: 100 }]}>
+
+      <View ref={panel} onLayout={onPanelLayout ? () => panel.current?.measureInWindow((_x, top, _width, height) => onPanelLayout(top, height)) : undefined} style={{ padding: 16, paddingBottom: 22, gap: 12, backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ ...font.body(12), color: colors.textSecondary, flex: 1 }}>{contextText}</Text>
+          {onNext ? <Pressable accessibilityRole="button" accessibilityLabel={nextTitle} onPress={() => { const value = accessoryValue(text, field); if (value !== undefined && props.mode === 'accessory') props.onNext?.(value); }}><Text style={{ ...font.body(12), color: colors.goldText }}>{nextTitle}</Text></Pressable> : null}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 3, gap: 8 }}>{[['1','2','3'],['4','5','6'],['7','8','9']].map((row, i) => <View key={i} style={{ flexDirection: 'row', gap: 8 }}>{row.map(ch => key(ch))}</View>)}<View style={{ flexDirection: 'row', gap: 8 }}>{key('.')}{key('0', 2)}</View></View>
+          <View style={{ flex: 1, gap: 8 }}>{key('⌫', 0)}<Pressable accessibilityRole="button" accessibilityLabel={commitTitle} disabled={invalid} onPress={dismiss} style={{ flex: 1, backgroundColor: colors.gold500, borderRadius: radius.control, justifyContent: 'center', alignItems: 'center' }}><Text style={{ ...font.body(16, 'bold'), color: colors.inkOnGold }}>{commitTitle}</Text></Pressable></View>
+        </View>
+      </View>
+    </View>;
+  }
   const keys = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['.', '0', '⌫']];
   return (
     <View accessibilityViewIsModal style={[StyleSheet.absoluteFill, { zIndex: 100, justifyContent: 'flex-end' }]}>

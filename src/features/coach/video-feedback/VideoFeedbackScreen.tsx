@@ -70,7 +70,7 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
     finally { sendingRef.current = false; if (alive.current) setSending(false); }
   }
   const cells = log ? [
-    [t('coach.videoFeedback.weight'), Number(log.weight_kg).toLocaleString(deviceLocale(), { maximumFractionDigits: 1, useGrouping: false }), t('coach.videoFeedback.kilograms')],
+    [t('coach.videoFeedback.weight'), log.weight_kg == null ? '—' : Number(log.weight_kg).toLocaleString(deviceLocale(), { maximumFractionDigits: 1, useGrouping: false }), t('coach.videoFeedback.kilograms')],
     [t('coach.videoFeedback.reps'), String(log.reps), t('coach.videoFeedback.repsValue %lld', [log.reps])],
     [t('coach.videoFeedback.rpe'), log.rpe === null ? t('coach.videoFeedback.missingValue') : String(Number(log.rpe)), ''],
     [t('coach.videoFeedback.setOrder'), String(log.set_index + 1), t('coach.videoFeedback.setNumber %lld', [log.set_index + 1])],
@@ -85,7 +85,7 @@ function Workbench({ item, now, index, total, onSkip, onSend }: { item: PendingV
       <VideoWorkbenchPlayer videoId={item.id} url={slice.url} failed={slice.urlFailed} markers={slice.markers}
         markersFailed={slice.markerError === 'load'} onProgress={setSeconds} onRetry={slice.loadURL}
         refreshURL={async videoId => (await uploadsRepository.url(videoId)).url} onMarkersRefresh={slice.loadMarkers}
-        badge={{ exerciseName: item.exerciseName, weightKg: log ? Number(log.weight_kg) : null, reps: log?.reps,
+        badge={{ exerciseName: item.exerciseName, weightKg: log?.weight_kg != null ? Number(log.weight_kg) : null, reps: log?.reps,
           rpe: log?.rpe != null ? Number(log.rpe) : null, setOrdinal: log ? log.set_index + 1 : null, coachName }}
         selectedMarkerID={selectedMarkerID} onAnnotationClose={() => setSelectedMarkerID(null)}
         onAddMarker={slice.markers !== null ? () => setMarkerSheet({ time: Math.max(0, Math.round(seconds * 1000)) / 1000, note: '' }) : undefined} />

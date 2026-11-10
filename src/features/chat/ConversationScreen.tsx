@@ -1,3 +1,4 @@
+import { ChatExerciseNoteCard } from './ChatExerciseNoteCard';
 import { ChatTimeSeparator, chatTimeLocale } from './ChatTimeSeparator';
 import { chatTimeSeparators } from './student-timeline';
 import { startConversationRealtime, useChatRealtime } from './realtime';
@@ -20,7 +21,14 @@ import { createUUID } from '@/analytics/uuid';
 import { CoachNavHeader } from '@/features/coach/CoachNavHeader';
 import { receivingKeys } from '@/features/coach/receiving/use-coach-receiving';
 import { FullScreenDestination } from '@/features/coach/receiving/FullScreenDestination';
-import { applyReadState, feedbackVideoBadge, CONVERSATION_POLL_MS, conversationSubtitle, createConversationSync, mergeMessages } from './conversation-model';
+import {
+  applyReadState,
+  feedbackVideoBadge,
+  CONVERSATION_POLL_MS,
+  conversationSubtitle,
+  createConversationSync,
+  mergeMessages,
+} from './conversation-model';
 // Bubble colors follow CoachConversationDestination (outgoing textPrimary, incoming borderHairline), not ConversationView's defaults.
 type PendingMessage = { text: string; clientID: string; createdAt: string; failed: boolean };
 
@@ -235,6 +243,7 @@ export function ConversationScreen({ conversationId, studentName, status, initia
 
 function ChatMessageRow({ message, outgoing, read, openImage, openVideo }: { message: ChatMessage; outgoing: boolean; read: boolean; openImage: () => void; openVideo: () => Promise<void> }) {
   const colors = useColors();
+  if (message.exercise_ref) return <ChatExerciseNoteCard message={message} outgoing={outgoing} />;
   const presentation = message.kind === 'text' ? ChatSetCardPresentation(message) : null;
   if (presentation) return <ChatSetCard reference={presentation.setRef} note={presentation.note} message={message} outgoing={outgoing} read={read} openVideo={openVideo} />;
   if (message.kind === 'image') return <Pressable accessibilityRole="button" accessibilityLabel={t('chat.image')} onPress={openImage} style={{ width: '75%', aspectRatio: 4 / 3, alignSelf: outgoing ? 'flex-end' : 'flex-start', borderRadius: radius.xl, borderBottomRightRadius: outgoing ? 5 : radius.xl, borderBottomLeftRadius: outgoing ? radius.xl : 5, overflow: 'hidden' }}><ChatImage key={message.image_url} url={message.image_url} /></Pressable>;

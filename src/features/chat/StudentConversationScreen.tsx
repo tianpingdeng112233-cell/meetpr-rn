@@ -1,35 +1,44 @@
-import { ChatVideoCover, type PosterSize } from './ChatVideoCover';
-import { ChatTimeSeparator, chatTimeLocale } from './ChatTimeSeparator';
-import { startConversationRealtime, useChatRealtime } from './realtime';
-import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
-import { canonicalBody, ChatSetCardPresentation, displayFirstLine, setRefBodyAllowed } from './set-ref';
-import { loadTodaySetRefCandidates, SetRefSharePicker } from './SetRefSharePicker';
-import { useSetRefStagingStore, waitForSetRefVideo, type SetRefSendIntent } from './set-ref-staging';
-import { useStudentVideos, type StudentVideo } from '@/api/domains/videos';
-import { sortedMarkers, videoMarkersRepository } from '@/api/domains/video-markers';
-import { feedbackVideoAssociation } from '@/features/feedback/video-presentation';
-import { FeedbackPlaybackSession } from '@/features/feedback/playback-session';
-import { FeedbackPlaybackModal } from '@/features/feedback/FeedbackPlaybackModal';
-import { freshPlaybackURL } from '@/features/feedback/use-feedback-playback';
-import { FeedbackVideoUnavailable, PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
-import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, View } from 'react-native';
-import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { createUUID } from '@/analytics/uuid';
 import { chatRepository, type ChatMessage, type Conversation } from '@/api/domains/chat';
-import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
-import { feedbackKeys, feedbackRepository, type FeedbackResponse, type FeedbackItem } from '@/api/domains/feedback';
-import { useQueryClient } from '@tanstack/react-query';
-import { markDashboardPlanSeen } from '@/features/dashboard/plan-seen';
-import { studentChatKeys, useStudentPlanNotice } from './open-coach-chat';
-import { feedbackCoverSize, chatTimeSeparators, mergeStudentTimeline, visibleFraction, videoLabel, type VerticalFrame, type StudentPlanNotice } from './student-timeline';
+import { feedbackKeys, feedbackRepository, type FeedbackItem, type FeedbackResponse } from '@/api/domains/feedback';
+import { sortedMarkers, videoMarkersRepository } from '@/api/domains/video-markers';
+import { useStudentVideos, type StudentVideo } from '@/api/domains/videos';
 import { useSessionStore } from '@/api/session';
 import { font, GradientFill, Screen, useColors } from '@/design';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
+import { markDashboardPlanSeen } from '@/features/dashboard/plan-seen';
+import { FeedbackVideoUnavailable, PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
+import { FeedbackPlaybackModal } from '@/features/feedback/FeedbackPlaybackModal';
+import { FeedbackPlaybackSession } from '@/features/feedback/playback-session';
+import { freshPlaybackURL } from '@/features/feedback/use-feedback-playback';
+import { feedbackVideoAssociation } from '@/features/feedback/video-presentation';
+import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
 import { getLocale, t } from '@/i18n';
-import { createUUID } from '@/analytics/uuid';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, View } from 'react-native';
+import { ChatExerciseNoteCard } from './ChatExerciseNoteCard';
+import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
+import { chatTimeLocale, ChatTimeSeparator } from './ChatTimeSeparator';
+import { ChatVideoCover, type PosterSize } from './ChatVideoCover';
 import { applyReadState, CONVERSATION_POLL_MS, createConversationSync, mergeMessages } from './conversation-model';
+import { flushExerciseNotes, useExerciseNoteOutbox } from './exercise-note-outbox';
+import { studentChatKeys, useStudentPlanNotice } from './open-coach-chat';
+import { startConversationRealtime, useChatRealtime } from './realtime';
+import { canonicalBody, ChatSetCardPresentation, displayFirstLine, setRefBodyAllowed } from './set-ref';
+import { useSetRefStagingStore, waitForSetRefVideo, type SetRefSendIntent } from './set-ref-staging';
+import {
+  chatTimeSeparators,
+  feedbackCoverSize,
+  mergeStudentTimeline,
+  videoLabel,
+  visibleFraction,
+  type StudentPlanNotice,
+  type VerticalFrame,
+} from './student-timeline';
 
 export function StudentConversationScreen({ conversationId, coachName }: { conversationId: string; coachName: string }) {
   const { subscribe } = useChatRealtime();
@@ -37,6 +46,9 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const router = useRouter();
   const studentId = useSessionStore(state => state.user?.id ?? '');
   const client = useQueryClient();
+  const exerciseNotes = useExerciseNoteOutbox(state => state.notes);
+  const [coachId, setCoachId] = useState('');
+  useEffect(() => { let live = true; void chatRepository.list().then(result => { if (live) setCoachId(result.conversations.find(item => item.id === conversationId)?.other_party.id ?? ''); }).catch(() => {}); return () => { live = false; }; }, [conversationId]);
   const plan = useStudentPlanNotice(studentId);
   const inbox = useFeedbackInboxViewModel(studentId);
   const videos = useStudentVideos(studentId);
@@ -76,8 +88,6 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const staged = useSetRefStagingStore(state => state.intents[conversationId]);
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const loadCandidates = useCallback(() => loadTodaySetRefCandidates(studentId), [studentId]);
   const [sendError, setSendError] = useState('');
   const setOperations = useRef(new Map<string, { intent: SetRefSendIntent; note: string; controller: AbortController }>());
   useEffect(() => () => { for (const operation of setOperations.current.values()) operation.controller.abort(); }, []);
@@ -149,7 +159,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       const result = await sync.receive(event);
       if (live && result) { setLoadError(false); setLoading(false); }
     } });
-    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; setPickerVisible(false); sync.stop(); stopRealtime(); };
+    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; sync.stop(); stopRealtime(); };
   }, [acknowledgeSetRef, client, conversationId, studentId, subscribe, updateOtherRead]));
   async function loadOlder() {
     const generation = focusGeneration.current;
@@ -310,6 +320,10 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
         {item.kind === 'feedback' && playback.errorFeedbackId === item.feedback.id ? <PlaybackLinkError /> : null}
       </View></Fragment>)}
       {shareVideoError ? <PlaybackLinkError /> : null}
+      {exerciseNotes.filter(note => note.studentId === studentId && note.coachId === coachId && !messages.some(message => message.client_id === note.clientID)).map(note => <View key={note.clientID} style={{ gap: 4 }}>
+        <ChatExerciseNoteCard student outgoing message={{ body: note.body, exercise_ref: note.exerciseRef, sender_id: studentId }} />
+        <Pressable onPress={() => void flushExerciseNotes(studentId)}><Text style={{ color: colors.textMuted, textAlign: 'right', ...font.body(12) }}>{t(note.failed ? 'chat.sendFailed' : 'student.setSync.syncing')}</Text></Pressable>
+      </View>)}
       {pending.map((item, index) => <Fragment key={item.clientId}><ChatTimeSeparator label={separators.get(items.length + index)} /><View style={{ maxWidth: '76%', alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4 }}>
         <Text style={{ ...font.body(14, 'medium'), color: colors.bgBase, backgroundColor: `${colors.textPrimary}B8`, paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: 5 }}>{getLocale() === 'zh-Hant' && item.setIntent?.displayExerciseName
           ? displayFirstLine(item.setIntent.setRef, item.setIntent.displayExerciseName) + item.text.slice(canonicalBody(item.setIntent.setRef).length)
@@ -330,14 +344,12 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
         <View style={{ flexDirection: 'row', gap: 8 }}><Text style={{ ...font.mono(10), color: setRefBodyAllowed(stagedBody) ? colors.textDim : colors.danger, flex: 1 }}>{!setRefBodyAllowed(stagedBody) ? t('student.studentBlackGoldChatView.copy005') : sendError}</Text><Text style={{ ...font.mono(10), color: colors.textDim }}>{stagedBody.length}/4000</Text></View>
       </View> : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy006')} disabled={Boolean(staged)} onPress={() => setPickerVisible(true)} hitSlop={5} style={{ width: 34, height: 34, marginBottom: 6, borderRadius: 17, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} /></Pressable>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', borderRadius: 20, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard, paddingLeft: 16, paddingRight: 6 }}>
         <TextInput accessibilityLabel={t('student.studentBlackGoldChatView.copy008')} placeholder={t(staged && !staged.autoSend ? 'student.studentBlackGoldChatView.copy009' : 'student.studentBlackGoldChatView.copy008')} placeholderTextColor={colors.textGhost} multiline maxLength={4000} value={draft} onChangeText={text => { draftRef.current = text.slice(0, 4000); setDraft(draftRef.current); }} style={{ ...font.body(14), color: colors.textPrimary, flex: 1, lineHeight: 20, maxHeight: 122, paddingVertical: 11 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy007')} disabled={!canSend} onPress={sendDraft} style={{ width: 34, height: 34, marginVertical: 6, borderRadius: 17, backgroundColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center', opacity: canSend ? 1 : 0.55 }}><MaterialCommunityIcons name="arrow-up" size={18} color={colors.ctaTopHighlight} /></Pressable>
       </View>
     </View>
     </View>
-    {pickerVisible ? <SetRefSharePicker conversationId={conversationId} loadCandidates={loadCandidates} onClose={() => setPickerVisible(false)} /> : null}
     <FeedbackPlaybackModal item={playback.playbackItem} session={playback.session} />
     {selectedShare?.video_url ? <Modal visible animationType="slide" onRequestClose={() => setSelectedShare(null)}><FeedbackVideoPlayer videoId={selectedShare.id} url={selectedShare.video_url} refreshURL={() => refreshShareURL(selectedShare)} onClose={() => setSelectedShare(null)} /></Modal> : null}
   </KeyboardAvoidingView></Screen>;
@@ -345,6 +357,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
 
 function StudentChatMessageRow({ message, outgoing, read, openVideo }: { message: ChatMessage; outgoing: boolean; read: boolean; openVideo?: () => void }) {
   const colors = useColors();
+  if (message.exercise_ref) return <ChatExerciseNoteCard message={message} outgoing={outgoing} student />;
   const presentation = ChatSetCardPresentation(message);
   if (presentation) return <ChatSetCard note={presentation.note} reference={presentation.setRef} message={message} outgoing={outgoing} read={read} openVideo={openVideo} />;
   return <View style={{ maxWidth: '76%', alignSelf: outgoing ? 'flex-end' : 'flex-start', alignItems: outgoing ? 'flex-end' : 'flex-start', gap: 4 }}>

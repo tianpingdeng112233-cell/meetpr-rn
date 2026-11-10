@@ -1,0 +1,25 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-sheet.test.ts
+
+FAIL src/features/training/__tests__/all-day-sheet.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../all-day-sheet' from 'src/features/training/__tests__/all-day-sheet.test.ts'
+
+      2 | import { day, set } from '@/domain/plan/test-fixtures';
+      3 | import type { SetLog } from '@/api/domains/sets';
+    > 4 | import { buildAllDaySheet } from '../all-day-sheet';
+        | ^
+      5 |
+      6 | const exercise = { id: 'exercise', plan_day_id: 'day', exercise_id: 'squat', sort_order: 0, is_main_lift: true, notes: null,
+      7 |   sets: [set({ id: 'one', target_value: '100' }), set({ id: 'two', set_number: 2, intensity_mode: 'rpe', target_value: '8' }), set({ id: 'three', set_number: 3, intensity_mode: 'rpe', target_value: '7' })] };
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (src/features/training/__tests__/all-day-sheet.test.ts:4:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        1.061 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

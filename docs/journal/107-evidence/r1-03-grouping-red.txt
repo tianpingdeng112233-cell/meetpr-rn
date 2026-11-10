@@ -1,0 +1,72 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+FAIL src/features/training/__tests__/exercise-summary.test.ts
+  ✕ per-set weights compress only consecutive equal weights (1 ms)
+  ✕ different rep sections keep weights paired in prescription order (1 ms)
+  107 one-line prescription table
+    ✓ uniform weight: 4×8 130 (1 ms)
+
+  ● per-set weights compress only consecutive equal weights
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+    -     "load": "135×2 / 120",
+    +     "load": "135",
+          "setsReps": "3×3",
+        },
+      ]
+
+      17 |   const planned = sets(3, { target_reps: 3, target_value: '135' });
+      18 |   planned[2].target_value = '120';
+    > 19 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '3×3', load: '135×2 / 120' }]);
+         |                                              ^
+      20 | });
+      21 | test('different rep sections keep weights paired in prescription order', () => {
+      22 |   const planned = [set({ target_reps: 1, target_value: '150' }), ...sets(3, { target_reps: 3, target_value: '135' }).map(s => ({ ...s, set_number: s.set_number + 1 }))];
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:19:46)
+
+  ● different rep sections keep weights paired in prescription order
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+        Object {
+    +     "intensityOnly": false,
+          "load": "150",
+    -     "setsReps": "1×1",
+    -   },
+    -   Object {
+    -     "load": "135",
+    -     "setsReps": "3×3",
+    +     "loadChanged": false,
+    +     "repsChanged": false,
+    +     "setsReps": "4×1",
+    +     "short": false,
+        },
+      ]
+
+      21 | test('different rep sections keep weights paired in prescription order', () => {
+      22 |   const planned = [set({ target_reps: 1, target_value: '150' }), ...sets(3, { target_reps: 3, target_value: '135' }).map(s => ({ ...s, set_number: s.set_number + 1 }))];
+    > 23 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '1×1', load: '150' }, { setsReps: '3×3', load: '135' }]);
+         |                                              ^
+      24 | });
+      25 |
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:23:46)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        0.379 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

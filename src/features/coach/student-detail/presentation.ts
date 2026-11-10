@@ -51,3 +51,5 @@ const muscleKeys: Record<string, TranslationKey> = {
   quadriceps: 'coach.shared.muscle.quadriceps', hamstrings: 'coach.shared.muscle.hamstrings', glutes: 'coach.shared.muscle.glutes', back: 'coach.shared.muscle.back', chest: 'coach.shared.muscle.chest', shoulder: 'coach.shared.muscle.shoulder', shoulders: 'coach.shared.muscle.shoulder', triceps: 'coach.shared.muscle.triceps', core_and_lower_back: 'coach.shared.muscle.coreAndLowerBack', core: 'coach.shared.muscle.coreAndLowerBack',
 };
 export const muscleLabel = (value: string) => muscleKeys[value] ? t(muscleKeys[value]) : value;
+
+export { isAsPrescribed } from '@/domain/plan/prescription-result';

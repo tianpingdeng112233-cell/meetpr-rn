@@ -1,25 +1,23 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
-import { useVideoUploadStore } from '@/features/training/video-upload/store';
-import { EMPTY_VIDEO_UPLOAD } from '@/features/training/video-upload/model';
-import { day, plan, set } from '@/domain/plan/test-fixtures';
-import { isValidElement, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, AppState, Pressable, StyleSheet, Text, TextInput, ScrollView, type AppStateStatus } from 'react-native';
-import { authenticatedRequest, useSessionStore } from '@/api/session';
-import { chatRepository, ChatMessageSchema, toSetRefWire, type ChatMessage } from '@/api/domains/chat';
-import { setLocaleOverride, t } from '@/i18n';
 import { ApiError } from '@/api/client';
-import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
-import { Image } from 'expo-image';
+import { ChatMessageSchema, chatRepository, toSetRefWire, type ChatMessage } from '@/api/domains/chat';
 import { FeedbackItemSchema } from '@/api/domains/feedback';
-import { StudentConversationScreen } from '../StudentConversationScreen';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authenticatedRequest, useSessionStore } from '@/api/session';
 import { dashboardPlanSeenKey } from '@/features/dashboard/plan-seen';
+import { EMPTY_VIDEO_UPLOAD } from '@/features/training/video-upload/model';
+import { useVideoUploadStore } from '@/features/training/video-upload/store';
+import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
+import { setLocaleOverride, t } from '@/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { isValidElement, type ReactNode } from 'react';
+import { Alert, AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, type AppStateStatus } from 'react-native';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { studentChatKeys, useOpenCoachChat } from '../open-coach-chat';
 import { canonicalBody, displayFirstLine } from '../set-ref';
 import { useSetRefStagingStore, type SetRefSendIntent } from '../set-ref-staging';
-
+import { StudentConversationScreen } from '../StudentConversationScreen';
 
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -371,24 +369,6 @@ test('oversized staged body disables sending and shows the canonical-inclusive U
   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy005'));
   expect(copy()).toContain(`${canonicalBody(staged.setRef, '😀'.repeat(2000)).length}/4000`);
 });
-test('chat plus opens the real picker and sends a prescribed set in one step', async () => {
-  const summary = plan([day(studentId, { exercises: [{ id: studentId, plan_day_id: studentId, exercise_id: coachId, sort_order: 0, is_main_lift: true, notes: null, sets: [set({ id: conversationId, plan_exercise_id: studentId })] }] })], { id: conversationId, trainee_id: studentId });
-  plans = [summary];
-  const previous = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === `/plans/${conversationId}`) return summary as never;
-    if (path.includes('/sets?')) return { logs: [] } as never;
-    if (path === '/exercises') return { exercises: [{ id: coachId, name: 'Squat', name_en: 'Squat' }] } as never;
-    return previous(path, options);
-  });
-  await renderScreen();
-  await act(async () => { renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('student.studentBlackGoldChatView.copy006')).props.onPress(); });
-  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress(); });
-  expect(copy()).toContain(t('chat.yourQuestion'));
-  jest.mocked(chatRepository.sendSetRef).mockResolvedValue({ message: message('sent', 1, studentId, 'shared') });
-  await act(async () => { await renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.sendToCoach')).props.onPress(); });
-  expect(chatRepository.sendSetRef).toHaveBeenCalledWith(conversationId, expect.objectContaining({ setRef: expect.objectContaining({ source: 'planned', planSetId: conversationId, exerciseName: 'Squat' }) }));
-});
 
 test('an upload session can renew its remote attachment id without replacing the selected local video', async () => {
   const recordKey = `${studentId}:set`;
@@ -422,32 +402,6 @@ test.each(['', '   '])('a coach without a display name renders a localized fallb
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy014', [t('student.dashboardView.copy003')]));
   expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.dashboardView.copy003'))).toBe(true);
-});
-
-test('Traditional picker send failure keeps a Traditional preview and canonical retry payload', async () => {
-  setLocaleOverride('zh-Hant');
-  const summary = plan([day(studentId, { exercises: [{ id: studentId, plan_day_id: studentId, exercise_id: coachId, sort_order: 0, is_main_lift: true, notes: null, sets: [set({ id: conversationId, plan_exercise_id: studentId })] }] })], { id: conversationId, trainee_id: studentId });
-  plans = [summary];
-  const previous = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === `/plans/${conversationId}`) return summary as never;
-    if (path.includes('/sets?')) return { logs: [] } as never;
-    if (path === '/exercises') return { exercises: [{ id: coachId, name: '卧推', name_en: 'Bench Press', created_by_coach_id: null }] } as never;
-    return previous(path, options);
-  });
-  jest.mocked(chatRepository.sendSetRef).mockRejectedValue(new Error('offline'));
-  await renderScreen();
-  await act(async () => { renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('student.studentBlackGoldChatView.copy006')).props.onPress(); });
-  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'radio' && node.props.onPress)[0].props.onPress(); });
-  await act(async () => { await renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === t('chat.sendToCoach')).props.onPress(); });
-  expect(chatRepository.sendSetRef).toHaveBeenCalledWith(conversationId, expect.objectContaining({ setRef: expect.objectContaining({ exerciseName: '卧推' }), body: expect.stringContaining('卧推') }));
-  expect(copy()).toContain(t('chat.trainingShareFailed'));
-  expect(copy().join(' ')).toContain('臥推');
-  expect(copy().join(' ')).not.toContain('卧推');
-  const retryText = renderer.root.findAllByType(Text).find(node => node.props.children === t('student.studentBlackGoldChatView.copy026'))!;
-  let retry = retryText.parent!; while (!retry.props.onPress) retry = retry.parent!;
-  await act(async () => { await retry.props.onPress(); });
-  expect(chatRepository.sendSetRef).toHaveBeenNthCalledWith(2, ...jest.mocked(chatRepository.sendSetRef).mock.calls[0]);
 });
 
 

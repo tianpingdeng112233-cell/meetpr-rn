@@ -1,0 +1,29 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-sheet.test.ts
+
+FAIL src/features/training/__tests__/all-day-sheet.test.ts
+  ✓ all-day sheet preserves old actuals and prefills only RPE-only weights from the server suggestion (2 ms)
+  ✓ completion writes every untouched group including null weight, and exercise completion also updates old records
+  ✓ a deliberately empty recorded weight stays empty instead of restoring the prescription on upgrade
+  ✕ coach as-prescribed matching accepts ranges and distinguishes empty weight from zero (1 ms)
+
+  ● coach as-prescribed matching accepts ranges and distinguishes empty weight from zero
+
+    TypeError: (0 , _presentation.isAsPrescribed) is not a function
+
+      37 | test('coach as-prescribed matching accepts ranges and distinguishes empty weight from zero', () => {
+      38 |   const ranged = set({ load_mode: 'weight_range', target_value: '0', weight_low: '90', weight_high: '100', target_reps: 4, target_reps_max: 6 });
+    > 39 |   expect(isAsPrescribed(log, ranged)).toBe(true);
+         |                        ^
+      40 |   expect(isAsPrescribed({ ...log, weight_kg: null }, ranged)).toBe(false);
+      41 |   expect(isAsPrescribed({ ...log, weight_kg: null, reps: 5, rpe: '8' }, set({ intensity_mode: 'rpe', target_value: '8' }))).toBe(true);
+      42 | });
+
+      at Object.<anonymous> (src/features/training/__tests__/all-day-sheet.test.ts:39:24)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Snapshots:   0 total
+Time:        0.371 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

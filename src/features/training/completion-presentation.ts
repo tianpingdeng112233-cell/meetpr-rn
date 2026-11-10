@@ -21,12 +21,12 @@ type Input = {
 
 function resolved(draft: WorkoutSetDraft) {
   const prescribed = decodePrescription(draft.planSet);
-  // synthesizeDrafts formats text to one decimal; retain the saved precision.
+  // Saved actuals take priority, including deliberately empty weight and RPE.
   const actual = draft.sourceLog;
   return {
-    weight: parseFiniteDecimal(actual?.weight_kg ?? draft.weightText) ?? prescribed.weightKg ?? 0,
+    weight: actual ? parseFiniteDecimal(actual.weight_kg ?? '') : parseFiniteDecimal(draft.weightText) ?? prescribed.weightKg ?? null,
     reps: actual?.reps ?? parseFiniteDecimal(draft.repsText) ?? prescribed.reps ?? prescribed.repsMax ?? 0,
-    rpe: parseFiniteDecimal(actual ? actual.rpe ?? '' : draft.rpeText) ?? (prescribed.intensity?.kind === 'rpe' ? prescribed.intensity.value : null),
+    rpe: actual ? parseFiniteDecimal(actual.rpe ?? '') : parseFiniteDecimal(draft.rpeText),
   };
 }
 function average(values: (number | null)[]): number | null {
@@ -55,14 +55,14 @@ export function workoutCompletionPresentation({ planDay, drafts, references, exe
   const exercises = planDay.exercises.map(exercise => {
     const sets = completed.filter(draft => draft.exercise.id === exercise.id);
     const best = sets.map(resolved).reduce<ReturnType<typeof resolved> | null>((best, value) =>
-      !best || value.weight > best.weight || (value.weight === best.weight && value.reps > best.reps) ? value : best, null);
+      !best || (value.weight ?? -1) > (best.weight ?? -1) || (value.weight === best.weight && value.reps > best.reps) ? value : best, null);
     const baseline = references.get(exercise.exercise_id);
     const failedSetCount = sets.filter(draft => draft.status === 'failed').length;
     return {
       id: exercise.id,
       name: exerciseNames.get(exercise.exercise_id) ?? t('student.todayWorkoutView.copy011'),
-      bestSetText: best ? `${compact(best.weight)}kg × ${best.reps} @${best.rpe === null ? '—' : compact(best.rpe)}` : '—',
-      isPersonalRecord: Boolean(best && baseline && (best.weight > baseline.weightKg || (best.weight === baseline.weightKg && best.reps > baseline.reps))),
+      bestSetText: best ? `${best.weight == null ? '—' : compact(best.weight)}kg × ${best.reps} @${best.rpe === null ? '—' : compact(best.rpe)}` : '—',
+      isPersonalRecord: Boolean(best && best.weight != null && baseline && (best.weight > baseline.weightKg || (best.weight === baseline.weightKg && best.reps > baseline.reps))),
       completedSetCount: sets.length, failedSetCount,
       statusText: failedSetCount ? t('student.workoutCompletionPresentation.copy001', [sets.length, failedSetCount]) : t('student.workoutCompletionPresentation.copy002', [sets.length]),
     };
@@ -85,7 +85,7 @@ export function workoutCompletionPresentation({ planDay, drafts, references, exe
     totalPlannedSets: drafts.filter(draft => !draft.kind).length,
     setCompletionLabel: failedCount ? t('student.workoutCompletionPresentation.copy005', [failedCount]) : t('student.workoutCompletionPresentation.copy006'),
     totalReps, mainRPEText, planComparisonText,
-    totalVolumeText: new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(completed.reduce((sum, draft) => { const value = resolved(draft); return sum + value.weight * value.reps; }, 0)),
+    totalVolumeText: new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(completed.reduce((sum, draft) => { const value = resolved(draft); return sum + (value.weight ?? 0) * value.reps; }, 0)),
     exerciseCount: planDay.exercises.length,
     completedSetCount: completed.length,
     averageRPEText: averageRPE === null ? '—' : oneDecimal(averageRPE),
