@@ -1,0 +1,95 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --forceExit src/navigation/__tests__/student-tabs-layout.test.tsx src/features/chat/__tests__/chat-photos.test.tsx src/features/chat/__tests__/student-conversation-screen.test.tsx
+
+FAIL src/features/chat/__tests__/chat-photos.test.tsx
+  ● switching accounts while persisting a photo blocks the subsequent upload initiation
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"content_type": "image/jpeg", "filename": "photo.jpg", "kind": "chat_image", "part_count": 1, "size_bytes": 100}
+
+      77 |   useSessionStore.setState({ user: { id: 'other', role: 'coached_student', phone: '', created_at: '' } });
+      78 |   await act(async () => { release(); await sending; });
+    > 79 |   expect(initiate).not.toHaveBeenCalled();
+         |                        ^
+      80 |   expect(await readChatPhotos('student', 'conversation')).toHaveLength(1);
+      81 | });
+      82 |
+
+      at Object.toHaveBeenCalled (src/features/chat/__tests__/chat-photos.test.tsx:79:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● cancel and retake cannot destroy a photo while its send is being persisted
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 2
+
+    1: called with 0 arguments
+    2: called with 0 arguments
+
+       97 |   await act(async () => { sending = vm.send(vm.preview!); });
+       98 |   await act(async () => { vm.discardPreview(); await vm.takePhoto(); });
+    >  99 |   expect(mockDelete).not.toHaveBeenCalled();
+          |                          ^
+      100 |   await act(async () => { release(); await sending; });
+      101 |   expect(await readChatPhotos('student', 'conversation')).toHaveLength(1);
+      102 | });
+
+      at Object.toHaveBeenCalled (src/features/chat/__tests__/chat-photos.test.tsx:99:26)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/chat/__tests__/student-conversation-screen.test.tsx
+  ● unread coach feedback is present in the conversation with its unread badge
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      109 |   await renderScreen();
+      110 |   expect(copy()).toContain('Keep your chest up');
+    > 111 |   expect(renderer.root.findAllByProps({ testID: 'feedback-unread-f' }).length).toBeGreaterThan(0);
+          |                                                                                ^
+      112 |   const card = renderer.root.find(node => node.props.testID === 'feedback-detail-f' && typeof node.props.onPress === 'function');
+      113 |   act(() => card.props.onPress());
+      114 |   expect(mockNavigate).toHaveBeenCalledWith('/(student)/feedback/f');
+
+      at Object.toBeGreaterThan (src/features/chat/__tests__/student-conversation-screen.test.tsx:111:80)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/navigation/__tests__/student-tabs-layout.test.tsx
+  ● the highlighted Growth tab returns from body weight to its menu
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: "growth", undefined
+
+    Number of calls: 0
+
+      57 |   expect(tab.props.accessibilityState.selected).toBe(true);
+      58 |   act(() => tab.props.onPress());
+    > 59 |   expect(mockNavigate).toHaveBeenCalledWith('growth', undefined);
+         |                        ^
+      60 |   mockSelected = 'training';
+      61 | });
+      62 |
+
+      at Object.toHaveBeenCalledWith (src/navigation/__tests__/student-tabs-layout.test.tsx:59:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 3 failed, 3 total
+Tests:       4 failed, 44 passed, 48 total
+Snapshots:   0 total
+Time:        2.779 s
+Ran all test suites matching /src\/navigation\/__tests__\/student-tabs-layout.test.tsx|src\/features\/chat\/__tests__\/chat-photos.test.tsx|src\/features\/chat\/__tests__\/student-conversation-screen.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

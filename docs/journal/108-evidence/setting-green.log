@@ -1,0 +1,8 @@
+PASS src/features/settings/__tests__/daily-weight.test.ts
+  ✓ daily weight defaults off and persists separately per account (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.28 s
+Ran all test suites matching /src\/features\/settings\/__tests__\/daily-weight.test.ts/i.

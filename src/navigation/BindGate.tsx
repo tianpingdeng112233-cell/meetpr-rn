@@ -184,7 +184,7 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
 
   useEffect(() => {
     if (enteringToday.current && state === 'bound') {
-      router.replace('/(student)/today');
+      router.replace('/(student)/training');
       enteringToday.current = false;
     }
   }, [router, state]);

@@ -1,0 +1,26 @@
+FAIL src/features/training/__tests__/all-day-view.test.tsx
+  ● Test suite failed to run
+
+    TypeError: Cannot read properties of undefined (reading 'jest')
+
+      37 | jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate }), useFocusEffect: jest.fn() }));
+      38 | jest.mock('@/api/session', () => ({
+    > 39 |   ...jest.requireActual<typeof import('@/api/session')>('@/api/session'),
+         |      ^
+      40 |   authenticatedRequest: jest.fn(),
+      41 | }));
+      42 |
+
+      at jest (src/features/training/__tests__/all-day-view.test.tsx:39:6)
+      at Object.require (src/api/domains/onboarding.ts:10:1)
+      at Object.require (src/api/domains/body-weights.ts:5:1)
+      at Object.require (src/features/training/__tests__/all-day-view.test.tsx:2:1)
+
+PASS src/features/history/__tests__/body-weight-screen.test.tsx
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        1.232 s, estimated 3 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-view.test.tsx|src\/features\/history\/__tests__\/body-weight-screen.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

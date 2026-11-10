@@ -1,0 +1,27 @@
+FAIL src/navigation/__tests__/student-tabs-layout.test.tsx
+  ✕ cold start lands on training and coached tabs keep one unread badge, hidden while reading (26 ms)
+
+  ● cold start lands on training and coached tabs keep one unread badge, hidden while reading
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "/(student)/training"
+    Received: "/(student)/today"
+
+      35 |   useSessionStore.setState({ bootstrapped: true, status: 'authenticated', user: { id: 'student', role: 'coached_student', phone: '', created_at: '' } });
+      36 |   await act(async () => { renderer = create(<Index />); });
+    > 37 |   expect(renderer.root.findByType('Redirect' as never).props.href).toBe('/(student)/training');
+         |                                                                    ^
+      38 |   await act(async () => { renderer.update(<StudentTabs />); });
+      39 |   expect(mockInitial).toBe('training');
+      40 |   const labels = () => renderer.root.findAll(node => node.props.accessibilityRole === 'tab', { deep: false }).map(n => n.props.accessibilityLabel);
+
+      at Object.toBe (src/navigation/__tests__/student-tabs-layout.test.tsx:37:68)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.872 s
+Ran all test suites matching /src\/navigation\/__tests__\/student-tabs-layout.test.tsx/i.

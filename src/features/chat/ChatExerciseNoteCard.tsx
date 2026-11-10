@@ -54,7 +54,7 @@ export function ChatExerciseNoteCard({ message, outgoing, student = false }: { m
   const body = message.body ?? '';
   const note = /^\[(?:Exercise note|\u52a8\u4f5c\u7559\u8a00)\]/.test(body) ? body.split('\n').slice(1).join('\n') : body;
   return <View style={{ maxWidth: '88%', alignSelf: outgoing ? 'flex-end' : 'flex-start', gap: 6 }}>
-    <Pressable accessibilityRole="button" accessibilityLabel={exerciseNoteTitle(reference)} disabled={opening} onPress={() => void open()} style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.borderDefault, backgroundColor: colors.surfaceCard, gap: 8 }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={exerciseNoteTitle(reference)} disabled={opening} onPress={() => void open()} style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.borderDefault, backgroundColor: student && outgoing ? colors.goldSoft : colors.surfaceCard, gap: 8 }}>
       <Text style={{ ...font.body(14, 'semibold'), color: colors.goldText }}>{exerciseNoteTitle(reference)}</Text>
       <Text style={{ ...font.body(14), color: colors.textPrimary }}>{note}</Text>
     </Pressable>

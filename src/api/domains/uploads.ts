@@ -11,6 +11,7 @@ const DOCUMENT_MAX_BYTES = 20 * MEBIBYTE;
 
 export const UploadKindSchema = z.enum([
   'set_video',
+  'chat_image',
   'onboarding_video',
   'onboarding_doc',
 ]);
@@ -33,7 +34,8 @@ export const UploadInitiateRequestSchema = z
   .strict()
   .superRefine((value, context) => {
     const isDocument = value.kind === 'onboarding_doc';
-    const allowedType = isDocument
+    const isImage = value.kind === 'chat_image';
+    const allowedType = isImage ? ['image/png', 'image/jpeg'].includes(value.content_type) : isDocument
       ? ['image/png', 'image/jpeg', 'application/pdf'].includes(value.content_type)
       : ['video/mp4', 'video/quicktime'].includes(value.content_type);
     if (!allowedType) {
@@ -43,7 +45,7 @@ export const UploadInitiateRequestSchema = z
         path: ['content_type'],
       });
     }
-    const maxBytes = isDocument ? DOCUMENT_MAX_BYTES : VIDEO_MAX_BYTES;
+    const maxBytes = isImage ? 10 * MEBIBYTE : isDocument ? DOCUMENT_MAX_BYTES : VIDEO_MAX_BYTES;
     if (value.size_bytes > maxBytes) {
       context.addIssue({
         code: 'too_big',

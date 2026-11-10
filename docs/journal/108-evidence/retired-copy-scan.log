@@ -1,0 +1,80 @@
+src/navigation/BindGate.tsx:77:  const enteringToday = useRef(false);
+src/navigation/BindGate.tsx:186:    if (enteringToday.current && state === 'bound') {
+src/navigation/BindGate.tsx:188:      enteringToday.current = false;
+src/navigation/BindGate.tsx:202:    onContinue={() => { enteringToday.current = true; setState('bound'); }}
+src/app/(student)/training.tsx:1:import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+src/app/(student)/training.tsx:4:  return <TodayWorkoutView />;
+src/features/history/summary-model.ts:316:  const localToday = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+src/features/history/summary-model.ts:317:  return (target - localToday) / E1RM_MATH.millisecondsPerDay;
+src/features/history/BodyWeightScreen.tsx:56:      <AppButton label={t(view.hasToday ? 'student.bodyWeight.update' : 'student.bodyWeight.log')} disabled={profile.isPending || profile.isError || remove.isPending} onPress={() => setEditing(true)} />
+src/features/history/GrowthE1RMCard.tsx:14:export function GrowthE1RMCard({ curve, isZeroTraining, onToday, onSelect, onRangeChange, range, selectedPointId }: { selectedPointId?: string | null; curve: GrowthCurve; isZeroTraining: boolean; onToday: () => void; onSelect?: (sample: E1RMSample) => void; range: GrowthTimeRange; onRangeChange: (range: GrowthTimeRange) => void }) {
+src/features/history/GrowthE1RMCard.tsx:38:      {isZeroTraining ? <AppButton haptic="none" label={t('student.growthEmptyStates.copy009')} onPress={onToday} /> : null}
+src/features/history/body-weight-model.ts:17:    hasToday: ascending.some(record => record.recorded_on === localDay(now)),
+src/features/profile/__tests__/editor.test.tsx:39:  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+src/features/profile/__tests__/editor.test.tsx:87:  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
+src/features/profile/__tests__/editor.test.tsx:105:  expect(jest.mocked(bodyWeightsRepository.saveToday).mock.calls.at(-1)?.[0]).toBe('90.00');
+src/features/profile/__tests__/editor.test.tsx:165:  expect(jest.mocked(bodyWeightsRepository.saveToday).mock.calls.at(-1)?.[0]).toBe(unit === 'kg' ? '83.25' : '83.12');
+src/features/profile/__tests__/editor.test.tsx:170:  expect(jest.mocked(bodyWeightsRepository.saveToday).mock.calls.at(-1)?.[0]).toBe(unit === 'kg' ? '83.25' : '83.12');
+src/features/profile/__tests__/editor.test.tsx:272:  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
+src/features/profile/__tests__/editor.test.tsx:283:  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
+src/features/profile/__tests__/editor.test.tsx:294:  expect(bodyWeightsRepository.saveToday).not.toHaveBeenCalled();
+src/features/history/__tests__/body-weight-screen.test.tsx:85:  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+src/features/history/__tests__/body-weight-screen.test.tsx:125:  const save = jest.spyOn(bodyWeightsRepository, 'saveToday').mockResolvedValue({ record: null, current_weight_kg: '77.40' });
+src/features/profile/__tests__/profile-pages.test.tsx:48:  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+src/features/history/__tests__/body-weight-model.test.ts:16:  expect(view.hasToday).toBe(true);
+src/features/history/__tests__/body-weight-model.test.ts:29:  expect(bodyWeightPresentation([], '30', now)).toMatchObject({ state: 'empty', current: '—', points: [], records: [], hasToday: false, delta: null });
+src/features/history/__tests__/body-weight-model.test.ts:30:  expect(bodyWeightPresentation([records[1]], '30', now)).toMatchObject({ state: 'single', current: '83.00', points: [records[1]], hasToday: false, delta: null });
+src/features/history/__tests__/e1rm-screen.test.tsx:49:test('missing Total names missing lifts; all three zero-data segments offer Today', async () => {
+src/features/history/E1RMScreen.tsx:49:      </> : <GrowthE1RMCard curve={data.curves[segment]} range={range} onRangeChange={changeRange} selectedPointId={selectedPointId} onSelect={sample => setSelectedPointId(sample.winnerPointId)} isZeroTraining={data.stats.trainingSessionCount === 0} onToday={() => router.navigate('/(student)/training')} />}
+src/features/training/index.ts:5:export * from './TodayWorkoutView';
+src/features/training/policy.ts:4:import { gymDayToday, localDateText } from '@/domain/plan/workout-date-policy';
+src/features/training/policy.ts:18:export const gymDayText = gymDayToday;
+src/features/training/model.ts:54:export type ReadinessGateState = 'unknown' | 'needed' | 'done' | 'skippedToday';
+src/features/training/refresh-throttle.ts:1:export class StudentTodayRefreshThrottle {
+src/features/training/__tests__/quick-log-copy.test.ts:13:    'Already trained? Log this session', 'Quick log · W1D2', 'Back', 'Training date', 'Today', 'Done', 'Next cell →',
+src/features/training/__tests__/quick-log-copy.test.ts:28:  expect(copy.hold).toBe('长按 · 补记并完成今日训练');
+src/features/training/TodayWorkoutView.tsx:10:  completedToday,
+src/features/training/TodayWorkoutView.tsx:35:import { StudentTodayRefreshThrottle } from './refresh-throttle';
+src/features/training/TodayWorkoutView.tsx:75:export function TodayWorkoutView() {
+src/features/training/TodayWorkoutView.tsx:127:  const throttle = useRef(new StudentTodayRefreshThrottle());
+src/features/training/TodayWorkoutView.tsx:207:  const initialDayID = completedToday(orderedDays, clockNow)?.id ?? defaultTrainingDay(orderedDays, logs, clockNow)?.id;
+src/features/training/TodayWorkoutView.tsx:461:  const refreshToday = async () => {
+src/features/training/TodayWorkoutView.tsx:751:  const showEmpty = state.kind === 'noPlan' || (state.kind === 'loaded' && emptyState !== null && !completedToday(orderedDays, clockNow) && requestedDayID === null);
+src/features/training/TodayWorkoutView.tsx:765:      <View style={{ flex: 1 }} onTouchEnd={() => editor.pad.current?.dismiss()}><ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshToday()} tintColor={colors.gold500} />} ref={workoutScroll} innerViewRef={workoutContent}
+src/features/training/TodayWorkoutView.tsx:792:                : t('student.dashboardTodayScreen.copy008')}
+src/features/training/TodayWorkoutView.tsx:794:            <Pressable onPress={() => void refreshToday()}>
+src/features/training/training-analytics.ts:10:    screen(AnalyticsScreen.TodayWorkout),
+src/features/training/video-upload/__tests__/attachment-trim.test.tsx:307:    // TodayWorkoutView refreshes attachments when the system picker returns to active.
+src/features/coach/dashboard/CoachDashboardScreen.tsx:30:  // iOS CoachTodayFormatting: wide month + day, then the wide weekday ("September 5 · Saturday").
+src/features/training/__tests__/set-save.test.tsx:7:import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+src/features/training/__tests__/set-save.test.tsx:102:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/set-save.test.tsx:195:test('Sending does not block the TodayWorkoutView save path or discard the attachment', async () => {
+src/features/training/__tests__/set-save.test.tsx:234:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/set-save.test.tsx:242:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/set-save.test.tsx:338:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/set-save.test.tsx:345:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/set-save.test.tsx:387:  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+src/features/training/__tests__/set-save.test.tsx:389:  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
+src/features/training/__tests__/quick-log-entry.test.tsx:5:import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+src/features/training/__tests__/quick-log-entry.test.tsx:87:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/number-pad-visibility.test.tsx:12:import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+src/features/training/__tests__/number-pad-visibility.test.tsx:77:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/hero-camera-upload.test.tsx:12:import { TodayWorkoutView } from '../TodayWorkoutView';
+src/features/training/__tests__/hero-camera-upload.test.tsx:114:  await act(async () => { renderer = create(<QueryClientProvider client={client}><SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 400, height: 800 }, insets: { top: 0, left: 0, right: 0, bottom: 0 } }}><TodayWorkoutView /></SafeAreaProvider></QueryClientProvider>); });
+src/features/training/MeetWeightStrip.tsx:28:      {model.kind === 'meet-weight' ? <Pressable accessibilityRole="button" accessibilityLabel={model.days === 0 ? t('student.weightStrip.meetToday') : `${t('student.weightStrip.untilMeet', [model.name])} ${t('student.weightStrip.days', [model.days])}`} onPress={() => router.navigate({ pathname: '/(student)/profile', params: { edit: 'competition' } })} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRightWidth: 1, borderRightColor: colors.borderHairline }}>
+src/features/training/MeetWeightStrip.tsx:30:        <View style={{ flex: 1 }}><Text style={{ ...font.body(12), color: colors.textSecondary }}>{model.days === 0 ? t('student.weightStrip.meetToday') : t('student.weightStrip.untilMeet', [model.name])}</Text>
+src/features/training/__tests__/completion-entry.test.tsx:6:import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+src/features/training/__tests__/completion-entry.test.tsx:87:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/chat/StudentConversationScreen.tsx:25:import { SetRefSharePicker, loadTodaySetRefCandidates } from './SetRefSharePicker';
+src/features/chat/StudentConversationScreen.tsx:75:  const loadCandidates = useCallback(() => loadTodaySetRefCandidates(studentId), [studentId]);
+src/features/training/__tests__/readiness-sheet.test.tsx:137:test('the shared Profile and Today readiness sheet shows the coach notice only above the final submission', () => {
+src/features/training/__tests__/training-analytics.test.ts:8:  AnalyticsScreen: { TodayWorkout: 'today_workout' },
+src/features/training/__tests__/async-control.test.ts:3:import { StudentTodayRefreshThrottle } from '../refresh-throttle';
+src/features/training/__tests__/async-control.test.ts:74:  const throttle = new StudentTodayRefreshThrottle();
+src/features/training/__tests__/all-day-view.test.tsx:13:import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+src/features/training/__tests__/all-day-view.test.tsx:96:  await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+src/features/training/__tests__/all-day-view.test.tsx:303:  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+src/features/chat/SetRefSharePicker.tsx:19:export async function loadTodaySetRefCandidates(studentId: string): Promise<SetRefCandidate[]> {
+src/features/chat/__tests__/set-ref-picker.test.tsx:12:import { SetRefSharePicker, loadTodaySetRefCandidates } from '../SetRefSharePicker';
+src/features/chat/__tests__/set-ref-picker.test.tsx:77:  expect(await loadTodaySetRefCandidates(id)).toEqual([expect.objectContaining({ id, source: expect.objectContaining({ source: 'logged', setNumber: 3, setTotal: null }) })]);
+src/features/chat/__tests__/set-ref-picker.test.tsx:88:  await mount(() => loadTodaySetRefCandidates(id));

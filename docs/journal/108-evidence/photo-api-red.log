@@ -1,0 +1,26 @@
+FAIL src/api/domains/__tests__/chat-images.test.ts
+  ✕ sends a photo attachment as an image message with a stable retry client id
+
+  ● sends a photo attachment as an image message with a stable retry client id
+
+    TypeError: _chat.chatRepository.sendImage is not a function
+
+      10 |   const message = { id, conversation_id: id, seq: 1, sender_id: id, kind: 'image', attachment_id: id, client_id: 'retry-id', created_at: '2026-11-10T00:00:00Z' };
+      11 |   globalThis.fetch = jest.fn(async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ message }) })) as unknown as typeof fetch;
+    > 12 |   await expect(chatRepository.sendImage(id, id, 'retry-id')).resolves.toEqual({ message });
+         |                               ^
+      13 |   expect(JSON.parse(jest.mocked(fetch).mock.calls[0][1]?.body as string)).toEqual({ kind: 'image', attachment_id: id, client_id: 'retry-id' });
+      14 |   expect(UploadInitiateRequestSchema.safeParse({ kind: 'chat_image', content_type: 'image/jpeg', size_bytes: 100000, part_count: 1 }).success).toBe(true);
+      15 |   expect(UploadInitiateRequestSchema.safeParse({ kind: 'chat_image', content_type: 'video/mp4', size_bytes: 100000, part_count: 1 }).success).toBe(false);
+
+      at Object.sendImage (src/api/domains/__tests__/chat-images.test.ts:12:31)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.348 s
+Ran all test suites matching /src\/api\/domains\/__tests__\/chat-images.test.ts/i.

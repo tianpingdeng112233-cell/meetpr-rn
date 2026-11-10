@@ -1,0 +1,7 @@
+
+> meetpr-rn@1.0.0 postinstall
+> patch-package
+
+patch-package 8.0.1
+Applying patches...
+react-native-video@6.19.2 ✔

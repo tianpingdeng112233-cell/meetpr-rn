@@ -1,6 +1,6 @@
 import { beforeEach, expect, jest, test } from '@jest/globals';
 import { InMemoryE1RMRepository, type E1RMHistoryPoint } from '@/domain/e1rm';
-import { replayE1RMHistoryPoints } from '@/features/dashboard/model';
+import { replayE1RMHistoryPoints } from '@/features/history/summary-model';
 import { loadGrowthHistory } from '../history-points';
 import { buildGrowthCurves, growthSnapshot } from '../model';
 import AsyncStorage from '@react-native-async-storage/async-storage';

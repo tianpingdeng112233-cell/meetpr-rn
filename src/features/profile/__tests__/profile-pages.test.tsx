@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { bodyWeightsRepository } from '@/api/domains/body-weights';
 import { bindRepository } from '@/api/domains/bind';
 import { OnboardingProfileSchema, onboardingRepository, type OnboardingProfile } from '@/api/domains/onboarding';
 import { readinessRepository } from '@/api/domains/readiness';
@@ -44,6 +45,10 @@ beforeEach(async () => {
   jest.spyOn(onboardingRepository, 'get').mockImplementation(async () => profile);
   jest.spyOn(readinessRepository, 'get').mockResolvedValue({ checkin: null });
   jest.spyOn(onboardingRepository, 'upsert').mockImplementation(async patch => { profile = { ...profile, ...patch }; return profile; });
+  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+    profile = { ...profile, weight_kg: weight };
+    return { record: { recorded_on: '2026-11-08', weight_kg: weight }, current_weight_kg: weight };
+  });
   jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: null });
 });
 afterEach(() => { act(() => renderer?.unmount()); client.clear(); jest.restoreAllMocks(); setLocaleOverride(null); useSessionStore.setState({ user: null }); });

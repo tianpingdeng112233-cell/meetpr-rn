@@ -1,0 +1,8 @@
+PASS src/api/domains/__tests__/chat-images.test.ts
+  ✓ sends a photo attachment as an image message with a stable retry client id (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.351 s, estimated 1 s
+Ran all test suites matching /src\/api\/domains\/__tests__\/chat-images.test.ts/i.

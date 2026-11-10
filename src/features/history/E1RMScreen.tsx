@@ -5,7 +5,7 @@ import { useSessionStore } from '@/api/session';
 import { AnalyticsEvent, track } from '@/analytics';
 import { Screen, StatTile, font, radius, spacing, typography, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import { formatKg } from '@/features/dashboard/model';
+import { formatKg } from '@/features/history/summary-model';
 import { t } from '@/i18n';
 import type { LiftFamily } from '@/domain/e1rm';
 import { GrowthE1RMCard } from './GrowthE1RMCard';
@@ -46,7 +46,7 @@ export function E1RMScreen() {
           <StatTile label={t('student.trainingHistoryView.copy016')} value={data.stats.trainingTotalKg === null ? '—' : formatKg(data.stats.trainingTotalKg)} unit="kg" style={{ flex: 1, padding: spacing.space3, gap: spacing.space2 }} />
         </View>
         {data.stats.sbdTotalKg !== null && data.stats.trainingTotalKg !== null && data.stats.trainingTotalKg > 0 && data.stats.sbdTotalKg > data.stats.trainingTotalKg ? <Text style={{ color: colors.success, ...typography.footnote }}>{t('student.trainingHistoryView.copy017', [Math.round(data.stats.sbdTotalKg / data.stats.trainingTotalKg * 100)])}</Text> : null}
-      </> : <GrowthE1RMCard curve={data.curves[segment]} range={range} onRangeChange={changeRange} selectedPointId={selectedPointId} onSelect={sample => setSelectedPointId(sample.winnerPointId)} isZeroTraining={data.stats.trainingSessionCount === 0} onToday={() => router.navigate('/(student)/today')} />}
+      </> : <GrowthE1RMCard curve={data.curves[segment]} range={range} onRangeChange={changeRange} selectedPointId={selectedPointId} onSelect={sample => setSelectedPointId(sample.winnerPointId)} isZeroTraining={data.stats.trainingSessionCount === 0} onToday={() => router.navigate('/(student)/training')} />}
     </ScrollView> : <ProgressLoadState failed={vm.state.status === 'error'} onRetry={() => void vm.reload()} />}
     <GrowthSourceSheet detail={detail} onClose={() => setSelectedPointId(null)} />
   </Screen>;

@@ -1,0 +1,8 @@
+PASS src/features/training/__tests__/student-empty-state.test.ts
+  ✓ training distinguishes first plan, next unpublished week, and whole plan completion (6 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.371 s
+Ran all test suites matching /src\/features\/training\/__tests__\/student-empty-state.test.ts/i.

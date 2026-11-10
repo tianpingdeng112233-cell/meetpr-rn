@@ -3,7 +3,7 @@ import { ApiError } from '@/api/client';
 import { ChatMessageSchema, chatRepository, toSetRefWire, type ChatMessage } from '@/api/domains/chat';
 import { FeedbackItemSchema } from '@/api/domains/feedback';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
-import { dashboardPlanSeenKey } from '@/features/dashboard/plan-seen';
+import { dashboardPlanSeenKey } from '@/features/chat/plan-seen';
 import { EMPTY_VIDEO_UPLOAD } from '@/features/training/video-upload/model';
 import { useVideoUploadStore } from '@/features/training/video-upload/store';
 import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
@@ -29,7 +29,7 @@ jest.mock('@react-native-community/netinfo', () =>
 jest.mock('react-native-video', () => 'Video');
 const mockNavigate = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ navigate: mockNavigate, back: jest.fn() }),
+  useRouter: () => ({ navigate: mockNavigate, push: mockNavigate, back: jest.fn() }),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   useFocusEffect: (callback: () => void) => require('react').useEffect(callback, [callback]),
 }));
@@ -85,10 +85,10 @@ afterEach(() => {
   act(() => renderer?.unmount()); jest.restoreAllMocks(); client.clear(); useSessionStore.setState({ user: null }); setLocaleOverride(null);
 });
 
-test('empty conversation invites a message to the coach and shows tonight online', async () => {
+test('empty conversation invites a message to the coach and shows the Coach tab subtitle', async () => {
   await renderScreen();
   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy014', ['Alex']));
-  expect(copy()).toContain(t('student.studentBlackGoldChatView.copy002'));
+  expect(copy()).toContain(t('student.coachTab.subtitle'));
   expect(chatRepository.read).not.toHaveBeenCalled();
 });
 
@@ -108,7 +108,10 @@ test('unread coach feedback is present in the conversation with its unread badge
   feedbackItems = [{ id: 'f', student_id: studentId, coach_id: coachId, day_date: null, plan_exercise_id: null, text: 'Keep your chest up', posted_at: '2026-09-05T09:04:00Z', read_at: null }];
   await renderScreen();
   expect(copy()).toContain('Keep your chest up');
-  expect(copy()).toContain(t('student.studentBlackGoldChatView.copy023'));
+  expect(renderer.root.findAllByProps({ testID: 'feedback-unread-f' }).length).toBeGreaterThan(0);
+  const card = renderer.root.find(node => node.props.testID === 'feedback-detail-f' && typeof node.props.onPress === 'function');
+  act(() => card.props.onPress());
+  expect(mockNavigate).toHaveBeenCalledWith('/(student)/feedback/f');
 });
 test('opening the new plan persists its seen signature and goes to Training', async () => {
   plans = [{ id: 'plan', status: 'published', published_at: '2026-09-05T08:00:00Z', created_at: '2026-09-01T08:00:00Z' }];
@@ -300,7 +303,7 @@ test('a Global feedback chat card and its player keep the embedded English exerc
     text: 'QA feedback', posted_at: '2026-09-22T06:22:45Z', read_at: null,
     video: { id: studentId, exercise_name: '竞技深蹲', exercise_name_en: 'Competition Squat', set_index: 0, weight_kg: '80.00', reps: 5, rpe: '7.0' } }];
   await renderScreen();
-  expect(copy()).toContain('My Competition Squat · Set 1');
+  expect(copy()).toEqual(expect.arrayContaining([expect.stringContaining('My Competition Squat · Set 1')]));
   await act(async () => { await renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') })[0].props.onPress(); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
   expect(renderer.root.findByType(FeedbackVideoPlayer).props.badge).toMatchObject({ exerciseName: 'Competition Squat', setOrdinal: 1 });
@@ -451,9 +454,9 @@ test('a loaded portrait feedback poster uses a left-aligned 240dp cover and reme
   await act(async () => { renderer.root.findByType(Image).props.onLoad({ source: { width: 900, height: 1200 } }); });
   expect(coverStyle()).toMatchObject({ height: 240, width: 180, alignSelf: 'flex-start' });
   const label = renderer.root.findAllByType(Text).find(node => textContent(node.props.children).includes('Very long low bar'))!;
-  expect(label.props.numberOfLines).toBe(1);
-  expect(StyleSheet.flatten(label.props.style).maxWidth).toBe('100%');
-  expect(StyleSheet.flatten(label.props.style).color).toBe('#FFFFFF');
+  // B3 moves the exercise label into the secondary header above the cover.
+  expect(textContent(label.props.children)).toContain(t('student.studentBlackGoldChatView.copy022'));
+  expect(StyleSheet.flatten(label.props.style).fontSize).toBe(12);
   expect(copy()).toContain('1:05');
   await act(async () => { renderer.unmount(); });
   await renderScreen();
@@ -553,4 +556,13 @@ test.each([
     expect(times()).toHaveLength(separate ? 2 : 1);
     if (separate) expect(times()).toEqual(['19:00', '19:04']);
   } finally { jest.useRealTimers(); }
+});
+
+test('108 Coach composer shows only camera and today set-video actions and keeps its draft', async () => {
+  await renderScreen();
+  await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Keep this draft'));
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.coachTab.add'))[0].props.onPress());
+  expect(copy()).toContain(t('student.coachTab.takePhoto'));
+  expect(copy()).toContain(t('student.coachTab.shareVideo'));
+  expect(renderer.root.findByType(TextInput).props.value).toBe('Keep this draft');
 });

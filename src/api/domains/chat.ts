@@ -67,6 +67,7 @@ export const chatRepository = {
   open: (otherUserId: string) => authenticatedRequest('/conversations', { method: 'POST', body: { other_user_id: UuidSchema.parse(otherUserId) }, schema: z.object({ conversation: ConversationSchema }) }),
   messages: (id: string, query: { since_seq?: number; before_seq?: number; limit?: number } = {}) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages${encodeQuery({ limit: 50, ...query })}`, { schema: ChatMessagesSchema }),
   send: (id: string, body: string, clientID: string) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages`, { method: 'POST', body: SendTextSchema.parse({ kind: 'text', body, client_id: clientID }), schema: z.object({ message: ChatMessageSchema }) }),
+  sendImage: (id: string, attachmentId: string, clientID: string) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages`, { method: 'POST', body: { kind: 'image', attachment_id: UuidSchema.parse(attachmentId), client_id: z.string().min(1).parse(clientID) }, schema: z.object({ message: ChatMessageSchema }) }),
   sendExerciseNote: (id: string, input: { body: string; clientID: string; exerciseRef: ExerciseRef }) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages`, {
     method: 'POST', body: { kind: 'text', body: z.string().min(1).max(4000).parse(input.body), client_id: z.string().min(1).parse(input.clientID), exercise_ref: ExerciseRefSchema.parse(input.exerciseRef) }, schema: z.object({ message: ChatMessageSchema }),
   }),

@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { writeDailyWeight } from '@/features/settings/daily-weight';
+import { bodyWeightsRepository } from '@/api/domains/body-weights';
+import { localDay } from '@/domain/coach/detail-week';
 import { useExerciseNoteOutbox, flushExerciseNotes } from '@/features/chat/exercise-note-outbox';
 import { chatRepository, ChatMessageSchema, ExerciseRefSchema } from '@/api/domains/chat';
 import contract from '../__fixtures__/107-contract-provisional.json';
@@ -291,4 +294,22 @@ test('lb summary, expanded rows and keypad use the same unit while saved weights
   await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('220.5'));
   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
     .toMatchObject({ weight_kg: '100' });
+});
+
+test('108 logging weight from the training strip updates today without leaving training', async () => {
+  await writeDailyWeight(studentId, true);
+  let records: { recorded_on: string; weight_kg: string }[] = [];
+  jest.spyOn(bodyWeightsRepository, 'list').mockImplementation(async () => ({ records }));
+  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+    const record = { recorded_on: localDay(new Date()), weight_kg: weight };
+    records = [record]; return { record, current_weight_kg: weight };
+  });
+  await mount();
+  await press('Log weight');
+  for (const key of ['7', '7', 'Decimal point', '4']) await press(key);
+  await press('Done');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain('77.4');
+  expect(mockNavigate).not.toHaveBeenCalled();
+  expect(records).toEqual([{ recorded_on: localDay(new Date()), weight_kg: '77.40' }]);
 });

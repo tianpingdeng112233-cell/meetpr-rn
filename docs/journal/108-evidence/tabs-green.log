@@ -1,0 +1,8 @@
+PASS src/navigation/__tests__/student-tabs.test.ts
+  ✓ training is first and coach is second only for coached students (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.44 s
+Ran all test suites matching /src\/navigation\/__tests__\/student-tabs.test.ts/i.

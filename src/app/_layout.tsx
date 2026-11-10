@@ -85,6 +85,7 @@ function RootNavigator() {
         <Stack.Screen name="profile/settings" />
         <Stack.Screen name="progress/e1rm" />
         <Stack.Screen name="progress/intensity" />
+        <Stack.Screen name="progress/body-weight" />
       </Stack.Protected>
     </Stack>
   );

@@ -1,6 +1,6 @@
 import type { PlanDay } from '@/api/domains/plans';
 import { decodePrescription } from '@/domain/plan/prescription';
-import { chineseWeekday } from '@/features/dashboard/model';
+import { chineseWeekday } from '@/features/history/summary-model';
 import { getLocale, t } from '@/i18n';
 import { isDraftTerminal } from './drafts';
 import type { WorkoutSetDraft } from './model';

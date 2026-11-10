@@ -1,0 +1,13 @@
+
+/Users/david/Projects/apps/meetpr-rn-wt-108/scripts/generate-zh-hant.cjs
+  6:27  error  '__dirname' is not defined  no-undef
+
+/Users/david/Projects/apps/meetpr-rn-wt-108/src/features/training/TodayWorkoutView.tsx
+   18:8   warning  '/Users/david/Projects/apps/meetpr-rn-wt-108/src/domain/plan/sequence.ts' imported multiple times  import/no-duplicates
+   24:32  warning  '/Users/david/Projects/apps/meetpr-rn-wt-108/src/domain/plan/sequence.ts' imported multiple times  import/no-duplicates
+   26:8   warning  'MaterialCommunityIcons' is defined but never used                                                 @typescript-eslint/no-unused-vars
+  128:9   warning  'router' is assigned a value but never used                                                        @typescript-eslint/no-unused-vars
+
+✖ 5 problems (1 error, 4 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

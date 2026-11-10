@@ -1,0 +1,65 @@
+FAIL src/features/chat/__tests__/student-conversation-screen.test.tsx
+  ✓ empty conversation invites a message to the coach and shows tonight online (127 ms)
+  ✓ shows both sides and marks my bubble read when the coach read cursor covers it (28 ms)
+  ✓ unread coach feedback is present in the conversation with its unread badge (25 ms)
+  ✓ opening the new plan persists its seen signature and goes to Training (25 ms)
+  ✓ sending text clears the composer and shows the confirmed message (34 ms)
+  ✓ failed sends retain their text and retry with the same idempotency key (37 ms)
+  ✓ initial load failure offers retry and can recover to the empty conversation (31 ms)
+  ✓ reading the latest message updates the shared unread cache immediately (25 ms)
+  ✓ header opens the bound coach once and navigates with conversation ID and name (25 ms)
+  ✓ the visible history sentinel requests older messages without discarding the loaded page (29 ms)
+  ✓ valid training shares render their metrics and note, invalid snapshots fall back to ordinary text (28 ms)
+  ✓ feedback becomes read only when at least 55 percent of its height is visible, once per card (57 ms)
+  ✓ initial scroll aligns the first unread feedback bottom, and prepending history preserves the visible message (29 ms)
+  ✓ header counts the unseen plan plus feedback plus only the bound coach conversation (30 ms)
+  ✓ opening failure noCoach uses the matching iOS alert (29 ms)
+  ✓ opening failure binding uses the matching iOS alert (24 ms)
+  ✓ opening failure network uses the matching iOS alert (22 ms)
+  ✓ returning to foreground drains all incremental pages and reads their latest sequence (30 ms)
+  ✓ a feedback video opens the shared player with W3-a markers and unknown duration (92 ms)
+  ✓ a Global feedback chat card and its player keep the embedded English exercise name (43 ms)
+  ✓ explicit unavailable feedback metadata does not offer another playback: null (25 ms)
+  ✓ explicit unavailable feedback metadata does not offer another playback: {"exercise_name": "Other clip", "id": "30000000-0000-4000-8000-000000000000", "set_index": 0} (26 ms)
+  ✓ staged composer accepts an optional note, sends the canonical body and clears on success (30 ms)
+  ✓ uploading share waits, then sends the selected video; HTTP retries keep body and client id (34 ms)
+  ✓ waiting upload failed never sends a wrong video and can be discarded (32 ms)
+  ✓ waiting upload removed never sends a wrong video and can be discarded (30 ms)
+  ✓ waiting upload replaced never sends a wrong video and can be discarded (35 ms)
+  ✓ oversized staged body disables sending and shows the canonical-inclusive UTF-16 count (28 ms)
+  ✓ an upload session can renew its remote attachment id without replacing the selected local video (29 ms)
+  ✓ poll acknowledgement clears a staged send whose HTTP response was lost (30 ms)
+  ✓ a coach without a display name renders a localized fallback ("") (33 ms)
+  ✓ a coach without a display name renders a localized fallback ("   ") (35 ms)
+  ✓ time separators include pending sends and collapse the old first separator when history arrives (36 ms)
+  ✓ a loaded portrait feedback poster uses a left-aligned 240dp cover and remembers it on reentry (104 ms)
+  ✓ feedback video uses wire poster and duration, falls back on failure, and accepts a refreshed URL (50 ms)
+  ✓ shared set video uses wire poster and duration, falls back on failure, and accepts a refreshed URL (39 ms)
+  ✓ feedback video with no poster or duration keeps playback and hides the badge (24 ms)
+  ✓ shared set video with no poster or duration keeps playback and hides the badge (26 ms)
+  ✓ acknowledging a send at 2026-11-06T19:04:59 keeps its group when the server clock crosses five minutes (33 ms)
+  ✓ acknowledging a send at 2026-11-06T19:05:01 keeps its group when the server clock crosses five minutes (34 ms)
+  ✕ 108 Coach composer shows only camera and today set-video actions and keeps its draft (27 ms)
+
+  ● 108 Coach composer shows only camera and today set-video actions and keeps its draft
+
+    ReferenceError: press is not defined
+
+      559 |   await renderScreen();
+      560 |   await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Keep this draft'));
+    > 561 |   await press(t('student.coachTab.add'));
+          |   ^
+      562 |   expect(copy()).toContain(t('student.coachTab.takePhoto'));
+      563 |   expect(copy()).toContain(t('student.coachTab.shareVideo'));
+      564 |   expect(renderer.root.findByType(TextInput).props.value).toBe('Keep this draft');
+
+      at Object.<anonymous> (src/features/chat/__tests__/student-conversation-screen.test.tsx:561:3)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 40 passed, 41 total
+Snapshots:   0 total
+Time:        2.382 s, estimated 12 s
+Ran all test suites matching /src\/features\/chat\/__tests__\/student-conversation-screen.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

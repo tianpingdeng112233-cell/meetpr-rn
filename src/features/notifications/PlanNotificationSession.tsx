@@ -31,6 +31,7 @@ export function PlanNotificationSession() {
         }
       },
       openTraining: () => router.navigate('/(student)/training'),
+      openCoach: () => { if (useSessionStore.getState().user?.role === 'coached_student') router.navigate('/(student)/chat'); },
       transport: {
         onReceive: listener => { const subscription = Notifications.addNotificationReceivedListener(notification => listener(notification.request.content.data)); return () => subscription.remove(); },
         onResponse: listener => { const subscription = Notifications.addNotificationResponseReceivedListener(response => listener(response.notification.request.identifier, response.notification.request.content.data)); return () => subscription.remove(); },
