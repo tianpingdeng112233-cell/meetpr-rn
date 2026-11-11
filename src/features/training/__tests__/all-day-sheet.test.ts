@@ -97,3 +97,14 @@ test('a completed day stays complete even if its local optional checks were neve
   expect(buildAllDaySheet({ ...selected, completed_at: '2026-11-10T13:00:00Z' }, [], [], { expandedExerciseId: exercise.id }).exercises[0])
     .toMatchObject({ node: 'complete', collapsed: false });
 });
+
+test('empty effort follows coach then remembered exercise type, while actual values keep their type', () => {
+  const withCoach = day('day', { exercises: [{ ...exercise, sets: [set({ id: 'one', load_mode: 'rir', rir_target: 2 }), set({ id: 'two', set_number: 2, target_value: '100' })] }] });
+  const options = { effortPreferences: { squat: 'rir' as const } };
+  const empty = buildAllDaySheet(withCoach, [log], [], options).exercises[0].rows;
+  expect(empty.map(row => row.effortKind)).toEqual(['rir', 'rir']);
+  const recorded = buildAllDaySheet(withCoach, [{ ...log, rpe: '8' }], [], options).exercises[0].rows[0];
+  expect([recorded.effortKind, recorded.rpeText]).toEqual(['rpe', '8']);
+  const coachRPE = day('day', { exercises: [{ ...exercise, sets: [set({ id: 'one', intensity_mode: 'rpe', target_value: '7' })] }] });
+  expect(buildAllDaySheet(coachRPE, [log], [], options).exercises[0].rows[0].effortKind).toBe('rpe');
+});

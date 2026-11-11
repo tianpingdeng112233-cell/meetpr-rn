@@ -10,7 +10,7 @@ const sets = (count: number, fields: Partial<PlanSet>) => Array.from({ length: c
 describe('107 one-line prescription table', () => {
   test('uniform weight: 4×8 130', () => {
     expect(summarizeExercise(sets(4, { target_reps: 8, target_value: '130' }), [], [])).toEqual([
-      { setsReps: '4×8', load: '130', effort: '—', effortChanged: false, loadParts: [{ text: '130', changed: false }], repsChanged: false, short: false, loadChanged: false, intensityOnly: false },
+      { setsReps: '4×8', load: '130', effort: 'RPE —', effortChanged: false, loadParts: [{ text: '130', changed: false }], repsChanged: false, short: false, loadChanged: false, intensityOnly: false },
     ]);
   });
 });
@@ -70,7 +70,7 @@ test('top-set percent waits for the top set and then shows its calculated weight
 
 const actual = (index: number, weight: string | null, reps: number, rpe: string | null = null) => ({ set_index: index, weight_kg: weight, reps, rpe });
 test('student-added exercise shows unrecorded until entered, then its actual values', () => {
-  expect(summarizeExercise([], [], [])).toMatchObject([{ setsReps: '—', load: '未记录', effort: '—' }]);
+  expect(summarizeExercise([], [], [])).toMatchObject([{ setsReps: '—', load: '未记录', effort: 'RPE —' }]);
   expect(summarizeExercise([], [actual(0, '20', 10), actual(1, '20', 10)], []))
     .toMatchObject([{ setsReps: '2×10', load: '20' }]);
 });
@@ -140,4 +140,16 @@ test('weighted effort summaries preserve missing positions and varying RIR value
     .toMatchObject([{ effort: 'RPE 6/—/8/8' }]);
   expect(summarizeExercise(planned, [3, 2, 1, 1].map((rir, index) => ({ ...actual(index, '100', 7), actual_rir: rir })), []))
     .toMatchObject([{ effort: 'RIR 3/2/1/1' }]);
+});
+
+test('empty recorded effort keeps the coach type without restoring the target', () => {
+  const planned = sets(2, { target_reps: 10, load_mode: 'rir', rir_target: 2 });
+  expect(summarizeExercise(planned, [actual(0, '100', 10), actual(1, '100', 10)], []))
+    .toMatchObject([{ effort: 'RIR —' }]);
+  expect(summarizeExercise(planned, [actual(0, '100', 10, '8'), actual(1, '100', 10)], []))
+    .toMatchObject([{ effort: 'RPE 8 / RIR —' }]);
+});
+
+test('an empty student-added exercise uses its remembered effort type in the summary', () => {
+  expect(summarizeExercise([], [], [], { effortKinds: { 0: 'rir' } })).toMatchObject([{ effort: 'RIR —' }]);
 });

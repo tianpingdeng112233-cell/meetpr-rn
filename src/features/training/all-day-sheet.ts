@@ -1,5 +1,5 @@
 import type { PlanDay, PlanExercise } from '@/api/domains/plans';
-import { effortFields } from './actual-effort';
+import { effortFields, emptyEffortKind, type EffortKind } from './actual-effort';
 import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { decodePrescription } from '@/domain/plan/prescription';
 import { synthesizeDrafts, studentAddedDrafts } from './drafts';
@@ -15,8 +15,10 @@ export type AllDayExercise = {
 export type AllDaySheet = { exercises: AllDayExercise[] };
 
 export function buildAllDaySheet(planDay: PlanDay, logs: readonly SetLog[], suggestions: readonly AllDayWeightSuggestion[],
-  options: { drafts?: readonly WorkoutSetDraft[]; completedExercises?: ReadonlySet<string>; expandedExerciseId?: string | null } = {}): AllDaySheet {
+  options: { effortPreferences?: Readonly<Record<string, EffortKind>>; drafts?: readonly WorkoutSetDraft[]; completedExercises?: ReadonlySet<string>; expandedExerciseId?: string | null } = {}): AllDaySheet {
   const rows = (options.drafts ?? [...synthesizeDrafts(planDay, logs), ...studentAddedDrafts(planDay.id, logs)]).map(row => {
+    const kind = row.rpeText ? row.effortKind : emptyEffortKind(row.planSet, options.effortPreferences?.[row.exercise.exercise_id]);
+    row = { ...row, effortKind: kind };
     if (row.sourceLog || row.kind) return row;
     const prescription = decodePrescription(row.planSet);
     const effort = prescription.intensity;

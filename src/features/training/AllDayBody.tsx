@@ -30,7 +30,8 @@ function TimelineConnector({ exerciseId, current, color }: { exerciseId: string;
   </View>;
 }
 
-export function AllDayBody({ sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, unit = 'kg' }: {
+export function AllDayBody({ sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, onEffortChoice, unit = 'kg' }: {
+  onEffortChoice?: (row: WorkoutSetDraft) => void;
   unit?: 'kg' | 'lb'; onExpand: (id: string) => void;
   sheet: AllDaySheet; editable: boolean; studentId: string; title: string;
   exerciseName: (id: string) => string; allowsRIR: (id: string) => boolean;
@@ -58,7 +59,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
       const summary = summarizeExercise(block.exercise.sets,
         block.rows.flatMap<ExerciseSummaryActual>(row => row.sourceLog ? [row.sourceLog] : row.kind && (row.weightText || row.repsText || row.rpeText) ? [allDayLogRequest(row)] : []),
         block.rows.filter(row => !row.sourceLog && row.weightText).map(row => ({ plan_set_id: row.planSet.id, weight_kg: row.weightText })),
-        { unit, labels: { bodyweight: t('loadTypes.bodyweight'), freeWeight: t('training.allDay.freeWeight'), topSet: t('training.allDay.topSet'), unrecorded: t('training.allDay.unrecorded') } });
+        { unit, effortKinds: Object.fromEntries(block.rows.map(row => [row.setIndex, row.effortKind ?? 'rpe'])), labels: { bodyweight: t('loadTypes.bodyweight'), freeWeight: t('training.allDay.freeWeight'), topSet: t('training.allDay.topSet'), unrecorded: t('training.allDay.unrecorded') } });
       const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
       return <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ width: 22, alignItems: 'center' }}>
@@ -113,7 +114,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, marginVertical: -4 }}>
                       <Pressable disabled={field === 'weight' || field === 'reps' || !allowsRIR(row.exercise.exercise_id)} onPress={() => {
                         const switched = { ...display, effortKind: display.effortKind === 'rir' ? 'rpe' as const : 'rir' as const, rpeText: '' };
-                        onSave(switched); edit(switched, switched.effortKind);
+                        onEffortChoice?.(switched); onSave(switched); edit(switched, switched.effortKind);
                       }}><Text style={{ ...font.body(11), color: colors.textSecondary }}>{field === 'weight' ? t('training.allDay.weightUnit', [unit]) : field === 'reps' ? t('student.accessory.pad.reps') : field.toUpperCase()}</Text></Pressable>
                       {field === 'rpe' || field === 'rir' ? <EffortHelpButton kind={field} inline /> : null}
                       </View>
@@ -158,7 +159,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
 
 
 export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exerciseName: (id: string) => string,
-  onPadLayout: (row: View | null, panel: { top: number; height: number } | null) => void, scopeKey: string, unit: 'kg' | 'lb' = 'kg') {
+  onPadLayout: (row: View | null, panel: { top: number; height: number } | null) => void, scopeKey: string, unit: 'kg' | 'lb' = 'kg', onEffortChoice?: (row: WorkoutSetDraft) => void) {
   const [editing, setEditing] = useState<{ row: WorkoutSetDraft; field: NumberPadField; weightInput?: string } | null>(null);
   const [previousScope, setPreviousScope] = useState(scopeKey);
   if (previousScope !== scopeKey) {
@@ -184,7 +185,10 @@ export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exercise
     const value = current.field === 'weight' && unit === 'lb' && text.trim() && Number(text) !== 0 ? metricStored(text, POUNDS_PER_KG) : text;
     const row = { ...current.row, [key]: value };
     input.current = { ...current, row, ...(current.field === 'weight' ? { weightInput: text } : {}) }; setEditing(input.current);
-    if (accessoryValue(text, current.field) !== undefined) onSave(row);
+    if (accessoryValue(text, current.field) !== undefined) {
+      if (current.field === 'rpe' || current.field === 'rir') onEffortChoice?.(row);
+      onSave(row);
+    }
   };
   useEffect(() => {
     if (!editing) return;

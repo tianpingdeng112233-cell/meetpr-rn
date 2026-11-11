@@ -1,3 +1,4 @@
+import { useEffortChoices, historicalEffortChoices } from './effort-preferences';
 import { decodePrescription } from '@/domain/plan/prescription';
 import { weightSuggestionOutcome } from './suggestion-gating';
 import { useMineBindRequest } from '@/api/domains/bind';
@@ -240,6 +241,8 @@ export function TodayWorkoutView() {
   const synthesizedIDs = new Set(synthesizedDrafts.map(draft => draft.stableSetId));
   synthesizedDrafts.push(...Object.values({ ...syncSnapshot.drafts, ...draftOverrides }).filter(draft => draft.kind && draft.exercise.plan_day_id === selectedDayID && !synthesizedIDs.has(draft.stableSetId) && (syncSnapshot.drafts?.[draft.stableSetId] || (!syncSnapshot.pending.some(entry => entry.stableSetId === draft.stableSetId && entry.remove) && !syncSnapshot.confirmed[draft.stableSetId]?.remove)) &&
     (draft.kind === 'added' || planDay?.exercises.some(exercise => exercise.id === draft.exercise.id))));
+  const effortChoices = useEffortChoices(studentId, synthesizedDrafts.map(row => row.exercise.exercise_id));
+  const rememberEffort = (row: WorkoutSetDraft) => effortChoices.remember(row.exercise.exercise_id, row.effortKind ?? 'rpe');
   const baseDrafts = synthesizedDrafts.map(draft => {
     const local = draftOverrides[draft.stableSetId];
     if (local && !local.sourceLog && !draft.sourceLog) return local;
@@ -260,6 +263,7 @@ export function TodayWorkoutView() {
     return outcome.suggestion ? { ...draft, weightText: String(outcome.suggestion.weightKg) } : draft;
   });
   const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, HISTORY_WEIGHT_PREFILL_ENABLED ? suggestionsQuery.data?.suggestions ?? [] : [], {
+    effortPreferences: { ...historicalEffortChoices(historyQuery.data?.logs ?? [], studentId, today), ...effortChoices.choices },
     drafts: prefilledDrafts, completedExercises: checkedExercises[reviewKey], expandedExerciseId: expandedExercises[reviewKey],
   }) : { exercises: [] };
   const liveDrafts = sheet.exercises.flatMap(block => block.rows);
@@ -704,7 +708,7 @@ export function TodayWorkoutView() {
     if (!id) throw new Error('Set unavailable');
     return id;
   };
-  const editor = useAllDayEditor(row => { void saveRow(row).catch(() => undefined); }, id => exerciseTitle(resolveExerciseMetadata(id)), onAccessoryPadLayout, `${reviewKey}:${trainingVisible}:${editable}:${workoutProfile?.unit_preference}`, workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg');
+  const editor = useAllDayEditor(row => { void saveRow(row).catch(() => undefined); }, id => exerciseTitle(resolveExerciseMetadata(id)), onAccessoryPadLayout, `${reviewKey}:${trainingVisible}:${editable}:${workoutProfile?.unit_preference}`, workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg', rememberEffort);
   const toggleExercise = async (id: string) => {
     const version = (exerciseCheckVersions.current[reviewKey] ?? 0) + 1;
     exerciseCheckVersions.current[reviewKey] = version;
@@ -827,6 +831,7 @@ export function TodayWorkoutView() {
               exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))}
               allowsRIR={id => isAccessoryExercise(resolveExerciseMetadata(id)?.exerciseType)}
               editor={editor}
+              onEffortChoice={rememberEffort}
               onSave={row => { void saveRow(row).catch(() => undefined); }}
               onExpand={id => { editor.close(); setExpandedExercises(current => ({ ...current, [reviewKey]: sheet.exercises.find(block => block.exercise.id === id)?.collapsed ? id : null })); }}
               onToggle={id => void toggleExercise(id)}

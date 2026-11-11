@@ -1,3 +1,4 @@
+import { writeEffortChoice } from '../effort-preferences';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { writeDailyWeight } from '@/features/settings/daily-weight';
 import { bodyWeightsRepository } from '@/api/domains/body-weights';
@@ -536,7 +537,7 @@ test.each<[Locale, number, string]>([
 });
 
 
-test('switching an RIR prescription to empty RPE keeps the chosen column label after editing', async () => {
+test('empty switched effort returns to coach type, but entered RPE keeps its actual unit', async () => {
   const exercise = plan.days[0].exercises[0];
   servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
     ...exercise.sets[0], load_mode: 'rir', rir_target: 2,
@@ -552,8 +553,13 @@ test('switching an RIR prescription to empty RPE keeps the chosen column label a
     node.findAllByType(Text).some(text => text.props.children === 'RIR'))[0].props.onPress());
   expect(renderer.root.findByType(NumberPad).props.field).toBe('rpe');
   await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
-  expect(copy()).toContain('RPE —');
-  expect(copy()).not.toContain('RIR —');
+  expect(copy()).toContain('RIR —');
+  await press('Edit set 1');
+  await act(async () => renderer.root.findAll(node => node.props.onPress && !node.props.disabled &&
+    node.findAllByType(Text).some(text => text.props.children === 'RIR'))[0].props.onPress());
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('8'));
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(copy()).toContain('RPE 8');
 });
 
 test('107-1 expanding a noncurrent exercise adds only a gold border', async () => {
@@ -798,4 +804,43 @@ test('entering different RPE values updates the weighted exercise summary after 
     const effort = renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-effort-${exercise.id}-0`)!;
     expect(effort.props.children).toBe('RPE\u00a0' + ['6/—/—/—', '6/7/—/—', '6/7/8/—', '6/7/8/8'][index]);
   }
+});
+
+
+test('an empty exercise remembers an RIR choice after reopening the training page', async () => {
+  const exercise = plan.days[0].exercises[0];
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/exercises'
+    ? { exercises: [{ id: exercise.exercise_id, name: 'Row', name_en: 'Row', exercise_type: 'accessory' }] } as never
+    : original(path, options));
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  await act(async () => renderer.root.findAll(node => node.props.onPress && !node.props.disabled &&
+    node.findAllByType(Text).some(text => text.props.children === 'RPE'))[0].props.onPress());
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(copy()).toContain('RIR —');
+  await act(async () => renderer.unmount());
+  await mount();
+  expect(copy().map(text => text.replace(/\u00a0/g, ' '))).toContain('RIR —');
+  await expandFirst();
+  await press('Edit set 1');
+  await press('rir');
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
+});
+
+
+test('adding an empty exercise loads its previous choice into summary, row and editor', async () => {
+  const id = '60000000-0000-4000-8000-000000000009';
+  await writeEffortChoice(studentId, id, 'rir');
+  await mount();
+  await act(async () => renderer.root.findByType(AllDayBody).props.onAddExercise());
+  await act(async () => renderer.root.findByType(StudentExercisePicker).props.onSelect(id));
+  const block = renderer.root.findByType(AllDayBody).props.sheet.exercises.at(-1);
+  expect(block.rows[0].effortKind).toBe('rir');
+  const summary = renderer.root.findAllByProps({ testID: `all-day-effort-${block.exercise.id}-0` })[0];
+  expect(String(summary.props.children).replace(/\u00a0/g, ' ')).toBe('RIR —');
+  await act(async () => renderer.root.findByType(AllDayBody).props.onExpand(block.exercise.id));
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-edit-effort-${block.rows[0].stableSetId}` && node.props.onPress)[0].props.onPress());
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
 });
