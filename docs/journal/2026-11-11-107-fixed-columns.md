@@ -81,3 +81,9 @@ David 拒收仅上下排布，要求如 Excel 同类数据固定位置，并统�
 - iOS1.0(39)最终候选beta/1.0-39-rc2与release/1.0同为c89bcff6b6873edceb4b09194579d8243255b131，CI43013765230全绿。首次beta/1.0-39因函数长度lint失败，原样提取偏好恢复函数后用新tag重跑；未覆盖旧tag。两台demo从最终SHA构建，安装容器Info.plist均实读39，并核对教练/学员角色截图。准确工程已打开给David手动Archive/Upload；39上传成功和Ceshi提交状态尚待明确确认。
 - 用户可查证据：当前Codex会话outputs/release-39-cn13/release-evidence.json、installed-demo-versions.json、android13-verification.json，以及升级前后/双demo截图。原始HTTP头和下载哈希在work/release-39-cn13。
 - 本节为执行证据；正典RELEASES/NEXT-RELEASE/PARITY及active记忆仍由Opus按已核实状态定稿，不将待确认iOS状态记作已发布。
+
+## 2026-11-11 iOS 上传确认补记
+
+- David 本会话明确确认「39 已上传，已提交 Ceshi 外测审核」。据此，ASC已上传基线更新为1.0(39)，对应已验证候选beta/1.0-39-rc2@c89bcff6。用户口报为证据来源，未声称独立登录ASC查询。
+- Ceshi状态为已提交外测审核；Apple审核通过及Neice分发状态未核实。Android CN0.1.0(13)已上线并完成HTTP/哈希/升级数据核验，见上节。
+- 本轮人工上传动作已确认完成；发布事实及原始证据已归档。正典RELEASES/NEXT-RELEASE/PARITY及active记忆按职责由Opus定稿，本执行分支提供补录依据。
