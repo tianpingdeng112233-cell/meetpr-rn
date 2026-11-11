@@ -48,11 +48,11 @@ test('2A varying RPE stays verbatim even when historical weight suggestions exis
   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '100' }))))
     .toMatchObject([{ setsReps: '4×12', load: '—', effort: 'RPE 6/7/8/8' }]);
 });
-test('1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets', () => {
+test('weight and both uniform and varying RPE retain their separate columns', () => {
   const planned = sets(4, { target_reps: 5, load_mode: 'fixed_weight', target_weight: '100', target_rpe: '7' });
   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100', effort: 'RPE 7', intensityOnly: false }]);
   planned[1].target_rpe = '8';
-  expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100' }]);
+  expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100', effort: 'RPE 7/8/7/7' }]);
 });
 
 test.each(['one_rm', 'e1rm'] as const)('percentage %s 107-6 shows only resolved weight, or percent if unresolved', anchor => {
@@ -98,9 +98,9 @@ test('weight unit follows the student preference while percent and RPE stay unch
     .toMatchObject([{ setsReps: '2×5', load: '220.5' }]);
 });
 
-test('1A differing RPE across rep sections is omitted across the entire exercise', () => {
+test('different rep sections retain their corresponding RPE', () => {
   const planned = [set({ set_number: 1, target_reps: 1, load_mode: 'fixed_weight', target_weight: '150', target_rpe: '8' }), set({ set_number: 2, target_reps: 3, load_mode: 'fixed_weight', target_weight: '135', target_rpe: '7' })];
-  expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '1×1', load: '150' }, { setsReps: '1×3', load: '135' }]);
+  expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '1×1', load: '150', effort: 'RPE 8' }, { setsReps: '1×3', load: '135', effort: 'RPE 7' }]);
 });
 test('only changed load tokens get emphasis when one set differs from the prescription', () => {
   expect(summarizeExercise(sets(3, { target_value: '100' }), [actual(1, '90', 5)], [])[0].loadParts).toEqual([
@@ -124,5 +124,20 @@ test('same reps stay in one segment when only one RPE set has recorded weight', 
 test('partially recorded varying RPE keeps unrecorded effort values on the same row', () => {
   const planned = sets(4, { target_reps: 5, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
   expect(summarizeExercise(planned, [actual(0, '90', 5, '6')], []))
-    .toMatchObject([{ setsReps: '4×5', load: '90 / —×3', effort: 'RPE —/7/8/8' }]);
+    .toMatchObject([{ setsReps: '4×5', load: '90 / —×3', effort: 'RPE 6/7/8/8' }]);
+});
+
+test('recorded weighted sets keep every RPE in the summary', () => {
+  const planned = sets(4, { target_reps: 7, target_value: '100' });
+  const logs = [6, 7, 8, 8].map((rpe, index) => actual(index, ['95', '100', '105', '110'][index], 7, String(rpe)));
+  expect(summarizeExercise(planned, logs, []))
+    .toMatchObject([{ setsReps: '4×7', load: '95 / 100 / 105 / 110', effort: 'RPE 6/7/8/8' }]);
+});
+
+test('weighted effort summaries preserve missing positions and varying RIR values', () => {
+  const planned = sets(4, { target_reps: 7, target_value: '100' });
+  expect(summarizeExercise(planned, [actual(0, '100', 7, '6'), actual(2, '100', 7, '8'), actual(3, '100', 7, '8')], []))
+    .toMatchObject([{ effort: 'RPE 6/—/8/8' }]);
+  expect(summarizeExercise(planned, [3, 2, 1, 1].map((rir, index) => ({ ...actual(index, '100', 7), actual_rir: rir })), []))
+    .toMatchObject([{ effort: 'RIR 3/2/1/1' }]);
 });

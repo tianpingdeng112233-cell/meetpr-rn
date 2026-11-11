@@ -778,3 +778,24 @@ test.each(['saved', 'failed'])('cancelling a pending check stays on that exercis
     expect(expanded(first.id)).toBe(true); expect(expanded(second.id)).toBe(false);
   } finally { release?.(); }
 });
+
+test('entering different RPE values updates the weighted exercise summary after every set', async () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/sets/log'
+    ? { id: `90000000-0000-4000-8000-00000000000${(options?.body as { set_index: number }).set_index}`, logged_at: new Date().toISOString() } as never
+    : original(path, options));
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [95, 100, 105, 110].map((weight, index) => ({
+    ...exercise.sets[0], id: `70000000-0000-4000-8000-00000000000${index}`, set_number: index + 1, target_reps: 7, target_value: String(weight),
+  })) }] }] };
+  await mount();
+  await expandFirst();
+  for (const [index, rpe] of ['6', '7', '8', '8'].entries()) {
+    await press(`Edit set ${index + 1}`);
+    await press('rpe');
+    await act(async () => renderer.root.findByType(NumberPad).props.onChangeText(rpe));
+    await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+    const effort = renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-effort-${exercise.id}-0`)!;
+    expect(effort.props.children).toBe('RPE\u00a0' + ['6/—/—/—', '6/7/—/—', '6/7/8/—', '6/7/8/8'][index]);
+  }
+});
