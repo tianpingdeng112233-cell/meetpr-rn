@@ -1,3 +1,4 @@
+import { writeEffortChoice } from '../effort-preferences';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { writeDailyWeight } from '@/features/settings/daily-weight';
 import { bodyWeightsRepository } from '@/api/domains/body-weights';
@@ -460,7 +461,7 @@ test('108 logging weight from the training strip updates today without leaving t
 });
 
 
-test('current collapsed exercise retains its gold highlight and completion moves it without expanding', async () => {
+test('completion moves the current highlight to the next exercise even when it has no rows', async () => {
   const first = plan.days[0].exercises[0];
   const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
   servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
@@ -536,7 +537,7 @@ test.each<[Locale, number, string]>([
 });
 
 
-test('switching an RIR prescription to empty RPE keeps the chosen column label after editing', async () => {
+test('empty switched effort returns to coach type, but entered RPE keeps its actual unit', async () => {
   const exercise = plan.days[0].exercises[0];
   servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
     ...exercise.sets[0], load_mode: 'rir', rir_target: 2,
@@ -552,8 +553,13 @@ test('switching an RIR prescription to empty RPE keeps the chosen column label a
     node.findAllByType(Text).some(text => text.props.children === 'RIR'))[0].props.onPress());
   expect(renderer.root.findByType(NumberPad).props.field).toBe('rpe');
   await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
-  expect(copy()).toContain('RPE —');
-  expect(copy()).not.toContain('RIR —');
+  expect(copy()).toContain('RIR —');
+  await press('Edit set 1');
+  await act(async () => renderer.root.findAll(node => node.props.onPress && !node.props.disabled &&
+    node.findAllByType(Text).some(text => text.props.children === 'RIR'))[0].props.onPress());
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('8'));
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(copy()).toContain('RPE 8');
 });
 
 test('107-1 expanding a noncurrent exercise adds only a gold border', async () => {
@@ -651,4 +657,190 @@ test('107-6 expanded percentage prescriptions place the original percent at each
   const percent = row.findAllByType(Text).find(node => node.props.children === '60%');
   expect(percent).toBeDefined();
   expect(StyleSheet.flatten(percent!.props.style)).toMatchObject({ fontSize: 11, color: '#4B5563' });
+});
+
+
+test('summary columns reserve missing load and use the same typography for RPE and weights', async () => {
+  const weighted = plan.days[0].exercises[0];
+  const intensity = { ...weighted, id: '50000000-0000-4000-8000-000000000002', sort_order: 1,
+    sets: [{ ...weighted.sets[0], id: '70000000-0000-4000-8000-000000000002', load_mode: 'rpe' as const, target_rpe: '8', target_value: null }] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [weighted, intensity] }] };
+  await mount();
+  const cell = (field: string, id: string) => renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-${field}-${id}-0`)!;
+  expect(cell('load', intensity.id).findAllByType(Text).map(node => node.props.children).flat()).toContain('—');
+  expect(cell('effort', intensity.id).props.children).toBe('RPE\u00a08');
+  expect(cell('effort', weighted.id).props.children).toBe('RPE\u00a0—');
+  const style = (field: string, id: string) => StyleSheet.flatten(cell(field, id).props.style);
+  expect(style('effort', intensity.id)).toEqual({ ...style('load', weighted.id), color: '#9A4A06' });
+  expect(style('effort', weighted.id).color).toBe('#9A4A06');
+  expect(style('reps', weighted.id)).toEqual(style('load', weighted.id));
+  const title = renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-name-${weighted.id}`)!;
+  expect(style('load', weighted.id).fontSize).toBeLessThan(StyleSheet.flatten(title.props.style).fontSize);
+});
+
+test('tapping the resting effort value selects effort directly and inline fields remain reachable', async () => {
+  await mount();
+  await expandFirst();
+  const effort = renderer.root.findAll(node => typeof node.props.testID === 'string' && node.props.testID.startsWith('all-day-edit-effort-') && node.props.onPress)[0];
+  expect(effort).toBeDefined();
+  await act(async () => effort.props.onPress());
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rpe');
+  const inlineReps = renderer.root.findAll(node => node.props.accessibilityLabel === 'reps' && node.props.onPress)[0];
+  await act(async () => inlineReps.props.onPress());
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('reps');
+  expect(renderer.root.findByType(NumberPad).findAllByType(View)[0].props.pointerEvents).toBe('box-none');
+  const beforeHelp = renderer.root.findByType(NumberPad).props.initialValue;
+  await press(t('training.explainer.rpe.help'));
+  expect(copy()).toContain(t('training.explainer.rpe.title'));
+  await press(t('training.explainer.close'));
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('reps');
+  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe(beforeHelp);
+});
+
+test.each<[string | null, string, string | null]>([
+  [null, '9', null], ['8', '8', null], ['8', '9', 'RPE 8'],
+])('effort comparison requires a concrete different target: %s → %s', async (target, actual, expected) => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
+    ...exercise.sets[0], load_mode: 'fixed_weight', target_rpe: target,
+  }] }] }] };
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  await press('rpe');
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText(actual));
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(copy()).toContain(`RPE ${actual}`);
+  expect(copy()).not.toContain(t('training.allDay.original', ['—']));
+  const original = t('training.allDay.original', ['RPE 8']);
+  if (expected) {
+    expect(copy()).toContain(original);
+    const text = renderer.root.findAllByType(Text).find(node => node.props.children === original)!;
+    expect(StyleSheet.flatten(text.props.style).fontSize).toBe(10);
+  } else expect(copy()).not.toContain(original);
+});
+
+test('editing a set retains its camera control and supplies the edited values', async () => {
+  await mount();
+  await expandFirst();
+  const camera = renderer.root.findByType(VideoAttachmentControls);
+  const stableSetId = camera.props.stableSetId;
+  await press('Edit set 1');
+  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(1);
+  await press('rpe');
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('9'));
+  const editingCamera = renderer.root.findByType(VideoAttachmentControls);
+  expect(editingCamera).toBe(camera);
+  expect(editingCamera.props.stableSetId).toBe(stableSetId);
+  expect(editingCamera.props.buildLogRequest()).toMatchObject({
+    plan_exercise_id: plan.days[0].exercises[0].id, set_index: 0, rpe: '9',
+  });
+  await press(t('student.videoAttachmentV3Controls.copy001'));
+  expect(Alert.alert).toHaveBeenCalled();
+});
+
+test('the first exercise starts collapsed and checking each exercise expands the next one', async () => {
+  const first = plan.days[0].exercises[0];
+  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1,
+    sets: [{ ...first.sets[0], id: '70000000-0000-4000-8000-000000000001', plan_exercise_id: '50000000-0000-4000-8000-000000000001' }] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
+  await mount();
+  const expanded = (id: string) => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0].props.accessibilityState.expanded;
+  const check = async (id: string) => {
+    await act(async () => {
+      renderer.root.findAll(node => node.props.testID === `all-day-check-${id}` && node.props.onPress)[0].props.onPress();
+      await new Promise(resolve => setTimeout(resolve, 30));
+    });
+  };
+  expect(expanded(first.id)).toBe(false); expect(expanded(second.id)).toBe(false);
+  await expandFirst();
+  expect(expanded(first.id)).toBe(true);
+  await check(first.id);
+  expect(expanded(first.id)).toBe(false); expect(expanded(second.id)).toBe(true);
+  await check(second.id);
+  expect(expanded(first.id)).toBe(false); expect(expanded(second.id)).toBe(false);
+  await check(first.id);
+  expect(expanded(first.id)).toBe(true); expect(expanded(second.id)).toBe(false);
+});
+
+test.each(['saved', 'failed'])('cancelling a pending check stays on that exercise after its save %s', async outcome => {
+  const first = plan.days[0].exercises[0];
+  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1,
+    sets: [{ ...first.sets[0], id: '70000000-0000-4000-8000-000000000001', plan_exercise_id: '50000000-0000-4000-8000-000000000001' }] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
+  await mount();
+  await expandFirst();
+  let release: (() => void) | undefined;
+  jest.mocked(AsyncStorage.setItem).mockImplementationOnce(() => new Promise<void>((resolve, reject) => { release = () => outcome === 'saved' ? resolve() : reject(new Error('Storage unavailable')); }));
+  const check = () => renderer.root.findAll(node => node.props.testID === `all-day-check-${first.id}` && node.props.onPress)[0];
+  try {
+    await act(async () => { check().props.onPress(); await new Promise(resolve => setTimeout(resolve, 10)); });
+    expect(release).toBeDefined();
+    expect(check().props.accessibilityState.checked).toBe(true);
+    await act(async () => check().props.onPress());
+    await act(async () => { release!(); await new Promise(resolve => setTimeout(resolve, 30)); });
+    expect(check().props.accessibilityState.checked).toBe(false);
+    const expanded = (id: string) => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0].props.accessibilityState.expanded;
+    expect(expanded(first.id)).toBe(true); expect(expanded(second.id)).toBe(false);
+  } finally { release?.(); }
+});
+
+test('entering different RPE values updates the weighted exercise summary after every set', async () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/sets/log'
+    ? { id: `90000000-0000-4000-8000-00000000000${(options?.body as { set_index: number }).set_index}`, logged_at: new Date().toISOString() } as never
+    : original(path, options));
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [95, 100, 105, 110].map((weight, index) => ({
+    ...exercise.sets[0], id: `70000000-0000-4000-8000-00000000000${index}`, set_number: index + 1, target_reps: 7, target_value: String(weight),
+  })) }] }] };
+  await mount();
+  await expandFirst();
+  for (const [index, rpe] of ['6', '7', '8', '8'].entries()) {
+    await press(`Edit set ${index + 1}`);
+    await press('rpe');
+    await act(async () => renderer.root.findByType(NumberPad).props.onChangeText(rpe));
+    await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+    const effort = renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-effort-${exercise.id}-0`)!;
+    expect(effort.props.children).toBe('RPE\u00a0' + ['6/—/—/—', '6/7/—/—', '6/7/8/—', '6/7/8/8'][index]);
+  }
+});
+
+
+test('an empty exercise remembers an RIR choice after reopening the training page', async () => {
+  const exercise = plan.days[0].exercises[0];
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/exercises'
+    ? { exercises: [{ id: exercise.exercise_id, name: 'Row', name_en: 'Row', exercise_type: 'accessory' }] } as never
+    : original(path, options));
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  await act(async () => renderer.root.findAll(node => node.props.onPress && !node.props.disabled &&
+    node.findAllByType(Text).some(text => text.props.children === 'RPE'))[0].props.onPress());
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(copy()).toContain('RIR —');
+  await act(async () => renderer.unmount());
+  await mount();
+  expect(copy().map(text => text.replace(/\u00a0/g, ' '))).toContain('RIR —');
+  await expandFirst();
+  await press('Edit set 1');
+  await press('rir');
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
+});
+
+
+test('adding an empty exercise loads its previous choice into summary, row and editor', async () => {
+  const id = '60000000-0000-4000-8000-000000000009';
+  await writeEffortChoice(studentId, id, 'rir');
+  await mount();
+  await act(async () => renderer.root.findByType(AllDayBody).props.onAddExercise());
+  await act(async () => renderer.root.findByType(StudentExercisePicker).props.onSelect(id));
+  const block = renderer.root.findByType(AllDayBody).props.sheet.exercises.at(-1);
+  expect(block.rows[0].effortKind).toBe('rir');
+  const summary = renderer.root.findAllByProps({ testID: `all-day-effort-${block.exercise.id}-0` })[0];
+  expect(String(summary.props.children).replace(/\u00a0/g, ' ')).toBe('RIR —');
+  await act(async () => renderer.root.findByType(AllDayBody).props.onExpand(block.exercise.id));
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-edit-effort-${block.rows[0].stableSetId}` && node.props.onPress)[0].props.onPress());
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
 });

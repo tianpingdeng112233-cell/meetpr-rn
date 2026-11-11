@@ -1,3 +1,4 @@
+import { EffortHelpButton } from './EffortHelpButton';
 import { prescriptionDifferences } from '@/domain/plan/prescription-result';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BackHandler, Text, View } from 'react-native';
@@ -29,7 +30,8 @@ function TimelineConnector({ exerciseId, current, color }: { exerciseId: string;
   </View>;
 }
 
-export function AllDayBody({ sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, unit = 'kg' }: {
+export function AllDayBody({ sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, onEffortChoice, unit = 'kg' }: {
+  onEffortChoice?: (row: WorkoutSetDraft) => void;
   unit?: 'kg' | 'lb'; onExpand: (id: string) => void;
   sheet: AllDaySheet; editable: boolean; studentId: string; title: string;
   exerciseName: (id: string) => string; allowsRIR: (id: string) => boolean;
@@ -57,7 +59,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
       const summary = summarizeExercise(block.exercise.sets,
         block.rows.flatMap<ExerciseSummaryActual>(row => row.sourceLog ? [row.sourceLog] : row.kind && (row.weightText || row.repsText || row.rpeText) ? [allDayLogRequest(row)] : []),
         block.rows.filter(row => !row.sourceLog && row.weightText).map(row => ({ plan_set_id: row.planSet.id, weight_kg: row.weightText })),
-        { unit, labels: { bodyweight: t('loadTypes.bodyweight'), freeWeight: t('training.allDay.freeWeight'), topSet: t('training.allDay.topSet'), unrecorded: t('training.allDay.unrecorded') } });
+        { unit, effortKinds: Object.fromEntries(block.rows.map(row => [row.setIndex, row.effortKind ?? 'rpe'])), labels: { bodyweight: t('loadTypes.bodyweight'), freeWeight: t('training.allDay.freeWeight'), topSet: t('training.allDay.topSet'), unrecorded: t('training.allDay.unrecorded') } });
       const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
       return <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ width: 22, alignItems: 'center' }}>
@@ -68,22 +70,29 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
           </View>
         </View>
         <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: current ? colors.goldSoft : undefined }}>
+          <View style={{ minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: current ? colors.goldSoft : undefined }}>
             <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, justifyContent: 'center', gap: 4, paddingVertical: 8 }}>
-              <View>
+              <View style={{ paddingRight: 64, minHeight: 30, justifyContent: 'center' }}>
                 {!block.repeatName ? <Text numberOfLines={2} testID={`all-day-name-${block.exercise.id}`} style={{ ...font.body(15, 'bold'), color: done ? colors.textSecondary : colors.textPrimary }}>{name}{block.rows[0]?.kind === 'added' ? ` · ${t('student.added.added')}` : ''}</Text> : null}
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 4, rowGap: 2 }}>
-                {summary.map((segment, index) => <Text key={index} style={{ flexShrink: 1 }}>
-                  {index ? <Text style={{ color: colors.textMuted }}> · </Text> : null}
-                  <Text style={{ ...font.mono(14), color: segment.short ? colors.danger : segment.repsChanged ? colors.goldText : colors.textSecondary }}>{segment.setsReps}</Text>
-                  {segment.setsReps ? '  ' : ''}
-                  <Text style={{ ...font.mono(segment.intensityOnly ? 13 : 15, 'bold') }}>{segment.loadParts.map((part, partIndex) => <Text key={partIndex} style={{ color: part.changed || segment.intensityOnly ? colors.goldText : colors.textPrimary }}>{part.text.replace(/(RIR|RPE) /g, '$1\u00a0')}</Text>)}</Text>
-                </Text>)}
+              <View style={{ gap: 4, paddingRight: 44 }}>
+                {summary.map((segment, index) => <View key={index} testID={`all-day-summary-${block.exercise.id}-${index}`} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
+                  <View style={{ flexBasis: 0, flexGrow: 0.87, minWidth: 0 }}>
+                    <Text testID={`all-day-reps-${block.exercise.id}-${index}`} style={{ ...font.body(13), fontVariant: ['tabular-nums'], color: segment.short ? colors.danger : segment.repsChanged ? colors.goldText : colors.textPrimary }}>{segment.setsReps || '—'}</Text>
+                  </View>
+                  <View style={{ flexBasis: 0, flexGrow: 1.79, minWidth: 0 }}>
+                    <Text testID={`all-day-load-${block.exercise.id}-${index}`} style={{ ...font.body(13), fontVariant: ['tabular-nums'], color: colors.textPrimary }}>{segment.loadParts.map((part, partIndex) => <Text key={partIndex} style={{ color: part.changed ? colors.goldText : colors.textPrimary }}>{part.text.replace(/ \/ /g, '/')}</Text>)}</Text>
+                  </View>
+                  <View style={{ flexBasis: 0, flexGrow: 1.34, minWidth: 0 }}>
+                    <Text testID={`all-day-effort-${block.exercise.id}-${index}`} style={{ ...font.body(13), fontVariant: ['tabular-nums'], color: colors.goldText }}>{(segment.effort === '—' ? 'RPE —' : segment.effort).replace(/\s*\/\s*/g, '/').replace(/(RIR|RPE) /g, '$1\u00a0')}</Text>
+                  </View>
+                </View>)}
               </View>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ minHeight: 48, width: 16, justifyContent: 'center' }}><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} /></Pressable>
+            <View style={{ position: 'absolute', right: 6, top: 8, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            <Pressable accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ minHeight: 30, width: 16, justifyContent: 'center' }}><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} /></Pressable>
             {editable ? <Pressable testID={`all-day-check-${block.exercise.id}`} accessibilityRole="checkbox" accessibilityLabel={t(done ? 'training.allDay.expand' : 'training.allDay.completeExercise')} accessibilityState={{ checked: done }} onPress={() => { pad.current?.dismiss(); onToggle(block.exercise.id); }} style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 1.5, borderColor: done ? colors.success : colors.textSecondary, backgroundColor: done ? colors.success : undefined, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="check" size={17} color={done ? colors.inkOnCTAFill : colors.textSecondary} /></Pressable> : null}
+            </View>
           </View>
           {expanded ? <>
             {editable && block.rows[0]?.kind === 'added' ? <Pressable onPress={() => onRemoveExercise(block.exercise)}><Text style={{ color: colors.danger }}>{t('student.added.remove')}</Text></Pressable> : null}
@@ -99,30 +108,37 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                 const weightChanged = differences?.weight != null;
                 const textColor = weightChanged ? colors.goldText : colors.textPrimary;
                 return <View onTouchEnd={event => event.stopPropagation()} testID={`all-day-row-${row.stableSetId}`} key={row.stableSetId} ref={view => { if (view) rowViews.current.set(row.stableSetId, view); else rowViews.current.delete(row.stableSetId); }} style={{ borderBottomWidth: 1, borderBottomColor: colors.borderDefault, backgroundColor: active ? colors.goldSoft : short ? colors.dangerSoft : undefined }}>
-                  {active ? <View style={{ flexDirection: 'row', padding: 8, gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {active ? <View style={{ flex: 1, flexDirection: 'row', padding: 8, gap: 8 }}>
                     {(['weight', 'reps', display.effortKind === 'rir' ? 'rir' : 'rpe'] as const).map(field => <View key={field} style={{ flex: field === 'weight' ? 1.5 : 1, gap: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, marginVertical: -4 }}>
                       <Pressable disabled={field === 'weight' || field === 'reps' || !allowsRIR(row.exercise.exercise_id)} onPress={() => {
                         const switched = { ...display, effortKind: display.effortKind === 'rir' ? 'rpe' as const : 'rir' as const, rpeText: '' };
-                        onSave(switched); edit(switched, switched.effortKind);
+                        onEffortChoice?.(switched); onSave(switched); edit(switched, switched.effortKind);
                       }}><Text style={{ ...font.body(11), color: colors.textSecondary }}>{field === 'weight' ? t('training.allDay.weightUnit', [unit]) : field === 'reps' ? t('student.accessory.pad.reps') : field.toUpperCase()}</Text></Pressable>
+                      {field === 'rpe' || field === 'rir' ? <EffortHelpButton kind={field} inline /> : null}
+                      </View>
                       <Pressable accessibilityRole="button" accessibilityLabel={field} onPress={() => edit(display, field)} style={{ minHeight: 38, borderRadius: 8, borderWidth: 1.5, borderColor: editing.field === field ? colors.gold500 : colors.borderDefault, outlineWidth: editing.field === field ? 2 : 0, outlineColor: colors.goldSoft, justifyContent: 'center', paddingHorizontal: 8 }}><Text style={{ ...font.mono(16), color: colors.textPrimary }}>{(field === 'weight' ? editing.weightInput ?? displayWeight(display.weightText, unit) : field === 'reps' ? display.repsText : display.rpeText) || '—'}</Text></Pressable>
                     </View>)}
                     {percentage}
-                  </View> : <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
+                  </View> : <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
                     <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t('training.allDay.editSet', [row.setIndex + 1])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
                       <Text style={{ ...font.mono(12), color: colors.textMuted, width: 18 }}>{row.setIndex + 1}</Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 3 }}>
                         <Text style={{ ...font.mono(15, 'semibold'), color: textColor }}>{displayWeight(display.weightText, unit) || '—'}</Text><Text style={{ ...font.body(12), color: colors.textMuted }}>{unit}</Text>
-                        {weightChanged ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [unit === 'lb' ? differences!.weight!.replace(/\d+(?:\.\d+)?/g, value => displayWeight(value, unit)) : differences!.weight!])}</Text> : null}
+                        {weightChanged && differences?.weight !== '—' ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [unit === 'lb' ? differences!.weight!.replace(/\d+(?:\.\d+)?/g, value => displayWeight(value, unit)) : differences!.weight!])}</Text> : null}
                         <Text style={{ ...font.mono(15, 'semibold'), color: short ? colors.danger : differences?.reps ? colors.goldText : colors.textPrimary }}>× {short ? `${display.repsText}/${prescription.reps}` : display.repsText || '—'}</Text>
-                        {differences?.reps && !short ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.reps])}</Text> : null}
+                        {differences?.reps && !short ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [differences.reps])}</Text> : null}
                       </View>
-                      <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{`${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText || '—'}`}</Text>{differences?.effort ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
                     </Pressable>
-                    {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(row)} ensureSetLog={() => ensureSetLog(row)} /> : null}
+                    <Pressable testID={`all-day-edit-effort-${row.stableSetId}`} disabled={!editable} accessibilityRole="button" accessibilityLabel={(display.effortKind ?? 'rpe').toUpperCase()} onPress={() => edit(row, display.effortKind ?? 'rpe')} style={{ minHeight: 38, justifyContent: 'center', paddingHorizontal: 4 }}>
+                      <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{`${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText || '—'}`}</Text>{differences?.effort && differences.effort !== '—' ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
+                    </Pressable>
                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
                     {percentage}
                   </View>}
+                  {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : null}
+                  </View>
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
                 </View>;
               })}
@@ -143,7 +159,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
 
 
 export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exerciseName: (id: string) => string,
-  onPadLayout: (row: View | null, panel: { top: number; height: number } | null) => void, scopeKey: string, unit: 'kg' | 'lb' = 'kg') {
+  onPadLayout: (row: View | null, panel: { top: number; height: number } | null) => void, scopeKey: string, unit: 'kg' | 'lb' = 'kg', onEffortChoice?: (row: WorkoutSetDraft) => void) {
   const [editing, setEditing] = useState<{ row: WorkoutSetDraft; field: NumberPadField; weightInput?: string } | null>(null);
   const [previousScope, setPreviousScope] = useState(scopeKey);
   if (previousScope !== scopeKey) {
@@ -169,7 +185,10 @@ export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exercise
     const value = current.field === 'weight' && unit === 'lb' && text.trim() && Number(text) !== 0 ? metricStored(text, POUNDS_PER_KG) : text;
     const row = { ...current.row, [key]: value };
     input.current = { ...current, row, ...(current.field === 'weight' ? { weightInput: text } : {}) }; setEditing(input.current);
-    if (accessoryValue(text, current.field) !== undefined) onSave(row);
+    if (accessoryValue(text, current.field) !== undefined) {
+      if (current.field === 'rpe' || current.field === 'rir') onEffortChoice?.(row);
+      onSave(row);
+    }
   };
   useEffect(() => {
     if (!editing) return;
