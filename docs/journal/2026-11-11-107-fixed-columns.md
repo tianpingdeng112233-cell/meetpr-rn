@@ -23,3 +23,9 @@ David 拒收仅上下排布，要求如 Excel 同类数据固定位置，并统�
 - iPhone 17e 原生验证：直达 RPE；标签切 RIR；点重量再回 RIR；问号打开/关闭保留会话；图标外缘命中；点空白收起后可再直接编辑。证据：会话 outputs/fixed-columns/ios-final-direct.png，work/fixed-columns/ios-native-final-direct.txt、ios-native-blank-button.txt、ios-native-help-edge.txt。
 - 两轴定向复审 CLEAN；只覆盖本轮工程返修，不代替 David 视觉收货。未合并、未切包、未发布。相机真机取景及完整大字号/极长列表验收仍不能据本轮结果宣布通过。
 - Android 5570 原生补验通过：图标右外缘打开说明；关闭后标签切 RIR，键盘仍为第1组 RIR。命中区 UI hierarchy 实读 72×66 px（24×22 dp）；截图 outputs/fixed-columns/android-final-direct.png。5570 曾短暂 System UI 无响应，选择 Wait 后恢复，未清除应用数据。
+
+## 恢复编辑行摄像入口
+
+- 根因：VideoAttachmentControls只存在于resting分支，active编辑分支缺失。移动至两种状态共用的行右侧，编辑切换保持同一实例及stableSetId，构建上传请求读取display最新输入。
+- 新增先红后绿页面回归：进入编辑后仍有相机、组件不重建、组ID正确、RPE9更新用于请求、点击进入须知。训练页46项通过，tsc/ESLint通过；定向审查CLEAN。
+- 5570原生确认编辑行相机显示且点击进入虚拟相机预览，已关闭返回编辑；outputs/fixed-columns/android-edit-camera.png 与 android-edit-camera-preview.png。未发布。

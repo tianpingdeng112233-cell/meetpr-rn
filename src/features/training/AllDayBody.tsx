@@ -107,7 +107,8 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                 const weightChanged = differences?.weight != null;
                 const textColor = weightChanged ? colors.goldText : colors.textPrimary;
                 return <View onTouchEnd={event => event.stopPropagation()} testID={`all-day-row-${row.stableSetId}`} key={row.stableSetId} ref={view => { if (view) rowViews.current.set(row.stableSetId, view); else rowViews.current.delete(row.stableSetId); }} style={{ borderBottomWidth: 1, borderBottomColor: colors.borderDefault, backgroundColor: active ? colors.goldSoft : short ? colors.dangerSoft : undefined }}>
-                  {active ? <View style={{ flexDirection: 'row', padding: 8, gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {active ? <View style={{ flex: 1, flexDirection: 'row', padding: 8, gap: 8 }}>
                     {(['weight', 'reps', display.effortKind === 'rir' ? 'rir' : 'rpe'] as const).map(field => <View key={field} style={{ flex: field === 'weight' ? 1.5 : 1, gap: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, marginVertical: -4 }}>
                       <Pressable disabled={field === 'weight' || field === 'reps' || !allowsRIR(row.exercise.exercise_id)} onPress={() => {
@@ -119,7 +120,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                       <Pressable accessibilityRole="button" accessibilityLabel={field} onPress={() => edit(display, field)} style={{ minHeight: 38, borderRadius: 8, borderWidth: 1.5, borderColor: editing.field === field ? colors.gold500 : colors.borderDefault, outlineWidth: editing.field === field ? 2 : 0, outlineColor: colors.goldSoft, justifyContent: 'center', paddingHorizontal: 8 }}><Text style={{ ...font.mono(16), color: colors.textPrimary }}>{(field === 'weight' ? editing.weightInput ?? displayWeight(display.weightText, unit) : field === 'reps' ? display.repsText : display.rpeText) || '—'}</Text></Pressable>
                     </View>)}
                     {percentage}
-                  </View> : <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
+                  </View> : <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
                     <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t('training.allDay.editSet', [row.setIndex + 1])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
                       <Text style={{ ...font.mono(12), color: colors.textMuted, width: 18 }}>{row.setIndex + 1}</Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 3 }}>
@@ -132,10 +133,11 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                     <Pressable testID={`all-day-edit-effort-${row.stableSetId}`} disabled={!editable} accessibilityRole="button" accessibilityLabel={(display.effortKind ?? 'rpe').toUpperCase()} onPress={() => edit(row, display.effortKind ?? 'rpe')} style={{ minHeight: 38, justifyContent: 'center', paddingHorizontal: 4 }}>
                       <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{`${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText || '—'}`}</Text>{differences?.effort && differences.effort !== '—' ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
                     </Pressable>
-                    {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(row)} ensureSetLog={() => ensureSetLog(row)} /> : null}
                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
                     {percentage}
                   </View>}
+                  {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : null}
+                  </View>
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
                 </View>;
               })}

@@ -712,3 +712,22 @@ test.each<[string | null, string, string | null]>([
     expect(StyleSheet.flatten(text.props.style).fontSize).toBe(10);
   } else expect(copy()).not.toContain(original);
 });
+
+test('editing a set retains its camera control and supplies the edited values', async () => {
+  await mount();
+  await expandFirst();
+  const camera = renderer.root.findByType(VideoAttachmentControls);
+  const stableSetId = camera.props.stableSetId;
+  await press('Edit set 1');
+  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(1);
+  await press('rpe');
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('9'));
+  const editingCamera = renderer.root.findByType(VideoAttachmentControls);
+  expect(editingCamera).toBe(camera);
+  expect(editingCamera.props.stableSetId).toBe(stableSetId);
+  expect(editingCamera.props.buildLogRequest()).toMatchObject({
+    plan_exercise_id: plan.days[0].exercises[0].id, set_index: 0, rpe: '9',
+  });
+  await press(t('student.videoAttachmentV3Controls.copy001'));
+  expect(Alert.alert).toHaveBeenCalled();
+});
