@@ -107,6 +107,7 @@ export function VideoAttachmentControls({
     ), []);
   const hasCamera = useCameraAvailability();
   const overlay = useOverlayHost();
+  // CameraRecorder owns its native Modal; a second window can cover it with a blank screen.
   const [fallbackNode, setFallbackNode] = useState<ReactNode>(null);
   const dismiss = () => {
     if (overlay.isFallback) setFallbackNode(null);
@@ -226,7 +227,7 @@ export function VideoAttachmentControls({
       if (outcome.type === 'saved') attach({ ...videoToTrim, ...outcome.video, mimeType: 'video/mp4', fileName: null });
       else if (outcome.type === 'failed') showActionError(new Error('Trim failed'));
     }} /> : null}
-    {overlay.isFallback && fallbackNode !== null ? <Modal visible animationType="slide" onRequestClose={dismiss}>{fallbackNode}</Modal> : null}
+    {overlay.isFallback ? fallbackNode : null}
   </>;
   return (
     <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: spacing.point14, paddingVertical: spacing.point11, gap: spacing.space2 }}>
@@ -264,9 +265,7 @@ export function VideoAttachmentControls({
         if (outcome.type === 'saved') attach({ ...videoToTrim, ...outcome.video, mimeType: 'video/mp4', fileName: null });
         else if (outcome.type === 'failed') showActionError(new Error('Trim failed'));
       }} /> : null}
-      {overlay.isFallback && fallbackNode !== null ? (
-        <Modal visible animationType="slide" onRequestClose={dismiss}>{fallbackNode}</Modal>
-      ) : null}
+      {overlay.isFallback ? fallbackNode : null}
     </View>
   );
 }
