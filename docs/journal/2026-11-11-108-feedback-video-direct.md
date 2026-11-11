@@ -20,3 +20,9 @@
 - 指定 AVD `meetpr`（emulator-5556）；另一个 meetpr16 不动。使用 `expo run:android --device meetpr --app-id com.meetpr.app.feedbackqa --no-bundler` 构建独立 debug QA 包，不覆盖现有正式包。
 - 模拟器窗口没有可供 cua_repl 绑定的应用 ID，按工具限制已请求 David 明确允许改用 ADB 点击 / 截图。此时不宣称设备验收完成。
 - 临时 demo fixture 只用于本机视频与标注复现，不属于交付代码；完成后还原。它不能代替真实 OSS / Global 联调。
+
+### 构建结果与交付
+
+- 原生编译 **BUILD SUCCESSFUL in 4m 19s**，518 tasks（280 executed / 238 from cache）；已安装独立包 `com.meetpr.app.feedbackqa` 到 meetpr。Expo 随后使用自定义包名推导 `.MainActivity`，因真实 activity 仍属于原 namespace `com.meetpr.app` 导致启动步骤 exit 1；这是 QA 改包名造成的启动命令问题，非编译失败。设备点击授权后使用实际 activity 启动并验证。
+- 两次 CLI 参数试运行分别因 --device 接受 AVD 名而非 serial、--port 与 --no-bundler 互斥退出，最终用上述命令成功编译。未切换 AVD。
+- 源码 PR：#181（draft），实现 commit `50d4dc9`；在设备证据完成前不合并。本地临时 demo backend 已恢复，fixture 与原文件保存在聊天 work/android-fixture 以便续验，不进 PR。
