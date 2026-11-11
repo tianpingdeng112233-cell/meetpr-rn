@@ -54,6 +54,15 @@ function textContent(value: ReactNode): string {
   return value == null ? '' : String(value);
 }
 const copy = () => renderer.root.findAllByType(Text).map(node => textContent(node.props.children));
+function expectFeedbackBodyIsStatic(text: string) {
+  let node = renderer.root.findAllByType(Text).find(item => item.props.children === text)!;
+  expect(node).toBeDefined();
+  while (node) {
+    expect(node.props.onPress).toBeUndefined();
+    expect(node.props.accessibilityRole).not.toBe('button');
+    node = node.parent!;
+  }
+}
 async function renderScreen() {
   await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen conversationId={conversationId} coachName="Alex" /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
@@ -104,14 +113,13 @@ test('shows both sides and marks my bubble read when the coach read cursor cover
   expect(chatRepository.read).toHaveBeenCalledWith(conversationId, 'b');
 });
 
-test('unread coach feedback is present in the conversation with its unread badge', async () => {
+test('unread feedback body stays in chat without a detail navigation action', async () => {
   feedbackItems = [{ id: 'f', student_id: studentId, coach_id: coachId, day_date: null, plan_exercise_id: null, text: 'Keep your chest up', posted_at: '2026-09-05T09:04:00Z', read_at: null }];
   await renderScreen();
   expect(copy()).toContain('Keep your chest up');
   expect(renderer.root.findAllByProps({ testID: 'feedback-unread-f' }).length).toBeGreaterThan(0);
-  const card = renderer.root.find(node => node.props.testID === 'feedback-detail-f' && typeof node.props.onPress === 'function');
-  act(() => card.props.onPress());
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/feedback/f');
+  expectFeedbackBodyIsStatic('Keep your chest up');
+  expect(mockNavigate).not.toHaveBeenCalled();
 });
 test('opening the new plan persists its seen signature and goes to Training', async () => {
   plans = [{ id: 'plan', status: 'published', published_at: '2026-09-05T08:00:00Z', created_at: '2026-09-01T08:00:00Z' }];
@@ -285,9 +293,10 @@ test('returning to foreground drains all incremental pages and reads their lates
   expect(copy()).toEqual(expect.arrayContaining(['First', 'Second', 'Third']));
 });
 
-test('a feedback video opens the shared player with W3-a markers and unknown duration', async () => {
+test('one cover tap opens the player with coach markers while the feedback body stays static', async () => {
   feedbackItems = [{ id: coachId, student_id: studentId, coach_id: coachId, video_id: studentId, text: 'Watch your brace', posted_at: '2026-09-05T09:04:00Z', read_at: null }];
   await renderScreen();
+  expectFeedbackBodyIsStatic('Watch your brace');
   expect(copy()).not.toContain('—:—');
   expect(renderer.root.findAllByProps({ testID: 'chat.videoDuration' })).toHaveLength(0);
   await act(async () => { await renderer.root.findAllByProps({ accessibilityLabel: t('chat.playVideo') })[0].props.onPress(); });
@@ -296,6 +305,11 @@ test('a feedback video opens the shared player with W3-a markers and unknown dur
   expect(player.props.url).toBe('https://video.example/play.mp4');
   expect(player.props.markers).toEqual([{ id: 'marker', timeMs: 1200, note: 'Brace', annotationURL: null }]);
   expect(player.props.badge).toBeUndefined();
+  expect(player.props.videoId).toBe(studentId);
+  expect(mockNavigate).not.toHaveBeenCalled();
+  act(() => player.props.onClose());
+  expect(renderer.root.findAllByType(FeedbackVideoPlayer)).toHaveLength(0);
+  expect(copy()).toContain('Watch your brace');
 });
 
 test('a Global feedback chat card and its player keep the embedded English exercise name', async () => {

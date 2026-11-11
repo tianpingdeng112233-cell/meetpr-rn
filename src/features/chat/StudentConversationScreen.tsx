@@ -327,7 +327,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       {hasOlder ? historyError ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy013')} onPress={() => void loadOlder()}><Text style={{ ...font.body(13), color: colors.textMuted, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy013')}</Text></Pressable> : <ActivityIndicator accessibilityLabel={t('student.studentBlackGoldChatView.copy024')} size="small" color={colors.gold500} style={{ paddingVertical: 8 }} /> : null}
       {items.map((item, index) => <Fragment key={item.id}><ChatTimeSeparator label={separators.get(index)} /><View testID={`student-chat-item-${item.id}`} onLayout={({ nativeEvent: { layout } }) => { frames.current.set(item.id, { y: layout.y, height: layout.height }); }}>
         {item.kind === 'message' ? <StudentChatMessageRow message={item.message} outgoing={item.message.sender_id === studentId} read={otherReadSeq >= item.message.seq} openImage={() => setSelectedImage(item.message.image_url ?? null)} openVideo={() => void openShareVideo(item.message)} />
-          : item.kind === 'feedback' ? <StudentFeedbackChatCard feedback={item.feedback} videos={videos.data?.videos ?? []} onOpen={() => router.push(`/(student)/feedback/${item.feedback.id}`)} onPlay={() => { if (item.feedback.video_id) void playback.session.open(item.feedback.id, item.feedback.video_id); }} />
+          : item.kind === 'feedback' ? <StudentFeedbackChatCard feedback={item.feedback} videos={videos.data?.videos ?? []} onPlay={() => { if (item.feedback.video_id) void playback.session.open(item.feedback.id, item.feedback.video_id); }} />
           : <StudentPlanChatCard notice={item.notice} onPress={async () => { await markDashboardPlanSeen(studentId, item.notice.signature); await client.cancelQueries({ queryKey: plan.queryKey }); client.setQueryData(plan.queryKey, true); router.navigate('/(student)/training'); }} />}
         {item.kind === 'feedback' && playback.errorFeedbackId === item.feedback.id ? <PlaybackLinkError /> : null}
       </View></Fragment>)}
@@ -395,7 +395,7 @@ function StudentChatMessageRow({ message, outgoing, read, openVideo, openImage }
 // In-memory only: keep a video's ratio across card/screen remounts and signed URL renewal.
 const feedbackPosterSizes = new Map<string, PosterSize>();
 
-function StudentFeedbackChatCard({ feedback, videos, onPlay, onOpen }: { feedback: FeedbackItem; videos: readonly StudentVideo[]; onPlay: () => void; onOpen: () => void }) {
+function StudentFeedbackChatCard({ feedback, videos, onPlay }: { feedback: FeedbackItem; videos: readonly StudentVideo[]; onPlay: () => void }) {
   const colors = useColors();
   const association = feedbackVideoAssociation(feedback.video_id, videos, feedback.video);
   const video = association.kind === 'available' ? association.video : null;
@@ -418,19 +418,19 @@ function StudentFeedbackChatCard({ feedback, videos, onPlay, onOpen }: { feedbac
     }
     setPosterResult({ videoId, url: posterURL, size });
   }
-  return <Pressable testID={`feedback-detail-${feedback.id}`} accessibilityRole="button" onPress={onOpen} onLayout={({ nativeEvent: { layout } }) => setAvailableWidth(Math.max(0, layout.width - 26))}
+  return <View onLayout={({ nativeEvent: { layout } }) => setAvailableWidth(Math.max(0, layout.width - 26))}
     style={{ width: '88%', alignSelf: 'flex-start', backgroundColor: colors.surfaceCard, borderRadius: 16, overflow: 'hidden', paddingHorizontal: 13, paddingVertical: 12, gap: 9 }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
       {feedback.read_at == null ? <View testID={`feedback-unread-${feedback.id}`} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.dangerFill }} /> : null}
       <Text style={{ ...font.body(12), color: colors.textSecondary, flex: 1 }}>{[t('student.studentBlackGoldChatView.copy022'), date, video ? videoLabel(video) : null].filter(Boolean).join(' · ')}</Text>
     </View>
     <Text style={{ ...font.body(15), color: colors.textPrimary, lineHeight: 22 }}>{feedback.text}</Text>
-    {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={event => { event?.stopPropagation(); onPlay(); }} style={{ height: coverSize.height, width: coverSize.width || '100%', alignSelf: 'flex-start', borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+    {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={onPlay} style={{ height: coverSize.height, width: coverSize.width || '100%', alignSelf: 'flex-start', borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
       <GradientFill direction="diagonal" stops={[{ color: colors.borderStrong, offset: 0 }, { color: colors.surfaceCard, offset: 1 }]} />
       <ChatVideoCover posterURL={posterURL} durationSeconds={video?.duration_seconds} onPosterSize={onPosterSize} />
       {markers.data?.markers.length ? <Text style={{ position: 'absolute', right: 8, bottom: 8, ...font.body(12), color: colors.ctaTopHighlight, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 }}>{t('student.coachTab.annotations', [markers.data.markers.length])}</Text> : null}
     </Pressable> : null}
-  </Pressable>;
+  </View>;
 }
 
 function StudentPlanChatCard({ notice, onPress }: { notice: StudentPlanNotice; onPress: () => Promise<void> }) {
