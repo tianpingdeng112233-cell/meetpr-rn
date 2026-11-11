@@ -11,13 +11,13 @@ import type { EffortKind } from './actual-effort';
 import { effortExplainerFor } from './effort-explainer';
 
 /** Owns presentation only: opening help never changes the surrounding input draft. */
-export function EffortHelpButton({ kind, superscript = false }: { kind: EffortKind; superscript?: boolean }) {
+export function EffortHelpButton({ kind, superscript = false, inline = false }: { kind: EffortKind; superscript?: boolean; inline?: boolean }) {
   const colors = useColors();
   const [open, setOpen] = useState(false);
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel={t(kind === 'rpe' ? 'training.explainer.rpe.help' : 'training.explainer.rir.help')}
-      onPress={() => setOpen(true)} style={[styles.button, superscript && styles.superscript]}>
-      <Svg width={superscript ? spacing.point14 : 18} height={superscript ? spacing.point14 : 18} viewBox="0 0 18 18" accessible={false}>
+      onPress={() => setOpen(true)} style={[styles.button, superscript && styles.superscript, inline && styles.inline]}>
+      <Svg width={superscript || inline ? spacing.point14 : 18} height={superscript || inline ? spacing.point14 : 18} viewBox="0 0 18 18" accessible={false}>
         <Circle cx={9} cy={9} r={7.3} fill="none" stroke={colors.textMuted} strokeWidth={1.4} />
         <Path d="M6.8 6.8a2.2 2.2 0 0 1 4.4 0c0 1.6-2.2 1.6-2.2 3.2M9 12.7v.1" fill="none" stroke={colors.textMuted} strokeWidth={1.4} strokeLinecap="round" />
       </Svg>
@@ -68,6 +68,7 @@ function EffortExplainerCard({ kind, onClose }: { kind: EffortKind; onClose: () 
 const styles = StyleSheet.create({
   button: { width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   // Start beyond the intrinsic-width label, borrowing the column gap without overlapping its target.
+  inline: { width: 24, height: 22, marginHorizontal: -5, marginVertical: -4 },
   superscript: { position: 'absolute', left: '100%', top: 0, width: spacing.point14, paddingBottom: spacing.point14 },
   overlay: { flex: 1 },
   safeArea: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, paddingVertical: 20 },

@@ -652,3 +652,63 @@ test('107-6 expanded percentage prescriptions place the original percent at each
   expect(percent).toBeDefined();
   expect(StyleSheet.flatten(percent!.props.style)).toMatchObject({ fontSize: 11, color: '#4B5563' });
 });
+
+
+test('summary columns reserve missing load and use the same typography for RPE and weights', async () => {
+  const weighted = plan.days[0].exercises[0];
+  const intensity = { ...weighted, id: '50000000-0000-4000-8000-000000000002', sort_order: 1,
+    sets: [{ ...weighted.sets[0], id: '70000000-0000-4000-8000-000000000002', load_mode: 'rpe' as const, target_rpe: '8', target_value: null }] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [weighted, intensity] }] };
+  await mount();
+  const cell = (field: string, id: string) => renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-${field}-${id}-0`)!;
+  expect(cell('load', intensity.id).findAllByType(Text).map(node => node.props.children).flat()).toContain('—');
+  expect(cell('effort', intensity.id).props.children).toBe('RPE\u00a08');
+  expect(cell('effort', weighted.id).props.children).toBe('RPE\u00a0—');
+  const style = (field: string, id: string) => StyleSheet.flatten(cell(field, id).props.style);
+  expect(style('effort', intensity.id)).toEqual(style('load', weighted.id));
+  expect(style('reps', weighted.id)).toEqual(style('load', weighted.id));
+  const title = renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-name-${weighted.id}`)!;
+  expect(style('load', weighted.id).fontSize).toBeLessThan(StyleSheet.flatten(title.props.style).fontSize);
+});
+
+test('tapping the resting effort value selects effort directly and inline fields remain reachable', async () => {
+  await mount();
+  await expandFirst();
+  const effort = renderer.root.findAll(node => typeof node.props.testID === 'string' && node.props.testID.startsWith('all-day-edit-effort-') && node.props.onPress)[0];
+  expect(effort).toBeDefined();
+  await act(async () => effort.props.onPress());
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rpe');
+  const inlineReps = renderer.root.findAll(node => node.props.accessibilityLabel === 'reps' && node.props.onPress)[0];
+  await act(async () => inlineReps.props.onPress());
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('reps');
+  expect(renderer.root.findByType(NumberPad).findAllByType(View)[0].props.pointerEvents).toBe('box-none');
+  const beforeHelp = renderer.root.findByType(NumberPad).props.initialValue;
+  await press(t('training.explainer.rpe.help'));
+  expect(copy()).toContain(t('training.explainer.rpe.title'));
+  await press(t('training.explainer.close'));
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('reps');
+  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe(beforeHelp);
+});
+
+test.each<[string | null, string, string | null]>([
+  [null, '9', null], ['8', '8', null], ['8', '9', 'RPE 8'],
+])('effort comparison requires a concrete different target: %s → %s', async (target, actual, expected) => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
+    ...exercise.sets[0], load_mode: 'fixed_weight', target_rpe: target,
+  }] }] }] };
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  await press('rpe');
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText(actual));
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(copy()).toContain(`RPE ${actual}`);
+  expect(copy()).not.toContain(t('training.allDay.original', ['—']));
+  const original = t('training.allDay.original', ['RPE 8']);
+  if (expected) {
+    expect(copy()).toContain(original);
+    const text = renderer.root.findAllByType(Text).find(node => node.props.children === original)!;
+    expect(StyleSheet.flatten(text.props.style).fontSize).toBe(10);
+  } else expect(copy()).not.toContain(original);
+});

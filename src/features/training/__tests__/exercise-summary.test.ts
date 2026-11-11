@@ -10,7 +10,7 @@ const sets = (count: number, fields: Partial<PlanSet>) => Array.from({ length: c
 describe('107 one-line prescription table', () => {
   test('uniform weight: 4×8 130', () => {
     expect(summarizeExercise(sets(4, { target_reps: 8, target_value: '130' }), [], [])).toEqual([
-      { setsReps: '4×8', load: '130', loadParts: [{ text: '130', changed: false }], repsChanged: false, short: false, loadChanged: false, intensityOnly: false },
+      { setsReps: '4×8', load: '130', effort: '—', effortChanged: false, loadParts: [{ text: '130', changed: false }], repsChanged: false, short: false, loadChanged: false, intensityOnly: false },
     ]);
   });
 });
@@ -36,21 +36,21 @@ test.each([
 });
 
 test.each([
-  ['free weight and effort', 4, { target_reps: 12, load_mode: 'free_weight', target_rpe: '8' }, '4×12', '自选 · RPE 8'],
-  ['uniform RPE', 3, { target_reps: 5, load_mode: 'rpe', target_rpe: '8' }, '3×5', 'RPE 8'],
-  ['RPE range', 3, { target_reps: 5, load_mode: 'rpe_range', rpe_low: '7', rpe_high: '8' }, '3×5', 'RPE 7–8'],
-  ['RIR', 3, { target_reps: 10, load_mode: 'rir', rir_target: 2 }, '3×10', 'RIR 2'],
-] satisfies [string, number, Partial<PlanSet>, string, string][])('%s uses the intensity style', (_, count, fields, setsReps, load) => {
-  expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load, intensityOnly: true }]);
+  ['free weight and effort', 4, { target_reps: 12, load_mode: 'free_weight', target_rpe: '8' }, '4×12', '自选', 'RPE 8'],
+  ['uniform RPE', 3, { target_reps: 5, load_mode: 'rpe', target_rpe: '8' }, '3×5', '—', 'RPE 8'],
+  ['RPE range', 3, { target_reps: 5, load_mode: 'rpe_range', rpe_low: '7', rpe_high: '8' }, '3×5', '—', 'RPE 7–8'],
+  ['RIR', 3, { target_reps: 10, load_mode: 'rir', rir_target: 2 }, '3×10', '—', 'RIR 2'],
+] satisfies [string, number, Partial<PlanSet>, string, string, string][])('%s keeps load and effort in their own columns', (_, count, fields, setsReps, load, effort) => {
+  expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load, effort }]);
 });
 test('2A varying RPE stays verbatim even when historical weight suggestions exist', () => {
   const planned = sets(4, { target_reps: 12, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '100' }))))
-    .toMatchObject([{ setsReps: '4×12', load: 'RPE 6/7/8/8', intensityOnly: true }]);
+    .toMatchObject([{ setsReps: '4×12', load: '—', effort: 'RPE 6/7/8/8' }]);
 });
 test('1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets', () => {
   const planned = sets(4, { target_reps: 5, load_mode: 'fixed_weight', target_weight: '100', target_rpe: '7' });
-  expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100 · RPE 7', intensityOnly: false }]);
+  expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100', effort: 'RPE 7', intensityOnly: false }]);
   planned[1].target_rpe = '8';
   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100' }]);
 });
@@ -70,7 +70,7 @@ test('top-set percent waits for the top set and then shows its calculated weight
 
 const actual = (index: number, weight: string | null, reps: number, rpe: string | null = null) => ({ set_index: index, weight_kg: weight, reps, rpe });
 test('student-added exercise shows unrecorded until entered, then its actual values', () => {
-  expect(summarizeExercise([], [], [])).toMatchObject([{ setsReps: '', load: '未记录' }]);
+  expect(summarizeExercise([], [], [])).toMatchObject([{ setsReps: '—', load: '未记录', effort: '—' }]);
   expect(summarizeExercise([], [actual(0, '20', 10), actual(1, '20', 10)], []))
     .toMatchObject([{ setsReps: '2×10', load: '20' }]);
 });
@@ -85,7 +85,7 @@ test('recorded values override prescription and suggestions, flag edits and shor
 test('recorded RPE-only groups show actual weights and effort instead of the untouched RPE summary', () => {
   const planned = sets(2, { load_mode: 'rpe', target_rpe: '8' });
   expect(summarizeExercise(planned, [actual(0, '92.5', 5, '8'), actual(1, '92.5', 5, '8')], []))
-    .toMatchObject([{ setsReps: '2×5', load: '92.5 · RPE 8', intensityOnly: false }]);
+    .toMatchObject([{ setsReps: '2×5', load: '92.5', effort: 'RPE 8', intensityOnly: false }]);
 });
 test('warmups count as ordinary sets and advanced settings do not appear', () => {
   const planned = sets(2, { target_reps: 8, target_value: '60', rest_seconds: 120 });
@@ -107,4 +107,22 @@ test('only changed load tokens get emphasis when one set differs from the prescr
     { text: '100', changed: false }, { text: ' / ', changed: false },
     { text: '90', changed: true }, { text: ' / ', changed: false }, { text: '100', changed: false },
   ]);
+});
+
+test('fixed columns keep RPE in the effort column and reserve missing weight', () => {
+  expect(summarizeExercise(sets(3, { target_reps: 5, load_mode: 'rpe', target_rpe: '8' }), [], []))
+    .toMatchObject([{ setsReps: '3×5', load: '—', effort: 'RPE 8' }]);
+});
+
+
+test('same reps stay in one segment when only one RPE set has recorded weight', () => {
+  const planned = sets(4, { target_reps: 5, load_mode: 'rpe', target_rpe: '8' });
+  expect(summarizeExercise(planned, [actual(0, '90', 5, '8')], []))
+    .toMatchObject([{ setsReps: '4×5', load: '90 / —×3', effort: 'RPE 8' }]);
+});
+
+test('partially recorded varying RPE keeps unrecorded effort values on the same row', () => {
+  const planned = sets(4, { target_reps: 5, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
+  expect(summarizeExercise(planned, [actual(0, '90', 5, '6')], []))
+    .toMatchObject([{ setsReps: '4×5', load: '90 / —×3', effort: 'RPE —/7/8/8' }]);
 });

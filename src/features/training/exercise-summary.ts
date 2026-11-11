@@ -6,8 +6,8 @@ import { prescriptionDifferences } from '@/domain/plan/prescription-result';
 
 type SummaryPart = { text: string; changed: boolean };
 export type ExerciseSummarySegment = {
-  setsReps: string; load: string; repsChanged: boolean; short: boolean;
-  loadChanged: boolean; intensityOnly: boolean; loadParts: SummaryPart[];
+  setsReps: string; load: string; effort: string; repsChanged: boolean; short: boolean;
+  loadChanged: boolean; effortChanged: boolean; intensityOnly: boolean; loadParts: SummaryPart[];
 };
 export type ExerciseSummaryActual = Pick<SetLog, 'set_index' | 'weight_kg' | 'reps'> & Partial<Pick<SetLog, 'rpe' | 'actual_rir'>>;
 export type ExerciseSummaryOptions = {
@@ -35,8 +35,8 @@ export function summarizeExercise(sets: readonly PlanSet[], logs: readonly Exerc
   const weight = (value: number | string) => options.unit === 'lb' && Number(value) !== 0 ? metricDisplay(String(value), POUNDS_PER_KG) : String(Number(value));
   const ordered = [...sets].sort((a, b) => a.set_number - b.set_number);
   const indices = [...new Set([...ordered.map((_, index) => index), ...logs.map(log => log.set_index)])].sort((a, b) => a - b);
-  if (!indices.length) return [{ setsReps: '', load: labels.unrecorded, repsChanged: false, short: false, loadChanged: false, intensityOnly: false, loadParts: [{ text: labels.unrecorded, changed: false }] }];
-  const groups: { reps: string; loads: string[]; weightChanges: boolean[]; efforts: string[]; effortChanges: boolean[]; intensityOnly: boolean; repsChanged: boolean; short: boolean; loadChanged: boolean }[] = [];
+  if (!indices.length) return [{ setsReps: '—', load: labels.unrecorded, effort: '—', effortChanged: false, repsChanged: false, short: false, loadChanged: false, intensityOnly: false, loadParts: [{ text: labels.unrecorded, changed: false }] }];
+  const groups: { reps: string; loads: string[]; weightChanges: boolean[]; efforts: string[]; intensityOnlyValues: boolean[]; effortChanges: boolean[]; intensityOnly: boolean; repsChanged: boolean; short: boolean; loadChanged: boolean }[] = [];
   for (const index of indices) {
     const set = ordered[index];
     const actual = logs.find(log => log.set_index === index);
@@ -66,21 +66,21 @@ export function summarizeExercise(sets: readonly PlanSet[], logs: readonly Exerc
       intensityOnly = false;
     }
     const last = groups.at(-1);
-    if (last?.reps === reps && last.intensityOnly === intensityOnly) { last.loads.push(load); last.weightChanges.push(differences?.weight != null); last.efforts.push(effort); last.effortChanges.push(differences?.effort != null); last.loadChanged ||= loadChanged; last.repsChanged ||= repsChanged; }
-    else groups.push({ reps, loads: [load], weightChanges: [differences?.weight != null], efforts: [effort], effortChanges: [differences?.effort != null], intensityOnly, repsChanged, short, loadChanged });
+    if (last?.reps === reps) { last.loads.push(load || '—'); last.intensityOnly &&= intensityOnly; last.weightChanges.push(differences?.weight != null); last.efforts.push(effort); last.intensityOnlyValues.push(intensityOnly); last.effortChanges.push(differences?.effort != null); last.loadChanged ||= loadChanged; last.repsChanged ||= repsChanged; }
+    else groups.push({ reps, loads: [load || '—'], weightChanges: [differences?.weight != null], efforts: [effort], intensityOnlyValues: [intensityOnly], effortChanges: [differences?.effort != null], intensityOnly, repsChanged, short, loadChanged });
   }
   const allEfforts = groups.flatMap(group => group.efforts);
   const uniformExerciseEffort = allEfforts.every(value => value === allEfforts[0]);
   return groups.map(group => {
     const parts = compress(group.loads, group.weightChanges).filter(part => part.text);
-    const uniformEffort = group.efforts.every(value => value === group.efforts[0]);
-    const effort = uniformEffort ? group.efforts[0] : group.efforts.map((value, index) => index ? value.replace(/^RPE /, '') : value).join('/');
-    if (effort && (group.intensityOnly || uniformExerciseEffort)) {
-      if (parts.length) parts.push({ text: ' · ', changed: false });
-      parts.push({ text: effort, changed: group.effortChanges.some(Boolean) });
-    }
+    const efforts = group.efforts.map((value, index) => value && (group.intensityOnlyValues[index] || uniformExerciseEffort) ? value : '—');
+    const uniformEffort = efforts.every(value => value === efforts[0]);
+    const prefix = ['RPE ', 'RIR '].find(label => efforts.some(value => value.startsWith(label)) && efforts.every(value => value === '—' || value.startsWith(label)));
+    const displayedEffort = uniformEffort ? efforts[0] : prefix
+      ? prefix + efforts.map(value => value.replace(prefix, '')).join('/')
+      : compress(efforts, group.effortChanges).map(part => part.text).join('');
     if (!parts.length) parts.push({ text: '—', changed: false });
-    return { setsReps: `${group.loads.length}×${group.reps}`, load: parts.map(part => part.text).join(''), loadParts: parts,
-      repsChanged: group.repsChanged, short: group.short, loadChanged: group.loadChanged, intensityOnly: group.intensityOnly };
+    return { setsReps: `${group.loads.length}×${group.reps}`, load: parts.map(part => part.text).join(''), effort: displayedEffort, loadParts: parts,
+      repsChanged: group.repsChanged, short: group.short, loadChanged: group.loadChanged, effortChanged: displayedEffort !== '—' && group.effortChanges.some(Boolean), intensityOnly: group.intensityOnly };
   });
 }
