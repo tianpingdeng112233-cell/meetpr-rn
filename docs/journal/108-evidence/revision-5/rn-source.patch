@@ -1,0 +1,112 @@
+diff --git a/src/features/training/TodayWorkoutView.tsx b/src/features/training/TodayWorkoutView.tsx
+index 430ef6f..2f1a8d4 100644
+--- a/src/features/training/TodayWorkoutView.tsx
++++ b/src/features/training/TodayWorkoutView.tsx
+@@ -57,7 +57,7 @@ import { localNoon } from './quick-log';
+ 
+ import { workoutCompletionPresentation, type CompletionReference } from './completion-presentation';
+ import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
+-import { TRAINING_LIMITS } from './constants';
++import { HISTORY_WEIGHT_PREFILL_ENABLED, TRAINING_LIMITS } from './constants';
+ import { addExtraDraft, addStudentExercise, addStudentSet, studentAddedDrafts, synthesizeDrafts } from './drafts';
+ import { recordTrainingSetE1RM } from './e1rm-live';
+ import { createExerciseMetadataResolver, exerciseTitle } from './exercise-metadata';
+@@ -245,7 +245,7 @@ export function TodayWorkoutView() {
+     return local && !local.rpeText && !draft.rpeText
+       ? { ...draft, effortKind: local.effortKind } : draft;
+   });
+-  const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', editable);
++  const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', HISTORY_WEIGHT_PREFILL_ENABLED && editable);
+   const prefilledDrafts = baseDrafts.map(draft => {
+     const prescription = decodePrescription(draft.planSet);
+     if (draft.sourceLog || draft.kind || draft.weightText || prescription.intensity?.kind !== 'pct') return draft;
+@@ -257,7 +257,7 @@ export function TodayWorkoutView() {
+       registeredOneRMKg: registered == null ? null : Number(registered), family });
+     return outcome.suggestion ? { ...draft, weightText: String(outcome.suggestion.weightKg) } : draft;
+   });
+-  const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, suggestionsQuery.data?.suggestions ?? [], {
++  const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, HISTORY_WEIGHT_PREFILL_ENABLED ? suggestionsQuery.data?.suggestions ?? [] : [], {
+     drafts: prefilledDrafts, completedExercises: checkedExercises[reviewKey], expandedExerciseId: expandedExercises[reviewKey],
+   }) : { exercises: [] };
+   const liveDrafts = sheet.exercises.flatMap(block => block.rows);
+diff --git a/src/features/training/__tests__/all-day-view.test.tsx b/src/features/training/__tests__/all-day-view.test.tsx
+index cacc866..0828c9a 100644
+--- a/src/features/training/__tests__/all-day-view.test.tsx
++++ b/src/features/training/__tests__/all-day-view.test.tsx
+@@ -22,6 +22,7 @@ import { useFocusEffect } from 'expo-router';
+ import { Alert, Text, TextInput, Modal, StyleSheet, View } from 'react-native';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+ import { TrainingWeekStrip } from '../TrainingWeekStrip';
++import * as trainingConstants from '../constants';
+ import { AllDayBody } from '../AllDayBody';
+ import { StudentExercisePicker } from '../StudentExercisePicker';
+ import { HoldToCompleteButton } from '../HoldToCompleteButton';
+@@ -143,6 +144,57 @@ test('107 long hold records untouched prescriptions before completing the day',
+   expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+ });
+ 
++const serveRpeHistory = () => {
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0],
++    sets: [{ ...plan.days[0].exercises[0].sets[0], intensity_mode: 'rpe', target_value: '8' }],
++  }] }] };
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) =>
++    path.endsWith('/weight-suggestions') ? contract.suggestionsResponse as never : original(path, options));
++};
++
++test('history prefill disabled: matching cached/server history leaves RPE-only weight empty and completion saves null', async () => {
++  serveRpeHistory();
++  client.setQueryData(['weight-suggestions', studentId, plan.days[0].id], contract.suggestionsResponse);
++  await mount();
++  await expandFirst();
++  await press('Edit set 1');
++  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('');
++  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
++  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows[0])
++    .toMatchObject({ weightText: '', repsText: '5', rpeText: '8' });
++  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
++  expect(jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path === '/sets/log')?.[1]?.body)
++    .toMatchObject({ weight_kg: null, reps: 5, rpe: '8' });
++});
++
++test('history prefill disabled: opening, switching days and refreshing never request weight suggestions', async () => {
++  serveRpeHistory();
++  const later = { ...servedPlan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 3 };
++  servedPlan = { ...servedPlan, days: [...servedPlan.days, later] };
++  const suggestionCalls = () => jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/weight-suggestions'));
++  await mount();
++  expect(suggestionCalls()).toHaveLength(0);
++  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(later.id));
++  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(later.id);
++  expect(suggestionCalls()).toHaveLength(0);
++  await act(async () => client.invalidateQueries({ queryKey: ['weight-suggestions'] }));
++  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
++  expect(suggestionCalls()).toHaveLength(0);
++});
++
++test('history prefill enabled: requesting matching history restores the original RPE-only prefill', async () => {
++  jest.replaceProperty(trainingConstants, 'HISTORY_WEIGHT_PREFILL_ENABLED', true);
++  serveRpeHistory();
++  await mount();
++  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/weight-suggestions'))).toHaveLength(1);
++  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows[0])
++    .toMatchObject({ weightText: '92.5', repsText: '5', rpeText: '8' });
++  await expandFirst();
++  await press('Edit set 1');
++  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('92.5');
++});
++
+ test('acceptance 16: W2 can be edited, checked and completed while W1 remains unsettled', async () => {
+   const dayId = '40000000-0000-4000-8000-000000000002';
+   const exerciseId = '50000000-0000-4000-8000-000000000002';
+diff --git a/src/features/training/constants.ts b/src/features/training/constants.ts
+index 0c8c298..f41d2ba 100644
+--- a/src/features/training/constants.ts
++++ b/src/features/training/constants.ts
+@@ -1,3 +1,6 @@
++// Spec 107 round 4: keep history suggestions available for a later opt-in.
++export const HISTORY_WEIGHT_PREFILL_ENABLED: boolean = false;
++
+ export const TRAINING_LIMITS = Object.freeze({
+   gymDayCutoffHour: 4,
+   historyWindowDays: 84,

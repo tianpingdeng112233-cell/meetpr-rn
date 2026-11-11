@@ -22,6 +22,7 @@ import { useFocusEffect } from 'expo-router';
 import { Alert, Text, TextInput, Modal, StyleSheet, View } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { TrainingWeekStrip } from '../TrainingWeekStrip';
+import * as trainingConstants from '../constants';
 import { AllDayBody } from '../AllDayBody';
 import { StudentExercisePicker } from '../StudentExercisePicker';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
@@ -141,6 +142,57 @@ test('107 long hold records untouched prescriptions before completing the day', 
   expect(jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path === '/sets/log')?.[1]?.body)
     .toMatchObject({ weight_kg: '80', reps: 5, rpe: null });
   expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+});
+
+const serveRpeHistory = () => {
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0],
+    sets: [{ ...plan.days[0].exercises[0].sets[0], intensity_mode: 'rpe', target_value: '8' }],
+  }] }] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) =>
+    path.endsWith('/weight-suggestions') ? contract.suggestionsResponse as never : original(path, options));
+};
+
+test('history prefill disabled: matching cached/server history leaves RPE-only weight empty and completion saves null', async () => {
+  serveRpeHistory();
+  client.setQueryData(['weight-suggestions', studentId, plan.days[0].id], contract.suggestionsResponse);
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('');
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows[0])
+    .toMatchObject({ weightText: '', repsText: '5', rpeText: '8' });
+  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
+  expect(jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path === '/sets/log')?.[1]?.body)
+    .toMatchObject({ weight_kg: null, reps: 5, rpe: '8' });
+});
+
+test('history prefill disabled: opening, switching days and refreshing never request weight suggestions', async () => {
+  serveRpeHistory();
+  const later = { ...servedPlan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 3 };
+  servedPlan = { ...servedPlan, days: [...servedPlan.days, later] };
+  const suggestionCalls = () => jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/weight-suggestions'));
+  await mount();
+  expect(suggestionCalls()).toHaveLength(0);
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(later.id));
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(later.id);
+  expect(suggestionCalls()).toHaveLength(0);
+  await act(async () => client.invalidateQueries({ queryKey: ['weight-suggestions'] }));
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
+  expect(suggestionCalls()).toHaveLength(0);
+});
+
+test('history prefill enabled: requesting matching history restores the original RPE-only prefill', async () => {
+  jest.replaceProperty(trainingConstants, 'HISTORY_WEIGHT_PREFILL_ENABLED', true);
+  serveRpeHistory();
+  await mount();
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/weight-suggestions'))).toHaveLength(1);
+  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows[0])
+    .toMatchObject({ weightText: '92.5', repsText: '5', rpeText: '8' });
+  await expandFirst();
+  await press('Edit set 1');
+  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('92.5');
 });
 
 test('acceptance 16: W2 can be edited, checked and completed while W1 remains unsettled', async () => {

@@ -57,7 +57,7 @@ import { localNoon } from './quick-log';
 
 import { workoutCompletionPresentation, type CompletionReference } from './completion-presentation';
 import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
-import { TRAINING_LIMITS } from './constants';
+import { HISTORY_WEIGHT_PREFILL_ENABLED, TRAINING_LIMITS } from './constants';
 import { addExtraDraft, addStudentExercise, addStudentSet, studentAddedDrafts, synthesizeDrafts } from './drafts';
 import { recordTrainingSetE1RM } from './e1rm-live';
 import { createExerciseMetadataResolver, exerciseTitle } from './exercise-metadata';
@@ -245,7 +245,7 @@ export function TodayWorkoutView() {
     return local && !local.rpeText && !draft.rpeText
       ? { ...draft, effortKind: local.effortKind } : draft;
   });
-  const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', editable);
+  const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', HISTORY_WEIGHT_PREFILL_ENABLED && editable);
   const prefilledDrafts = baseDrafts.map(draft => {
     const prescription = decodePrescription(draft.planSet);
     if (draft.sourceLog || draft.kind || draft.weightText || prescription.intensity?.kind !== 'pct') return draft;
@@ -257,7 +257,7 @@ export function TodayWorkoutView() {
       registeredOneRMKg: registered == null ? null : Number(registered), family });
     return outcome.suggestion ? { ...draft, weightText: String(outcome.suggestion.weightKg) } : draft;
   });
-  const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, suggestionsQuery.data?.suggestions ?? [], {
+  const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, HISTORY_WEIGHT_PREFILL_ENABLED ? suggestionsQuery.data?.suggestions ?? [] : [], {
     drafts: prefilledDrafts, completedExercises: checkedExercises[reviewKey], expandedExerciseId: expandedExercises[reviewKey],
   }) : { exercises: [] };
   const liveDrafts = sheet.exercises.flatMap(block => block.rows);
