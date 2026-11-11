@@ -69,16 +69,16 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
         </View>
         <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: current ? colors.goldSoft : undefined }}>
-            <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ flex: 1 }}>
+            <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, justifyContent: 'center', gap: 4, paddingVertical: 8 }}>
+              <View>
                 {!block.repeatName ? <Text numberOfLines={2} testID={`all-day-name-${block.exercise.id}`} style={{ ...font.body(15, 'bold'), color: done ? colors.textSecondary : colors.textPrimary }}>{name}{block.rows[0]?.kind === 'added' ? ` · ${t('student.added.added')}` : ''}</Text> : null}
               </View>
-              <View style={{ flex: 1.4, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: 4 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 4, rowGap: 2 }}>
                 {summary.map((segment, index) => <Text key={index} style={{ flexShrink: 1 }}>
                   {index ? <Text style={{ color: colors.textMuted }}> · </Text> : null}
                   <Text style={{ ...font.mono(14), color: segment.short ? colors.danger : segment.repsChanged ? colors.goldText : colors.textSecondary }}>{segment.setsReps}</Text>
                   {segment.setsReps ? '  ' : ''}
-                  <Text style={{ ...font.mono(segment.intensityOnly ? 13 : 15, 'bold') }}>{segment.loadParts.map((part, partIndex) => <Text key={partIndex} style={{ color: part.changed || segment.intensityOnly ? colors.goldText : colors.textPrimary }}>{part.text}</Text>)}</Text>
+                  <Text style={{ ...font.mono(segment.intensityOnly ? 13 : 15, 'bold') }}>{segment.loadParts.map((part, partIndex) => <Text key={partIndex} style={{ color: part.changed || segment.intensityOnly ? colors.goldText : colors.textPrimary }}>{part.text.replace(/(RIR|RPE) /g, '$1\u00a0')}</Text>)}</Text>
                 </Text>)}
               </View>
             </Pressable>
