@@ -1,0 +1,542 @@
+diff --git a/src/features/training/AllDayBody.tsx b/src/features/training/AllDayBody.tsx
+index 9b4c51c..b95fa1f 100644
+--- a/src/features/training/AllDayBody.tsx
++++ b/src/features/training/AllDayBody.tsx
+@@ -38,7 +38,8 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+       <Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t('training.allDay.summary', [title, sheet.exercises.length])}</Text>
+       <Text style={{ ...font.body(12), color: colors.textMuted, flexShrink: 1 }}>{t(editable ? 'training.allDay.hint' : 'training.allDay.setCount', [count])}</Text>
+     </View>
+-    {sheet.exercises.map(block => {
++    <View testID="all-day-timeline" style={{ gap: 0 }}>
++    {sheet.exercises.map((block, index) => {
+       const name = exerciseName(block.exercise.exercise_id);
+       const done = block.node === 'complete';
+       const expanded = !block.collapsed;
+@@ -51,14 +52,14 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+       const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
+       return <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
+         <View style={{ width: 22, alignItems: 'center' }}>
++          {index < sheet.exercises.length - 1 ? <View testID={`all-day-line-${block.exercise.id}`} style={{ position: 'absolute', top: 16, bottom: -16, width: 3, backgroundColor: nodeColor, overflow: 'hidden' }}>{current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}</View> : null}
+           <View style={{ width: 22, height: 22, borderRadius: 11, overflow: 'hidden', backgroundColor: nodeColor, alignItems: 'center', justifyContent: 'center', marginTop: 5, outlineColor: colors.goldSoft, outlineWidth: current ? 4 : 0 }}>
+             {current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}
+             {done ? <MaterialCommunityIcons name="check" size={15} color={colors.inkOnCTAFill} /> : null}
+           </View>
+-          <View style={{ flex: 1, width: 3, backgroundColor: nodeColor, minHeight: 12, overflow: 'hidden' }}>{current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}</View>
+         </View>
+         <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
+-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded ? colors.gold500 : 'transparent', backgroundColor: expanded ? colors.goldSoft : undefined }}>
++          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: expanded || current ? colors.goldSoft : undefined }}>
+             <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+               <View style={{ flex: 1 }}>
+                 {!block.repeatName ? <Text numberOfLines={2} testID={`all-day-name-${block.exercise.id}`} style={{ ...font.body(15, 'bold'), color: done ? colors.textSecondary : colors.textPrimary }}>{name}{block.rows[0]?.kind === 'added' ? ` · ${t('student.added.added')}` : ''}</Text> : null}
+@@ -105,7 +106,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+                         <Text style={{ ...font.mono(15, 'semibold'), color: short ? colors.danger : differences?.reps ? colors.goldText : colors.textPrimary }}>× {short ? `${display.repsText}/${prescription.reps}` : display.repsText || '—'}</Text>
+                         {differences?.reps && !short ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.reps])}</Text> : null}
+                       </View>
+-                      <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{display.rpeText ? `${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText}` : '—'}</Text>{differences?.effort ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
++                      <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{`${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText || '—'}`}</Text>{differences?.effort ? <Text style={{ ...font.body(11), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
+                     </Pressable>
+                     {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(row)} ensureSetLog={() => ensureSetLog(row)} /> : null}
+                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
+@@ -122,6 +123,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+         </View>
+       </View>;
+     })}
++    </View>
+     {editable ? <Pressable accessibilityRole="button" onPress={onAddExercise}><Text style={{ color: colors.goldText, ...font.body(14) }}>{t('student.added.addExercise')}</Text></Pressable> : null}
+ 
+   </>;
+diff --git a/src/features/training/MeetWeightStrip.tsx b/src/features/training/MeetWeightStrip.tsx
+index 3a8cefe..dac9690 100644
+--- a/src/features/training/MeetWeightStrip.tsx
++++ b/src/features/training/MeetWeightStrip.tsx
+@@ -19,16 +19,15 @@ export function MeetWeightStrip({ studentId, profile, today }: { studentId: stri
+   const [editing, setEditing] = useState(false);
+   const [preview, setPreview] = useState<string | null>(null);
+   const model = weightStripModel({ today, settingOn: setting.data === true,
+-    meet: profile?.is_competing && profile.competition_date ? { date: profile.competition_date, name: t('student.rn.meet.title') } : null,
++    meet: profile?.is_competing && profile.competition_date ? { date: profile.competition_date } : null,
+     todayRecord: weights.data?.records.find(record => record.recorded_on === today) ?? null });
+   if (model.kind === 'hidden') return null;
+   const value = editing && preview !== null ? preview : model.weight;
+   return <>
+     <View testID="training.meetWeightStrip" style={{ minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: colors.borderHairline, backgroundColor: colors.surfaceCard, flexDirection: 'row', overflow: 'hidden' }}>
+-      {model.kind === 'meet-weight' ? <Pressable accessibilityRole="button" accessibilityLabel={model.days === 0 ? t('student.weightStrip.meetToday') : `${t('student.weightStrip.untilMeet', [model.name])} ${t('student.weightStrip.days', [model.days])}`} onPress={() => router.navigate({ pathname: '/(student)/profile', params: { edit: 'competition' } })} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRightWidth: 1, borderRightColor: colors.borderHairline }}>
++      {model.kind === 'meet-weight' ? <Pressable accessibilityRole="button" accessibilityLabel={model.days === 0 ? t('student.weightStrip.meetToday') : t('student.weightStrip.untilMeet', [model.days])} onPress={() => router.navigate({ pathname: '/(student)/profile', params: { edit: 'competition' } })} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRightWidth: 1, borderRightColor: colors.borderHairline }}>
+         <MaterialCommunityIcons name="flag-outline" size={16} color={colors.textSecondary} />
+-        <View style={{ flex: 1 }}><Text style={{ ...font.body(12), color: colors.textSecondary }}>{model.days === 0 ? t('student.weightStrip.meetToday') : t('student.weightStrip.untilMeet', [model.name])}</Text>
+-          {model.days > 0 ? <Text style={{ ...font.mono(15, 'bold'), color: colors.textPrimary }}>{t('student.weightStrip.days', [model.days])}</Text> : null}</View>
++        <Text style={{ flex: 1, ...font.body(15, 'bold'), fontVariant: ['tabular-nums'], color: colors.textPrimary }}>{model.days === 0 ? t('student.weightStrip.meetToday') : t('student.weightStrip.untilMeet', [model.days])}</Text>
+       </Pressable> : null}
+       <Pressable accessibilityRole="button" accessibilityLabel={model.weight ? `${t('student.weightStrip.today')} ${model.weight} kg` : t('student.weightStrip.log')} onPress={() => { setPreview(null); setEditing(true); }} style={{ flex: 1, minHeight: 48, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+         <Text style={{ ...font.body(12), color: colors.textSecondary, flexShrink: 1 }}>{t('student.weightStrip.today')}</Text>
+diff --git a/src/features/training/TodayWorkoutView.tsx b/src/features/training/TodayWorkoutView.tsx
+index ecfd4ff..a8a4dd1 100644
+--- a/src/features/training/TodayWorkoutView.tsx
++++ b/src/features/training/TodayWorkoutView.tsx
+@@ -215,7 +215,7 @@ export function TodayWorkoutView() {
+     : null;
+   const editable = Boolean(plan && selectedDayID && canWriteTrainingDay(plan, selectedDayID));
+   const reviewKey = `${studentId}:${selectedDayID}`;
+-  const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null | undefined>>({});
++  const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null>>({});
+   const review =
+     reviewState.key === reviewKey && reviewState.status === 'loaded'
+       ? reviewState.value
+@@ -239,11 +239,13 @@ export function TodayWorkoutView() {
+   const synthesizedIDs = new Set(synthesizedDrafts.map(draft => draft.stableSetId));
+   synthesizedDrafts.push(...Object.values({ ...syncSnapshot.drafts, ...draftOverrides }).filter(draft => draft.kind && draft.exercise.plan_day_id === selectedDayID && !synthesizedIDs.has(draft.stableSetId) && (syncSnapshot.drafts?.[draft.stableSetId] || (!syncSnapshot.pending.some(entry => entry.stableSetId === draft.stableSetId && entry.remove) && !syncSnapshot.confirmed[draft.stableSetId]?.remove)) &&
+     (draft.kind === 'added' || planDay?.exercises.some(exercise => exercise.id === draft.exercise.id))));
+-  const baseDrafts = synthesizedDrafts.map((draft) =>
+-    draftOverrides[draft.stableSetId] && !draftOverrides[draft.stableSetId].sourceLog && !draft.sourceLog
+-      ? draftOverrides[draft.stableSetId]
+-      : draft,
+-  );
++  const baseDrafts = synthesizedDrafts.map(draft => {
++    const local = draftOverrides[draft.stableSetId];
++    if (local && !local.sourceLog && !draft.sourceLog) return local;
++    // Empty effort has no RPE/RIR discriminator on the wire; retain this session's choice.
++    return local && !local.rpeText && !draft.rpeText
++      ? { ...draft, effortKind: local.effortKind } : draft;
++  });
+   const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', editable);
+   const prefilledDrafts = baseDrafts.map(draft => {
+     const prescription = decodePrescription(draft.planSet);
+@@ -605,7 +607,7 @@ export function TodayWorkoutView() {
+                 weightText: input.weightText,
+                 repsText: input.repsText,
+                 rpeText: actualRIR == null ? input.rpeText : String(actualRIR),
+-                effortKind: actualRIR == null ? 'rpe' : 'rir',
++                effortKind: input.effortKind ?? (actualRIR == null ? 'rpe' : 'rir'),
+                 sourceLog: {
+                   id: response.id,
+                   student_id: studentId,
+@@ -706,7 +708,7 @@ export function TodayWorkoutView() {
+     const old = checkedExercises[reviewKey] ?? new Set<string>();
+     const next = new Set(old);
+     if (next.has(id)) { next.delete(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next })); setExpandedExercises(current => ({ ...current, [reviewKey]: id })); return; }
+-    setExpandedExercises(current => ({ ...current, [reviewKey]: undefined }));
++    setExpandedExercises(current => ({ ...current, [reviewKey]: null }));
+     next.add(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next }));
+     try { for (const { row, request } of completionWrites(sheet, id)) await saveRow(row, request); }
+     catch { setCheckedExercises(current => ({ ...current, [reviewKey]: old })); }
+diff --git a/src/features/training/__tests__/all-day-sheet.test.ts b/src/features/training/__tests__/all-day-sheet.test.ts
+index f7d4434..ac9024e 100644
+--- a/src/features/training/__tests__/all-day-sheet.test.ts
++++ b/src/features/training/__tests__/all-day-sheet.test.ts
+@@ -17,7 +17,7 @@ test('all-day sheet preserves old actuals and prefills only RPE-only weights fro
+   expect(sheet.exercises[0].rows.map(row => [row.weightText, row.repsText, row.rpeText])).toEqual([
+     ['92.5', '4', ''], ['110', '5', '8'], ['', '5', '7'],
+   ]);
+-  expect(sheet.exercises[0]).toMatchObject({ collapsed: false, node: 'current' });
++  expect(sheet.exercises[0]).toMatchObject({ collapsed: true, node: 'current' });
+ });
+ 
+ 
+@@ -61,15 +61,15 @@ test('upgrade and exercise completion retain precise saved weight and effort', (
+   expect(completionWrites(sheet, 'exercise')[0].request).toMatchObject({ weight_kg: '92.25', rpe: '8.25' });
+ });
+ 
+-test('only the first unfinished exercise expands by default, independent of completion and repeated names', () => {
++test('all exercises start collapsed while the first unfinished remains current, independent of viewing', () => {
+   const second = { ...exercise, id: 'second', sort_order: 1 };
+   const third = { ...exercise, id: 'third', exercise_id: 'bench', sort_order: 2 };
+   const planned = day('day', { exercises: [exercise, second, third] });
+   expect(buildAllDaySheet(planned, [], []).exercises.map(block => [block.collapsed, block.node, block.repeatName]))
+-    .toEqual([[false, 'current', false], [true, 'pending', true], [true, 'pending', false]]);
++    .toEqual([[true, 'current', false], [true, 'pending', true], [true, 'pending', false]]);
+   const checked = new Set(['exercise']);
+   expect(buildAllDaySheet(planned, [], [], { completedExercises: checked }).exercises.map(block => [block.collapsed, block.node]))
+-    .toEqual([[true, 'complete'], [false, 'current'], [true, 'pending']]);
++    .toEqual([[true, 'complete'], [true, 'current'], [true, 'pending']]);
+   expect(buildAllDaySheet(planned, [], [], { completedExercises: checked, expandedExerciseId: 'exercise' }).exercises.map(block => [block.collapsed, block.node]))
+     .toEqual([[false, 'complete'], [true, 'current'], [true, 'pending']]);
+   expect(buildAllDaySheet(planned, [], [], { expandedExerciseId: null }).exercises.every(block => block.collapsed)).toBe(true);
+diff --git a/src/features/training/__tests__/all-day-view.test.tsx b/src/features/training/__tests__/all-day-view.test.tsx
+index a4fed48..13fd03b 100644
+--- a/src/features/training/__tests__/all-day-view.test.tsx
++++ b/src/features/training/__tests__/all-day-view.test.tsx
+@@ -11,10 +11,10 @@ import type { PlanDetail } from '@/api/domains/plans';
+ import { authenticatedRequest, useSessionStore } from '@/api/session';
+ import { NumberPad } from '@/design/NumberPad';
+ import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+-import { setLocaleOverride, t } from '@/i18n';
++import { setLocaleOverride, t, type Locale } from '@/i18n';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+ import { useFocusEffect } from 'expo-router';
+-import { Alert, Text, TextInput, Modal } from 'react-native';
++import { Alert, Text, TextInput, Modal, StyleSheet, View } from 'react-native';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+ import { TrainingWeekStrip } from '../TrainingWeekStrip';
+ import { AllDayBody } from '../AllDayBody';
+@@ -96,6 +96,9 @@ const mount = async () => {
+   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+ };
++const expandFirst = async () => {
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${plan.days[0].exercises[0].id}` && node.props.onPress)[0].props.onPress());
++};
+ const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
+ const press = async (label: string) => {
+   await act(async () => { renderer.root.findAll(node => node.props.onPress && node.props.accessibilityLabel === label)[0].props.onPress(); });
+@@ -113,6 +116,7 @@ afterEach(async () => {
+ 
+ test('107 tapping a row edits in place and checking an exercise collapses its rows', async () => {
+   await mount();
++  await expandFirst();
+   await press('Edit set 1');
+   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(1);
+   await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+@@ -136,7 +140,7 @@ test('107 long hold records untouched prescriptions before completing the day',
+ 
+ test('107 row fields remain reachable while the keypad is open and only the edited row changes', async () => {
+   servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0], sets: [plan.days[0].exercises[0].sets[0], { ...plan.days[0].exercises[0].sets[0], id: '70000000-0000-4000-8000-000000000001', set_number: 2 }] }] }] };
+-  await mount(); await press('Edit set 1');
++  await mount(); await expandFirst(); await press('Edit set 1');
+   expect(renderer.root.findAllByType(Modal)).toHaveLength(0);
+   await press('reps');
+   expect(renderer.root.findByType(NumberPad).props.field).toBe('reps');
+@@ -163,6 +167,7 @@ test('107 exercise note queues offline and retries canonical text plus exercise_
+     return original(path, options);
+   });
+   await mount();
++  await expandFirst();
+   const note = renderer.root.findAll(node => node.props.onPress && String(node.props.accessibilityLabel).startsWith('Ask coach ·'))[0];
+   await act(async () => note.props.onPress());
+   await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Check my pause, please.'));
+@@ -185,7 +190,7 @@ test('107 exercise note queues offline and retries canonical text plus exercise_
+ test('changing the selected day closes the old row editor', async () => {
+   const second = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000004', day_of_week: 4 };
+   servedPlan = { ...plan, days: [...plan.days, second] };
+-  await mount(); await press('Edit set 1');
++  await mount(); await expandFirst(); await press('Edit set 1');
+   await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(second.id));
+   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+ });
+@@ -234,7 +239,7 @@ test('single expanded exercise, repeated name indentation, manual collapse and c
+   await mount();
+   const row = (id: string) => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0];
+   const isExpanded = (id: string) => row(id).props.accessibilityState.expanded;
+-  expect(isExpanded(first.id)).toBe(true); expect(isExpanded(second.id)).toBe(false);
++  expect(isExpanded(first.id)).toBe(false); expect(isExpanded(second.id)).toBe(false);
+   expect(renderer.root.findAll(node => node.type === Text && node.props.testID === `all-day-name-${second.id}`)).toHaveLength(0);
+   await act(async () => row(second.id).props.onPress());
+   expect(isExpanded(first.id)).toBe(false); expect(isExpanded(second.id)).toBe(true);
+@@ -244,9 +249,9 @@ test('single expanded exercise, repeated name indentation, manual collapse and c
+   await act(async () => row(first.id).props.onPress());
+   expect(isExpanded(first.id)).toBe(false); expect(isExpanded(second.id)).toBe(false);
+   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toHaveLength(0);
+-  // Finish the second exercise while manually collapsed: return to first unfinished.
++  // Checking a collapsed exercise leaves every exercise collapsed.
+   await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-check-${second.id}` && node.props.onPress)[0].props.onPress());
+-  expect(isExpanded(first.id)).toBe(true); expect(isExpanded(second.id)).toBe(false);
++  expect(isExpanded(first.id)).toBe(false); expect(isExpanded(second.id)).toBe(false);
+   await act(async () => row(second.id).props.onPress());
+   expect(isExpanded(second.id)).toBe(true);
+   expect(renderer.root.findAll(node => node.props.testID === `all-day-check-${second.id}`)[0].props.accessibilityState.checked).toBe(true);
+@@ -288,6 +293,7 @@ test('lb summary, expanded rows and keypad use the same unit while saved weights
+   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path.endsWith('/onboarding') ? { unit_preference: 'lb' } as never : original(path, options));
+   await mount();
+   expect(copy()).toContain('176.4');
++  await expandFirst();
+   await press('Edit set 1');
+   expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('176.4');
+   expect(renderer.root.findByType(NumberPad).props.contextText).toContain('lb');
+@@ -313,3 +319,100 @@ test('108 logging weight from the training strip updates today without leaving t
+   expect(mockNavigate).not.toHaveBeenCalled();
+   expect(records).toEqual([{ recorded_on: localDay(new Date()), weight_kg: '77.40' }]);
+ });
++
++
++test('current collapsed exercise retains its gold highlight and completion moves it without expanding', async () => {
++  const first = plan.days[0].exercises[0];
++  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
++  await mount();
++  const rowStyle = (id: string) => StyleSheet.flatten(renderer.root.findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0].parent!.props.style);
++  expect(rowStyle(first.id).borderColor).not.toBe('transparent');
++  expect(rowStyle(first.id).backgroundColor).toBeTruthy();
++  expect(rowStyle(first.id).borderWidth).toBe(1);
++  expect(rowStyle(second.id).borderColor).toBe('transparent');
++  await press('Complete exercise');
++  expect(rowStyle(first.id).borderColor).toBe('transparent');
++  expect(rowStyle(second.id).borderColor).not.toBe('transparent');
++  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1')).toHaveLength(0);
++});
++
++
++test('timeline connects consecutive node centers with no outer gap and stops at the last node', async () => {
++  const first = plan.days[0].exercises[0];
++  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
++  const third = { ...second, id: '50000000-0000-4000-8000-000000000002', sort_order: 2 };
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second, third] }] };
++  await mount();
++  const timeline = renderer.root.findByProps({ testID: 'all-day-timeline' });
++  expect(StyleSheet.flatten(timeline.props.style).gap).toBe(0);
++  const lines = (id: string) => renderer.root.findAllByType(View).filter(node => node.props.testID === `all-day-line-${id}`);
++  const line = (id: string) => lines(id)[0];
++  for (const id of [first.id, second.id]) {
++    expect(lines(id)).toHaveLength(1);
++    expect(StyleSheet.flatten(line(id)!.props.style)).toMatchObject({ position: 'absolute', top: 16, bottom: -16, width: 3 });
++  }
++  expect(line(third.id)).toBeUndefined();
++  await expandFirst();
++  expect(StyleSheet.flatten(line(first.id)!.props.style).bottom).toBe(-16);
++});
++
++
++test.each<[string, string | null, string]>([
++  ['rpe', '8', 'RPE 8'], ['rpe', null, 'RPE —'],
++  ['rir', '2', 'RIR 2'], ['rir', null, 'RIR —'],
++])('expanded effort column identifies %s even when its value is %s', async (kind, value, expected) => {
++  const exercise = plan.days[0].exercises[0];
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
++    ...exercise.sets[0], load_mode: kind === 'rir' ? 'rir' : 'fixed_weight', rir_target: kind === 'rir' ? 2 : null,
++    target_rpe: kind === 'rpe' ? value : null,
++  }] }] }] };
++  await mount();
++  await expandFirst();
++  if (value === null && kind === 'rir') {
++    await press('Edit set 1');
++    await press('rir');
++    await act(async () => renderer.root.findByType(NumberPad).props.onChangeText(''));
++    await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
++  }
++  expect(copy()).toContain(expected);
++});
++
++test.each<[Locale, number, string]>([
++  ['zh', 23, '距比赛 23 天'], ['zh', 0, '今天比赛'],
++  ['zh-Hant', 23, '距比賽 23 天'], ['zh-Hant', 0, '今天比賽'],
++  ['en', 23, '23 days until meet'], ['en', 0, 'Meet today'],
++])('meet strip displays the generic countdown in %s at day %s', async (locale, days, expected) => {
++  setLocaleOverride(locale);
++  const meet = new Date();
++  meet.setDate(meet.getDate() + days);
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path.endsWith('/onboarding')
++    ? { is_competing: true, competition_date: localDay(meet) } as never : original(path, options));
++  jest.spyOn(bodyWeightsRepository, 'list').mockResolvedValue({ records: [] });
++  await mount();
++  expect(copy()).toContain(expected);
++  await press(expected);
++  expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/profile', params: { edit: 'competition' } });
++});
++
++
++test('switching an RIR prescription to empty RPE keeps the chosen column label after editing', async () => {
++  const exercise = plan.days[0].exercises[0];
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
++    ...exercise.sets[0], load_mode: 'rir', rir_target: 2,
++  }] }] }] };
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/exercises'
++    ? { exercises: [{ id: exercise.exercise_id, name: 'Row', name_en: 'Row', exercise_type: 'accessory' }] } as never
++    : original(path, options));
++  await mount();
++  await expandFirst();
++  await press('Edit set 1');
++  await act(async () => renderer.root.findAll(node => node.props.onPress && !node.props.disabled &&
++    node.findAllByType(Text).some(text => text.props.children === 'RIR'))[0].props.onPress());
++  expect(renderer.root.findByType(NumberPad).props.field).toBe('rpe');
++  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
++  expect(copy()).toContain('RPE —');
++  expect(copy()).not.toContain('RIR —');
++});
+diff --git a/src/features/training/__tests__/hero-camera-upload.test.tsx b/src/features/training/__tests__/hero-camera-upload.test.tsx
+index ffcfcf1..0691eb7 100644
+--- a/src/features/training/__tests__/hero-camera-upload.test.tsx
++++ b/src/features/training/__tests__/hero-camera-upload.test.tsx
+@@ -130,6 +130,7 @@ const record = () => useVideoUploadStore.getState().records[`${studentId}:${plan
+ const openCamera = async () => {
+   await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
+   await mount();
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${plan.days[0].exercises[0].id}` && node.props.onPress)[0].props.onPress());
+   await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001') && node.props.onPress)[0].props.onPress());
+   expect(renderer.root.findAllByType(CameraRecorder)).toHaveLength(1);
+ };
+diff --git a/src/features/training/__tests__/quick-log-entry.test.tsx b/src/features/training/__tests__/quick-log-entry.test.tsx
+index 6f819f8..c5d9e62 100644
+--- a/src/features/training/__tests__/quick-log-entry.test.tsx
++++ b/src/features/training/__tests__/quick-log-entry.test.tsx
+@@ -99,20 +99,26 @@ afterEach(async () => {
+   await AsyncStorage.clear();
+ });
+ 
+-test('107 retired training entry points are unreachable and all rows are visible', async () => {
++test('107 retired training entry points are unreachable and all exercise rows start collapsed', async () => {
+   await mount();
+   const labels = renderer.root.findAll(node => node.props.onPress).map(node => node.props.accessibilityLabel);
+   expect(labels).not.toContain(t('student.trainingHistoryView.copy024'));
+   expect(labels).not.toContain(t('student.todayWorkoutScreen.copy008'));
+   expect(renderer.root.findAllByType(Modal)).toHaveLength(0);
+-  expect(labels).toContain('Edit set 1');
++  expect(labels).not.toContain('Edit set 1');
++  const exerciseRows = renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress);
++  expect(exerciseRows.length).toBeGreaterThan(0);
++  expect(exerciseRows.every(node => node.props.accessibilityState.expanded === false)).toBe(true);
+ });
+ 
+ test('107 a future week is read only and previous week returns to editable rows', async () => {
+   servedPlan = { ...plan, days: [plan.days[0], { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', week_number: 2 }] };
+   await mount();
+   await press('Next week');
++  await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
++  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === true).length).toBeGreaterThan(0);
+   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false)).toHaveLength(0);
+   await press('Previous week');
++  await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
+   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false).length).toBeGreaterThan(0);
+ });
+diff --git a/src/features/training/__tests__/weight-strip-model.test.ts b/src/features/training/__tests__/weight-strip-model.test.ts
+index 34d9e05..f05bba5 100644
+--- a/src/features/training/__tests__/weight-strip-model.test.ts
++++ b/src/features/training/__tests__/weight-strip-model.test.ts
+@@ -5,8 +5,8 @@ test('strip follows local today and active meets independently of the selected t
+   const base = { today: '2026-11-10', settingOn: false, todayRecord: null, meet: null };
+   expect(weightStripModel(base)).toEqual({ kind: 'hidden' });
+   expect(weightStripModel({ ...base, settingOn: true })).toMatchObject({ kind: 'weight', weight: null });
+-  expect(weightStripModel({ ...base, meet: { date: '2026-12-03', name: 'Provincials' } })).toMatchObject({ kind: 'meet-weight', days: 23, name: 'Provincials', weight: null });
+-  expect(weightStripModel({ ...base, meet: { date: '2026-11-10', name: 'Meet' }, todayRecord: { recorded_on: '2026-11-10', weight_kg: '77.00' } })).toMatchObject({ kind: 'meet-weight', days: 0, weight: '77.0' });
+-  expect(weightStripModel({ ...base, meet: { date: '2026-11-09', name: 'Past' } })).toEqual({ kind: 'hidden' });
++  expect(weightStripModel({ ...base, meet: { date: '2026-12-03' } })).toMatchObject({ kind: 'meet-weight', days: 23, weight: null });
++  expect(weightStripModel({ ...base, meet: { date: '2026-11-10' }, todayRecord: { recorded_on: '2026-11-10', weight_kg: '77.00' } })).toMatchObject({ kind: 'meet-weight', days: 0, weight: '77.0' });
++  expect(weightStripModel({ ...base, meet: { date: '2026-11-09' } })).toEqual({ kind: 'hidden' });
+   expect(weightStripModel({ ...base, settingOn: true, todayRecord: { recorded_on: '2026-11-09', weight_kg: '78.00' } })).toMatchObject({ kind: 'weight', weight: null });
+ });
+diff --git a/src/features/training/all-day-sheet.ts b/src/features/training/all-day-sheet.ts
+index b8d4bd0..5430ff3 100644
+--- a/src/features/training/all-day-sheet.ts
++++ b/src/features/training/all-day-sheet.ts
+@@ -31,8 +31,7 @@ export function buildAllDaySheet(planDay: PlanDay, logs: readonly SetLog[], sugg
+   let hasCurrent = false;
+   const exercises = [...planDay.exercises].sort((a, b) => a.sort_order - b.sort_order);
+   rows.forEach(row => { if (!exercises.some(exercise => exercise.id === row.exercise.id)) exercises.push(row.exercise); });
+-  const expandedId = options.expandedExerciseId === undefined
+-    ? exercises.find(exercise => !planDay.completed_at && !options.completedExercises?.has(exercise.id))?.id : options.expandedExerciseId;
++  const expandedId = options.expandedExerciseId;
+   return { exercises: exercises.map((exercise, index) => {
+     const exerciseRows = rows.filter(row => row.exercise.id === exercise.id).sort((a, b) => a.setIndex - b.setIndex);
+     const complete = Boolean(planDay.completed_at) || (options.completedExercises?.has(exercise.id) ?? false);
+diff --git a/src/features/training/drafts.ts b/src/features/training/drafts.ts
+index 95f0343..52001fa 100644
+--- a/src/features/training/drafts.ts
++++ b/src/features/training/drafts.ts
+@@ -4,6 +4,7 @@ import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
+ import type { WorkoutSetDraft } from './model';
+ import { accessoryLogRequest, type AccessoryRow } from './accessory-quick-log';
+ import type { SetLogInput } from './set-log-input';
++import { decodePrescription } from '@/domain/plan/prescription';
+ import { planSetPrescription } from './policy';
+ 
+ export function synthesizeDrafts(
+@@ -41,7 +42,7 @@ export function synthesizeDrafts(
+                   ? ''
+                   : String(prescription.weightKg),
+             repsText: String(log?.reps ?? prescription.reps),
+-            effortKind: log?.actual_rir != null ? 'rir' : 'rpe',
++            effortKind: log?.actual_rir != null || (log?.rpe == null && decodePrescription(planSet).intensity?.kind === 'rir') ? 'rir' : 'rpe',
+             rpeText:
+               log?.actual_rir != null ? String(log.actual_rir) : log?.rpe != null
+                 ? String(Number(log.rpe))
+diff --git a/src/features/training/video-upload/VideoAttachmentControls.tsx b/src/features/training/video-upload/VideoAttachmentControls.tsx
+index 55d7431..a3d3459 100644
+--- a/src/features/training/video-upload/VideoAttachmentControls.tsx
++++ b/src/features/training/video-upload/VideoAttachmentControls.tsx
+@@ -210,12 +210,12 @@ export function VideoAttachmentControls({
+     : t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007');
+   if (cameraOnly) return <>
+     <Pressable accessibilityRole="button" accessibilityLabel={t(playable ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy001')} onPress={() => { if (playable || failed) setDetailVisible(true); else void choose('camera'); }} style={{ width: 40, minHeight: 38, justifyContent: 'center', alignItems: 'center' }}>
+-      <MaterialCommunityIcons name="camera-outline" size={20} color={record.status === 'uploaded' ? colors.success : record.status !== 'none' || isPreparing ? colors.gold500 : colors.textMuted} />
++      <MaterialCommunityIcons name="video-outline" size={20} color={record.status === 'uploaded' ? colors.success : record.status !== 'none' || isPreparing ? colors.gold500 : colors.textMuted} />
+     </Pressable>
+     {detailVisible ? <Modal visible animationType="slide" onRequestClose={() => setDetailVisible(false)}><View style={{ flex: 1, backgroundColor: colors.bgBase, padding: 16, paddingTop: 48 }}>
+       <VideoAction icon="close" label={t('training.allDay.done')} disabled={false} onPress={() => setDetailVisible(false)} />
+       {playable ? <VideoPlayback inline localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => setDetailVisible(false)} /> : null}
+-      <VideoAction icon="camera" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('camera')} />
++      <VideoAction icon="video" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('camera')} />
+       {failed ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable} onPress={() => void retry([{ stableSetId }])} /> : null}
+       <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable} onPress={() => void remove().then(() => setDetailVisible(false))} />
+     </View></Modal> : null}
+diff --git a/src/features/training/video-upload/__tests__/upload-status.test.tsx b/src/features/training/video-upload/__tests__/upload-status.test.tsx
+index a3d9884..8d6fa5e 100644
+--- a/src/features/training/video-upload/__tests__/upload-status.test.tsx
++++ b/src/features/training/video-upload/__tests__/upload-status.test.tsx
+@@ -1,3 +1,4 @@
++import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+ import { afterEach, expect, jest, test } from '@jest/globals';
+ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+ import { Text } from 'react-native';
+@@ -96,3 +97,21 @@ test.each([false, true])('retry keeps failure visible until delivery (saved sess
+   }
+   expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Delivered to coach');
+ });
++
++
++test('all-day capture button uses a video camera before, during and after delivery', async () => {
++  await act(async () => {
++    renderer = create(<VideoAttachmentControls compact studentId="student" stableSetId="set" editable
++      ensureSetLog={async () => 'set-log'} buildLogRequest={() => { throw new Error('unused'); }} />);
++  });
++  const camera = () => renderer.root.findAllByType(MaterialCommunityIcons)[0];
++  expect(camera().props.name).toBe('video-outline');
++  const idleColor = camera().props.color;
++  act(() => { useVideoUploadStore.getState().dispatch('student', 'set', { type: 'uploadStarted', attachmentId: 'attachment' }); });
++  expect(camera().props.name).toBe('video-outline');
++  const uploadingColor = camera().props.color;
++  expect(uploadingColor).not.toBe(idleColor);
++  act(() => { useVideoUploadStore.setState({ records: { 'student:set': { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded', attachmentId: 'attachment' } } }); });
++  expect(camera().props.name).toBe('video-outline');
++  expect(camera().props.color).not.toBe(uploadingColor);
++});
+diff --git a/src/features/training/weight-strip-model.ts b/src/features/training/weight-strip-model.ts
+index 285367a..1cffe3a 100644
+--- a/src/features/training/weight-strip-model.ts
++++ b/src/features/training/weight-strip-model.ts
+@@ -1,7 +1,7 @@
+ import type { BodyWeightRecord } from '@/api/domains/body-weights';
+ 
+ export function weightStripModel({ meet, todayRecord, settingOn, today }: {
+-  meet: { date: string; name: string } | null;
++  meet: { date: string } | null;
+   todayRecord: BodyWeightRecord | null;
+   settingOn: boolean;
+   today: string;
+@@ -9,6 +9,6 @@ export function weightStripModel({ meet, todayRecord, settingOn, today }: {
+   // Date-only values are local calendar dates; UTC arithmetic avoids DST's 23/25-hour days.
+   const days = meet ? Math.round((Date.parse(`${meet.date}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86400000) : -1;
+   const weight = todayRecord?.recorded_on === today ? Number(todayRecord.weight_kg).toFixed(1) : null;
+-  if (meet && Number.isFinite(days) && days >= 0) return { kind: 'meet-weight' as const, days, name: meet.name, weight };
++  if (meet && Number.isFinite(days) && days >= 0) return { kind: 'meet-weight' as const, days, weight };
+   return settingOn ? { kind: 'weight' as const, weight } : { kind: 'hidden' as const };
+ }
+diff --git a/src/i18n/catalog/RnExtras.json b/src/i18n/catalog/RnExtras.json
+index 50245f3..0156274 100644
+--- a/src/i18n/catalog/RnExtras.json
++++ b/src/i18n/catalog/RnExtras.json
+@@ -533,8 +533,8 @@
+ "student.weightStrip.log": {"en": "Log weight", "zh": "记一下"},
+ "student.weightStrip.today": {"en": "Today's weight", "zh": "今天体重"},
+ "student.weightStrip.meetToday": {"en": "Meet today", "zh": "今天比赛"},
+-"student.weightStrip.untilMeet": {"en": "Until {0}", "zh": "距{0}"},
+-"student.weightStrip.days": {"en": "{0} days", "zh": "{0} 天"},
++"student.weightStrip.untilMeet": {"en": "{0} days until meet", "zh": "距比赛 {0} 天"},
++"student.weightStrip.untilMeet.one": {"en": "1 day until meet", "zh": "距比赛 1 天"},
+ "student.weightStrip.setting": {"en": "Log weight daily", "zh": "每天记录体重"},
+ "student.weightStrip.settingDetail": {"en": "Show the weight strip above training. An upcoming meet shows it automatically.", "zh": "打开后训练页顶部会出现体重条。设了比赛会自动显示。"},
+ "student.weightStrip.dismiss": {"en": "Dismiss", "zh": "收起"},
+diff --git a/src/i18n/generated/zh-Hant.json b/src/i18n/generated/zh-Hant.json
+index 7c83730..57e4fdc 100644
+--- a/src/i18n/generated/zh-Hant.json
++++ b/src/i18n/generated/zh-Hant.json
+@@ -2432,8 +2432,8 @@
+   "student.weightStrip.log": "記一下",
+   "student.weightStrip.today": "今天體重",
+   "student.weightStrip.meetToday": "今天比賽",
+-  "student.weightStrip.untilMeet": "距{0}",
+-  "student.weightStrip.days": "{0} 天",
++  "student.weightStrip.untilMeet": "距比賽 {0} 天",
++  "student.weightStrip.untilMeet.one": "距比賽 1 天",
+   "student.weightStrip.setting": "每天記錄體重",
+   "student.weightStrip.settingDetail": "開啟後訓練頁頂部會出現體重條。設了比賽會自動顯示。",
+   "student.weightStrip.dismiss": "收起",

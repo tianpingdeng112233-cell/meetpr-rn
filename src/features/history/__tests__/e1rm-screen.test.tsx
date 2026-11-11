@@ -6,7 +6,7 @@ import { t } from '@/i18n';
 import { Text } from 'react-native';
 import { StatTile } from '@/design';
 import { trainingE1RMRepository } from '@/features/training/storage';
-import { formatKg } from '@/features/dashboard/model';
+import { formatKg } from '@/features/history/summary-model';
 import { GrowthTotalCard } from '../GrowthTotalCard';
 import { E1RMScreen } from '../E1RMScreen';
 import { GrowthE1RMChart } from '../GrowthE1RMChart';
@@ -56,7 +56,7 @@ test('missing Total names missing lifts; all three zero-data segments offer Toda
     const today = button(t('student.growthEmptyStates.copy009'));
     expect(today).toBeDefined();
     act(() => today.props.onPress());
-    expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/today');
+    expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/training');
   }
 });
 

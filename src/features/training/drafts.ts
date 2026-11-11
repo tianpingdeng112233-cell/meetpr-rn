@@ -4,7 +4,8 @@ import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import type { WorkoutSetDraft } from './model';
 import { accessoryLogRequest, type AccessoryRow } from './accessory-quick-log';
 import type { SetLogInput } from './set-log-input';
-import { formatWeight, planSetPrescription } from './policy';
+import { decodePrescription } from '@/domain/plan/prescription';
+import { planSetPrescription } from './policy';
 
 export function synthesizeDrafts(
   planDay: PlanDay,
@@ -33,21 +34,21 @@ export function synthesizeDrafts(
               : log?.completed
                 ? 'complete'
                 : 'pending',
-            // Server decimals arrive as strings ("100.00", "8.0"); show them the way iOS does (0–2 fraction digits).
+            // Preserve saved precision: checking an exercise writes these values back.
             weightText:
-              log?.weight_kg != null
-                ? formatWeight(Number(log.weight_kg))
+              log
+                ? log.weight_kg == null ? '' : String(Number(log.weight_kg))
                 : prescription.weightKg === null
                   ? ''
-                  : formatWeight(prescription.weightKg),
+                  : String(prescription.weightKg),
             repsText: String(log?.reps ?? prescription.reps),
-            effortKind: log?.actual_rir != null ? 'rir' : 'rpe',
+            effortKind: log?.actual_rir != null || (log?.rpe == null && decodePrescription(planSet).intensity?.kind === 'rir') ? 'rir' : 'rpe',
             rpeText:
               log?.actual_rir != null ? String(log.actual_rir) : log?.rpe != null
-                ? formatWeight(Number(log.rpe))
+                ? String(Number(log.rpe))
                 : log || prescription.rpe === null
                   ? ''
-                  : formatWeight(prescription.rpe),
+                  : String(prescription.rpe),
             sourceLog: log ?? null,
           } satisfies WorkoutSetDraft;
         }),
@@ -70,8 +71,8 @@ function unprescribedDraft(exercise: PlanExercise, setIndex: number, kind: 'extr
     set_type: 'working', rest_seconds: null, coach_note: null, created_at: '' };
   return { stableSetId, kind, exercise, planSet, exerciseOrdinal, setIndex, sourceLog,
     status: sourceLog?.failed ? 'failed' : sourceLog?.completed ? 'complete' : 'pending',
-    weightText: sourceLog ? formatWeight(Number(sourceLog.weight_kg)) : '',
-    repsText: sourceLog ? String(sourceLog.reps) : '', effortKind: sourceLog?.actual_rir != null ? 'rir' : 'rpe', rpeText: sourceLog?.actual_rir != null ? String(sourceLog.actual_rir) : sourceLog?.rpe == null ? '' : formatWeight(Number(sourceLog.rpe)) };
+    weightText: sourceLog?.weight_kg != null ? String(Number(sourceLog.weight_kg)) : '',
+    repsText: sourceLog ? String(sourceLog.reps) : '', effortKind: sourceLog?.actual_rir != null ? 'rir' : 'rpe', rpeText: sourceLog?.actual_rir != null ? String(sourceLog.actual_rir) : sourceLog?.rpe == null ? '' : String(Number(sourceLog.rpe)) };
 }
 
 export function addExtraDraft(exercise: PlanExercise, drafts: readonly WorkoutSetDraft[]): WorkoutSetDraft | null {

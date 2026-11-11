@@ -1,5 +1,5 @@
 import type { PlanDay, PlanDetail, PlanSummary } from '@/api/domains/plans';
-import { gymDayRange, gymDayToday, localDateText } from './workout-date-policy';
+import { gymDayRange, localDateText } from './workout-date-policy';
 
 export function sequenceDays<
   T extends Pick<PlanDay, 'week_number' | 'day_of_week' | 'sort_order' | 'id'>,
@@ -144,8 +144,7 @@ export function dayCode(day: PlanDay, days: readonly PlanDay[]): string {
 }
 export type WorkoutDayState =
   | { kind: 'current' }
-  | { kind: 'completed'; canUndo: boolean }
-  | { kind: 'upcoming'; previousDay: PlanDay | null };
+  | { kind: 'completed'; canUndo: boolean };
 export function workoutDayState(
   days: readonly PlanDay[],
   selected: PlanDay,
@@ -156,34 +155,11 @@ export function workoutDayState(
       kind: 'completed',
       canUndo: canUndoCompletion(days, selected.id, now),
     };
-  if (cursorDay(days)?.week_number === selected.week_number) return { kind: 'current' };
-  const sorted = sequenceDays(days);
-  return {
-    kind: 'upcoming',
-    previousDay:
-      sorted[sorted.findIndex((day) => day.id === selected.id) - 1] ?? null,
-  };
+  return { kind: 'current' };
 }
 
 
 export function canWriteTrainingDay(plan: Pick<PlanDetail, 'status' | 'days'>, dayId: string): boolean {
   const selected = plan.days.find(day => day.id === dayId);
   return plan.status === 'published' && selected != null && workoutDayState(plan.days, selected).kind === 'current';
-}
-
-/** Resume today's latest real result, including student-added exercises attached to the day. */
-export function defaultTrainingDay(days: readonly PlanDay[], logs: readonly {
-  plan_exercise_id: string | null; plan_day_id?: string | null; logged_date: string;
-  logged_at: string; assumed: boolean; completed: boolean; failed: boolean;
-}[], now = new Date()): PlanDay | null {
-  const cursor = cursorDay(days);
-  const eligible = days.filter(day => !day.completed_at && day.week_number === cursor?.week_number);
-  const today = gymDayToday(now);
-  const latest = [...logs].filter(log => !log.assumed && (log.completed || log.failed) && log.logged_date === today)
-    .sort((a, b) => Date.parse(b.logged_at) - Date.parse(a.logged_at));
-  for (const log of latest) {
-    const day = eligible.find(day => log.plan_day_id === day.id || day.exercises.some(exercise => exercise.id === log.plan_exercise_id));
-    if (day) return day;
-  }
-  return cursor;
 }

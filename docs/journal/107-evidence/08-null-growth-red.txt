@@ -1,0 +1,43 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/history/__tests__/history-points.test.ts
+
+FAIL src/features/history/__tests__/history-points.test.ts
+  ✓ growth displays stored points even when their source logs are missing, retaining equal-valued days (2 ms)
+  ✓ replayed server calibration retains both RPE sources and an existing saved point is never recalculated (1 ms)
+  ✓ a coach-calibrated stored point participates using its effective RPE without rewriting the saved value
+  ✓ replay admits only eligible real logs and breaks equal timestamps by set identity (5 ms)
+  ✓ unreadable storage is never overwritten by migration (not-json)
+  ✓ unreadable storage is never overwritten by migration ({"points":null,"prs":[]})
+  ✓ unreadable storage is never overwritten by migration ({"points":[],"prs":[],"rpeTableVersions":null})
+  ✕ 107 a server-confirmed null weight retires only that set estimate, retaining orphaned history (2 ms)
+
+  ● 107 a server-confirmed null weight retires only that set estimate, retaining orphaned history
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+    +   "cleared",
+        "orphan",
+      ]
+
+      90 |   await loadGrowthHistory(repository, 'student', [log, { ...log, id: 'orphan' }], families);
+      91 |   const points = await loadGrowthHistory(repository, 'student', [{ ...log, weight_kg: null }], families);
+    > 92 |   expect(points.map(point => point.setLogId)).toEqual(['orphan']);
+         |                                               ^
+      93 |   expect((await repository.historySnapshot('student')).points.map(point => point.setLogId)).toEqual(['orphan']);
+      94 | });
+      95 |
+
+      at Object.toEqual (src/features/history/__tests__/history-points.test.ts:92:47)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+Snapshots:   0 total
+Time:        0.446 s, estimated 1 s
+Ran all test suites matching /src\/features\/history\/__tests__\/history-points.test.ts/i.

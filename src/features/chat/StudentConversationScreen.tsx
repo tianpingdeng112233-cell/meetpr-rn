@@ -1,35 +1,47 @@
-import { ChatVideoCover, type PosterSize } from './ChatVideoCover';
-import { ChatTimeSeparator, chatTimeLocale } from './ChatTimeSeparator';
-import { startConversationRealtime, useChatRealtime } from './realtime';
-import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
-import { canonicalBody, ChatSetCardPresentation, displayFirstLine, setRefBodyAllowed } from './set-ref';
-import { loadTodaySetRefCandidates, SetRefSharePicker } from './SetRefSharePicker';
-import { useSetRefStagingStore, waitForSetRefVideo, type SetRefSendIntent } from './set-ref-staging';
-import { useStudentVideos, type StudentVideo } from '@/api/domains/videos';
-import { sortedMarkers, videoMarkersRepository } from '@/api/domains/video-markers';
-import { feedbackVideoAssociation } from '@/features/feedback/video-presentation';
-import { FeedbackPlaybackSession } from '@/features/feedback/playback-session';
-import { FeedbackPlaybackModal } from '@/features/feedback/FeedbackPlaybackModal';
-import { freshPlaybackURL } from '@/features/feedback/use-feedback-playback';
-import { FeedbackVideoUnavailable, PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
-import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, View } from 'react-native';
-import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { createUUID } from '@/analytics/uuid';
 import { chatRepository, type ChatMessage, type Conversation } from '@/api/domains/chat';
-import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
-import { feedbackKeys, feedbackRepository, type FeedbackResponse, type FeedbackItem } from '@/api/domains/feedback';
-import { useQueryClient } from '@tanstack/react-query';
-import { markDashboardPlanSeen } from '@/features/dashboard/plan-seen';
-import { studentChatKeys, useStudentPlanNotice } from './open-coach-chat';
-import { feedbackCoverSize, chatTimeSeparators, mergeStudentTimeline, visibleFraction, videoLabel, type VerticalFrame, type StudentPlanNotice } from './student-timeline';
+import { feedbackKeys, feedbackRepository, type FeedbackItem, type FeedbackResponse } from '@/api/domains/feedback';
+import { sortedMarkers, videoMarkersRepository } from '@/api/domains/video-markers';
+import { useStudentVideos, type StudentVideo } from '@/api/domains/videos';
 import { useSessionStore } from '@/api/session';
 import { font, GradientFill, Screen, useColors } from '@/design';
+import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { useFeedbackInboxViewModel } from '@/features/feedback/feedback-inbox';
+import { markDashboardPlanSeen } from '@/features/chat/plan-seen';
+import { FeedbackVideoUnavailable, PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
+import { FeedbackPlaybackModal } from '@/features/feedback/FeedbackPlaybackModal';
+import { FeedbackPlaybackSession } from '@/features/feedback/playback-session';
+import { freshPlaybackURL } from '@/features/feedback/use-feedback-playback';
+import { feedbackVideoAssociation } from '@/features/feedback/video-presentation';
+import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
+import { localDate } from '@/domain/coach/detail-week';
 import { getLocale, t } from '@/i18n';
-import { createUUID } from '@/analytics/uuid';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { ActivityIndicator, AppState, Image, KeyboardAvoidingView, Modal, ScrollView, Text, TextInput, View } from 'react-native';
+import { useChatPhotos } from './chat-photos';
+import { SetRefSharePicker, loadTodaySetRefCandidates } from './SetRefSharePicker';
+import { ChatExerciseNoteCard } from './ChatExerciseNoteCard';
+import { ChatSetCard, useChatSetPlayback } from './ChatSetCard';
+import { chatTimeLocale, ChatTimeSeparator } from './ChatTimeSeparator';
+import { ChatVideoCover, type PosterSize } from './ChatVideoCover';
 import { applyReadState, CONVERSATION_POLL_MS, createConversationSync, mergeMessages } from './conversation-model';
+import { flushExerciseNotes, useExerciseNoteOutbox } from './exercise-note-outbox';
+import { studentChatKeys, useStudentPlanNotice } from './open-coach-chat';
+import { startConversationRealtime, useChatRealtime } from './realtime';
+import { canonicalBody, ChatSetCardPresentation, displayFirstLine, setRefBodyAllowed } from './set-ref';
+import { useSetRefStagingStore, waitForSetRefVideo, type SetRefSendIntent } from './set-ref-staging';
+import {
+  chatTimeSeparators,
+  feedbackCoverSize,
+  mergeStudentTimeline,
+  videoLabel,
+  visibleFraction,
+  type StudentPlanNotice,
+  type VerticalFrame,
+} from './student-timeline';
 
 export function StudentConversationScreen({ conversationId, coachName }: { conversationId: string; coachName: string }) {
   const { subscribe } = useChatRealtime();
@@ -37,6 +49,9 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const router = useRouter();
   const studentId = useSessionStore(state => state.user?.id ?? '');
   const client = useQueryClient();
+  const exerciseNotes = useExerciseNoteOutbox(state => state.notes);
+  const [coachId, setCoachId] = useState('');
+  useEffect(() => { let live = true; void chatRepository.list().then(result => { if (live) setCoachId(result.conversations.find(item => item.id === conversationId)?.other_party.id ?? ''); }).catch(() => {}); return () => { live = false; }; }, [conversationId]);
   const plan = useStudentPlanNotice(studentId);
   const inbox = useFeedbackInboxViewModel(studentId);
   const videos = useStudentVideos(studentId);
@@ -53,6 +68,15 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const { selectedShare, setSelectedShare, shareVideoError, refreshShareURL, openShareVideo } = useChatSetPlayback(conversationId, message => {
     messagesRef.current = mergeMessages(messagesRef.current, [message]);
     setMessages(messagesRef.current);
+  });
+  const [showActions, setShowActions] = useState(false);
+  const [showSetPicker, setShowSetPicker] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const loadCandidates = useCallback(() => loadTodaySetRefCandidates(studentId), [studentId]);
+  const photos = useChatPhotos(studentId, conversationId, message => {
+    messagesRef.current = mergeMessages(messagesRef.current, [message]);
+    setMessages(messagesRef.current);
+    if (mounted.current) refresh.current();
   });
   const frames = useRef(new Map<string, VerticalFrame>());
   const viewport = useRef<VerticalFrame>({ y: 0, height: 0 });
@@ -76,8 +100,6 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const staged = useSetRefStagingStore(state => state.intents[conversationId]);
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const loadCandidates = useCallback(() => loadTodaySetRefCandidates(studentId), [studentId]);
   const [sendError, setSendError] = useState('');
   const setOperations = useRef(new Map<string, { intent: SetRefSendIntent; note: string; controller: AbortController }>());
   useEffect(() => () => { for (const operation of setOperations.current.values()) operation.controller.abort(); }, []);
@@ -149,7 +171,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       const result = await sync.receive(event);
       if (live && result) { setLoadError(false); setLoading(false); }
     } });
-    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; setPickerVisible(false); sync.stop(); stopRealtime(); };
+    return () => { live = false; mounted.current = false; focusGeneration.current += 1; historyAnchor.current = null; olderLoading.current = false; sync.stop(); stopRealtime(); };
   }, [acknowledgeSetRef, client, conversationId, studentId, subscribe, updateOtherRead]));
   async function loadOlder() {
     const generation = focusGeneration.current;
@@ -282,10 +304,10 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
     new Date(), chatTimeLocale(), [...items.map(item => item.occurredAt), ...pending.map(item => item.createdAt)],
   ).map(item => [item.index, item.label]));
   const empty = !loading && !inbox.isLoading && !plan.isLoading && !loadError && !items.length && !pending.length;
-  return <Screen><KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+  return <Screen edges={['top', 'left', 'right']}><KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <View style={{ paddingHorizontal: 18, paddingTop: 4, paddingBottom: 14, borderBottomWidth: 1, borderColor: colors.borderHairline, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy001')} onPress={() => router.back()} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="chevron-left" size={20} color={colors.textPrimary} /></Pressable>
-      <View style={{ gap: 2 }}><Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>{resolvedName}</Text><Text style={{ ...font.body(11), color: colors.success }}>{t(empty ? 'student.studentBlackGoldChatView.copy002' : 'student.studentBlackGoldChatView.copy003')}</Text></View>
+      <View style={{ width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}><GradientFill direction="diagonal" stops={[{ color: colors.gold400, offset: 0 }, { color: colors.gold500, offset: 1 }]} /><Text style={{ ...font.body(20, 'bold'), color: colors.inkOnGold }}>{resolvedName.slice(0, 1)}</Text></View>
+      <View style={{ gap: 3, flex: 1 }}><Text style={{ ...font.body(22, 'bold'), color: colors.textPrimary }}>{resolvedName}</Text><Text style={{ ...font.body(12), color: colors.textSecondary }}>{t('student.coachTab.subtitle')}</Text></View>
     </View>
     <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} scrollEventThrottle={16}
       onScrollBeginDrag={() => { initialPosition.current = true; }}
@@ -304,14 +326,18 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       </View> : !ready && !items.length && !pending.length ? <ActivityIndicator color={colors.gold500} style={{ flex: 1 }} /> : null}
       {hasOlder ? historyError ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy013')} onPress={() => void loadOlder()}><Text style={{ ...font.body(13), color: colors.textMuted, textAlign: 'center' }}>{t('student.studentBlackGoldChatView.copy013')}</Text></Pressable> : <ActivityIndicator accessibilityLabel={t('student.studentBlackGoldChatView.copy024')} size="small" color={colors.gold500} style={{ paddingVertical: 8 }} /> : null}
       {items.map((item, index) => <Fragment key={item.id}><ChatTimeSeparator label={separators.get(index)} /><View testID={`student-chat-item-${item.id}`} onLayout={({ nativeEvent: { layout } }) => { frames.current.set(item.id, { y: layout.y, height: layout.height }); }}>
-        {item.kind === 'message' ? <StudentChatMessageRow message={item.message} outgoing={item.message.sender_id === studentId} read={otherReadSeq >= item.message.seq} openVideo={() => void openShareVideo(item.message)} />
-          : item.kind === 'feedback' ? <StudentFeedbackChatCard feedback={item.feedback} videos={videos.data?.videos ?? []} onPlay={() => { if (item.feedback.video_id) void playback.session.open(item.feedback.id, item.feedback.video_id); }} />
+        {item.kind === 'message' ? <StudentChatMessageRow message={item.message} outgoing={item.message.sender_id === studentId} read={otherReadSeq >= item.message.seq} openImage={() => setSelectedImage(item.message.image_url ?? null)} openVideo={() => void openShareVideo(item.message)} />
+          : item.kind === 'feedback' ? <StudentFeedbackChatCard feedback={item.feedback} videos={videos.data?.videos ?? []} onOpen={() => router.push(`/(student)/feedback/${item.feedback.id}`)} onPlay={() => { if (item.feedback.video_id) void playback.session.open(item.feedback.id, item.feedback.video_id); }} />
           : <StudentPlanChatCard notice={item.notice} onPress={async () => { await markDashboardPlanSeen(studentId, item.notice.signature); await client.cancelQueries({ queryKey: plan.queryKey }); client.setQueryData(plan.queryKey, true); router.navigate('/(student)/training'); }} />}
         {item.kind === 'feedback' && playback.errorFeedbackId === item.feedback.id ? <PlaybackLinkError /> : null}
       </View></Fragment>)}
       {shareVideoError ? <PlaybackLinkError /> : null}
+      {exerciseNotes.filter(note => note.studentId === studentId && note.coachId === coachId && !messages.some(message => message.client_id === note.clientID)).map(note => <View key={note.clientID} style={{ gap: 4 }}>
+        <ChatExerciseNoteCard student outgoing message={{ body: note.body, exercise_ref: note.exerciseRef, sender_id: studentId }} />
+        <Pressable onPress={() => void flushExerciseNotes(studentId)}><Text style={{ color: colors.textMuted, textAlign: 'right', ...font.body(12) }}>{t(note.failed ? 'chat.sendFailed' : 'student.setSync.syncing')}</Text></Pressable>
+      </View>)}
       {pending.map((item, index) => <Fragment key={item.clientId}><ChatTimeSeparator label={separators.get(items.length + index)} /><View style={{ maxWidth: '76%', alignSelf: 'flex-end', alignItems: 'flex-end', gap: 4 }}>
-        <Text style={{ ...font.body(14, 'medium'), color: colors.bgBase, backgroundColor: `${colors.textPrimary}B8`, paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: 5 }}>{getLocale() === 'zh-Hant' && item.setIntent?.displayExerciseName
+        <Text style={{ ...font.body(14, 'medium'), color: colors.textPrimary, backgroundColor: colors.goldSoft, paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: 5 }}>{getLocale() === 'zh-Hant' && item.setIntent?.displayExerciseName
           ? displayFirstLine(item.setIntent.setRef, item.setIntent.displayExerciseName) + item.text.slice(canonicalBody(item.setIntent.setRef).length)
           : item.text}</Text>
         <Pressable accessibilityRole="button" disabled={!item.failed} onPress={() => send(item)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -319,7 +345,13 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
           <Text style={{ ...font.mono(10, item.failed ? 'bold' : 'regular'), color: item.failed ? colors.danger : colors.textDim }}>{t(item.failed ? 'student.studentBlackGoldChatView.copy026' : 'student.studentBlackGoldChatView.copy025')}</Text>
         </Pressable>
       </View></Fragment>)}
+      {photos.photos.filter(photo => !messages.some(message => message.client_id === photo.clientId)).map(photo => <View key={photo.clientId} style={{ alignSelf: 'flex-end', gap: 4 }}><PhotoBubble uri={photo.uri} width={photo.width} height={photo.height} onPress={() => setSelectedImage(photo.uri)} /><Pressable accessibilityRole="button" disabled={photos.sending !== null} onPress={() => void photos.send(photo)}><Text style={{ ...font.body(12), color: colors.textSecondary }}>{t(photos.sending === photo.clientId ? 'student.studentBlackGoldChatView.copy025' : 'student.studentBlackGoldChatView.copy026')}</Text></Pressable></View>)}
     </ScrollView>
+    {showActions ? <Pressable feedback="none" accessibilityLabel={t('chat.close')} onPress={() => setShowActions(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 80, justifyContent: 'flex-end', padding: 16 }}>
+      <View style={{ borderRadius: 16, backgroundColor: colors.surfaceCard, borderColor: colors.borderStrong, borderWidth: 1, padding: 8 }}>
+        {(['camera', 'video'] as const).map(kind => <Pressable key={kind} accessibilityRole="button" accessibilityLabel={t(kind === 'camera' ? 'student.coachTab.takePhoto' : 'student.coachTab.shareVideo')} onPress={() => { setShowActions(false); if (kind === 'camera') void photos.takePhoto(); else setShowSetPicker(true); }} style={{ minHeight: 48, flexDirection: 'row', gap: 12, alignItems: 'center', paddingHorizontal: 12 }}><MaterialCommunityIcons name={kind === 'camera' ? 'camera-outline' : 'video-outline'} size={20} color={colors.textPrimary} /><Text style={{ ...font.body(15), color: colors.textPrimary }}>{t(kind === 'camera' ? 'student.coachTab.takePhoto' : 'student.coachTab.shareVideo')}</Text></Pressable>)}
+      </View>
+    </Pressable> : null}
     <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, borderTopWidth: 1, borderColor: colors.borderHairline }}>
       {staged ? <View style={{ gap: 6, paddingBottom: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -330,27 +362,31 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
         <View style={{ flexDirection: 'row', gap: 8 }}><Text style={{ ...font.mono(10), color: setRefBodyAllowed(stagedBody) ? colors.textDim : colors.danger, flex: 1 }}>{!setRefBodyAllowed(stagedBody) ? t('student.studentBlackGoldChatView.copy005') : sendError}</Text><Text style={{ ...font.mono(10), color: colors.textDim }}>{stagedBody.length}/4000</Text></View>
       </View> : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy006')} disabled={Boolean(staged)} onPress={() => setPickerVisible(true)} hitSlop={5} style={{ width: 34, height: 34, marginBottom: 6, borderRadius: 17, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="plus" size={16} color={colors.textSecondary} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('student.coachTab.add')} onPress={() => setShowActions(value => !value)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceCard, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="plus" size={24} color={colors.textPrimary} /></Pressable>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', borderRadius: 20, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfaceCard, paddingLeft: 16, paddingRight: 6 }}>
-        <TextInput accessibilityLabel={t('student.studentBlackGoldChatView.copy008')} placeholder={t(staged && !staged.autoSend ? 'student.studentBlackGoldChatView.copy009' : 'student.studentBlackGoldChatView.copy008')} placeholderTextColor={colors.textGhost} multiline maxLength={4000} value={draft} onChangeText={text => { draftRef.current = text.slice(0, 4000); setDraft(draftRef.current); }} style={{ ...font.body(14), color: colors.textPrimary, flex: 1, lineHeight: 20, maxHeight: 122, paddingVertical: 11 }} />
-        <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy007')} disabled={!canSend} onPress={sendDraft} style={{ width: 34, height: 34, marginVertical: 6, borderRadius: 17, backgroundColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center', opacity: canSend ? 1 : 0.55 }}><MaterialCommunityIcons name="arrow-up" size={18} color={colors.ctaTopHighlight} /></Pressable>
+        <TextInput accessibilityLabel={t('student.studentBlackGoldChatView.copy008')} placeholder={staged && !staged.autoSend ? t('student.studentBlackGoldChatView.copy009') : t('student.coachTab.placeholder', [resolvedName])} placeholderTextColor={colors.textGhost} multiline maxLength={4000} value={draft} onChangeText={text => { draftRef.current = text.slice(0, 4000); setDraft(draftRef.current); }} style={{ ...font.body(14), color: colors.textPrimary, flex: 1, lineHeight: 20, maxHeight: 122, paddingVertical: 11 }} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy007')} disabled={!canSend} onPress={sendDraft} style={{ width: 34, height: 34, marginVertical: 6, borderRadius: 17, overflow: 'hidden', backgroundColor: colors.gold500, alignItems: 'center', justifyContent: 'center', opacity: canSend ? 1 : 0.55 }}><GradientFill direction="vertical" stops={[{ color: colors.gold400, offset: 0 }, { color: colors.gold500, offset: 1 }]} /><MaterialCommunityIcons name="arrow-up" size={18} color={colors.ctaTopHighlight} /></Pressable>
       </View>
     </View>
     </View>
-    {pickerVisible ? <SetRefSharePicker conversationId={conversationId} loadCandidates={loadCandidates} onClose={() => setPickerVisible(false)} /> : null}
+    {photos.failed ? <Text accessibilityRole="alert" style={{ paddingHorizontal: 16, ...font.body(12), color: colors.danger }}>{t('chat.sendFailed')}</Text> : null}
+    {showSetPicker ? <SetRefSharePicker conversationId={conversationId} loadCandidates={loadCandidates} onClose={() => setShowSetPicker(false)} /> : null}
+    {photos.preview ? <Modal visible animationType="slide" onRequestClose={photos.discardPreview}><Screen><View style={{ flex: 1, padding: 16, gap: 16 }}><Image source={{ uri: photos.preview.uri }} resizeMode="contain" style={{ flex: 1 }} /><View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>{[{ label: t('designSystem.action.cancel'), action: photos.discardPreview }, { label: t('student.coachTab.retake'), action: () => void photos.takePhoto() }, { label: t('student.studentBlackGoldChatView.copy007'), action: () => void photos.send(photos.preview!) }].map(item => <Pressable key={item.label} accessibilityRole="button" disabled={photos.sending !== null} onPress={item.action} style={{ minHeight: 48, justifyContent: 'center', padding: 12 }}><Text style={{ ...font.body(16, 'bold'), color: colors.goldText }}>{item.label}</Text></Pressable>)}</View></View></Screen></Modal> : null}
+    {selectedImage ? <Modal visible onRequestClose={() => setSelectedImage(null)}><Screen><Pressable accessibilityRole="button" accessibilityLabel={t('chat.close')} onPress={() => setSelectedImage(null)} style={{ padding: 16, alignSelf: 'flex-end' }}><MaterialCommunityIcons name="close" size={24} color={colors.textPrimary} /></Pressable><Image source={{ uri: selectedImage }} resizeMode="contain" style={{ flex: 1 }} /></Screen></Modal> : null}
     <FeedbackPlaybackModal item={playback.playbackItem} session={playback.session} />
     {selectedShare?.video_url ? <Modal visible animationType="slide" onRequestClose={() => setSelectedShare(null)}><FeedbackVideoPlayer videoId={selectedShare.id} url={selectedShare.video_url} refreshURL={() => refreshShareURL(selectedShare)} onClose={() => setSelectedShare(null)} /></Modal> : null}
   </KeyboardAvoidingView></Screen>;
 }
 
-function StudentChatMessageRow({ message, outgoing, read, openVideo }: { message: ChatMessage; outgoing: boolean; read: boolean; openVideo?: () => void }) {
+function StudentChatMessageRow({ message, outgoing, read, openVideo, openImage }: { message: ChatMessage; outgoing: boolean; read: boolean; openImage: () => void; openVideo?: () => void }) {
   const colors = useColors();
+  if (message.kind === 'image') return <View style={{ alignSelf: outgoing ? 'flex-end' : 'flex-start' }}><PhotoBubble uri={message.image_url} onPress={openImage} /></View>;
+  if (message.exercise_ref) return <ChatExerciseNoteCard message={message} outgoing={outgoing} student />;
   const presentation = ChatSetCardPresentation(message);
   if (presentation) return <ChatSetCard note={presentation.note} reference={presentation.setRef} message={message} outgoing={outgoing} read={read} openVideo={openVideo} />;
   return <View style={{ maxWidth: '76%', alignSelf: outgoing ? 'flex-end' : 'flex-start', alignItems: outgoing ? 'flex-end' : 'flex-start', gap: 4 }}>
-    <View style={{ paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: outgoing ? 5 : 16, borderBottomLeftRadius: outgoing ? 16 : 5, backgroundColor: outgoing ? colors.textPrimary : colors.surfaceElevated, flexDirection: 'row', gap: 6 }}>
-      {message.kind === 'image' ? <MaterialCommunityIcons name="image" size={18} color={outgoing ? colors.bgBase : colors.textPrimary} /> : null}
-      <Text selectable style={{ flexShrink: 1, ...font.body(14, outgoing ? 'medium' : 'regular'), lineHeight: 14 * 1.45, color: outgoing ? colors.bgBase : colors.textPrimary }}>{message.kind === 'image' ? t('student.studentBlackGoldChatView.copy018') : message.body}</Text>
+    <View style={{ paddingHorizontal: 14, paddingVertical: 11, borderRadius: 16, borderBottomRightRadius: outgoing ? 5 : 16, borderBottomLeftRadius: outgoing ? 16 : 5, backgroundColor: outgoing ? colors.goldSoft : colors.surfaceCard, flexDirection: 'row', gap: 6 }}>
+      <Text selectable style={{ flexShrink: 1, ...font.body(14, outgoing ? 'medium' : 'regular'), lineHeight: 14 * 1.45, color: colors.textPrimary }}>{message.body}</Text>
     </View>
     {outgoing ? <Text style={{ ...font.mono(10), color: colors.textDim }}>{t(read ? 'student.studentBlackGoldChatView.copy016' : 'student.studentBlackGoldChatView.copy017')}</Text> : null}
   </View>;
@@ -359,11 +395,14 @@ function StudentChatMessageRow({ message, outgoing, read, openVideo }: { message
 // In-memory only: keep a video's ratio across card/screen remounts and signed URL renewal.
 const feedbackPosterSizes = new Map<string, PosterSize>();
 
-function StudentFeedbackChatCard({ feedback, videos, onPlay }: { feedback: FeedbackItem; videos: readonly StudentVideo[]; onPlay: () => void }) {
+function StudentFeedbackChatCard({ feedback, videos, onPlay, onOpen }: { feedback: FeedbackItem; videos: readonly StudentVideo[]; onPlay: () => void; onOpen: () => void }) {
   const colors = useColors();
   const association = feedbackVideoAssociation(feedback.video_id, videos, feedback.video);
   const video = association.kind === 'available' ? association.video : null;
   const explicitlyUnavailable = feedback.video !== undefined && association.kind === 'unavailable';
+  const studentId = useSessionStore(state => state.user?.id ?? '');
+  const markers = useQuery({ queryKey: ['chat-feedback-markers', studentId, feedback.video_id], queryFn: () => videoMarkersRepository.list(feedback.video_id!), enabled: Boolean(feedback.video_id) && !explicitlyUnavailable, staleTime: 60_000 });
+  const date = new Intl.DateTimeFormat(getLocale(), { month: 'numeric', day: 'numeric', weekday: 'short' }).format(feedback.day_date ? localDate(feedback.day_date) : new Date(feedback.posted_at));
   const videoId = video?.id;
   const posterURL = video?.poster_url;
   const [posterResult, setPosterResult] = useState<{ videoId: string; url: string; size: PosterSize | null } | null>(null);
@@ -379,35 +418,25 @@ function StudentFeedbackChatCard({ feedback, videos, onPlay }: { feedback: Feedb
     }
     setPosterResult({ videoId, url: posterURL, size });
   }
-  return <View onLayout={({ nativeEvent: { layout } }) => setAvailableWidth(Math.max(0, layout.width - 26))}
-    style={{ width: '88%', alignSelf: 'flex-start', backgroundColor: colors.surfaceCard, borderRadius: 16, borderTopLeftRadius: 5, borderBottomLeftRadius: 5, overflow: 'hidden', paddingHorizontal: 13, paddingVertical: 12, gap: 9 }}>
-    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: colors.gold500 }} />
+  return <Pressable testID={`feedback-detail-${feedback.id}`} accessibilityRole="button" onPress={onOpen} onLayout={({ nativeEvent: { layout } }) => setAvailableWidth(Math.max(0, layout.width - 26))}
+    style={{ width: '88%', alignSelf: 'flex-start', backgroundColor: colors.surfaceCard, borderRadius: 16, overflow: 'hidden', paddingHorizontal: 13, paddingVertical: 12, gap: 9 }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.gold500 }} />
-      <Text style={{ ...font.body(13, 'bold'), color: colors.textPrimary, flex: 1 }}>{t('student.studentBlackGoldChatView.copy022')}</Text>
-      {feedback.read_at == null ? <Text style={{ ...font.mono(9, 'bold'), letterSpacing: 0.72, color: colors.inkOnGold, backgroundColor: colors.goldText, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 20 }}>{t('student.studentBlackGoldChatView.copy023')}</Text> : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}><MaterialCommunityIcons name="check" size={11} color={colors.goldText} /><Text style={{ ...font.mono(11), color: colors.goldText }}>{t('student.studentBlackGoldChatView.copy016')}</Text></View>}
+      {feedback.read_at == null ? <View testID={`feedback-unread-${feedback.id}`} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.dangerFill }} /> : null}
+      <Text style={{ ...font.body(12), color: colors.textSecondary, flex: 1 }}>{[t('student.studentBlackGoldChatView.copy022'), date, video ? videoLabel(video) : null].filter(Boolean).join(' · ')}</Text>
     </View>
-    {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={onPlay} style={{ height: coverSize.height, width: coverSize.width || '100%', alignSelf: 'flex-start', borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+    <Text style={{ ...font.body(15), color: colors.textPrimary, lineHeight: 22 }}>{feedback.text}</Text>
+    {explicitlyUnavailable ? <FeedbackVideoUnavailable /> : feedback.video_id ? <Pressable accessibilityRole="button" accessibilityLabel={t('chat.playVideo')} onPress={event => { event?.stopPropagation(); onPlay(); }} style={{ height: coverSize.height, width: coverSize.width || '100%', alignSelf: 'flex-start', borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
       <GradientFill direction="diagonal" stops={[{ color: colors.borderStrong, offset: 0 }, { color: colors.surfaceCard, offset: 1 }]} />
       <ChatVideoCover posterURL={posterURL} durationSeconds={video?.duration_seconds} onPosterSize={onPosterSize} />
-      <View style={{ position: 'absolute', top: 8, left: 9, right: 9, alignItems: 'flex-start' }}>
-        <Text numberOfLines={coverSize.height === 240 ? 1 : undefined} ellipsizeMode="tail" style={{ maxWidth: '100%', ...font.mono(11), color: colors.ctaTopHighlight, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>{videoLabel(video)}</Text>
-      </View>
+      {markers.data?.markers.length ? <Text style={{ position: 'absolute', right: 8, bottom: 8, ...font.body(12), color: colors.ctaTopHighlight, backgroundColor: colors.modalShadow, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 }}>{t('student.coachTab.annotations', [markers.data.markers.length])}</Text> : null}
     </Pressable> : null}
-    <Text style={{ ...font.body(14), color: colors.textPrimary, lineHeight: 21 }}>{feedback.text}</Text>
-  </View>;
+  </Pressable>;
 }
 
 function StudentPlanChatCard({ notice, onPress }: { notice: StudentPlanNotice; onPress: () => Promise<void> }) {
   const colors = useColors();
-  return <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy020')} onPress={onPress} style={{ width: '88%', flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13, backgroundColor: colors.surfaceCard, borderColor: colors.borderStrong, borderWidth: 1, borderRadius: 16, borderBottomLeftRadius: 5 }}>
-    <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="calendar" size={20} color={colors.textSecondary} /></View>
-    <View style={{ flex: 1, gap: 2, alignItems: 'flex-start' }}>
-      <Text style={{ ...font.mono(9, 'bold'), letterSpacing: 0.9, color: colors.goldText, backgroundColor: colors.chatPlanBadgeFill, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20 }}>{t('student.studentBlackGoldChatView.copy019')}</Text>
-      <Text style={{ ...font.body(14.5, 'bold'), color: colors.textPrimary, marginTop: 3 }}>{t('student.studentBlackGoldChatView.copy020')}</Text>
-      <Text style={{ ...font.body(12), color: colors.textMuted }}>{t('student.studentBlackGoldChatView.copy021', [notice.weekIndex])}</Text>
-    </View>
-    <MaterialCommunityIcons name="chevron-right" size={16} color={colors.textDim} />
+  return <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy020')} onPress={onPress} style={{ alignSelf: 'center', maxWidth: '100%', paddingHorizontal: 14, paddingVertical: 13, backgroundColor: colors.surfaceCard, borderColor: colors.borderSubtle, borderWidth: 1, borderRadius: 14 }}>
+    <Text style={{ ...font.body(13), color: colors.textSecondary, textAlign: 'center' }}>{t('student.coachTab.planPublished', [notice.weekIndex])}</Text>
   </Pressable>;
 }
 
@@ -444,4 +473,13 @@ function useStudentChatPlayback() {
   useFocusEffect(useCallback(() => () => session.close(), [session]));
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   return { ...state, session, markRead };
+}
+
+function PhotoBubble({ uri, width = 4, height = 3, onPress }: { uri?: string | null; width?: number; height?: number; onPress: () => void }) {
+  const colors = useColors();
+  const [size, setSize] = useState({ width, height });
+  const scale = 240 / Math.max(size.width, size.height, 1);
+  return <Pressable accessibilityRole="button" accessibilityLabel={t('chat.image')} onPress={onPress} style={{ width: size.width * scale, height: size.height * scale, borderRadius: 16, overflow: 'hidden', backgroundColor: colors.surfaceCard }}>
+    {uri ? <Image source={{ uri }} resizeMode="contain" onLoad={({ nativeEvent: { source } }) => { if (source.width > 0 && source.height > 0) setSize({ width: source.width, height: source.height }); }} style={{ width: '100%', height: '100%' }} /> : <Text style={{ color: colors.textSecondary }}>{t('chat.imageUnavailable')}</Text>}
+  </Pressable>;
 }

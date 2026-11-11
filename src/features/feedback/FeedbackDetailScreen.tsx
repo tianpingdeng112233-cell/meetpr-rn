@@ -6,7 +6,7 @@ import { useSessionStore } from '@/api/session';
 import { useStudentVideos } from '@/api/domains/videos';
 import { font, radius, Screen, spacing, useColors } from '@/design';
 import { getLocale, t } from '@/i18n';
-import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
+import { useFeedbackInboxViewModel } from '@/features/feedback/feedback-inbox';
 import { FeedbackEmpty, FeedbackHeader, FeedbackLoadError, FeedbackLoading, FeedbackVideoCard, FeedbackVideoUnavailable, PlaybackLinkError } from './FeedbackComponents';
 import { FeedbackPlaybackModal } from './FeedbackPlaybackModal';
 import { useFeedbackPlayback } from './use-feedback-playback';

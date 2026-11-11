@@ -1,0 +1,12 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/chat/__tests__/student-timeline.test.ts src/features/chat/__tests__/set-ref.test.ts
+
+PASS src/features/chat/__tests__/set-ref.test.ts
+PASS src/features/chat/__tests__/student-timeline.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       32 passed, 32 total
+Snapshots:   0 total
+Time:        0.585 s, estimated 1 s
+Ran all test suites matching /src\/features\/chat\/__tests__\/student-timeline.test.ts|src\/features\/chat\/__tests__\/set-ref.test.ts/i.

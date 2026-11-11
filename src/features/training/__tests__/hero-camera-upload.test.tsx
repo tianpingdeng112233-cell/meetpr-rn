@@ -1,23 +1,19 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Alert, Modal, Text } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
+import { authenticatedRequest, useSessionStore } from '@/api/session';
 import { setLocaleOverride, t } from '@/i18n';
-import { SetEntryRPEScale } from '../SetEntryRPEScale';
-import { NumberPad } from '@/design';
-import { deleteLocalVideo } from '../video-upload/native';
-import { FeedbackPressable } from '@/design/FeedbackPressable';
-import { TodayWorkoutView } from '../TodayWorkoutView';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Alert } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { SetEntrySheet } from '../SetEntrySheet';
-import { WorkoutBody } from '../WorkoutBody';
+import { TodayWorkoutView } from '../TodayWorkoutView';
 import { CameraRecorder } from '../video-upload/CameraRecorder';
 import { VIDEO_UPLOAD_CONSENT_KEY } from '../video-upload/model';
-import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
+import { deleteLocalVideo } from '../video-upload/native';
+import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../video-upload/store';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
@@ -130,61 +126,28 @@ afterEach(async () => {
 });
 
 const record = () => useVideoUploadStore.getState().records[`${studentId}:${plan.days[0].exercises[0].sets[0].id}`];
-const texts = () => renderer.root.findAllByType(Text).map(node => node.props.children);
 
-const openCamera = async () => {
+const openCamera = async (week = 1) => {
   await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
   await mount();
-  await act(async () => {
-    const body = renderer.root.findByType(WorkoutBody);
-    body.props.onVideo(body.props.drafts[0]);
-  });
-  expect(renderer.root.findByType(SetEntrySheet).props.initialCamera).toBe(true);
-  await act(async () => { renderer.root.findByType(SetEntrySheet).findByType(Modal).props.onShow(); });
+  if (week === 2) await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Next week' && node.props.onPress)[0].props.onPress());
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${plan.days[0].exercises[0].id}` && node.props.onPress)[0].props.onPress());
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001') && node.props.onPress)[0].props.onPress());
   expect(renderer.root.findAllByType(CameraRecorder)).toHaveLength(1);
 };
 
-test.each(['during camera', 'after capture'])('Hero initialCamera first upload resumes with prefill arriving %s', async timing => {
-  let finishProfile!: (profile: unknown) => void;
-  profileResponse = new Promise(resolve => { finishProfile = resolve; });
-  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0], sets: [{
-    ...plan.days[0].exercises[0].sets[0], load_mode: 'pct', intensity_mode: null, target_value: '80', target_pct: '80',
-  }] }] }] };
-  await openCamera();
-  if (timing === 'after capture') {
-    await act(async () => { renderer.root.findByType(CameraRecorder).props.onUse('file:///cache/captured.mp4'); });
-    expect(record()?.source?.uri).toBe('file:///documents/captured.mp4');
-    expect(writes).toBe(0);
-  }
-  await act(async () => { finishProfile({ squat_1rm_kg: '100', squat_stance: 'low_bar' }); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(renderer.root.findByType(SetEntrySheet).props.suggestion).toMatchObject({ weightKg: 80 });
-  if (timing === 'during camera') await act(async () => { renderer.root.findByType(CameraRecorder).props.onUse('file:///cache/captured.mp4'); });
-  // Include the exact user-facing failure in the red output, not merely an API count.
-  expect({ status: record()?.status, error: record()?.errorMessage, copy004: texts().includes(t('student.todayWorkoutViewModelRecordingError.copy004')) })
-    .toEqual({ status: 'uploaded', error: null, copy004: false });
+test.each<['weight' | 'free_weight', number]>([['weight', 1], ['free_weight', 1], ['weight', 2], ['free_weight', 2]])('107 camera uploads with %s in W%s without opening set entry or requiring weight', async (mode, week) => {
+  if (mode === 'free_weight') servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0], sets: [{ ...plan.days[0].exercises[0].sets[0], load_mode: mode, intensity_mode: null, target_value: null }] }] }] };
+  if (week === 2) servedPlan = { ...servedPlan, days: [
+    { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', exercises: [] },
+    { ...servedPlan.days[0], week_number: 2 },
+  ] };
+  await openCamera(week);
+  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
+  expect(renderer.root.findByType(CameraRecorder).props.onLibrary).toEqual(expect.any(Function));
+  await act(async () => renderer.root.findByType(CameraRecorder).props.onUse('file:///cache/captured.mp4'));
+  expect(record()).toMatchObject({ status: 'uploaded', errorMessage: null });
   expect(writes).toBe(1);
-});
-
-
-test('empty free weight keeps the captured video and gives a prompt until the athlete enters weight', async () => {
-  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0], sets: [{
-    ...plan.days[0].exercises[0].sets[0], load_mode: 'free_weight', intensity_mode: null, target_value: null,
-  }] }] }] };
-  await openCamera();
-  await act(async () => { renderer.root.findByType(CameraRecorder).props.onUse('file:///cache/captured.mp4'); });
-  expect(writes).toBe(0);
-  expect(record()).toMatchObject({ status: 'failed', source: { uri: 'file:///documents/captured.mp4' }, logRequest: null });
-  expect(texts()).toContain(t('loadTypes.missingWeight', [1]));
+  expect(storedLogs[0]).toMatchObject({ weight_kg: mode === 'weight' ? '80' : null, reps: 5, rpe: null });
   expect(deleteLocalVideo).not.toHaveBeenCalledWith('file:///documents/captured.mp4');
-  await act(async () => { renderer.root.findByType(SetEntryRPEScale).props.onChange(6.5); });
-  expect(writes).toBe(0);
-  await act(async () => {
-    renderer.root.findByType(SetEntrySheet).findAllByType(FeedbackPressable)
-      .find(node => node.props.accessibilityLabel === t('loadTypes.requiredWeight', ['kg']))!.props.onPress();
-  });
-  await act(async () => { renderer.root.findByType(NumberPad).props.onCommit(92.5); });
-  expect(record()?.status).toBe('uploaded');
-  expect(storedLogs).toHaveLength(1);
-  expect(storedLogs[0]).toMatchObject({ weight_kg: '92.5', reps: 5, rpe: '6.5' });
 });

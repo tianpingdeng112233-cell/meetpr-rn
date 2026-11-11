@@ -25,12 +25,14 @@ const clockText = (seconds: number) =>
     .toString()
     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 type CameraRecorderProps = {
+  onLibrary?: () => void;
   onClose: () => void;
   onUse: (uri: string, savedToPhotos?: boolean) => void;
   maxDurationSeconds?: number;
 };
 
 export function CameraRecorder({
+  onLibrary,
   onClose,
   onUse,
   maxDurationSeconds = VIDEO_MAX_DURATION_SECONDS,
@@ -344,6 +346,7 @@ export function CameraRecorder({
             />
           ) : null}
           {!review ? toolbar : null}
+          {!review && !recording && onLibrary ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.videoAttachmentV3Controls.copy002')} onPress={onLibrary} style={{ position: 'absolute', left: 20, bottom: 40, zIndex: 2, padding: 12 }}><MaterialCommunityIcons name="image-outline" size={26} color={colors.inkOnCTAFill} /><Text style={{ color: colors.inkOnCTAFill }}>{t('student.videoAttachmentV3Controls.copy002')}</Text></Pressable> : null}
           {review ? <View pointerEvents="box-none" style={{ position: 'absolute', bottom: spacing.base, left: spacing.base, right: spacing.base, alignItems: 'center', gap: spacing.space2 }}>
             <TrimPlayButton playing={playing} disabled={using} onPress={() => { if (!usingRef.current) toggle(); }} />
             {trimHintVisible && !hintClosed && !dragging && status === 'ready' ? <View style={{ alignSelf: 'stretch', borderRadius: radius.sm, backgroundColor: colors.surfaceRaised, padding: spacing.space2 }}>

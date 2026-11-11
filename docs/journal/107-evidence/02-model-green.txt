@@ -1,0 +1,12 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-sheet.test.ts
+
+PASS src/features/training/__tests__/all-day-sheet.test.ts
+  ✓ all-day sheet preserves old actuals and prefills only RPE-only weights from the server suggestion (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        1.151 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

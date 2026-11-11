@@ -1,0 +1,342 @@
+diff --git a/src/domain/plan/__tests__/sequence.test.ts b/src/domain/plan/__tests__/sequence.test.ts
+index 99eec23..9be1ecc 100644
+--- a/src/domain/plan/__tests__/sequence.test.ts
++++ b/src/domain/plan/__tests__/sequence.test.ts
+@@ -1,7 +1,6 @@
+ import { test, expect } from '@jest/globals';
+ import {
+   workoutDayState,
+-  defaultTrainingDay,
+   canWriteTrainingDay,
+   canUndoCompletion,
+   weekDayOrdinals,
+@@ -115,7 +114,7 @@ test('selects published_at newest, breaking ties by created_at then id, ignoring
+   expect(selectCurrentPlan([a, { ...a, id: 'z' }])?.id).toBe('z');
+   expect(selectCurrentPlan([{ ...a, status: 'draft' }])).toBeNull();
+ });
+-test('other weeks are read-only and only latest completion within the undo window can undo', () => {
++test('unsettled weeks are trainable and only latest completion within the undo window can undo', () => {
+   const now = new Date(2026, 8, 5, 12);
+   const days = [
+     day('a', { completed_at: now.toISOString() }),
+@@ -132,10 +131,7 @@ test('other weeks are read-only and only latest completion within the undo windo
+     canUndo: true,
+   });
+   expect(workoutDayState(days, days[2], now)).toEqual({ kind: 'current' });
+-  expect(workoutDayState(days, days[3], now)).toMatchObject({
+-    kind: 'upcoming',
+-    previousDay: { id: 'c' },
+-  });
++  expect(workoutDayState(days, days[3], now)).toEqual({ kind: 'current' });
+ });
+ test('published instants with different UTC offsets are compared as instants', () => {
+   expect(
+@@ -176,26 +172,17 @@ test('weekly labels count completed training days, not weekday slots, and reorde
+ });
+ 
+ 
+-test('every unsettled day in the cursor week is writable, other weeks and unpublished plans are not', () => {
++test('every unsettled day is writable regardless of week; settled days and unpublished plans are not', () => {
+   const days = [day('past', { completed_at: done }), day('d2', { week_number: 2 }), day('d4', { week_number: 2, day_of_week: 4 }), day('next', { week_number: 3 })];
+   expect(workoutDayState(days, days[2])).toEqual({ kind: 'current' });
+-  expect(days.map(d => canWriteTrainingDay(plan(days), d.id))).toEqual([false, true, true, false]);
+-  expect(canWriteTrainingDay(plan(days, { status: 'paused' }), 'd4')).toBe(false);
++  expect(days.map(d => canWriteTrainingDay(plan(days), d.id))).toEqual([false, true, true, true]);
++  for (const status of ['draft', 'paused', 'completed'] as const) {
++    expect(canWriteTrainingDay(plan(days, { status }), 'd4')).toBe(false);
++    expect(canWriteTrainingDay(plan(days, { status }), 'next')).toBe(false);
++  }
+   expect(canWriteTrainingDay(plan(days), 'missing')).toBe(false);
+ });
+ 
+-test('default returns to latest real log in the gym-day and resets across 04:00', () => {
+-  const days = [day('d2', { exercises: [{ id: 'e2', plan_day_id: 'd2', exercise_id: 'squat', is_main_lift: true, sort_order: 0, notes: null, sets: [] }] }), day('d4', { day_of_week: 4 })];
+-  const logs = [
+-    { plan_exercise_id: 'e2', plan_day_id: null, logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 18).toISOString(), assumed: false, completed: true, failed: false },
+-    { plan_exercise_id: null, plan_day_id: 'd4', logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 19).toISOString(), assumed: false, completed: true, failed: false },
+-  ];
+-  expect(defaultTrainingDay(days, logs, new Date(2026, 9, 15, 3, 59))?.id).toBe('d4');
+-  expect(defaultTrainingDay(days, logs, new Date(2026, 9, 15, 4))?.id).toBe('d2');
+-  expect(defaultTrainingDay(days, logs.map(l => ({ ...l, assumed: true })), new Date(2026, 9, 14, 20))?.id).toBe('d2');
+-  expect(defaultTrainingDay([days[0], { ...days[1], completed_at: done }], logs, new Date(2026, 9, 14, 20))?.id).toBe('d2');
+-});
+-
+ test('out-of-order completion can only undo the latest actual completion', () => {
+   const now = new Date(2026, 9, 14, 20);
+   const days = [day('d2', { completed_at: new Date(2026, 9, 14, 19).toISOString() }), day('d4', { day_of_week: 4, completed_at: new Date(2026, 9, 14, 18).toISOString() })];
+diff --git a/src/domain/plan/sequence.ts b/src/domain/plan/sequence.ts
+index e56d55c..c3b96e5 100644
+--- a/src/domain/plan/sequence.ts
++++ b/src/domain/plan/sequence.ts
+@@ -1,5 +1,5 @@
+ import type { PlanDay, PlanDetail, PlanSummary } from '@/api/domains/plans';
+-import { gymDayRange, gymDayToday, localDateText } from './workout-date-policy';
++import { gymDayRange, localDateText } from './workout-date-policy';
+ 
+ export function sequenceDays<
+   T extends Pick<PlanDay, 'week_number' | 'day_of_week' | 'sort_order' | 'id'>,
+@@ -144,8 +144,7 @@ export function dayCode(day: PlanDay, days: readonly PlanDay[]): string {
+ }
+ export type WorkoutDayState =
+   | { kind: 'current' }
+-  | { kind: 'completed'; canUndo: boolean }
+-  | { kind: 'upcoming'; previousDay: PlanDay | null };
++  | { kind: 'completed'; canUndo: boolean };
+ export function workoutDayState(
+   days: readonly PlanDay[],
+   selected: PlanDay,
+@@ -156,13 +155,7 @@ export function workoutDayState(
+       kind: 'completed',
+       canUndo: canUndoCompletion(days, selected.id, now),
+     };
+-  if (cursorDay(days)?.week_number === selected.week_number) return { kind: 'current' };
+-  const sorted = sequenceDays(days);
+-  return {
+-    kind: 'upcoming',
+-    previousDay:
+-      sorted[sorted.findIndex((day) => day.id === selected.id) - 1] ?? null,
+-  };
++  return { kind: 'current' };
+ }
+ 
+ 
+@@ -170,20 +163,3 @@ export function canWriteTrainingDay(plan: Pick<PlanDetail, 'status' | 'days'>, d
+   const selected = plan.days.find(day => day.id === dayId);
+   return plan.status === 'published' && selected != null && workoutDayState(plan.days, selected).kind === 'current';
+ }
+-
+-/** Resume today's latest real result, including student-added exercises attached to the day. */
+-export function defaultTrainingDay(days: readonly PlanDay[], logs: readonly {
+-  plan_exercise_id: string | null; plan_day_id?: string | null; logged_date: string;
+-  logged_at: string; assumed: boolean; completed: boolean; failed: boolean;
+-}[], now = new Date()): PlanDay | null {
+-  const cursor = cursorDay(days);
+-  const eligible = days.filter(day => !day.completed_at && day.week_number === cursor?.week_number);
+-  const today = gymDayToday(now);
+-  const latest = [...logs].filter(log => !log.assumed && (log.completed || log.failed) && log.logged_date === today)
+-    .sort((a, b) => Date.parse(b.logged_at) - Date.parse(a.logged_at));
+-  for (const log of latest) {
+-    const day = eligible.find(day => log.plan_day_id === day.id || day.exercises.some(exercise => exercise.id === log.plan_exercise_id));
+-    if (day) return day;
+-  }
+-  return cursor;
+-}
+diff --git a/src/features/training/TodayWorkoutView.tsx b/src/features/training/TodayWorkoutView.tsx
+index a8a4dd1..430ef6f 100644
+--- a/src/features/training/TodayWorkoutView.tsx
++++ b/src/features/training/TodayWorkoutView.tsx
+@@ -10,7 +10,6 @@ import {
+   completedToday,
+   cursorDay,
+   dayCode,
+-  defaultTrainingDay,
+   planLogRange,
+   recommendedDate,
+   selectCurrentPlan,
+@@ -204,7 +203,7 @@ export function TodayWorkoutView() {
+   );
+   const orderedDays = sequenceDays(plan?.days ?? []);
+   const cursor = cursorDay(orderedDays);
+-  const initialDayID = completedToday(orderedDays, clockNow)?.id ?? defaultTrainingDay(orderedDays, logs, clockNow)?.id;
++  const initialDayID = cursor?.id ?? completedToday(orderedDays, clockNow)?.id;
+   if (trainingVisible && requestedDayID === null && serverLogs && initialDayID) setRequestedDayID(initialDayID);
+   const weekStrip = trainingWeekStrip(plan, requestedDayID ?? initialDayID, today);
+   const viewedWeek = weekStrip.week;
+@@ -546,7 +545,7 @@ export function TodayWorkoutView() {
+           t('student.setEntrySheet.copy010'),
+           t('student.todayWorkoutScreen.copy024'),
+         );
+-        throw new Error('Selected day is no longer current');
++        throw new Error('Selected day is no longer writable');
+       }
+       const logDate = !input.quickLogDate && draft.sourceLog && !isLocalSetId(draft.sourceLog.id)
+         ? draft.sourceLog.logged_date
+@@ -749,7 +748,7 @@ export function TodayWorkoutView() {
+   };
+ 
+   const emptyState = studentEmptyState(plan);
+-  // Keep the completed day and its undo visible after finishing or reopening today.
++  // Keep an explicitly selected completed day and its undo visible after finishing.
+   const showEmpty = state.kind === 'noPlan' || (state.kind === 'loaded' && emptyState !== null && !completedToday(orderedDays, clockNow) && requestedDayID === null);
+   const realDrafts = liveDrafts.filter(
+     (draft) => draft.sourceLog && !draft.sourceLog.assumed,
+diff --git a/src/features/training/__tests__/all-day-view.test.tsx b/src/features/training/__tests__/all-day-view.test.tsx
+index 5043f9d..cacc866 100644
+--- a/src/features/training/__tests__/all-day-view.test.tsx
++++ b/src/features/training/__tests__/all-day-view.test.tsx
+@@ -15,6 +15,7 @@ import { NumberPad } from '@/design/NumberPad';
+ import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
+ import { ChatExerciseNoteCard } from '@/features/chat/ChatExerciseNoteCard';
+ import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
++import { CoachDayDetailView } from '@/features/coach/student-detail/CoachDayDetailView';
+ import { setLocaleOverride, t, type Locale } from '@/i18n';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+ import { useFocusEffect } from 'expo-router';
+@@ -24,6 +25,7 @@ import { TrainingWeekStrip } from '../TrainingWeekStrip';
+ import { AllDayBody } from '../AllDayBody';
+ import { StudentExercisePicker } from '../StudentExercisePicker';
+ import { HoldToCompleteButton } from '../HoldToCompleteButton';
++import { VideoAttachmentControls } from '../video-upload/VideoAttachmentControls';
+ import { resetVideoUploadStoreForTests } from '../video-upload/store';
+ 
+ 
+@@ -141,6 +143,87 @@ test('107 long hold records untouched prescriptions before completing the day',
+   expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+ });
+ 
++test('acceptance 16: W2 can be edited, checked and completed while W1 remains unsettled', async () => {
++  const dayId = '40000000-0000-4000-8000-000000000002';
++  const exerciseId = '50000000-0000-4000-8000-000000000002';
++  const later = { ...plan.days[0], id: dayId, week_number: 2, exercises: [{
++    ...plan.days[0].exercises[0], id: exerciseId, plan_day_id: dayId,
++    sets: [{ ...plan.days[0].exercises[0].sets[0], id: '70000000-0000-4000-8000-000000000002', plan_exercise_id: exerciseId }],
++  }] };
++  servedPlan = { ...plan, days: [...plan.days, later] };
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
++    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: 'coach' } } as never;
++    if (path === `/plans/days/${dayId}/complete`) {
++      const completed_at = new Date().toISOString();
++      servedPlan = { ...servedPlan, days: servedPlan.days.map(day => day.id === dayId ? { ...day, completed_at } : day) };
++      return { id: 'completion', plan_day_id: dayId, student_id: studentId, source: 'manual', completed_at } as never;
++    }
++    return original(path, options);
++  });
++  await mount();
++  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
++  await press('Next week');
++  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(1);
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exerciseId}` && node.props.onPress)[0].props.onPress());
++  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(1);
++  expect(renderer.root.findByType(VideoAttachmentControls).props.editable).toBe(true);
++  await press('Edit set 1');
++  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('85'));
++  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
++  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
++    .toMatchObject({ plan_exercise_id: exerciseId, weight_kg: '85' });
++  const pressText = async (label: string) => {
++    await act(async () => renderer.root.findAll(node => node.props.onPress && node.findAllByType(Text).some(text => text.props.children === label))[0].props.onPress());
++  };
++  await pressText(t('student.added.addSet'));
++  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(2);
++  await pressText(t('student.added.addExercise'));
++  expect(renderer.root.findAllByType(StudentExercisePicker)).toHaveLength(1);
++  await act(async () => renderer.root.findByType(StudentExercisePicker).props.onClose());
++  await act(async () => renderer.root.findAll(node => node.props.onPress && String(node.props.accessibilityLabel).startsWith('Message coach ·'))[0].props.onPress());
++  expect(renderer.root.findByType(ExerciseNoteSheet).props.reference.plan_day_id).toBe(dayId);
++  await act(async () => renderer.root.findByType(ExerciseNoteSheet).props.onClose());
++  await press('Complete exercise');
++  expect(renderer.root.findAllByProps({ testID: `all-day-check-${exerciseId}` })[0].props.accessibilityState.checked).toBe(true);
++  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
++  expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
++  const strip = renderer.root.findByType(TrainingWeekStrip).props.strip;
++  expect(strip.selectedDay).toMatchObject({ id: dayId, completed_at: expect.any(String) });
++  expect(strip.todayDay.id).toBe(plan.days[0].id);
++  expect(servedPlan.days[0].completed_at).toBeUndefined();
++  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(0);
++  expect(Alert.alert).not.toHaveBeenCalled();
++  await act(async () => renderer.unmount());
++  await mount();
++  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
++  await act(async () => renderer.update(<CoachDayDetailView
++    day={{ date: new Date(), planDay: servedPlan.days[1], logs: [] }} planDays={servedPlan.days}
++    exerciseName={() => 'Squat'} onClose={() => {}} />));
++  expect(copy()).toContain(`W2D1 · ${t('coach.detail.completed')}`);
++});
++
++test.each<[number, number, boolean]>([[1, 0, true], [2, 0, true], [2, 8, false]])(
++  'settled W%s remains read-only with a %s-day-old completion (undo %s)', async (week, age, undo) => {
++    const completed_at = new Date(Date.now() - age * 86_400_000).toISOString();
++    const settled = { ...plan.days[0], week_number: week, completed_at };
++    const open = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', week_number: 2, day_of_week: 4, exercises: [] };
++    servedPlan = { ...plan, days: [settled, open] };
++    await mount();
++    await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(settled.id));
++    await expandFirst();
++    expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(0);
++    expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(0);
++    expect(renderer.root.findAll(node => node.props.onPress && node.props.accessibilityRole === 'checkbox')).toHaveLength(0);
++    expect(renderer.root.findAll(node => node.props.onPress && node.props.accessibilityLabel === 'Edit set 1').every(node => node.props.disabled)).toBe(true);
++    expect(copy()).not.toContain(t('student.added.addSet'));
++    expect(copy()).not.toContain(t('student.added.addExercise'));
++    expect(copy().includes(t('student.todayWorkoutScreen.copy023'))).toBe(undo);
++    expect(jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
++  },
++);
++
+ 
+ test('107 row fields remain reachable while the keypad is open and only the edited row changes', async () => {
+   servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0], sets: [plan.days[0].exercises[0].sets[0], { ...plan.days[0].exercises[0].sets[0], id: '70000000-0000-4000-8000-000000000001', set_number: 2 }] }] }] };
+diff --git a/src/features/training/__tests__/hero-camera-upload.test.tsx b/src/features/training/__tests__/hero-camera-upload.test.tsx
+index 0691eb7..f1169f4 100644
+--- a/src/features/training/__tests__/hero-camera-upload.test.tsx
++++ b/src/features/training/__tests__/hero-camera-upload.test.tsx
+@@ -127,17 +127,22 @@ afterEach(async () => {
+ 
+ const record = () => useVideoUploadStore.getState().records[`${studentId}:${plan.days[0].exercises[0].sets[0].id}`];
+ 
+-const openCamera = async () => {
++const openCamera = async (week = 1) => {
+   await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
+   await mount();
++  if (week === 2) await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Next week' && node.props.onPress)[0].props.onPress());
+   await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${plan.days[0].exercises[0].id}` && node.props.onPress)[0].props.onPress());
+   await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001') && node.props.onPress)[0].props.onPress());
+   expect(renderer.root.findAllByType(CameraRecorder)).toHaveLength(1);
+ };
+ 
+-test.each(['weight', 'free_weight'] as const)('107 camera uploads with %s without opening set entry or requiring weight', async mode => {
++test.each<['weight' | 'free_weight', number]>([['weight', 1], ['free_weight', 1], ['weight', 2], ['free_weight', 2]])('107 camera uploads with %s in W%s without opening set entry or requiring weight', async (mode, week) => {
+   if (mode === 'free_weight') servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0], sets: [{ ...plan.days[0].exercises[0].sets[0], load_mode: mode, intensity_mode: null, target_value: null }] }] }] };
+-  await openCamera();
++  if (week === 2) servedPlan = { ...servedPlan, days: [
++    { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', exercises: [] },
++    { ...servedPlan.days[0], week_number: 2 },
++  ] };
++  await openCamera(week);
+   expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
+   expect(renderer.root.findByType(CameraRecorder).props.onLibrary).toEqual(expect.any(Function));
+   await act(async () => renderer.root.findByType(CameraRecorder).props.onUse('file:///cache/captured.mp4'));
+diff --git a/src/features/training/__tests__/quick-log-entry.test.tsx b/src/features/training/__tests__/quick-log-entry.test.tsx
+index c5d9e62..bb19d67 100644
+--- a/src/features/training/__tests__/quick-log-entry.test.tsx
++++ b/src/features/training/__tests__/quick-log-entry.test.tsx
+@@ -111,13 +111,12 @@ test('107 retired training entry points are unreachable and all exercise rows st
+   expect(exerciseRows.every(node => node.props.accessibilityState.expanded === false)).toBe(true);
+ });
+ 
+-test('107 a future week is read only and previous week returns to editable rows', async () => {
++test('107 unsettled future and previous weeks both allow row editing', async () => {
+   servedPlan = { ...plan, days: [plan.days[0], { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', week_number: 2 }] };
+   await mount();
+   await press('Next week');
+   await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
+-  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === true).length).toBeGreaterThan(0);
+-  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false)).toHaveLength(0);
++  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false).length).toBeGreaterThan(0);
+   await press('Previous week');
+   await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
+   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false).length).toBeGreaterThan(0);
+diff --git a/src/features/training/__tests__/set-save.test.tsx b/src/features/training/__tests__/set-save.test.tsx
+index afe0f4e..4eba4b4 100644
+--- a/src/features/training/__tests__/set-save.test.tsx
++++ b/src/features/training/__tests__/set-save.test.tsx
+@@ -329,7 +329,7 @@ test('extra and student-added saves retain their identities and card date across
+   expect(requests.at(-1)?.logged_date).toBe('2026-10-15');
+ });
+ 
+-test('restored non-cursor selection stays on the open day across 04:00 and a new visit returns to the cursor', async () => {
++test('opening defaults to the cursor despite recent logs; explicit selection survives 04:00 until the next visit', async () => {
+   const d4 = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000004', day_of_week: 4,
+     exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000004', plan_day_id: '40000000-0000-4000-8000-000000000004' }] };
+   servedPlan = { ...plan, days: [...plan.days, d4] };
+@@ -337,6 +337,8 @@ test('restored non-cursor selection stays on the open day across 04:00 and a new
+   storedLogs = [{ id: '80000000-0000-4000-8000-000000000004', student_id: studentId, plan_exercise_id: d4.exercises[0].id, exercise_id: d4.exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 20).toISOString() }];
+   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
+   for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
++  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
++  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(d4.id));
+   expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(d4.id);
+   await act(async () => { await jest.advanceTimersByTimeAsync(120_000); });
+   for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });

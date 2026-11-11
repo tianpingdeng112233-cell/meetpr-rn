@@ -44,6 +44,7 @@ export function decodePrescription(set: PlanSet): Prescription {
   const mode = effectiveLoadMode(set);
   if (mode === 'bodyweight' || mode === 'free_weight') {
     result.loadMode = mode;
+    if (mode === 'bodyweight') result.weightKg = numeric(set.target_weight);
     for (const [kind, raw] of [['rpe', set.target_rpe], ['rir', set.rir_target], ['pct', set.target_pct]] as const) {
       const value = numeric(raw);
       if (value !== undefined) { result.intensity = { kind, value }; break; }
@@ -99,6 +100,12 @@ export function decodePrescription(set: PlanSet): Prescription {
         low,
         high,
       };
+  }
+  if (set.load_mode === 'fixed_weight') {
+    const rpe = numeric(set.target_rpe);
+    const rir = numeric(set.rir_target);
+    if (rpe !== undefined) result.intensity = { kind: 'rpe', value: rpe };
+    else if (rir !== undefined) result.intensity = { kind: 'rir', value: rir };
   }
   return result;
 }

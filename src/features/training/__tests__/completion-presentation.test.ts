@@ -63,9 +63,9 @@ test.each<[string, string, 'copy010' | 'copy011' | 'copy012']>([
   expect(workoutCompletionPresentation({ ...input, drafts: drafts.map(draft => ({ ...draft, rpeText })) })).toMatchObject({ mainRPEText, planComparisonText: t(`student.workoutCompletionPresentation.${key}`) });
 });
 
-test('missing actuals fall back to prescription; pending sets and absent RPE stay absent', () => {
+test('legacy missing weight and reps use prescription but absent RPE stays absent', () => {
   const fallback = { ...drafts[0], weightText: '', repsText: '', rpeText: '', planSet: set({ load_mode: 'rpe', target_weight: '100.25', target_rpe: '8' }) };
-  expect(workoutCompletionPresentation({ ...input, drafts: [fallback] })).toMatchObject({ totalVolumeText: '501.25', totalReps: 5, mainRPEText: '8', averageRPEText: '8.0', setCompletionLabel: t('student.workoutCompletionPresentation.copy006') });
+  expect(workoutCompletionPresentation({ ...input, drafts: [fallback] })).toMatchObject({ totalVolumeText: '501.25', totalReps: 5, mainRPEText: '—', averageRPEText: '—', setCompletionLabel: t('student.workoutCompletionPresentation.copy006') });
   expect(workoutCompletionPresentation({ ...input, drafts: [{ ...fallback, planSet: set({ target_value: '100' }) }] })).toMatchObject({ mainRPEText: '—', averageRPEText: '—', planComparisonText: t('student.workoutCompletionPresentation.copy009') });
   const pending = workoutCompletionPresentation({ ...input, drafts: drafts.map(draft => ({ ...draft, status: 'pending' })) });
   expect(pending).toMatchObject({ completedSetCount: 0, totalVolumeText: '0', mainRPEText: '—', planComparisonText: t('student.workoutCompletionPresentation.copy009') });
@@ -77,10 +77,10 @@ test('rehydrated review uses precise recorded decimals before UI-rounded draft t
   expect(workoutCompletionPresentation({ ...input, drafts: synthesizeDrafts(planDay, logs) })).toMatchObject({ totalVolumeText: '501.25', mainRPEText: '8.3', exercises: [expect.objectContaining({ bestSetText: '100.25kg × 5 @8.25' }), expect.anything()] });
 });
 
-test('a recorded set without actual RPE falls back to the unrounded prescription', () => {
+test('a recorded set without actual RPE remains empty', () => {
   const prescribedDay = { ...planDay, exercises: [{ ...main, sets: [set({ intensity_mode: 'rpe', target_value: '8.25' })] }] };
   const logs = [{ id: 'log', student_id: 'student', plan_exercise_id: 'main', exercise_id: 'squat', set_index: 0, weight_kg: '100', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-09', logged_at: '2026-09-09T12:00:00Z' }];
-  expect(workoutCompletionPresentation({ ...input, planDay: prescribedDay, drafts: synthesizeDrafts(prescribedDay, logs) }).exercises[0].bestSetText).toBe('100kg × 5 @8.25');
+  expect(workoutCompletionPresentation({ ...input, planDay: prescribedDay, drafts: synthesizeDrafts(prescribedDay, logs) }).exercises[0].bestSetText).toBe('100kg × 5 @—');
 });
 
 test('extra work contributes actual volume without inflating prescription completion totals', () => {

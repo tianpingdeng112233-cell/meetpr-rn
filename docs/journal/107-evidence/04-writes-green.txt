@@ -1,0 +1,14 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-sheet.test.ts
+
+PASS src/features/training/__tests__/all-day-sheet.test.ts
+  ✓ all-day sheet preserves old actuals and prefills only RPE-only weights from the server suggestion (1 ms)
+  ✓ completion writes every untouched group including null weight, and exercise completion also updates old records
+  ✓ a deliberately empty recorded weight stays empty instead of restoring the prescription on upgrade
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.421 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

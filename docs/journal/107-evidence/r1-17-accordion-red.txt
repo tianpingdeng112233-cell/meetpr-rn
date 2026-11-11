@@ -1,0 +1,78 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-view.test.tsx
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/AllDayBody.tsx:14:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:31:1)
+      at Object.require (src/features/training/__tests__/all-day-view.test.tsx:10:1)
+
+FAIL src/features/training/__tests__/all-day-view.test.tsx
+  ✕ 107 tapping a row edits in place and checking an exercise collapses its rows (217 ms)
+  ✓ 107 long hold records untouched prescriptions before completing the day (119 ms)
+  ✓ 107 row fields remain reachable while the keypad is open and only the edited row changes (106 ms)
+  ✓ 107 exercise note queues offline and retries canonical text plus exercise_ref without set_ref or video (71 ms)
+  ✓ changing the selected day closes the old row editor (69 ms)
+  ✓ switching accounts drains the new outbox while the previous account request is pending (22 ms)
+  ✓ exercise note wire body preserves the original student text after the canonical header
+  ✕ single expanded exercise, repeated name indentation, manual collapse and check reset do not conflate viewing with saving (33 ms)
+
+  ● 107 tapping a row edits in place and checking an exercise collapses its rows
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "1×5"
+    Received array: ["W1", "󰍥", "1", "󰅁", "Tue", "1", "Wed", "2", "Thu", "3", …]
+
+      114 |   await press('Complete exercise');
+      115 |   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1')).toHaveLength(0);
+    > 116 |   expect(copy()).toContain('1×5');
+          |                  ^
+      117 |   expect(copy()).toContain('80');
+      118 |   await press('Expand exercise');
+      119 |   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1').length).toBeGreaterThan(0);
+
+      at Object.toContain (src/features/training/__tests__/all-day-view.test.tsx:116:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● single expanded exercise, repeated name indentation, manual collapse and check reset do not conflate viewing with saving
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      229 |   await mount();
+      230 |   const row = (id: string) => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0];
+    > 231 |   const isExpanded = (id: string) => row(id).props.accessibilityState.expanded;
+          |                                             ^
+      232 |   expect(isExpanded(first.id)).toBe(true); expect(isExpanded(second.id)).toBe(false);
+      233 |   expect(renderer.root.findAll(node => node.type === Text && node.props.testID === `all-day-name-${second.id}`)).toHaveLength(0);
+      234 |   await act(async () => row(second.id).props.onPress());
+
+      at isExpanded (src/features/training/__tests__/all-day-view.test.tsx:231:45)
+      at Object.isExpanded (src/features/training/__tests__/all-day-view.test.tsx:232:10)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 6 passed, 8 total
+Snapshots:   0 total
+Time:        1.628 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-view.test.tsx/i.

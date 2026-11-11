@@ -1,0 +1,58 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-sheet.test.ts
+
+FAIL src/features/training/__tests__/all-day-sheet.test.ts
+  ✓ all-day sheet preserves old actuals and prefills only RPE-only weights from the server suggestion (2 ms)
+  ✓ completion writes every untouched group including null weight, and exercise completion also updates old records
+  ✓ a deliberately empty recorded weight stays empty instead of restoring the prescription on upgrade
+  ✓ coach as-prescribed matching accepts ranges and distinguishes empty weight from zero (1 ms)
+  ✓ 107 provisional backend fixture preserves nullable logs and the suggestion wire shape (1 ms)
+  ✓ upgrade and exercise completion retain precise saved weight and effort
+  ✕ only the first unfinished exercise expands by default, independent of completion and repeated names (2 ms)
+
+  ● only the first unfinished exercise expands by default, independent of completion and repeated names
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+        Array [
+          false,
+          "current",
+    -     false,
+    +     undefined,
+        ],
+        Array [
+    -     true,
+    +     false,
+          "pending",
+    -     true,
+    +     undefined,
+        ],
+        Array [
+    -     true,
+    -     "pending",
+          false,
+    +     "pending",
+    +     undefined,
+        ],
+      ]
+
+      66 |   const planned = day('day', { exercises: [exercise, second, third] });
+      67 |   expect(buildAllDaySheet(planned, [], []).exercises.map(block => [block.collapsed, block.node, block.repeatName]))
+    > 68 |     .toEqual([[false, 'current', false], [true, 'pending', true], [true, 'pending', false]]);
+         |      ^
+      69 |   const checked = new Set(['exercise']);
+      70 |   expect(buildAllDaySheet(planned, [], [], { completedExercises: checked }).exercises.map(block => [block.collapsed, block.node]))
+      71 |     .toEqual([[true, 'complete'], [false, 'current'], [true, 'pending']]);
+
+      at Object.toEqual (src/features/training/__tests__/all-day-sheet.test.ts:68:6)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 passed, 7 total
+Snapshots:   0 total
+Time:        0.436 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

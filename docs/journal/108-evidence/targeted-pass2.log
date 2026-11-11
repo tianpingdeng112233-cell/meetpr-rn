@@ -1,0 +1,65 @@
+PASS src/features/chat/__tests__/student-conversation-screen.test.tsx
+FAIL src/features/training/__tests__/completion-entry.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/AllDayBody.tsx:14:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:33:1)
+      at Object.require (src/features/training/__tests__/completion-entry.test.tsx:6:1)
+
+  ● completed-day banner opens review directly and reflection survives reopening
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      91 | const completedRow = () => renderer.root.findAll(node => node.props.testID === 'training.completedDay');
+      92 | const press = async (label: string) => {
+    > 93 |   await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0].props.onPress(); });
+         |                                                                                                                                                 ^
+      94 | };
+      95 | afterEach(async () => {
+      96 |   act(() => renderer?.unmount());
+
+      at src/features/training/__tests__/completion-entry.test.tsx:93:145
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at src/features/training/__tests__/completion-entry.test.tsx:93:12
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/training/__tests__/completion-entry.test.tsx:92:12)
+      at Object.press (src/features/training/__tests__/completion-entry.test.tsx:128:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/features/history/__tests__/e1rm-screen.test.tsx
+PASS src/features/history/__tests__/growth-screen.test.tsx
+PASS src/navigation/__tests__/BindGate.test.tsx
+
+Test Suites: 1 failed, 4 passed, 5 total
+Tests:       1 failed, 113 passed, 114 total
+Snapshots:   0 total
+Time:        5.245 s
+Ran all test suites matching /src\/features\/history\/__tests__\/growth-screen.test.tsx|src\/features\/training\/__tests__\/completion-entry.test.tsx|src\/features\/chat\/__tests__\/student-conversation-screen.test.tsx|src\/navigation\/__tests__\/BindGate.test.tsx|src\/features\/history\/__tests__\/e1rm-screen.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

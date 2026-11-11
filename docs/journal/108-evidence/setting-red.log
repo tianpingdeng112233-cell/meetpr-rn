@@ -1,0 +1,20 @@
+FAIL src/features/settings/__tests__/daily-weight.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../daily-weight' from 'src/features/settings/__tests__/daily-weight.test.ts'
+
+      1 | import { expect, jest, test } from '@jest/globals';
+    > 2 | import { readDailyWeight, writeDailyWeight } from '../daily-weight';
+        | ^
+      3 | jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+      4 | test('daily weight defaults off and persists separately per account', async () => {
+      5 |   expect(await readDailyWeight('first')).toBe(false);
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (src/features/settings/__tests__/daily-weight.test.ts:2:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.248 s
+Ran all test suites matching /src\/features\/settings\/__tests__\/daily-weight.test.ts/i.

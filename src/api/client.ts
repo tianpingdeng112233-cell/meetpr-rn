@@ -80,6 +80,8 @@ export const KNOWN_BACKEND_ERROR_CODES = [
   'BIND_REQUEST_NOT_FOUND',
   'BIND_REQUEST_NOT_PENDING',
   'ONBOARDING_NOT_FOUND',
+  'BODY_WEIGHT_DATE_OUT_OF_RANGE',
+  'BODY_WEIGHT_NOT_FOUND',
   'ONE_RM_LOCKED',
   'ONBOARDING_INCOMPLETE',
   'PASSWORD_MISMATCH',
@@ -143,6 +145,7 @@ export async function apiRequest<T = unknown>(
   const headers: Record<string, string> = {
     accept: 'application/json',
     'X-MeetPR-Locale': getLocaleHeader(),
+    'X-MeetPR-Caps': 'set-weight-nullable',
   };
 
   if (options.body !== undefined) {

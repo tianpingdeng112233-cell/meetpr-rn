@@ -7,8 +7,8 @@ const CANONICAL = { logged: '[训练分享]', planned: '[训练计划]', ordinal
 function repsText(ref: ChatSetRef): string {
   return ref.repsMax != null ? `${ref.reps}-${ref.repsMax}` : String(ref.reps ?? '-');
 }
-function metrics(ref: ChatSetRef): string {
-  return `${ref.weightKg ?? '-'}kg×${repsText(ref)}${ref.rpe == null ? '' : ` @RPE${ref.rpe}`} (${ref.dayDate})`;
+function metrics(ref: ChatSetRef, emptyWeight = '-'): string {
+  return `${ref.weightKg ?? emptyWeight}kg×${repsText(ref)}${ref.rpe == null ? '' : ` @RPE${ref.rpe}`} (${ref.dayDate})`;
 }
 export function canonicalFirstLine(ref: ChatSetRef): string {
   return `${CANONICAL[ref.source]} ${ref.exerciseName} ${CANONICAL.ordinal}${ref.setNumber}${CANONICAL.set}${ref.setTotal == null ? '' : `/${ref.setTotal}`}${ref.source === 'planned' ? CANONICAL.plannedMarker : ''} ${metrics(ref)}`;
@@ -19,7 +19,7 @@ export function canonicalBody(ref: ChatSetRef, note?: string | null): string {
 }
 export function displayFirstLine(ref: ChatSetRef, exerciseName = ref.exerciseName): string {
   const position = ref.setTotal == null ? t('chat.setPosition %@', [ref.setNumber]) : t('chat.setPosition %@ of %@', [ref.setNumber, ref.setTotal]);
-  return `${t(ref.source === 'logged' ? 'chat.setReference.loggedTag' : 'chat.setReference.plannedTag')} ${exerciseName} ${position}${ref.source === 'planned' ? t('chat.setReference.plannedMarker') : ''} ${metrics(ref)}`;
+  return `${t(ref.source === 'logged' ? 'chat.setReference.loggedTag' : 'chat.setReference.plannedTag')} ${exerciseName} ${position}${ref.source === 'planned' ? t('chat.setReference.plannedMarker') : ''} ${metrics(ref, '—')}`;
 }
 export type SetRefSource = Omit<ChatSetRef, 'v'> & { v?: 1 };
 export function normalizeSetRef(source: SetRefSource): ChatSetRef {

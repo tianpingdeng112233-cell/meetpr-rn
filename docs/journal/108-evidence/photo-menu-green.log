@@ -1,0 +1,68 @@
+FAIL src/features/chat/__tests__/student-conversation-screen.test.tsx
+  ✕ empty conversation invites a message to the coach and shows tonight online (99 ms)
+  ✓ shows both sides and marks my bubble read when the coach read cursor covers it (31 ms)
+  ✓ unread coach feedback is present in the conversation with its unread badge (27 ms)
+  ✓ opening the new plan persists its seen signature and goes to Training (27 ms)
+  ✓ sending text clears the composer and shows the confirmed message (34 ms)
+  ✓ failed sends retain their text and retry with the same idempotency key (33 ms)
+  ✓ initial load failure offers retry and can recover to the empty conversation (29 ms)
+  ✓ reading the latest message updates the shared unread cache immediately (26 ms)
+  ✓ header opens the bound coach once and navigates with conversation ID and name (22 ms)
+  ✓ the visible history sentinel requests older messages without discarding the loaded page (30 ms)
+  ✓ valid training shares render their metrics and note, invalid snapshots fall back to ordinary text (28 ms)
+  ✓ feedback becomes read only when at least 55 percent of its height is visible, once per card (59 ms)
+  ✓ initial scroll aligns the first unread feedback bottom, and prepending history preserves the visible message (28 ms)
+  ✓ header counts the unseen plan plus feedback plus only the bound coach conversation (32 ms)
+  ✓ opening failure noCoach uses the matching iOS alert (23 ms)
+  ✓ opening failure binding uses the matching iOS alert (23 ms)
+  ✓ opening failure network uses the matching iOS alert (24 ms)
+  ✓ returning to foreground drains all incremental pages and reads their latest sequence (29 ms)
+  ✓ a feedback video opens the shared player with W3-a markers and unknown duration (67 ms)
+  ✓ a Global feedback chat card and its player keep the embedded English exercise name (47 ms)
+  ✓ explicit unavailable feedback metadata does not offer another playback: null (26 ms)
+  ✓ explicit unavailable feedback metadata does not offer another playback: {"exercise_name": "Other clip", "id": "30000000-0000-4000-8000-000000000000", "set_index": 0} (27 ms)
+  ✓ staged composer accepts an optional note, sends the canonical body and clears on success (33 ms)
+  ✓ uploading share waits, then sends the selected video; HTTP retries keep body and client id (35 ms)
+  ✓ waiting upload failed never sends a wrong video and can be discarded (31 ms)
+  ✓ waiting upload removed never sends a wrong video and can be discarded (31 ms)
+  ✓ waiting upload replaced never sends a wrong video and can be discarded (38 ms)
+  ✓ oversized staged body disables sending and shows the canonical-inclusive UTF-16 count (27 ms)
+  ✓ an upload session can renew its remote attachment id without replacing the selected local video (32 ms)
+  ✓ poll acknowledgement clears a staged send whose HTTP response was lost (29 ms)
+  ✓ a coach without a display name renders a localized fallback ("") (36 ms)
+  ✓ a coach without a display name renders a localized fallback ("   ") (36 ms)
+  ✓ time separators include pending sends and collapse the old first separator when history arrives (40 ms)
+  ✓ a loaded portrait feedback poster uses a left-aligned 240dp cover and remembers it on reentry (105 ms)
+  ✓ feedback video uses wire poster and duration, falls back on failure, and accepts a refreshed URL (51 ms)
+  ✓ shared set video uses wire poster and duration, falls back on failure, and accepts a refreshed URL (37 ms)
+  ✓ feedback video with no poster or duration keeps playback and hides the badge (26 ms)
+  ✓ shared set video with no poster or duration keeps playback and hides the badge (26 ms)
+  ✓ acknowledging a send at 2026-11-06T19:04:59 keeps its group when the server clock crosses five minutes (31 ms)
+  ✓ acknowledging a send at 2026-11-06T19:05:01 keeps its group when the server clock crosses five minutes (33 ms)
+  ✓ 108 Coach composer shows only camera and today set-video actions and keeps its draft (28 ms)
+
+  ● empty conversation invites a message to the coach and shows tonight online
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "● Online tonight"
+    Received array: ["A", "Alex", "Feedback, messages and plan updates", "󰍥", "Say hello to Alex", "Send a message below", "󰁅", "󰐕", "󰁝"]
+
+      89 |   await renderScreen();
+      90 |   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy014', ['Alex']));
+    > 91 |   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy002'));
+         |                  ^
+      92 |   expect(chatRepository.read).not.toHaveBeenCalled();
+      93 | });
+      94 |
+
+      at Object.toContain (src/features/chat/__tests__/student-conversation-screen.test.tsx:91:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 40 passed, 41 total
+Snapshots:   0 total
+Time:        2.096 s, estimated 3 s
+Ran all test suites matching /src\/features\/chat\/__tests__\/student-conversation-screen.test.tsx/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

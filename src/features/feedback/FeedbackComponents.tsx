@@ -11,7 +11,7 @@ export function FeedbackHeader({ detail = false }: { detail?: boolean }) {
   const colors = useColors();
   const router = useRouter();
   return <View style={[styles.header, { borderBottomColor: colors.borderHairline }]}>
-    <IconButton haptic="none" accessibilityLabel={t('student.feedbackInboxView.copy005')} onPress={() => router.canGoBack() ? router.back() : router.replace('/(student)/today')}
+    <IconButton haptic="none" accessibilityLabel={t('student.feedbackInboxView.copy005')} onPress={() => router.canGoBack() ? router.back() : router.replace('/(student)/chat')}
       icon={props => <MaterialCommunityIcons name="arrow-left" {...props} />} />
     <View style={{ flex: 1, gap: spacing.point2 }}>
       <Text style={{ ...font.body(16, 'bold'), color: colors.textPrimary }}>{t(detail ? 'student.feedbackDetailView.copy003' : 'student.feedbackInboxView.copy006')}</Text>

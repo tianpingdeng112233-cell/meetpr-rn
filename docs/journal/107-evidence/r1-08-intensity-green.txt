@@ -1,0 +1,26 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+PASS src/features/training/__tests__/exercise-summary.test.ts
+  ✓ per-set weights compress only consecutive equal weights
+  ✓ different rep sections keep weights paired in prescription order
+  ✓ weight range preserves the written prescription
+  ✓ rep range preserves the written prescription (1 ms)
+  ✓ AMRAP preserves the written prescription
+  ✓ bodyweight preserves the written prescription
+  ✓ bodyweight plus load preserves the written prescription
+  ✓ free weight and effort uses the intensity style
+  ✓ uniform RPE uses the intensity style
+  ✓ RPE range uses the intensity style
+  ✓ RIR uses the intensity style (1 ms)
+  ✓ 2A varying RPE stays verbatim even when historical weight suggestions exist
+  ✓ 1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets
+  107 one-line prescription table
+    ✓ uniform weight: 4×8 130 (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        0.538 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

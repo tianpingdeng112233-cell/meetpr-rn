@@ -1,7 +1,16 @@
 import { afterEach, expect, test } from '@jest/globals';
 import type { ChatSetRef } from '@/api/domains/chat';
 import { setLocaleOverride } from '@/i18n';
-import { buildCandidates, SetRefPickerPresentation, canonicalFirstLine, canonicalBody, displayFirstLine, normalizeSetRef, setRefBodyAllowed, ChatSetCardPresentation } from '../set-ref';
+import {
+  buildCandidates,
+  SetRefPickerPresentation,
+  canonicalFirstLine,
+  canonicalBody,
+  displayFirstLine,
+  normalizeSetRef,
+  setRefBodyAllowed,
+  ChatSetCardPresentation,
+} from '../set-ref';
 import { day, set } from '@/domain/plan/test-fixtures';
 import type { SetLog } from '@/api/domains/sets';
 import { synthesizeDrafts } from '@/features/training/drafts';
@@ -124,4 +133,10 @@ test.each([
   const copy = displayFirstLine(normalizeSetRef(candidates[0].source));
   expect(copy).not.toContain('RPE10');
   if ('target_rpe' in fields) expect(copy).toContain('RPE8');
+});
+
+
+test('null weight uses a dash in display copy without rewriting the frozen historical protocol', () => {
+  expect(displayFirstLine({ ...logged, weightKg: null })).toContain('—kg');
+  expect(canonicalFirstLine({ ...logged, weightKg: null })).toContain('-kg');
 });

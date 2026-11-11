@@ -1,0 +1,3 @@
+src/features/training/__tests__/all-day-view.test.tsx(217,107): error TS2322: Type '{ v: number; exercise_name: string; day_date: string; plan_day_id: string; plan_exercise_id: string; exercise_id: string; }' is not assignable to type '{ v: 1; exercise_name: string; day_date: string; plan_day_id: string | null; plan_exercise_id: string | null; exercise_id: string; }'.
+  Types of property 'v' are incompatible.
+    Type 'number' is not assignable to type '1'.

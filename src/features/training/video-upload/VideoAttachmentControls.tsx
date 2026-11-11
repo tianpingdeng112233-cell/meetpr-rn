@@ -23,6 +23,7 @@ import { deleteLocalVideo, pickTrainingVideo, VideoNativeError, type VideoSource
 import { preserveVideoAttachment, selectVideoUpload, useVideoUploadStore } from './store';
 
 type Props = {
+  compact?: boolean;
   badge?: VideoBadgeInfo | null;
   initialCamera?: boolean;
   inputReady?: boolean;
@@ -63,6 +64,7 @@ function promptConsent(input: {
 }
 
 export function VideoAttachmentControls({
+  compact: cameraOnly = false,
   editable,
   ensureSetLog,
   stableSetId,
@@ -81,6 +83,7 @@ export function VideoAttachmentControls({
   const compact = width / fontScale < 440;
   const { retry, recovery } = useVideoDeliveryRetry(studentId, { ensureSetLog, buildLogRequest: inputReady ? buildLogRequest : undefined });
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
+  const [detailVisible, setDetailVisible] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [videoToTrim, setVideoToTrim] = useState<SelectedVideo | null>(null);
   const pickedUri = useRef<string | null>(null);
@@ -126,6 +129,7 @@ export function VideoAttachmentControls({
         present(
           <CameraRecorder
             onClose={dismiss}
+            onLibrary={() => { dismiss(); void choose('library'); }}
             onUse={(uri, savedToPhotos) => {
               dismiss();
               attach({
@@ -204,6 +208,26 @@ export function VideoAttachmentControls({
   const statusLabel = failed ? t('student.videoAttachmentV3Controls.copy008') : record.status === 'uploading'
     ? t(percentage > 0 ? 'student.videoUpload.sendingProgress' : 'student.videoUpload.sending', [percentage])
     : t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007');
+  if (cameraOnly) return <>
+    <Pressable accessibilityRole="button" accessibilityLabel={t(playable ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy001')} onPress={() => { if (playable || failed) setDetailVisible(true); else void choose('camera'); }} style={{ width: 40, minHeight: 38, justifyContent: 'center', alignItems: 'center' }}>
+      <MaterialCommunityIcons name="video-outline" size={20} color={record.status === 'uploaded' ? colors.success : record.status !== 'none' || isPreparing ? colors.gold500 : colors.textMuted} />
+    </Pressable>
+    {detailVisible ? <Modal visible animationType="slide" onRequestClose={() => setDetailVisible(false)}><View style={{ flex: 1, backgroundColor: colors.bgBase, padding: 16, paddingTop: 48 }}>
+      <VideoAction icon="close" label={t('training.allDay.done')} disabled={false} onPress={() => setDetailVisible(false)} />
+      {playable ? <VideoPlayback inline localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => setDetailVisible(false)} /> : null}
+      <VideoAction icon="video" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('camera')} />
+      {failed ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable} onPress={() => void retry([{ stableSetId }])} /> : null}
+      <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable} onPress={() => void remove().then(() => setDetailVisible(false))} />
+    </View></Modal> : null}
+    {actionErrorMessage ? <Text style={{ color: colors.danger }}>{actionErrorMessage}</Text> : null}
+    {recovery}
+    {videoToTrim ? <VideoTrimView uri={videoToTrim.uri} onOutcome={outcome => {
+      releaseOriginal.current?.(); releaseOriginal.current = null; deleteLocalVideo(pickedUri.current); pickedUri.current = null; setVideoToTrim(null);
+      if (outcome.type === 'saved') attach({ ...videoToTrim, ...outcome.video, mimeType: 'video/mp4', fileName: null });
+      else if (outcome.type === 'failed') showActionError(new Error('Trim failed'));
+    }} /> : null}
+    {overlay.isFallback && fallbackNode !== null ? <Modal visible animationType="slide" onRequestClose={dismiss}>{fallbackNode}</Modal> : null}
+  </>;
   return (
     <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: spacing.point14, paddingVertical: spacing.point11, gap: spacing.space2 }}>
       {playable ? <VideoPlayback key={record.createdAt} inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => undefined} /> : null}

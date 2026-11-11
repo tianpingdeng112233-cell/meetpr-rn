@@ -1,0 +1,187 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+FAIL src/features/training/__tests__/exercise-summary.test.ts
+  ✓ per-set weights compress only consecutive equal weights (1 ms)
+  ✓ different rep sections keep weights paired in prescription order
+  ✓ weight range preserves the written prescription
+  ✓ rep range preserves the written prescription
+  ✓ AMRAP preserves the written prescription
+  ✓ bodyweight preserves the written prescription
+  ✓ bodyweight plus load preserves the written prescription (1 ms)
+  ✕ free weight and effort uses the intensity style (1 ms)
+  ✕ uniform RPE uses the intensity style
+  ✕ RPE range uses the intensity style
+  ✕ RIR uses the intensity style (1 ms)
+  ✕ 2A varying RPE stays verbatim even when historical weight suggestions exist
+  ✕ 1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets
+  107 one-line prescription table
+    ✓ uniform weight: 4×8 130 (1 ms)
+
+  ● free weight and effort uses the intensity style
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        Object {
+    -     "intensityOnly": true,
+    -     "load": "自选 · RPE 8",
+    +     "intensityOnly": false,
+    +     "load": "—",
+          "setsReps": "4×12",
+        },
+      ]
+
+      40 |   ['RIR', 3, { target_reps: 10, load_mode: 'rir', rir_target: 2 }, '3×10', 'RIR 2'],
+      41 | ] as const)('%s uses the intensity style', (_, count, fields, setsReps, load) => {
+    > 42 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load, intensityOnly: true }]);
+         |                                                          ^
+      43 | });
+      44 | test('2A varying RPE stays verbatim even when historical weight suggestions exist', () => {
+      45 |   const planned = sets(4, { target_reps: 12, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:42:58)
+
+  ● uniform RPE uses the intensity style
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        Object {
+    -     "intensityOnly": true,
+    -     "load": "RPE 8",
+    +     "intensityOnly": false,
+    +     "load": "—",
+          "setsReps": "3×5",
+        },
+      ]
+
+      40 |   ['RIR', 3, { target_reps: 10, load_mode: 'rir', rir_target: 2 }, '3×10', 'RIR 2'],
+      41 | ] as const)('%s uses the intensity style', (_, count, fields, setsReps, load) => {
+    > 42 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load, intensityOnly: true }]);
+         |                                                          ^
+      43 | });
+      44 | test('2A varying RPE stays verbatim even when historical weight suggestions exist', () => {
+      45 |   const planned = sets(4, { target_reps: 12, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:42:58)
+
+  ● RPE range uses the intensity style
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        Object {
+    -     "intensityOnly": true,
+    -     "load": "RPE 7–8",
+    +     "intensityOnly": false,
+    +     "load": "—",
+          "setsReps": "3×5",
+        },
+      ]
+
+      40 |   ['RIR', 3, { target_reps: 10, load_mode: 'rir', rir_target: 2 }, '3×10', 'RIR 2'],
+      41 | ] as const)('%s uses the intensity style', (_, count, fields, setsReps, load) => {
+    > 42 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load, intensityOnly: true }]);
+         |                                                          ^
+      43 | });
+      44 | test('2A varying RPE stays verbatim even when historical weight suggestions exist', () => {
+      45 |   const planned = sets(4, { target_reps: 12, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:42:58)
+
+  ● RIR uses the intensity style
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        Object {
+    -     "intensityOnly": true,
+    -     "load": "RIR 2",
+    +     "intensityOnly": false,
+    +     "load": "—",
+          "setsReps": "3×10",
+        },
+      ]
+
+      40 |   ['RIR', 3, { target_reps: 10, load_mode: 'rir', rir_target: 2 }, '3×10', 'RIR 2'],
+      41 | ] as const)('%s uses the intensity style', (_, count, fields, setsReps, load) => {
+    > 42 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load, intensityOnly: true }]);
+         |                                                          ^
+      43 | });
+      44 | test('2A varying RPE stays verbatim even when historical weight suggestions exist', () => {
+      45 |   const planned = sets(4, { target_reps: 12, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:42:58)
+
+  ● 2A varying RPE stays verbatim even when historical weight suggestions exist
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        Object {
+    -     "intensityOnly": true,
+    -     "load": "RPE 6/7/8/8",
+    +     "intensityOnly": false,
+    +     "load": "—",
+          "setsReps": "4×12",
+        },
+      ]
+
+      45 |   const planned = sets(4, { target_reps: 12, load_mode: 'rpe' }).map((s, i) => ({ ...s, target_rpe: ['6', '7', '8', '8'][i] }));
+      46 |   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '100' }))))
+    > 47 |     .toMatchObject([{ setsReps: '4×12', load: 'RPE 6/7/8/8', intensityOnly: true }]);
+         |      ^
+      48 | });
+      49 | test('1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets', () => {
+      50 |   const planned = sets(4, { target_reps: 5, load_mode: 'fixed_weight', target_weight: '100', target_rpe: '7' });
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:47:6)
+
+  ● 1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+          "intensityOnly": false,
+    -     "load": "100 · RPE 7",
+    +     "load": "100",
+          "setsReps": "4×5",
+        },
+      ]
+
+      49 | test('1A weight plus uniform RPE keeps both; varying RPE is only in expanded sets', () => {
+      50 |   const planned = sets(4, { target_reps: 5, load_mode: 'fixed_weight', target_weight: '100', target_rpe: '7' });
+    > 51 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100 · RPE 7', intensityOnly: false }]);
+         |                                              ^
+      52 |   planned[1].target_rpe = '8';
+      53 |   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100' }]);
+      54 | });
+
+      at Object.toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:51:46)
+
+Test Suites: 1 failed, 1 total
+Tests:       6 failed, 8 passed, 14 total
+Snapshots:   0 total
+Time:        0.549 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

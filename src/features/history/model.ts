@@ -16,7 +16,7 @@ import {
   e1RMPeriodLabel,
   replayE1RMSeries,
   utcDayDistance,
-} from '@/features/dashboard/model';
+} from '@/features/history/summary-model';
 
 import type {
   Exercise,

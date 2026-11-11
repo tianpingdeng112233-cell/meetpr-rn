@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { type ReactNode, forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
@@ -9,6 +9,9 @@ import { useColors } from './theme';
 import { font, radius, spacing } from './tokens';
 
 type NumberPadProps = {
+  layout?: 'allDay' | 'bodyWeight';
+  header?: (text: string) => ReactNode;
+  disabled?: boolean;
   field: NumberPadField;
   initialValue: string;
   minimumWeight?: number;
@@ -40,7 +43,7 @@ export const NumberPad = forwardRef<NumberPadHandle, NumberPadProps>(function Nu
   const accessory = props.mode === 'accessory';
   const panel = useRef<View>(null);
   const colors = useColors();
-  const [text, setText] = useState(accessory || props.onDismiss ? initialValue : '');
+  const [text, setText] = useState(accessory || props.onDismiss || props.layout === 'bodyWeight' ? initialValue : '');
   const [pristine, setPristine] = useState(true);
   const invalid = accessory && accessoryValue(text, field) === undefined;
   const resolvedValue = () => snapped(text && Number.isFinite(Number(text)) ? Number(text) : Number(initialValue), field, minimumWeight);
@@ -59,6 +62,28 @@ export const NumberPad = forwardRef<NumberPadHandle, NumberPadProps>(function Nu
     if (!text || !Number.isFinite(Number(text))) onCancel();
     else onCommit(snapped(Number(text), field, minimumWeight));
   };
+  if (props.layout === 'allDay' || props.layout === 'bodyWeight') {
+    const bodyWeight = props.layout === 'bodyWeight';
+    const key = (ch: string, flex = 1) => <Pressable key={ch} accessibilityRole="button" accessibilityLabel={ch === '⌫' ? t('designSystem.numberPad.backspace') : ch === '.' ? t('designSystem.numberPad.decimalPoint') : ch}
+      disabled={props.disabled || (ch === '.' && (field === 'reps' || field === 'rir'))} onPress={() => {
+        const next = ch === '⌫' ? text.slice(0, -1) : appendAccessory(pristine ? '' : text, ch, field);
+        if (bodyWeight && !/^\d{0,3}(?:\.\d?)?$/.test(next)) return;
+        setText(next); setPristine(false); props.onChangeText?.(next);
+      }} style={{ flex, height: 52, backgroundColor: colors.surfaceKey, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center' }}><Text style={{ ...font.mono(21, 'bold'), color: colors.textPrimary }}>{ch}</Text></Pressable>;
+    return <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', zIndex: 100 }]}>
+
+      <View ref={panel} onLayout={onPanelLayout ? () => panel.current?.measureInWindow((_x, top, _width, height) => onPanelLayout(top, height)) : undefined} style={{ padding: 16, paddingBottom: 22, gap: 12, backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal }}>
+        {props.header?.(text)}
+        {!bodyWeight ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Text style={{ ...font.body(12), color: colors.textSecondary, flex: 1 }}>{contextText}</Text>
+          {onNext ? <Pressable accessibilityRole="button" accessibilityLabel={nextTitle} onPress={() => { const value = accessoryValue(text, field); if (value !== undefined && props.mode === 'accessory') props.onNext?.(value); }}><Text style={{ ...font.body(12), color: colors.goldText }}>{nextTitle}</Text></Pressable> : null}
+        </View> : null}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 3, gap: 8 }}>{[['1','2','3'],['4','5','6'],['7','8','9']].map((row, i) => <View key={i} style={{ flexDirection: 'row', gap: 8 }}>{row.map(ch => key(ch))}</View>)}<View style={{ flexDirection: 'row', gap: 8 }}>{key('.')}{key('0', bodyWeight ? 1 : 2)}{bodyWeight ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.weightStrip.dismiss')} disabled={props.disabled} onPress={onCancel} style={{ flex: 1, height: 52, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surfaceKey, borderRadius: radius.control }}><Text style={{ ...font.body(12), color: colors.textSecondary }}>{t('student.weightStrip.dismiss')}</Text></Pressable> : null}</View></View>
+          <View style={{ flex: 1, gap: 8 }}>{key('⌫', 0)}<Pressable accessibilityRole="button" accessibilityLabel={commitTitle} disabled={props.disabled || (bodyWeight ? !text || !(Number(text) > 0 && Number(text) < 500) : invalid)} onPress={bodyWeight ? () => onCommit(Number(text)) : dismiss} style={{ flex: 1, overflow: 'hidden', backgroundColor: colors.gold500, borderRadius: radius.control, justifyContent: 'center', alignItems: 'center' }}>{bodyWeight ? <GradientFill direction="vertical" stops={[{ color: colors.gold400, offset: 0 }, { color: colors.gold500, offset: 1 }]} /> : null}<Text style={{ ...font.body(16, 'bold'), color: colors.inkOnGold }}>{commitTitle}</Text></Pressable></View>
+        </View>
+      </View>
+    </View>;
+  }
   const keys = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['.', '0', '⌫']];
   return (
     <View accessibilityViewIsModal style={[StyleSheet.absoluteFill, { zIndex: 100, justifyContent: 'flex-end' }]}>

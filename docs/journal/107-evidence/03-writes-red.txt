@@ -1,0 +1,44 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-sheet.test.ts
+
+FAIL src/features/training/__tests__/all-day-sheet.test.ts
+  ✓ all-day sheet preserves old actuals and prefills only RPE-only weights from the server suggestion (2 ms)
+  ✕ completion writes every untouched group including null weight, and exercise completion also updates old records
+  ✕ a deliberately empty recorded weight stays empty instead of restoring the prescription on upgrade
+
+  ● completion writes every untouched group including null weight, and exercise completion also updates old records
+
+    TypeError: (0 , _allDaySheet.completionWrites) is not a function
+
+      20 | test('completion writes every untouched group including null weight, and exercise completion also updates old records', () => {
+      21 |   const sheet = buildAllDaySheet(selected, [log], []);
+    > 22 |   expect(completionWrites(sheet).map(write => write.request)).toEqual([
+         |                          ^
+      23 |     { plan_exercise_id: 'exercise', set_index: 1, weight_kg: null, reps: 5, rpe: '8', actual_rir: null, completed: true, failed: false },
+      24 |     { plan_exercise_id: 'exercise', set_index: 2, weight_kg: null, reps: 5, rpe: '7', actual_rir: null, completed: true, failed: false },
+      25 |   ]);
+
+      at Object.<anonymous> (src/features/training/__tests__/all-day-sheet.test.ts:22:26)
+
+  ● a deliberately empty recorded weight stays empty instead of restoring the prescription on upgrade
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: ""
+    Received: "100"
+
+      31 | test('a deliberately empty recorded weight stays empty instead of restoring the prescription on upgrade', () => {
+      32 |   const sheet = buildAllDaySheet(selected, [{ ...log, weight_kg: null }], []);
+    > 33 |   expect(sheet.exercises[0].rows[0].weightText).toBe('');
+         |                                                 ^
+      34 | });
+      35 |
+
+      at Object.toBe (src/features/training/__tests__/all-day-sheet.test.ts:33:49)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        0.292 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

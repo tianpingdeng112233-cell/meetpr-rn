@@ -5,13 +5,7 @@ import { gymDayToday } from '@/domain/plan/workout-date-policy';
 
 import { ApiError } from '../client';
 import { authenticatedRequest } from '../session';
-import {
-  DateTextSchema,
-  DecimalStringSchema,
-  encodeQuery,
-  TimestampSchema,
-  UuidSchema,
-} from './shared';
+import { DateTextSchema, DecimalStringSchema, encodeQuery, TimestampSchema, UuidSchema } from './shared';
 
 function decimalRequestInRange(minimum: number, maximum: number) {
   return DecimalStringSchema.refine((value) => {
@@ -23,7 +17,7 @@ function decimalRequestInRange(minimum: number, maximum: number) {
 const SetLogFieldsSchema = z.object({
   set_index: z.number().int().min(0),
   /** Decimal request value; sent as a precision-preserving string. */
-  weight_kg: decimalRequestInRange(0, 9999.99),
+  weight_kg: decimalRequestInRange(0, 9999.99).nullable(),
   reps: z.number().int().min(0).max(99),
   /** Decimal request value; sent as a precision-preserving string. */
   rpe: decimalRequestInRange(0, 10).nullish(),
@@ -64,7 +58,7 @@ export const SetLogSchema = z.object({
   exercise_id: UuidSchema,
   set_index: z.number().int(),
   /** Decimal wire value; kept as a string. */
-  weight_kg: DecimalStringSchema,
+  weight_kg: DecimalStringSchema.nullable(),
   reps: z.number().int(),
   /** Nullable Decimal wire value; kept as a string when present. */
   rpe: DecimalStringSchema.nullable(),
@@ -179,4 +173,13 @@ export function resolvedLoggedAt(serverTimestamp: string, loggedDate: string): s
   if (gymDayToday(new Date(serverTimestamp)) === loggedDate) return serverTimestamp;
   const [year, month, day] = loggedDate.split('-').map(Number);
   return new Date(year, month - 1, day, 12).toISOString();
+}
+
+export const WeightSuggestionsSchema = z.object({ suggestions: z.array(z.object({
+  plan_set_id: UuidSchema, weight_kg: DecimalStringSchema,
+  source_set_log_id: UuidSchema, source_logged_date: DateTextSchema,
+})) });
+export function useWeightSuggestions(studentId: string, planDayId: string, enabled = true) {
+  return useQuery({ queryKey: ['weight-suggestions', studentId, planDayId], enabled: enabled && Boolean(studentId && planDayId),
+    queryFn: () => authenticatedRequest(`/students/${UuidSchema.parse(studentId)}/plan-days/${UuidSchema.parse(planDayId)}/weight-suggestions`, { schema: WeightSuggestionsSchema }) });
 }

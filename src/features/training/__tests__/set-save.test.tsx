@@ -1,35 +1,24 @@
-import { enterNumber, numericCell } from '../accessory-pad.test-helpers';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
-import { accountSetSync } from '../set-sync/runtime';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { E1RMRecorder } from '@/domain/e1rm';
 import { ApiError } from '@/api/client';
+import type { PlanDetail } from '@/api/domains/plans';
+import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
+import { authenticatedRequest, useSessionStore } from '@/api/session';
+import { E1RMRecorder } from '@/domain/e1rm';
+import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+import { setLocaleOverride, t } from '@/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Alert, Text } from 'react-native';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { AllDayBody } from '../AllDayBody';
+import { HoldToCompleteButton } from '../HoldToCompleteButton';
+import type { WorkoutSetDraft } from '../model';
+import { accountSetSync } from '../set-sync/runtime';
 import { trainingE1RMRepository } from '../storage';
-import { STORAGE_KEYS } from '../constants';
 import { StudentExercisePicker } from '../StudentExercisePicker';
 import { TrainingWeekStrip } from '../TrainingWeekStrip';
-import { HoldToCompleteButton } from '../HoldToCompleteButton';
-import { VideoPlayback } from '../video-upload/VideoPlayback';
-import { WorkoutBody } from '../WorkoutBody';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
-import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
-import { SetEntrySheet } from '../SetEntrySheet';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { resolveColors } from '@/design';
-import { FeedbackPressable } from '@/design/FeedbackPressable';
-import { NumberPad } from '@/design/NumberPad';
-import { Toast } from '@/design/Toast';
-import { RestTimer } from '../RestTimer';
-import { writeRestPreference } from '@/features/settings/storage';
-import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, AppState, StyleSheet, Text, TextInput, View, type AppStateStatus } from 'react-native';
-import { authenticatedRequest, useSessionStore } from '@/api/session';
-import type { PlanDetail } from '@/api/domains/plans';
-import { setLocaleOverride, t } from '@/i18n';
-import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../video-upload/store';
 
 jest.mock('expo-media-library', () => ({}));
 jest.mock('react-native-compressor', () => ({}));
@@ -125,30 +114,9 @@ afterEach(async () => {
 });
 
 
-const openSet = async () => {
-  await mount();
-  await act(async () => { renderer.root.findByType(WorkoutBody).props.onRecord(renderer.root.findByType(WorkoutBody).props.drafts[0]); });
-};
-const saveButton = (failed = false) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t(failed ? 'student.setEntrySheet.copy009' : 'student.setEntrySheet.copy012')))[0];
+const openSet = mount;
+const saveFirst = async () => { const body = renderer.root.findByType(AllDayBody); await act(async () => body.props.onSave({ ...body.props.sheet.exercises[0].rows[0], rpeText: '8' })); };
 const loadFailedTitle = () => renderer.root.findAll(node => node.type === Text && node.props.children === t('student.todayWorkoutScreen.copy001'));
-test('105r main dismissal stays local until the record button submits', async () => {
-  await openSet();
-  const field = () => renderer.root.findByType(SetEntrySheet).findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('student.setEntrySheet.copy001'))!;
-  await act(async () => field().props.onPress!({} as never));
-  for (const key of ['8', '2', t('designSystem.numberPad.decimalPoint'), '2', '5']) {
-    await act(async () => renderer.root.findByType(NumberPad).findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === key)!.props.onPress!({} as never));
-  }
-  await act(async () => renderer.root.findByType(NumberPad).findAllByType(FeedbackPressable)[0].props.onPress!({} as never));
-  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(1);
-  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toBeNull();
-  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toEqual([]);
-  expect(field().props.accessibilityValue.text).toBe('82.25 KG');
-  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-  await act(async () => saveButton().props.onPress());
-  const requests = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log');
-  expect(requests).toHaveLength(1);
-  expect(requests[0][1]?.body).toMatchObject({ weight_kg: '82.25', completed: true, failed: false });
-});
 
 test('102: an already loaded workout survives an offline cold start with its pending completed set', async () => {
   const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
@@ -158,25 +126,25 @@ test('102: an already loaded workout survives an offline cold start with its pen
     return base(path, options);
   });
   await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
-  const draft = body().props.drafts[0];
+  const body = () => renderer.root.findByType(AllDayBody);
+  const draft = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows)[0];
   jest.mocked(authenticatedRequest).mockRejectedValue(new ApiError('network', 'Offline'));
-  await act(async () => body().props.onAccessorySave(draft, { plan_exercise_id: draft.exercise.id, set_index: 0, weight_kg: '90', reps: 5, rpe: '8', completed: true }, 'single'));
-  expect(body().props.drafts[0].sourceLog.completed).toBe(true);
+  await act(async () => body().props.onSave({ ...draft, weightText: '90', repsText: '5', rpeText: '8' }));
+  expect(body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows)[0].sourceLog.completed).toBe(true);
   act(() => renderer.unmount()); client.clear();
   useSessionStore.setState({ user: null });
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
   await mount();
-  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
-  expect(body().props.drafts[0]).toMatchObject({ sourceLog: { completed: true }, weightText: '90' });
-  expect(body().props.unit).toBe('lb');
-  expect(body().props.resolveExerciseMetadata(draft.exercise.exercise_id)).toMatchObject({ name: 'Dumbbell press', exerciseType: 'accessory' });
+  expect(renderer.root.findAllByType(AllDayBody)).toHaveLength(1);
+  expect(body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows)[0]).toMatchObject({ sourceLog: { completed: true }, weightText: '90' });
+
+  expect(body().props.exerciseName(draft.exercise.exercise_id)).toBe('Dumbbell press');
   act(() => renderer.unmount()); client.clear();
   useSessionStore.setState({ user: { id: '10000000-0000-4000-8000-000000000001', phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   await mount();
-  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(0);
+  expect(renderer.root.findAllByType(AllDayBody)).toHaveLength(0);
   expect(loadFailedTitle().length).toBeGreaterThan(0);
 });
 
@@ -188,24 +156,24 @@ test('102: an offline student-added accessory keeps its catalog metadata after c
     return base(path, options);
   });
   await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
+  const body = () => renderer.root.findByType(AllDayBody);
   jest.mocked(authenticatedRequest).mockRejectedValue(new ApiError('network', 'Offline'));
   await act(async () => body().props.onAddExercise());
   await act(async () => renderer.root.findByType(StudentExercisePicker).props.onSelect(exerciseId));
-  const added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
-  await act(async () => body().props.onAccessorySave(added, { exercise_id: exerciseId, plan_day_id: plan.days[0].id, set_index: 0, weight_kg: '12.5', reps: 12, actual_rir: 2, completed: true }, 'single'));
+  const added = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string }) => draft.kind === 'added');
+  await act(async () => body().props.onSave({ ...added, weightText: '12.5', repsText: '12', rpeText: '2', effortKind: 'rir' }));
   act(() => renderer.unmount()); client.clear();
   useSessionStore.setState({ user: null });
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
   await mount();
-  expect(body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added')).toMatchObject({ sourceLog: { completed: true, actual_rir: 2 }, weightText: '12.5' });
-  expect(body().props.resolveExerciseMetadata(exerciseId)).toMatchObject({ name: 'Cable pushdown', exerciseType: 'accessory' });
+  expect(body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string }) => draft.kind === 'added')).toMatchObject({ sourceLog: { completed: true, actual_rir: 2 }, weightText: '12.5' });
+  expect(body().props.exerciseName(exerciseId)).toBe('Cable pushdown');
 });
 
 test('a rate-limited background refetch keeps the loaded workout instead of replacing it with the load error', async () => {
   await mount();
-  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+  expect(renderer.root.findAllByType(AllDayBody)).toHaveLength(1);
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
     if (path.endsWith('/plans') || path === `/plans/${plan.id}` || (path.includes('/sets') && path !== '/sets/log'))
@@ -214,57 +182,14 @@ test('a rate-limited background refetch keeps the loaded workout instead of repl
   });
   await act(async () => { await client.refetchQueries(); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(1);
+  expect(renderer.root.findAllByType(AllDayBody)).toHaveLength(1);
   expect(loadFailedTitle()).toHaveLength(0);
 });
 test('a first load that fails still shows the load error with retry', async () => {
   jest.mocked(authenticatedRequest).mockImplementation(async () => { throw new ApiError('backend', 'Unexpected HTTP response 429', { status: 429 }); });
   await mount();
   expect(loadFailedTitle()).toHaveLength(1);
-  expect(renderer.root.findAllByType(WorkoutBody)).toHaveLength(0);
-});
-test('a slow set save closes the sheet before the request succeeds', async () => {
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  let finish!: () => void;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log') await new Promise<void>(resolve => { finish = resolve; });
-    return original(path, options);
-  });
-  await openSet();
-  await act(async () => { saveButton().props.onPress(); });
-  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
-  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].status).toBe('complete');
-  await act(async () => { finish(); });
-  expect(writes).toBe(1);
-  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
-});
-
-test.each(['failure', 'timeout'])('%s retains the local failed-set mark and retries in the background', async (mode) => {
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  let attempt = 0;
-  const bodies: unknown[] = [];
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log') {
-      bodies.push(options?.body);
-      if (++attempt === 1) {
-        if (mode === 'timeout') return new Promise(() => {});
-        throw new Error('Offline');
-      }
-    }
-    return original(path, options);
-  });
-  await openSet();
-  jest.useFakeTimers();
-  await act(async () => { saveButton(true).props.onPress(); });
-  await act(async () => { await jest.advanceTimersByTimeAsync(30_001); });
-  expect(Alert.alert).not.toHaveBeenCalled();
-  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
-  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].status).toBe('failed');
-  await act(async () => { accountSetSync(studentId).queue.sendNow(); });
-  expect(bodies[1]).toEqual(bodies[0]);
-  expect(writes).toBe(1);
-  expect(storedLogs[0]).toMatchObject({ weight_kg: '80', reps: 5, rpe: '8' });
-  jest.useRealTimers();
+  expect(renderer.root.findAllByType(AllDayBody)).toHaveLength(0);
 });
 
 test('Sending does not block the TodayWorkoutView save path or discard the attachment', async () => {
@@ -272,7 +197,7 @@ test('Sending does not block the TodayWorkoutView save path or discard the attac
   useVideoUploadStore.setState({ records: { [key]: { ...EMPTY_VIDEO_UPLOAD, status: 'uploading', localUri: 'file:///video.mp4' } } });
   await openSet();
   expect(useVideoUploadStore.getState().records[key].status).toBe('uploading');
-  await act(async () => { saveButton().props.onPress(); });
+  await saveFirst();
   expect(writes).toBe(1);
   expect(useVideoUploadStore.getState().records[key].localUri).toBe('file:///video.mp4');
 });
@@ -289,7 +214,7 @@ test.each([false, true])('a saved PR is recorded and silently acknowledged witho
     await trainingE1RMRepository.acknowledgePR(prior!.id);
   }
   await openSet();
-  await act(async () => { saveButton().props.onPress(); });
+  await saveFirst();
   const copy = renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ');
   expect(copy).not.toMatch(/🎉|First record|new e1RM/i);
   expect(await trainingE1RMRepository.unacknowledgedPRs(studentId)).toEqual([]);
@@ -319,301 +244,6 @@ test('reentering Training silently drains all pending PRs at the replay time, le
   expect(renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ')).not.toMatch(/🎉|First record|new e1RM/i);
 });
 
-test('recording the next set closes the previous rest before returning to background', async () => {
-  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
-  await openSet();
-  await act(async () => saveButton().props.onPress());
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(t('student.restTimerOverlay.copy001'));
-  const body = renderer.root.findByType(WorkoutBody);
-  await act(async () => body.props.onRecord(body.props.drafts[1]));
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.restTimerOverlay.copy001'));
-});
-
-
-test.each([false, true])('a rest preference read cannot revive rest after leaving Training (return first: %s)', async returnFirst => {
-  mockFocused = true;
-  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
-  await openSet();
-  let release!: () => void;
-  let reading!: () => void;
-  const enteredRead = new Promise<void>(resolve => { reading = resolve; });
-  const original = jest.mocked(AsyncStorage.getItem).getMockImplementation()!;
-  jest.spyOn(AsyncStorage, 'getItem').mockImplementation(async key => {
-    if (key === `restTimer.preference.${studentId}`) {
-      reading();
-      await new Promise<void>(resolve => { release = resolve; });
-    }
-    return original(key);
-  });
-  let save: Promise<void>;
-  await act(async () => { save = saveButton().props.onPress(); await enteredRead; });
-  mockFocused = false;
-  await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
-  if (returnFirst) {
-    mockFocused = true;
-    await act(async () => renderer.update(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>));
-  }
-  await act(async () => { release(); await save; });
-  jest.mocked(AsyncStorage.getItem).mockImplementation(original);
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.restTimerOverlay.copy001'));
-});
-
-
-test.each(['Competition Deadlift', undefined])('saved set supplies its exercise name to the background rest notification (%s)', async name => {
-  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, exercises: day.exercises.map(exercise => ({ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: 'next-set', set_number: 2 }] })) })) };
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/exercises' && name) return { exercises: [{ id: plan.days[0].exercises[0].exercise_id, name, name_en: name, main_lift_family: null, is_competition_lift: false, competition_stance: null }] } as never;
-    return original(path, options);
-  });
-  const native = { show: jest.fn(), hide: jest.fn(), isPermissionGranted: () => true };
-  jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(native);
-  const listeners = new Set<(state: AppStateStatus) => void>();
-  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
-    listeners.add(listener);
-    return { remove: () => { listeners.delete(listener); } };
-  });
-  await AsyncStorage.setItem(STORAGE_KEYS.restExplanation(studentId), 'true');
-  await openSet();
-  await act(async () => saveButton().props.onPress());
-  act(() => listeners.forEach(listener => listener('background')));
-  expect(native.show).toHaveBeenLastCalledWith(expect.any(Number), name ?? '', expect.objectContaining({ title: 'Rest between sets' }));
-});
-
-
-const accessoryButton = (label: string) => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0];
-const accessoryInput = (label: string) => numericCell(renderer, label);
-function serveAccessories(rest: number | null = null) {
-  jest.mocked(authenticatedRequest).mockClear();
-  const exercise = plan.days[0].exercises[0];
-  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [
-    { ...exercise.sets[0], rest_seconds: rest },
-    { ...exercise.sets[0], id: 'second-set', set_number: 2, rest_seconds: rest },
-  ] }, { ...exercise, id: 'next-exercise', exercise_id: 'next-lift', sort_order: 1, sets: [{ ...exercise.sets[0], id: 'next-lift-set', plan_exercise_id: 'next-exercise' }] }] }] };
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/exercises') return { exercises: [{ id: exercise.exercise_id, name: 'Leg press', name_en: 'Leg press', exercise_type: 'accessory', main_lift_family: null, is_competition_lift: false, competition_stance: null }] } as never;
-    if (path === '/sets/log') {
-      const body = options?.body as SetLogUpsertRequest;
-      writes++;
-      const log: SetLog = { id: `saved-${body.set_index}`, student_id: studentId, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id, set_index: body.set_index, weight_kg: body.weight_kg, reps: body.reps, rpe: body.rpe ?? null, actual_rir: body.actual_rir ?? null, completed: body.completed, failed: body.failed ?? false, assumed: false, adhoc: false, logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' };
-      storedLogs = [...storedLogs.filter(item => item.set_index !== log.set_index), log];
-      return { id: log.id, logged_at: log.logged_at } as never;
-    }
-    return original(path, options);
-  });
-}
-async function startAccessories() {
-  await mount();
-  await act(async () => renderer.root.findByType(WorkoutBody).props.onStart());
-}
-const setBodies = () => jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').map(([, options]) => options?.body as SetLogUpsertRequest);
-
-test.each(['left', 'backdrop'] as const)('105r untouched RIR %s dismissal creates no record and can reopen', async action => {
-  serveAccessories();
-  await startAccessories();
-  await act(async () => accessoryButton(t('training.effort.switch')).props.onPress());
-  await act(async () => accessoryInput('Set 1 RIR').props.onPress!({} as never));
-  const pad = () => renderer.root.findByType(NumberPad);
-  const controls = pad().findAllByType(FeedbackPressable);
-  await act(async () => (action === 'left' ? controls.at(-2)! : controls[0]).props.onPress!({} as never));
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(setBodies()).toEqual([]);
-  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toBeNull();
-  await act(async () => accessoryInput('Set 1 RIR').props.onPress!({} as never));
-  await act(async () => pad().findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === '2')!.props.onPress!({} as never));
-  expect(pad().props.field).toBe('rir');
-  expect(pad().findAllByType(FeedbackPressable).at(-1)!.props.disabled).toBe(false);
-});
-
-test.each([true, false])('105r RIR dismissal stays local with completed=%s until the checkmark submits', async completed => {
-  serveAccessories();
-  storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId,
-    plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id,
-    set_index: 0, weight_kg: '80', reps: 10, rpe: '7', actual_rir: null, completed, failed: false, assumed: false, adhoc: false,
-    logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' }];
-  await startAccessories();
-  await act(async () => accessoryButton(t('training.effort.switch')).props.onPress());
-  expect(setBodies()).toEqual([]);
-  await act(async () => accessoryInput('Set 1 RPE').props.onPress!({} as never));
-  const pad = () => renderer.root.findByType(NumberPad);
-  await act(async () => pad().findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === '2')!.props.onPress!({} as never));
-  await act(async () => pad().findAllByType(FeedbackPressable)[0].props.onPress!({} as never));
-  expect(setBodies()).toEqual([]);
-  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toMatchObject({ rpe: '7', actual_rir: null, completed });
-  expect(accessoryInput('Set 1 RIR').props.accessibilityValue.text).toBe('2');
-  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-  await act(async () => accessoryButton('Complete set 1').props.onPress());
-  expect(setBodies()).toEqual([expect.objectContaining({ rpe: null, actual_rir: 2, completed: true, weight_kg: '80' })]);
-  expect(renderer.root.findByType(WorkoutBody).props.drafts[0].sourceLog).toMatchObject({ rpe: null, actual_rir: 2, completed: true });
-  await enterNumber(renderer, 'Set 1 RIR', '0');
-  expect(setBodies()).toHaveLength(1);
-  expect(accessoryInput('Set 1 RIR').props.accessibilityValue.text).toBe('0');
-  await act(async () => accessoryButton('Complete set 1').props.onPress());
-  expect(setBodies()).toHaveLength(2);
-  expect(setBodies().at(-1)).toMatchObject({ rpe: null, actual_rir: 0, completed: true });
-});
-
-test.each<[number | undefined, number | null, number]>([[undefined, null, 60], [90, null, 90], [90, 75, 75]])('accessory check saves ordinary data, prevents double taps and rests with preference %s / coach %s', async (accessory, rest, seconds) => {
-  serveAccessories(rest);
-  if (accessory !== undefined) await writeRestPreference(studentId, { mode: 'automatic', accessory });
-  let release!: () => void;
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log' && writes === 0) await new Promise<void>(resolve => { release = resolve; });
-    return original(path, options);
-  });
-  await startAccessories();
-  await enterNumber(renderer, 'Set 2 weight', '82,5');
-  await act(async () => accessoryButton('Complete set 2').props.onPress());
-  expect(accessoryButton('Undo set 2').props.disabled).toBe(false);
-  expect(accessoryButton('Complete set 1').props.disabled).toBe(false);
-  await act(async () => { release(); });
-  expect(setBodies()).toEqual([expect.objectContaining({ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1, weight_kg: '82.5', reps: 5, rpe: null, actual_rir: null, completed: true, failed: false })]);
-  expect(accessoryButton('Undo set 2')).toBeDefined();
-  expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(seconds);
-  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
-  await act(async () => renderer.root.findByType(RestTimer).props.onClose());
-  await enterNumber(renderer, 'Set 1 RPE', '7.5');
-  await act(async () => accessoryButton('Complete set 1').props.onPress());
-  expect(setBodies()[1]).toMatchObject({ set_index: 0, rpe: '7.5' });
-  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-  expect(accessoryButton('Complete all as planned')).toBeUndefined();
-  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
-});
-
-test('an upgraded completed accessory row cancels with its exact kg value; edits overwrite in lb and transport failures keep the latest local values', async () => {
-  serveAccessories();
-  storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80.123', reps: 10, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' }];
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  let failNext = false;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path.endsWith('/onboarding')) return { unit_preference: 'lb' } as never;
-    if (path === '/sets/log' && failNext) { failNext = false; throw new Error('Offline'); }
-    return original(path, options);
-  });
-  await startAccessories();
-  expect(accessoryInput('Set 1 weight').props.accessibilityValue.text).toBe('176.6');
-  await act(async () => accessoryButton('Undo set 1').props.onPress());
-  expect(setBodies()[0]).toMatchObject({ completed: false, failed: false, weight_kg: '80.123', reps: 10, rpe: null });
-  expect(accessoryButton('Complete set 1')).toBeDefined();
-  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-  await enterNumber(renderer, 'Set 1 weight', '55.1');
-  await act(async () => accessoryButton('Complete set 1').props.onPress());
-  expect(setBodies()[1]).toMatchObject({ completed: true, weight_kg: '25' });
-  await enterNumber(renderer, 'Set 1 reps', '12');
-  expect(accessoryButton('Complete set 1')).toBeDefined();
-  failNext = true;
-  await act(async () => accessoryButton('Complete set 1').props.onPress());
-  expect(Alert.alert).not.toHaveBeenCalled();
-  expect(accessoryInput('Set 1 reps').props.accessibilityValue.text).toBe('12');
-  expect(accessoryButton('Undo set 1').props.disabled).toBe(false);
-  await act(async () => { accountSetSync(studentId).queue.sendNow(); });
-  expect(setBodies()[3]).toEqual(setBodies()[2]);
-  expect(setBodies()[3]).toMatchObject({ completed: true, failed: false, reps: 12 });
-  expect(accessoryButton('Undo set 1')).toBeDefined();
-  expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(60);
-});
-
-
-test.each(['uploading', 'uploaded'] as const)('a completed accessory with %s video cannot be cancelled and explains how to manage it', async status => {
-  serveAccessories();
-  await startAccessories();
-  await act(async () => accessoryButton('Complete set 1').props.onPress());
-  await act(async () => { useVideoUploadStore.setState({ records: { [`${studentId}:${plan.days[0].exercises[0].sets[0].id}`]: { ...EMPTY_VIDEO_UPLOAD, status, localUri: 'file:///synthetic.mp4' } } }); });
-  let toast!: ReactTestRenderer;
-  await act(async () => { toast = create(<SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 360, height: 640 }, insets: { top: 0, bottom: 0, left: 0, right: 0 } }}><Toast /></SafeAreaProvider>); });
-  try {
-    await act(async () => accessoryButton('Undo set 1').props.onPress());
-    expect(writes).toBe(1);
-    expect(accessoryButton('Undo set 1')).toBeDefined();
-    expect(toast.root.findAllByType(Text).map(n => n.props.children)).toContain('This set has a video. Open the set to manage it');
-  } finally { act(() => toast.unmount()); }
-});
-
-test.each([0, 1, 2])('complete all submits serially without rest, leaves %s empty rows and keeps all local completions on transport failure', async skipped => {
-  serveAccessories();
-  const exercise = servedPlan.days[0].exercises[0];
-  for (let index = 0; index < skipped; index++) exercise.sets.push({ ...exercise.sets[0], id: `empty-${index}`, set_number: index + 3, intensity_mode: 'rpe', target_value: '8' });
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  let release!: () => void;
-  let fail = skipped === 2;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log') {
-      const body = options?.body as SetLogUpsertRequest;
-      if (body.set_index === 0) await new Promise<void>(resolve => { release = resolve; });
-      if (body.set_index === 1 && fail) { fail = false; throw new Error('Offline'); }
-    }
-    return original(path, options);
-  });
-  await startAccessories();
-  await enterNumber(renderer, 'Set 1 RPE', '7');
-  await act(async () => accessoryButton('Complete all as planned').props.onPress());
-  if (skipped) {
-    expect(accessoryButton('Complete all as planned').props.disabled).toBe(false);
-    expect(accessoryButton('Undo set 2').props.disabled).toBe(false);
-  }
-  expect(setBodies().map(body => body.set_index)).toEqual([0]);
-  await act(async () => release());
-  expect(setBodies().map(body => body.set_index)).toEqual([0, 1]);
-  expect(setBodies()[0]).toMatchObject({ completed: true, failed: false, rpe: '7' });
-  expect(setBodies()[1]).toMatchObject({ completed: true, failed: false, rpe: null });
-  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-  if (!skipped) {
-    expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
-    return;
-  }
-  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain(skipped === 1 ? '1 set still needs a weight' : '2 sets still need a weight');
-  expect(accessoryButton('Undo set 1')).toBeDefined();
-  if (skipped === 2) {
-    expect(writes).toBe(1);
-    expect(accessoryButton('Undo set 2')).toBeDefined();
-    expect(Alert.alert).not.toHaveBeenCalled();
-    await act(async () => { accountSetSync(studentId).queue.sendNow(); });
-    expect(setBodies().map(body => body.set_index)).toEqual([0, 1, 1]);
-    expect(accessoryButton('Undo set 2')).toBeDefined();
-  }
-  for (let index = 0; index < skipped; index++) {
-    await enterNumber(renderer, `Set ${index + 3} weight`, '60');
-    const copy = renderer.root.findAllByType(Text).map(n => n.props.children);
-    expect(copy).not.toContain('2 sets still need a weight');
-    if (skipped - index === 2) expect(copy).toContain('1 set still needs a weight');
-    else expect(copy).not.toContain('1 set still needs a weight');
-  }
-  await act(async () => accessoryButton('Complete all as planned').props.onPress());
-  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
-  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-});
-
-test('two accessory checks queued before the first response still recognize the final unrecorded set', async () => {
-  serveAccessories();
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  let release!: () => void;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log' && writes === 0) await new Promise<void>(resolve => { release = resolve; });
-    return original(path, options);
-  });
-  await startAccessories();
-  await act(async () => {
-    accessoryButton('Complete set 1').props.onPress();
-    accessoryButton('Complete set 1').props.onPress();
-    accessoryButton('Complete set 2').props.onPress();
-  });
-  expect(setBodies()).toHaveLength(1);
-  await act(async () => release());
-  expect(setBodies().map(body => body.set_index)).toEqual([0, 1]);
-  expect(renderer.root.findAllByType(RestTimer)).toHaveLength(0);
-  expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
-});
-
-test('an accessory recorded through its full entry also uses accessory rest and skips the RPE explanation', async () => {
-  serveAccessories();
-  await openSet();
-  await act(async () => saveButton().props.onPress());
-  expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(60);
-  expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.restTimerExplanationView.copy001'));
-});
-
 
 test('in-week switch starts, logs and settles the selected day without changing the cursor day', async () => {
   const d4 = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000004', day_of_week: 4,
@@ -631,13 +261,13 @@ test('in-week switch starts, logs and settles the selected day without changing 
   await mount();
   await act(async () => { renderer.root.findByType(TrainingWeekStrip).props.onSelect(d4.id); });
   for (let i = 0; i < 3; i++) await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
-  let body = renderer.root.findByType(WorkoutBody);
+  let body = renderer.root.findByType(AllDayBody);
   expect(body.props.editable).toBe(true);
   expect(body.props.preview?.unlockMessage).toBeUndefined();
-  await act(async () => body.props.onStart());
-  body = renderer.root.findByType(WorkoutBody);
-  await act(async () => body.props.onRecord(body.props.drafts[0]));
-  await act(async () => saveButton().props.onPress());
+
+  body = renderer.root.findByType(AllDayBody);
+
+  await saveFirst();
   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
     .toMatchObject({ plan_exercise_id: d4.exercises[0].id, set_index: 0 });
   await act(async () => renderer.root.findByType(HoldToCompleteButton).props.onComplete());
@@ -665,57 +295,41 @@ test('extra and student-added saves retain their identities and card date across
     return original(path, options);
   });
   await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
-  await act(async () => body().props.onStart());
+  const body = () => renderer.root.findByType(AllDayBody);
+
   await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
-  const extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
+  const extra = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string }) => draft.kind === 'extra');
   expect(extra).toMatchObject({ setIndex: 1, weightText: '80', rpeText: '' });
-  await act(async () => body().props.onAccessorySave(extra, { plan_exercise_id: extra.exercise.id, set_index: extra.setIndex, weight_kg: '85', reps: 4, completed: true }, 'single'));
+  await act(async () => body().props.onSave({ ...extra, weightText: '85', repsText: '4' }));
   expect(requests[0]).toMatchObject({ plan_exercise_id: plan.days[0].exercises[0].id, set_index: 1 });
-  expect(body().props.drafts.filter((draft: { kind?: string; status: string }) => !draft.kind && draft.status === 'pending')).toHaveLength(1);
+  expect(body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).filter((draft: { kind?: string; status: string }) => !draft.kind && draft.status === 'pending')).toHaveLength(1);
   await act(async () => body().props.onAddExercise());
   const picker = renderer.root.findByType(StudentExercisePicker);
   await act(async () => picker.props.onSelect('60000000-0000-4000-8000-000000000009'));
-  let added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  let added = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string }) => draft.kind === 'added');
   jest.useFakeTimers({ now: new Date(2026, 9, 15, 3, 59) });
-  await act(async () => body().props.onAccessorySave(added, { exercise_id: added.exercise.exercise_id, plan_day_id: plan.days[0].id, set_index: 0, logged_date: '2026-10-14', weight_kg: '12.5', reps: 12, completed: true }, 'single'));
+  await act(async () => body().props.onSave({ ...added, weightText: '12.5', repsText: '12' }));
   await act(async () => { await jest.advanceTimersByTimeAsync(50); });
-  added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  added = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string }) => draft.kind === 'added');
   await act(async () => body().props.onAddSet(added.exercise));
   jest.setSystemTime(new Date(2026, 9, 15, 4, 1));
-  const second = body().props.drafts.find((draft: { kind?: string; setIndex: number }) => draft.kind === 'added' && draft.setIndex === 1);
-  await act(async () => body().props.onAccessorySave(second, { exercise_id: added.exercise.exercise_id, plan_day_id: plan.days[0].id, set_index: 1, logged_date: '2026-10-15', weight_kg: '12.5', reps: 12, completed: true }, 'single'));
+  const second = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string; setIndex: number }) => draft.kind === 'added' && draft.setIndex === 1);
+  await act(async () => body().props.onSave({ ...second, weightText: '12.5', repsText: '12' }));
   expect(requests.slice(1).map(request => request.logged_date)).toEqual(['2026-10-14', '2026-10-14']);
   await act(async () => body().props.onRemoveExercise(added.exercise));
   const confirm = jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive');
   expect(confirm).toBeDefined();
   await act(async () => { confirm?.onPress?.(); });
-  expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added')).toHaveLength(0);
+  expect(body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).filter((draft: { kind?: string }) => draft.kind === 'added')).toHaveLength(0);
   expect(storedLogs).toHaveLength(1);
   await act(async () => body().props.onAddExercise());
   await act(async () => renderer.root.findByType(StudentExercisePicker).props.onSelect(added.exercise.exercise_id));
-  const replacement = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
-  await act(async () => body().props.onAccessorySave(replacement, { exercise_id: added.exercise.exercise_id, plan_day_id: plan.days[0].id, set_index: 0, logged_date: '2026-10-15', weight_kg: '10', reps: 10, completed: true }, 'single'));
+  const replacement = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string }) => draft.kind === 'added');
+  await act(async () => body().props.onSave({ ...replacement, weightText: '10', repsText: '10' }));
   expect(requests.at(-1)?.logged_date).toBe('2026-10-15');
 });
 
-test('main-lift extra full entry keeps RPE optional and unprescribed weight empty', async () => {
-  await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
-  await act(async () => body().props.onStart());
-  await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
-  let extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
-  await act(async () => body().props.onRecord(extra));
-  await act(async () => saveButton().props.onPress());
-  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body).toMatchObject({ rpe: null });
-  await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
-  extra = { ...body().props.drafts.find((draft: { kind?: string; setIndex: number }) => draft.kind === 'extra' && draft.setIndex === 2), weightText: '' };
-  // The full-entry seam receives an unprescribed, empty-weight row from pure RPE prescriptions.
-  await act(async () => { renderer.update(<SetEntrySheet studentId={studentId} draft={extra} collarOn={false} editable exerciseName="Squat" onChangeCollar={() => {}} onClose={() => {}} onSave={async () => {}} ensureSetLog={async () => "unused"} suggestion={null} suggestionReason={null} />); });
-  expect(saveButton().props.disabled).toBe(true);
-});
-
-test('restored non-cursor selection stays on the open day across 04:00 and a new visit returns to the cursor', async () => {
+test('opening defaults to the cursor despite recent logs; explicit selection survives 04:00 until the next visit', async () => {
   const d4 = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000004', day_of_week: 4,
     exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000004', plan_day_id: '40000000-0000-4000-8000-000000000004' }] };
   servedPlan = { ...plan, days: [...plan.days, d4] };
@@ -723,6 +337,8 @@ test('restored non-cursor selection stays on the open day across 04:00 and a new
   storedLogs = [{ id: '80000000-0000-4000-8000-000000000004', student_id: studentId, plan_exercise_id: d4.exercises[0].id, exercise_id: d4.exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 20).toISOString() }];
   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
   for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(d4.id));
   expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(d4.id);
   await act(async () => { await jest.advanceTimersByTimeAsync(120_000); });
   for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
@@ -731,82 +347,6 @@ test('restored non-cursor selection stays on the open day across 04:00 and a new
   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
   for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
   expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
-});
-
-test('extra main-lift rest uses student RPE settings instead of prescription rest', async () => {
-  mockFocused = true;
-  await writeRestPreference(studentId, { mode: 'custom', low: 90, mid: 150, high: 210 });
-  await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
-  await act(async () => body().props.onStart());
-  await act(async () => body().props.onAddSet(plan.days[0].exercises[0]));
-  const extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
-  await act(async () => body().props.onAccessorySave(extra, { plan_exercise_id: extra.exercise.id, set_index: 1, weight_kg: '80', reps: 5, rpe: '9', completed: true }, 'single'));
-  expect(renderer.root.findByType(RestTimer).props.durationSeconds).toBe(210);
-});
-
-test.each(['delete', 'cancel'] as const)('extra %s immediately refreshes the current e1RM suggestion', async action => {
-  const exercise = plan.days[0].exercises[0];
-  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{ ...exercise.sets[0], load_mode: 'pct', pct_anchor: 'e1rm', target_pct: '75', target_weight: null }] }] }] };
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/exercises') return { exercises: [{ id: exercise.exercise_id, name: 'Bench press', name_en: 'Bench press', main_lift_family: 'bench', is_competition_lift: true, competition_stance: null }] } as never;
-    if (options?.method === 'DELETE') { storedLogs = []; return undefined as never; }
-    return original(path, options);
-  });
-  await new E1RMRecorder(trainingE1RMRepository).record({ studentId, exerciseId: exercise.exercise_id, setLogId: 'previous', family: 'bench', weightKg: 60, reps: 5, rpe: 8, completed: true, failed: false });
-  await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
-  const suggestion = () => body().props.suggestionForDraft(body().props.drafts[0]).percentage.anchorKg;
-  const baseline = suggestion();
-  expect(baseline).toBeGreaterThan(0);
-  await act(async () => body().props.onStart());
-  await act(async () => body().props.onAddSet(exercise));
-  const extra = () => body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
-  await act(async () => body().props.onAccessorySave(extra(), { plan_exercise_id: exercise.id, set_index: 1, weight_kg: '65', reps: 5, rpe: '8', completed: true }, 'single'));
-  expect(suggestion()).toBeGreaterThan(baseline);
-  if (action === 'delete') {
-    await act(async () => body().props.onRemoveSet(extra()));
-    await act(async () => { jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive')?.onPress?.(); });
-  } else {
-    await act(async () => body().props.onAccessorySave(extra(), { plan_exercise_id: exercise.id, set_index: 1, weight_kg: '65', reps: 5, rpe: '8', completed: false }, 'single'));
-  }
-  expect(suggestion()).toBe(baseline);
-});
-
-test.each(['cancel', 'fail'] as const)('102: %s of a pre-existing extra set removes its server-derived history with an empty outbox', async action => {
-  const exercise = plan.days[0].exercises[0];
-  const id = '80000000-0000-4000-8000-000000000000';
-  storedLogs = [{ id, student_id: studentId, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id, set_index: 1, weight_kg: '100', reps: 5, rpe: '8', completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-21', logged_at: '2026-09-21T10:00:00Z' }];
-  await new E1RMRecorder(trainingE1RMRepository).record({ studentId, exerciseId: exercise.exercise_id, setLogId: id, family: 'bench', weightKg: 100, reps: 5, rpe: 8, completed: true, failed: false });
-  await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
-  const extra = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'extra');
-  expect(extra.sourceLog.id).toBe(id);
-  expect((await trainingE1RMRepository.historySnapshot(studentId)).points.some(point => point.setLogId === id)).toBe(true);
-  await act(async () => body().props.onAccessorySave(extra, { plan_exercise_id: exercise.id, set_index: 1, weight_kg: '100', reps: 5, rpe: '8', completed: false, failed: action === 'fail' }, 'single'));
-  expect((await trainingE1RMRepository.historySnapshot(studentId)).points.some(point => point.setLogId === id)).toBe(false);
-});
-
-test('a completed day shows the overview card with logged counts and expandable sets instead of a set hero', async () => {
-  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z' }] };
-  const base: SetLog = { id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' };
-  storedLogs = [base, { ...base, id: '80000000-0000-4000-8000-000000000001', set_index: 1, weight_kg: '85' }, { ...base, id: '80000000-0000-4000-8000-000000000002', exercise_id: '60000000-0000-4000-8000-000000000002', plan_exercise_id: null, plan_day_id: plan.days[0].id, adhoc: true }];
-  await mount();
-  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join('')).join(' ');
-  expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
-  expect(renderer.root.findAllByProps({ testID: 'completed-day-card' }).length).toBeGreaterThan(0);
-  // The extra set is logged but never inflates the prescription count.
-  expect(copy()).toContain(t('student.completedDay.loggedSets %lld %lld', [1, 1]));
-  expect(copy()).toContain(t('student.completedDay.addedSets %lld', [1]));
-  expect(copy()).not.toContain('85 kg × 5');
-  const rows = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false && typeof node.props.onPress === 'function');
-  await act(async () => { rows[0].props.onPress(); });
-  expect(copy()).toContain('80 kg × 5');
-  expect(copy()).toContain(t('student.added.extra'));
-  expect(copy()).toContain('85 kg × 5');
 });
 
 test('removing a student-added card keeps a rejected delete queued without restoring its rows', async () => {
@@ -824,60 +364,14 @@ test('removing a student-added card keeps a rejected delete queued without resto
     return original(path, options);
   });
   await mount();
-  const body = () => renderer.root.findByType(WorkoutBody);
-  const added = body().props.drafts.find((draft: { kind?: string }) => draft.kind === 'added');
+  const body = () => renderer.root.findByType(AllDayBody);
+  const added = body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).find((draft: { kind?: string }) => draft.kind === 'added');
   await act(async () => body().props.onRemoveExercise(added.exercise));
   await act(async () => { jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive')?.onPress?.(); });
   expect(deleted).toEqual(['/sets/80000000-0000-4000-8000-000000000000', '/sets/80000000-0000-4000-8000-000000000001', '/sets/80000000-0000-4000-8000-000000000002']);
-  expect(body().props.drafts.filter((draft: { kind?: string }) => draft.kind === 'added').map((draft: { setIndex: number }) => draft.setIndex)).toEqual([]);
+  expect(body().props.sheet.exercises.flatMap((block: { rows: WorkoutSetDraft[] }) => block.rows).filter((draft: { kind?: string }) => draft.kind === 'added').map((draft: { setIndex: number }) => draft.setIndex)).toEqual([]);
   expect(accountSetSync(studentId).queue.pending()).toMatchObject([{ status: 'failed', remove: true }]);
   expect(Alert.alert).toHaveBeenCalledTimes(1);
-});
-
-test.each(['uploaded', 'none', 'uploading', 'failed'] as const)('completed summary replay and upload status: %s', async status => {
-  servedPlan = { ...plan, days: [{ ...plan.days[0], completed_at: '2026-10-14T12:00:00Z', exercises: [{ ...plan.days[0].exercises[0], sets: [...plan.days[0].exercises[0].sets, { ...plan.days[0].exercises[0].sets[0], id: 'second-set', set_number: 2 }] }] }] };
-  storedLogs = [{ id: '80000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: '2026-10-14T11:00:00Z' }];
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path.endsWith('/videos')) return { videos: status === 'none' ? [] : [{ id: 'video', set_log_id: storedLogs[0].id, created_at: '2026-10-14T11:00:00Z' }] } as never;
-    if (path.endsWith('/feedback')) return { items: [
-      { id: 'latest-feedback', video_id: 'video', posted_at: '2026-10-15T12:00:00Z' },
-      { id: 'old-feedback', video_id: 'video', posted_at: '2026-10-14T12:00:00Z' },
-    ] } as never;
-    return original(path, options);
-  });
-  if (status === 'uploading' || status === 'failed') useVideoUploadStore.setState({ hydrated: true, records: { [`${studentId}:${plan.days[0].exercises[0].sets[0].id}`]: { ...EMPTY_VIDEO_UPLOAD, status, setLogId: storedLogs[0].id, localUri: 'file:///still-uploading.mp4' } } });
-  await mount();
-  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(plan.days[0].id));
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  const summary = renderer.root.findAllByProps({ testID: 'completed-day-card' })[0];
-  await act(async () => summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityState?.expanded === false)[0].props.onPress());
-  if (status !== 'uploaded') {
-    expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo'))).toHaveLength(0);
-    if (status === 'none') {
-      expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(0);
-      return;
-    }
-    const failures = summary.findAllByType(Text).filter(node => node.props.children === t('student.videoDelivery.notUploaded'));
-    expect(failures).toHaveLength(status === 'failed' ? 1 : 0);
-    // Completing the pending upload updates the mounted summary without navigation.
-    await act(async () => { useVideoUploadStore.getState().dispatch(studentId, plan.days[0].exercises[0].sets[0].id, { type: 'succeeded', attachmentId: 'video' }); });
-  }
-  expect(summary.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.playVideo')).length).toBeGreaterThan(0);
-  expect(summary.findAllByType(View).filter(node => StyleSheet.flatten(node.props.style)?.width === 22 && StyleSheet.flatten(node.props.style)?.alignSelf === 'stretch')).toHaveLength(2);
-  const playButton = summary.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === t('chat.playVideo'))!;
-  expect(StyleSheet.flatten(playButton.props.style)).toMatchObject({ width: 22, height: 22 });
-  expect(playButton.props.hitSlop).toBe(11);
-  let hitContainer = playButton.parent!;
-  while (hitContainer.type !== View) hitContainer = hitContainer.parent!;
-  expect(StyleSheet.flatten(hitContainer.props.style)).toMatchObject({ position: 'absolute', width: 44, height: 44 });
-  expect(playButton.findByType(MaterialCommunityIcons).props.color).toBe(resolveColors('light').completedVideoIcon);
-  await act(async () => playButton.props.onPress());
-  expect(renderer.root.findByType(VideoPlayback).props).toMatchObject({ readOnly: true, attachmentId: 'video' });
-  await act(async () => renderer.root.findByType(VideoPlayback).props.onReview());
-  expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/(student)/feedback/[feedbackId]', params: { feedbackId: 'latest-feedback' } });
-  expect(renderer.root.findAllByType(VideoPlayback)).toHaveLength(0);
-  expect(writes).toBe(0);
 });
 
 

@@ -1,12 +1,6 @@
 import type { SetLog } from '@/api/domains';
-import {
-  isE1RMPointEligible,
-  type E1RMHistoryPoint,
-  type E1RMHistorySnapshot,
-  type E1RMRepository,
-  type LiftFamily,
-} from '@/domain/e1rm';
-import { replayE1RMHistoryPoints } from '@/features/dashboard/model';
+import { isE1RMPointEligible, type E1RMHistoryPoint, type E1RMHistorySnapshot, type E1RMRepository, type LiftFamily } from '@/domain/e1rm';
+import { replayE1RMHistoryPoints } from '@/features/history/summary-model';
 
 /** Repair and backfill in one transaction. Saved estimates and PRs remain authoritative. */
 export async function loadGrowthHistory(
@@ -24,7 +18,8 @@ export async function loadGrowthHistory(
     return (['squat', 'bench', 'deadlift'] as const)
       .flatMap(family => replayE1RMHistoryPoints(canonical, families, family));
   }
-  const saved = [...snapshot.points];
+  const emptyWeights = new Set(canonical.filter(log => log.weight_kg == null).map(log => log.id));
+  const saved = snapshot.points.filter(point => !emptyWeights.has(point.setLogId));
   const known = new Map(saved.map(point => [point.setLogId, point]));
   const replacements = new Map<string, E1RMHistoryPoint>();
   const realLogIds = new Set(canonical.filter(log => !log.assumed).map(log => log.id));
@@ -53,7 +48,7 @@ export async function loadGrowthHistory(
       }
     }
   }
-  if (replacements.size === 0) return saved;
+  if (replacements.size === 0 && saved.length === snapshot.points.length) return saved;
   const updated = saved.map(point => replacements.get(point.setLogId) ?? point);
   updated.push(...[...replacements.values()].filter(point => !known.has(point.setLogId)));
   try {

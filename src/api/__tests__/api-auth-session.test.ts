@@ -1,14 +1,8 @@
-import * as SecureStore from 'expo-secure-store';
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import * as SecureStore from 'expo-secure-store';
 import { z } from 'zod';
 
-import {
-  loginRequest,
-  normalizeWirePhone,
-  refreshRequest,
-  registerRequest,
-  UserSchema,
-} from '../auth';
+import { loginRequest, normalizeWirePhone, refreshRequest, registerRequest, UserSchema } from '../auth';
 import { setLocaleOverride, type Locale } from '@/i18n';
 import { ApiError, apiRequest } from '../client';
 import {
@@ -194,7 +188,7 @@ describe('auth wire format', () => {
     });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
-      'X-MeetPR-Locale': 'en',
+      'X-MeetPR-Caps': 'set-weight-nullable', 'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -224,7 +218,7 @@ describe('auth wire format', () => {
     });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
-      'X-MeetPR-Locale': 'en',
+      'X-MeetPR-Caps': 'set-weight-nullable', 'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -245,7 +239,7 @@ describe('auth wire format', () => {
     expect(requestBody(init)).toEqual({ refresh_token: 'refresh-old' });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
-      'X-MeetPR-Locale': 'en',
+      'X-MeetPR-Caps': 'set-weight-nullable', 'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
     });
   });
@@ -263,7 +257,7 @@ describe('auth wire format', () => {
     expect(requestBody(init)).toEqual({ snake_case: true });
     expect(requestHeaders(init)).toEqual({
       accept: 'application/json',
-      'X-MeetPR-Locale': 'en',
+      'X-MeetPR-Caps': 'set-weight-nullable', 'X-MeetPR-Locale': 'en',
       'content-type': 'application/json',
       authorization: 'Bearer access-token',
     });

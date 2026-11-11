@@ -1,0 +1,140 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+FAIL src/features/training/__tests__/exercise-summary.test.ts
+  ✓ per-set weights compress only consecutive equal weights
+  ✓ different rep sections keep weights paired in prescription order
+  ✕ weight range preserves the written prescription (2 ms)
+  ✕ rep range preserves the written prescription
+  ✕ AMRAP preserves the written prescription (1 ms)
+  ✕ bodyweight preserves the written prescription
+  ✕ bodyweight plus load preserves the written prescription
+  107 one-line prescription table
+    ✓ uniform weight: 4×8 130 (1 ms)
+
+  ● weight range preserves the written prescription
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+    -     "load": "100–110",
+    +     "load": "undefined",
+          "setsReps": "4×5",
+        },
+      ]
+
+      31 |   ['bodyweight plus load', 3, { target_reps: 8, load_mode: 'bodyweight', target_weight: '10' }, '3×8', '自重+10'],
+      32 | ] as const)('%s preserves the written prescription', (_, count, fields, setsReps, load) => {
+    > 33 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load }]);
+         |                                                          ^
+      34 | });
+      35 |
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:33:58)
+
+  ● rep range preserves the written prescription
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+          "load": "60",
+    -     "setsReps": "3×8–10",
+    +     "setsReps": "3×8",
+        },
+      ]
+
+      31 |   ['bodyweight plus load', 3, { target_reps: 8, load_mode: 'bodyweight', target_weight: '10' }, '3×8', '自重+10'],
+      32 | ] as const)('%s preserves the written prescription', (_, count, fields, setsReps, load) => {
+    > 33 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load }]);
+         |                                                          ^
+      34 | });
+      35 |
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:33:58)
+
+  ● AMRAP preserves the written prescription
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+          "load": "100",
+    -     "setsReps": "1×5+",
+    +     "setsReps": "1×5",
+        },
+      ]
+
+      31 |   ['bodyweight plus load', 3, { target_reps: 8, load_mode: 'bodyweight', target_weight: '10' }, '3×8', '自重+10'],
+      32 | ] as const)('%s preserves the written prescription', (_, count, fields, setsReps, load) => {
+    > 33 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load }]);
+         |                                                          ^
+      34 | });
+      35 |
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:33:58)
+
+  ● bodyweight preserves the written prescription
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+    -     "load": "自重",
+    +     "load": "undefined",
+          "setsReps": "3×10",
+        },
+      ]
+
+      31 |   ['bodyweight plus load', 3, { target_reps: 8, load_mode: 'bodyweight', target_weight: '10' }, '3×8', '自重+10'],
+      32 | ] as const)('%s preserves the written prescription', (_, count, fields, setsReps, load) => {
+    > 33 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load }]);
+         |                                                          ^
+      34 | });
+      35 |
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:33:58)
+
+  ● bodyweight plus load preserves the written prescription
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+    -     "load": "自重+10",
+    +     "load": "undefined",
+          "setsReps": "3×8",
+        },
+      ]
+
+      31 |   ['bodyweight plus load', 3, { target_reps: 8, load_mode: 'bodyweight', target_weight: '10' }, '3×8', '自重+10'],
+      32 | ] as const)('%s preserves the written prescription', (_, count, fields, setsReps, load) => {
+    > 33 |   expect(summarizeExercise(sets(count, fields), [], [])).toMatchObject([{ setsReps, load }]);
+         |                                                          ^
+      34 | });
+      35 |
+
+      at toMatchObject (src/features/training/__tests__/exercise-summary.test.ts:33:58)
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 3 passed, 8 total
+Snapshots:   0 total
+Time:        0.403 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

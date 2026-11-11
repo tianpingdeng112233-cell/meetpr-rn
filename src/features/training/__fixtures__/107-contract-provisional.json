@@ -1,0 +1,23 @@
+{
+  "provenance": "Provisional fixture transcribed from card 107-RN on 2026-11-10. Replace with backend 065 contract-samples.json before integration acceptance.",
+  "nullLog": {
+    "id": "90000000-0000-4000-8000-000000000000",
+    "student_id": "10000000-0000-4000-8000-000000000000",
+    "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+    "exercise_id": "60000000-0000-4000-8000-000000000000",
+    "set_index": 0, "weight_kg": null, "reps": 5, "rpe": null,
+    "completed": true, "failed": false, "assumed": false, "adhoc": false,
+    "logged_date": "2026-11-10", "logged_at": "2026-11-10T12:00:00Z"
+  },
+  "suggestionsResponse": { "suggestions": [{
+    "plan_set_id": "70000000-0000-4000-8000-000000000000",
+    "weight_kg": "92.5", "source_set_log_id": "90000000-0000-4000-8000-000000000001",
+    "source_logged_date": "2026-11-03"
+  }] },
+  "exerciseRef": {
+    "v": 1, "exercise_name": "Paused bench press", "day_date": "2026-11-10",
+    "plan_day_id": "40000000-0000-4000-8000-000000000000",
+    "plan_exercise_id": "50000000-0000-4000-8000-000000000000",
+    "exercise_id": "60000000-0000-4000-8000-000000000000"
+  }
+}

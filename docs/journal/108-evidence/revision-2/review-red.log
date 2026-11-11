@@ -1,0 +1,98 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-view.test.tsx -t switching an RIR|timeline connects
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/AllDayBody.tsx:14:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:33:1)
+      at Object.require (src/features/training/__tests__/all-day-view.test.tsx:13:1)
+
+FAIL src/features/training/__tests__/all-day-view.test.tsx
+  ✕ timeline connects consecutive node centers with no outer gap and stops at the last node (383 ms)
+  ✕ switching an RIR prescription to empty RPE keeps the chosen column label after editing (134 ms)
+  ○ skipped 107 tapping a row edits in place and checking an exercise collapses its rows
+  ○ skipped 107 long hold records untouched prescriptions before completing the day
+  ○ skipped 107 row fields remain reachable while the keypad is open and only the edited row changes
+  ○ skipped 107 exercise note queues offline and retries canonical text plus exercise_ref without set_ref or video
+  ○ skipped changing the selected day closes the old row editor
+  ○ skipped switching accounts drains the new outbox while the previous account request is pending
+  ○ skipped exercise note wire body preserves the original student text after the canonical header
+  ○ skipped single expanded exercise, repeated name indentation, manual collapse and check reset do not conflate viewing with saving
+  ○ skipped acceptance 14: free weight, RPE without history, and an empty added exercise finish without input
+  ○ skipped a day with no exercises can complete without an at-least-one-exercise gate
+  ○ skipped lb summary, expanded rows and keypad use the same unit while saved weights remain kg
+  ○ skipped 108 logging weight from the training strip updates today without leaving training
+  ○ skipped current collapsed exercise retains its gold highlight and completion moves it without expanding
+  ○ skipped expanded effort column identifies rpe even when its value is 8
+  ○ skipped expanded effort column identifies rpe even when its value is null
+  ○ skipped expanded effort column identifies rir even when its value is 2
+  ○ skipped expanded effort column identifies rir even when its value is null
+  ○ skipped meet strip displays the generic countdown in zh at day 23
+  ○ skipped meet strip displays the generic countdown in zh at day 0
+  ○ skipped meet strip displays the generic countdown in zh-Hant at day 23
+  ○ skipped meet strip displays the generic countdown in zh-Hant at day 0
+  ○ skipped meet strip displays the generic countdown in en at day 23
+  ○ skipped meet strip displays the generic countdown in en at day 0
+
+  ● timeline connects consecutive node centers with no outer gap and stops at the last node
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 1
+    Received length: 2
+    Received array:  [{"_fiber": [FiberNode]}, {"_fiber": [FiberNode]}]
+
+      350 |   const line = (id: string) => lines(id)[0];
+      351 |   for (const id of [first.id, second.id]) {
+    > 352 |     expect(lines(id)).toHaveLength(1);
+          |                       ^
+      353 |     expect(StyleSheet.flatten(line(id)!.props.style)).toMatchObject({ position: 'absolute', top: 16, bottom: -16, width: 3 });
+      354 |   }
+      355 |   expect(line(third.id)).toBeUndefined();
+
+      at Object.toHaveLength (src/features/training/__tests__/all-day-view.test.tsx:352:23)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● switching an RIR prescription to empty RPE keeps the chosen column label after editing
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "RPE —"
+    Received array: ["W1", "󰅁", "Tue", "1", "Wed", "2", "Thu", "3", "Fri", "4", …]
+
+      414 |   expect(renderer.root.findByType(NumberPad).props.field).toBe('rpe');
+      415 |   await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+    > 416 |   expect(copy()).toContain('RPE —');
+          |                  ^
+      417 |   expect(copy()).not.toContain('RIR —');
+      418 | });
+      419 |
+
+      at Object.toContain (src/features/training/__tests__/all-day-view.test.tsx:416:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 23 skipped, 25 total
+Snapshots:   0 total
+Time:        1.572 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-view.test.tsx/i with tests matching "switching an RIR|timeline connects".

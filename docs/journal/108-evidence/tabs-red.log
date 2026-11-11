@@ -1,0 +1,20 @@
+FAIL src/navigation/__tests__/student-tabs.test.ts
+  ● Test suite failed to run
+
+    Cannot find module '../student-tabs' from 'src/navigation/__tests__/student-tabs.test.ts'
+
+      1 | import { expect, test } from '@jest/globals';
+    > 2 | import { studentTabs } from '../student-tabs';
+        | ^
+      3 |
+      4 | test('training is first and coach is second only for coached students', () => {
+      5 |   expect(studentTabs('coached_student')).toEqual(['training', 'chat', 'growth', 'profile']);
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (src/navigation/__tests__/student-tabs.test.ts:2:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.663 s
+Ran all test suites matching /src\/navigation\/__tests__\/student-tabs.test.ts/i.

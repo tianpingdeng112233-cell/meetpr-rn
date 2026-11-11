@@ -2,7 +2,7 @@ import { Alert, AppState } from 'react-native';
 import { ApiError } from '@/api/client';
 import { bindKeys, useMineBindRequest } from '@/api/domains/bind';
 import { chatRepository } from '@/api/domains/chat';
-import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
+import { useFeedbackInboxViewModel } from '@/features/feedback/feedback-inbox';
 import { t } from '@/i18n';
 import { CHAT_POLL_MS } from './conversation-model';
 import { useChatRealtime, useRealtimeInboxRefresh } from './realtime';
@@ -12,8 +12,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePlan, usePlans } from '@/api/domains/plans';
 import { currentWeekDays } from '@/domain/plan/sequence';
-import { selectDashboardPlan, selectLatestPublishedPlan } from '@/features/dashboard/model';
-import { dashboardPlanSignature, dashboardPlanSignatureKey, hasSeenDashboardPlan } from '@/features/dashboard/plan-seen';
+import { selectDashboardPlan, selectLatestPublishedPlan } from '@/features/history/summary-model';
+import { dashboardPlanSignature, dashboardPlanSignatureKey, hasSeenDashboardPlan } from '@/features/chat/plan-seen';
 import type { StudentPlanNotice } from './student-timeline';
 
 export const studentChatKeys = {

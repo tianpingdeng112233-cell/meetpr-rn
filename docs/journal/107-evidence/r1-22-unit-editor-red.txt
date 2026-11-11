@@ -1,0 +1,64 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-view.test.tsx
+
+  console.warn
+    expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/AllDayBody.tsx:14:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:31:1)
+      at Object.require (src/features/training/__tests__/all-day-view.test.tsx:10:1)
+
+FAIL src/features/training/__tests__/all-day-view.test.tsx
+  ✓ 107 tapping a row edits in place and checking an exercise collapses its rows (224 ms)
+  ✓ 107 long hold records untouched prescriptions before completing the day (123 ms)
+  ✓ 107 row fields remain reachable while the keypad is open and only the edited row changes (108 ms)
+  ✓ 107 exercise note queues offline and retries canonical text plus exercise_ref without set_ref or video (74 ms)
+  ✓ changing the selected day closes the old row editor (71 ms)
+  ✓ switching accounts drains the new outbox while the previous account request is pending (25 ms)
+  ✓ exercise note wire body preserves the original student text after the canonical header
+  ✓ single expanded exercise, repeated name indentation, manual collapse and check reset do not conflate viewing with saving (120 ms)
+  ✓ acceptance 14: free weight, RPE without history, and an empty added exercise finish without input (66 ms)
+  ✓ a day with no exercises can complete without an at-least-one-exercise gate (47 ms)
+  ✕ lb summary, expanded rows and keypad use the same unit while saved weights remain kg (36 ms)
+
+  ● lb summary, expanded rows and keypad use the same unit while saved weights remain kg
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "176.4"
+    Received: "80"
+
+      287 |   expect(copy()).toContain('176.4');
+      288 |   await press('Edit set 1');
+    > 289 |   expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('176.4');
+          |                                                                  ^
+      290 |   expect(renderer.root.findByType(NumberPad).props.contextText).toContain('lb');
+      291 |   await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('220.5'));
+      292 |   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
+
+      at Object.toBe (src/features/training/__tests__/all-day-view.test.tsx:289:66)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 10 passed, 11 total
+Snapshots:   0 total
+Time:        2.145 s, estimated 4 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-view.test.tsx/i.

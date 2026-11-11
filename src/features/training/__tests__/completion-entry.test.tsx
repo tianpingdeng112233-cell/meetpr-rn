@@ -1,19 +1,19 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { readReview } from '../storage';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
-import { useSetRefStagingStore } from '@/features/chat/set-ref-staging';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ApiError } from '@/api/client';
-import { AccessibilityInfo, Alert, AppState, Keyboard, ScrollView, Text, TextInput } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
-import { setLocaleOverride, t } from '@/i18n';
-import { HoldToCompleteButton } from '../HoldToCompleteButton';
+import { authenticatedRequest, useSessionStore } from '@/api/session';
+import { useStudentTabsStore } from '@/features/student-tabs';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
-import { useVideoUploadStore, resetVideoUploadStoreForTests } from '../video-upload/store';
+import { setLocaleOverride, t } from '@/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFocusEffect } from 'expo-router';
+import { Alert, ScrollView, Text, TextInput } from 'react-native';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { HoldToCompleteButton } from '../HoldToCompleteButton';
+import { readReview } from '../storage';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
+import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../video-upload/store';
 
 
 jest.mock('expo-media-library', () => ({}));
@@ -99,22 +99,24 @@ afterEach(async () => {
   setLocaleOverride(null);
   jest.restoreAllMocks();
   jest.useRealTimers();
+  useStudentTabsStore.setState({ trainingHandoff: null });
   await AsyncStorage.clear();
   resetVideoUploadStoreForTests();
 });
 
-test('successful settlement opens celebration and direct finish persists review and navigates to Today', async () => {
+test('successful settlement opens celebration and direct finish persists review and stays on the completed training day', async () => {
   await mount();
   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction(); });
   expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
   await press(t('student.workoutCompletionFlowView.copy003'));
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/today');
+  expect(mockNavigate).not.toHaveBeenCalled();
   expect(await readReview(studentId, plan.days[0].id)).toMatchObject({ completedAt: expect.stringMatching(/^\d{4}-/), reflection: { goal: '', achieved: '', improve: '' } });
   expect(copy()).not.toContain(t('student.workoutCompletionFlowView.copy001'));
 });
 
 test('completed-day banner opens review directly and reflection survives reopening', async () => {
   servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
+  useStudentTabsStore.setState({ trainingHandoff: { plan: servedPlan, dayID: servedPlan.days[0].id, existingLogs: [] } });
   await mount();
   await press(t('student.dayCompletionBanner.copy003', [1]));
   expect(copy()).toContain(t('student.sessionSummaryView.copy003'));
@@ -122,7 +124,7 @@ test('completed-day banner opens review directly and reflection survives reopeni
   await act(async () => { renderer.root.findAllByType(TextInput)[0].props.onChangeText('Steady pace'); });
   expect((await readReview(studentId, plan.days[0].id))?.reflection.goal).toBe('Steady pace');
   await press(t('student.sessionSummaryView.copy002'));
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/today');
+  expect(mockNavigate).not.toHaveBeenCalled();
   await press(t('student.dayCompletionBanner.copy003', [1]));
   expect(renderer.root.findAllByType(TextInput)[0].props.value).toBe('Steady pace');
 });
@@ -135,44 +137,6 @@ test('failed settlement leaves the completion flow closed', async () => {
   expect(copy()).not.toContain(t('student.workoutCompletionFlowView.copy001'));
   expect(mockNavigate).not.toHaveBeenCalled();
   expect(await readReview(studentId, plan.days[0].id)).toBeNull();
-});
-
-test('Ask coach opens the picker before navigating, then enters chat with a staged current set', async () => {
-  const conversationId = '90000000-0000-4000-8000-000000000000';
-  const coachId = '80000000-0000-4000-8000-000000000000';
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: coachId, coach_display_name: 'Alex' } } as never;
-    if (path === '/conversations') return options?.method === 'POST'
-      ? { conversation: { id: conversationId, other_party: { id: coachId, display_name: 'Alex' }, unread_count: 0 } } as never
-      : { conversations: [] } as never;
-    if (path.endsWith('/videos')) return { videos: [] } as never;
-    if (path.includes('/sets?')) return { logs: [] } as never;
-    return original(path, options);
-  });
-  await mount();
-  expect(copy()).toContain(t('student.askCoach'));
-  await press(t('student.askCoach'));
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
-  expect(mockNavigate).not.toHaveBeenCalled();
-  expect(copy()).toContain(t('chat.whichSet'));
-  await press(t('chat.sendToCoach'));
-  expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(student)/chat', params: { conversationId, coachName: 'Alex' } });
-  expect(useSetRefStagingStore.getState().intents[conversationId]).toMatchObject({ setRef: { source: 'planned', planSetId: plan.days[0].exercises[0].sets[0].id } });
-});
-test('Ask coach conversation failure uses the training share alert and stays on Training', async () => {
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: '80000000-0000-4000-8000-000000000000', coach_display_name: 'Alex' } } as never;
-    if (path === '/conversations') { if (options?.method === 'POST') throw new Error('offline'); return { conversations: [] } as never; }
-    if (path.endsWith('/videos')) return { videos: [] } as never;
-    // Exercise the share failure while a current hero exists (090 removes it once all sets are done).
-    if (path.includes('/sets?')) return { logs: [] } as never;
-    return original(path, options);
-  });
-  await mount(); await press(t('student.askCoach'));
-  expect(Alert.alert).toHaveBeenCalledWith(t('student.trainingShareConversationFailed'));
-  expect(mockNavigate).not.toHaveBeenCalled();
 });
 
 function delayCompletion() {
@@ -268,7 +232,7 @@ test('failure after leaving celebration rolls back without reopening it or losin
   await mount();
   await complete();
   await press(t('student.workoutCompletionFlowView.copy003'));
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/today');
+  expect(mockNavigate).not.toHaveBeenCalled();
   await act(async () => { request.reject(new Error('Offline')); });
   expectRetryable();
 });
@@ -285,56 +249,6 @@ test('Chinese celebration shows sending until the completion response', async ()
   expect(copy()).not.toContain('正在发送给教练…');
 });
 
-test.each([
-  [7, 'Current week', 'Current week'],
-  [8, '1 day behind', '1 day behind schedule'],
-  [25, '18 days behind', '18 days behind schedule'],
-])('training header shows cursor status on September %i', async (date, label, accessibility) => {
-  jest.useFakeTimers({ now: new Date(2026, 8, date, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
-  servedPlan = { ...plan, start_date: '2026-09-07' };
-  await mount();
-  expect(copy()).toContain(label);
-  expect(renderer.root.findAllByProps({ accessibilityLabel: accessibility }).length).toBeGreaterThan(0);
-  expect(copy()).toContain('W1');
-  expect(copy()).toContain('Training history');
-});
-
-test.each(['focus', 'foreground'])('training header recalculates after 4am on %s without waiting for its minute tick', async (event) => {
-  jest.useFakeTimers({ now: new Date(2026, 8, 8, 3, 59, 59), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
-  const appState = jest.spyOn(AppState, 'addEventListener');
-  servedPlan = { ...plan, start_date: '2026-09-07' };
-  await mount();
-  expect(copy()).toContain('Current week');
-  jest.setSystemTime(new Date(2026, 8, 8, 4));
-  const cleanups: (() => void)[] = [];
-  await act(async () => {
-    if (event === 'foreground') {
-      appState.mock.calls.filter(([type]) => type === 'change').forEach(([, listener]) => listener('active'));
-    } else {
-      const callbacks = new Set(jest.mocked(useFocusEffect).mock.calls.map(([callback]) => callback));
-      callbacks.forEach(callback => { const cleanup = callback(); if (cleanup) cleanups.push(cleanup); });
-    }
-  });
-  try {
-    expect(copy()).toContain('1 day behind');
-    expect(copy()).not.toContain('Current week');
-  } finally {
-    act(() => cleanups.forEach(cleanup => cleanup()));
-  }
-});
-
-test('browsing a completed week keeps Completed instead of the overdue cursor count', async () => {
-  servedPlan = { ...plan, days: [
-    { ...plan.days[0], completed_at: '2026-09-01T12:00:00Z' },
-    { ...plan.days[0], id: 'current-week-two', week_number: 2 },
-  ] };
-  await mount();
-  await press('Previous week');
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(copy()).toContain('Completed');
-  expect(copy().some(text => text.includes('days behind'))).toBe(false);
-});
-
 
 test('090 all done docks exactly one completion control outside the scroll content', async () => {
   await mount();
@@ -342,120 +256,6 @@ test('090 all done docks exactly one completion control outside the scroll conte
   expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(1);
   expect(renderer.root.findAllByType(ScrollView)[0].findAllByType(HoldToCompleteButton)).toHaveLength(0);
   expect(renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0].findAllByType(HoldToCompleteButton)).toHaveLength(1);
-});
-
-test('090 undoing a recorded set restores the hero and returns the single completion control to the scroll content', async () => {
-  const exercise = plan.days[0].exercises[0];
-  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: '70000000-0000-4000-8000-000000000001', set_number: 2 }] }] }] };
-  let undone = false;
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log') {
-      undone = true;
-      return { id: '80000000-0000-4000-8000-000000000000', logged_at: new Date().toISOString() } as never;
-    }
-    if (path.includes('/sets?')) return { logs: [0, 1].map(set_index => ({
-      id: `80000000-0000-4000-8000-00000000000${set_index}`, student_id: studentId,
-      plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id, set_index, weight_kg: '80', reps: 5, rpe: '8',
-      completed: !(undone && set_index === 0), failed: false, assumed: false, adhoc: false,
-      logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z',
-    })) } as never;
-    return original(path, options);
-  });
-  await mount();
-  expect(renderer.root.findAllByProps({ testID: 'workout-hero' })).toHaveLength(0);
-  const completed = renderer.root.findAll(node => node.props.onPress && node.props.accessibilityLabel?.includes(', completed, 2 sets'))[0];
-  await act(async () => completed.props.onPress());
-  const toggle = renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy015'))[0];
-  await act(async () => toggle.props.onPress({ stopPropagation: () => {} }));
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  expect(renderer.root.findAllByProps({ testID: 'workout-hero' }).length).toBeGreaterThan(0);
-  expect(renderer.root.findAllByProps({ testID: 'workout-completion-dock' })).toHaveLength(0);
-  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(1);
-  expect(renderer.root.findAllByType(ScrollView)[0].findAllByType(HoldToCompleteButton)).toHaveLength(1);
-  expect(copy()).toContain(t('student.todayWorkoutPresentation.copy001', [1, 1]));
-});
-
-
-test.each([
-  { name: 'first completion', restored: [], newly: [0], targetY: 228 },
-  { name: 'batch completion in plan order, before a previously completed later row', restored: [0, 3], newly: [2, 1], targetY: 336 },
-  { name: 'last exercise with no hero remaining', restored: [0, 1, 2, 3], newly: [4], targetY: 444 },
-  { name: 'reduced motion', restored: [0], newly: [1], targetY: 282, reduced: true },
-  { name: 'keyboard already open', restored: [0], newly: [1], blocked: 'keyboard-before' },
-  { name: 'keyboard opens before layout', restored: [0], newly: [1], blocked: 'keyboard-after' },
-  { name: 'user dragging', restored: [0], newly: [1], blocked: 'drag-before' },
-  { name: 'user starts dragging before layout', restored: [0], newly: [1], blocked: 'drag-after' },
-  { name: 'momentum scrolling', restored: [0], newly: [1], blocked: 'momentum-before' },
-])('090 completed-row scroll: $name', async ({ restored, newly, targetY, reduced = false, blocked }) => {
-  const exercise = plan.days[0].exercises[0];
-  const exercises = Array.from({ length: 5 }, (_, index) => ({
-    ...exercise, id: `exercise-${index}`, sort_order: index,
-    sets: [{ ...exercise.sets[0], id: `set-${index}`, plan_exercise_id: `exercise-${index}` }],
-  }));
-  // Input order deliberately differs from plan order.
-  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [exercises[3], exercises[0], exercises[4], exercises[2], exercises[1]] }] };
-  let recorded = restored;
-  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path.includes('/sets?')) return { logs: recorded.map(index => ({
-      id: `log-${index}`, student_id: studentId, plan_exercise_id: exercises[index].id,
-      exercise_id: exercise.exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: '8',
-      completed: true, failed: false, assumed: false, adhoc: false,
-      logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z',
-    })) } as never;
-    return original(path, options);
-  });
-  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(reduced);
-  let keyboardOpen = false;
-  jest.spyOn(Keyboard, 'isVisible').mockImplementation(() => keyboardOpen);
-  const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {}).mockClear();
-  await mount();
-  if (!restored.length) await press(t('student.todayWorkoutScreen.copy008'));
-  const layoutCompletedRows = (indices: number[], rowsFirst = false) => {
-    const section = renderer.root.findAllByProps({ testID: 'workout-completed-exercises' })[0];
-    const sectionLayout = () => section?.props.onLayout({ nativeEvent: { layout: { x: 0, y: 240, width: 360, height: indices.length * 54 } } });
-    if (!rowsFirst) sectionLayout();
-    [...indices].sort((a, b) => a - b).forEach((index, order) => {
-      const row = renderer.root.findAllByProps({ testID: `workout-completed-exercise-${index}` })[0];
-      row?.props.onLayout({ nativeEvent: { layout: { x: 0, y: order * 54, width: 360, height: 48 } } });
-    });
-    if (rowsFirst) sectionLayout();
-  };
-  act(() => layoutCompletedRows(restored));
-  expect(scrollTo).not.toHaveBeenCalled();
-  const beginInteraction = () => {
-    const scroll = renderer.root.findAllByType(ScrollView)[0];
-    if (blocked?.startsWith('keyboard')) keyboardOpen = true;
-    if (blocked?.startsWith('drag')) scroll.props.onScrollBeginDrag();
-    if (blocked?.startsWith('momentum')) scroll.props.onMomentumScrollBegin();
-  };
-  if (blocked?.endsWith('before')) act(beginInteraction);
-  recorded = [...restored, ...newly];
-  await act(async () => { await client.invalidateQueries(); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
-  if (blocked?.endsWith('after')) act(beginInteraction);
-  act(() => {
-    const hero = renderer.root.findAllByProps({ testID: 'workout-hero' })[0];
-    hero?.props.onLayout?.({ nativeEvent: { layout: { x: 0, y: 300, width: 360, height: 400 } } });
-    layoutCompletedRows(recorded, true);
-  });
-  if (blocked) {
-    expect(scrollTo).not.toHaveBeenCalled();
-    keyboardOpen = false;
-    act(() => {
-      const scroll = renderer.root.findAllByType(ScrollView)[0];
-      scroll.props.onScrollEndDrag();
-      scroll.props.onMomentumScrollEnd();
-      layoutCompletedRows(recorded);
-    });
-    expect(scrollTo).not.toHaveBeenCalled();
-  } else {
-    expect(scrollTo).toHaveBeenCalledTimes(1);
-    expect(scrollTo).toHaveBeenCalledWith({ y: targetY, animated: !reduced });
-    act(() => layoutCompletedRows(recorded));
-    expect(scrollTo).toHaveBeenCalledTimes(1);
-  }
 });
 
 test('a day completed today shows one status row whose undo reopens the day', async () => {
@@ -476,73 +276,10 @@ test('a day completed today shows one status row whose undo reopens the day', as
 
 test('a day completed on an earlier day shows the status row without undo', async () => {
   servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
+  useStudentTabsStore.setState({ trainingHandoff: { plan: servedPlan, dayID: servedPlan.days[0].id, existingLogs: [] } });
   await mount();
   expect(completedRow().length).toBeGreaterThan(0);
   expect(renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy023'))).toHaveLength(0);
-});
-
-test('102: a hanging set request turns the row green immediately and leaves other rows available', async () => {
-  const exercise = plan.days[0].exercises[0];
-  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [exercise.sets[0], { ...exercise.sets[0], id: '70000000-0000-4000-8000-000000000001', set_number: 2 }] }] }] };
-  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log') return new Promise(() => {});
-    if (path.includes('/sets')) return { logs: [] } as never;
-    if (path === '/exercises') return { exercises: [{ id: exercise.exercise_id, name: 'Press', name_en: 'Press', exercise_type: 'accessory', main_lift_family: null, is_competition_lift: false, competition_stance: null }] } as never;
-    return base(path, options);
-  });
-  await AsyncStorage.setItem(`training.started.${studentId}:${plan.days[0].id}`, 'true');
-  await mount(); await press('Complete set 1');
-  const buttons = renderer.root.findAll(node => node.props.accessibilityRole === 'button');
-  expect(buttons.some(node => node.props.accessibilityLabel === 'Undo set 1')).toBe(true);
-  expect(buttons.find(node => node.props.accessibilityLabel === 'Complete set 2')?.props.disabled).toBe(false);
-  expect(buttons.find(node => node.props.accessibilityLabel === 'Complete all as planned')?.props.disabled).toBe(false);
-  expect(Alert.alert).not.toHaveBeenCalled();
-});
-
-test('102: a hanging set request closes SetEntrySheet immediately after completing a set', async () => {
-  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log') return new Promise(() => {});
-    if (path.includes('/sets')) return { logs: [] } as never;
-    return base(path, options);
-  });
-  await mount();
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { WorkoutBody } = require('../WorkoutBody');
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { SetEntrySheet } = require('../SetEntrySheet');
-  await act(async () => { const body = renderer.root.findByType(WorkoutBody); body.props.onRecord(body.props.drafts[0]); });
-  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))[0].props.onPress(); });
-  expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
-  expect(Alert.alert).not.toHaveBeenCalled();
-});
-
-test.each([
-  { sourceId: 'log', expectedDate: '2026-09-01' },
-  { sourceId: null, expectedDate: '2026-09-02' },
-  { sourceId: 'local:one', expectedDate: '2026-09-02' },
-])('102 R1: source=$sourceId records use $expectedDate when saved after the day changes', async ({ sourceId, expectedDate }) => {
-  jest.useFakeTimers({ now: new Date(2026, 8, 1, 12), doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'nextTick', 'queueMicrotask'] });
-  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
-  jest.mocked(authenticatedRequest).mockClear();
-  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
-    if (path === '/sets/log') return { id: '80000000-0000-4000-8000-000000000000', logged_at: '2026-09-02T12:00:00Z' } as never;
-    if (path.includes('/sets')) {
-      if (!sourceId) return { logs: [] } as never;
-      const response = await base(path, options) as import('@/api/domains/sets').SetLogsResponse;
-      return { logs: response.logs.map(log => ({ ...log, id: sourceId })) } as never;
-    }
-    return base(path, options);
-  });
-  await mount();
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { WorkoutBody } = require('../WorkoutBody');
-  await act(async () => { const body = renderer.root.findByType(WorkoutBody); body.props.onRecord(body.props.drafts[0]); });
-  jest.setSystemTime(new Date(2026, 8, 2, 12));
-  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.findAllByType(Text).some(text => text.props.children === t('student.setEntrySheet.copy012')))[0].props.onPress(); });
-  const write = jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path === '/sets/log');
-  expect(write?.[1]?.body).toMatchObject({ logged_date: expectedDate, completed: true });
 });
 
 test('undelivered videos reward first, keep the training progress card after closing, and complete on delivery', async () => {

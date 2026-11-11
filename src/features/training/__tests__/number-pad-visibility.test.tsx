@@ -1,12 +1,12 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Alert, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import type { PlanDetail } from '@/api/domains/plans';
-import { setLocaleOverride, t } from '@/i18n';
+import { setLocaleOverride } from '@/i18n';
 import { spacing } from '@/design';
 import { NumberPad } from '@/design/NumberPad';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
@@ -77,9 +77,6 @@ const mount = async () => {
   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
 };
-const press = async (label: string) => {
-  await act(async () => { renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0].props.onPress(); });
-};
 afterEach(async () => {
   act(() => renderer?.unmount());
   client.clear();
@@ -118,19 +115,22 @@ async function mountCards(kind = 'accessory', position = 5) {
     return original(path, options);
   });
   await mount();
-  if (position === 0) await press(t('student.todayWorkoutScreen.copy008'));
+
 }
 
 test.each(['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => ({ kind, position }))))(
   '105 reveals the active row above the pad: $kind card $position, then removes its inset', async ({ kind, position }) => {
     await mountCards(kind, position);
+    const exerciseId = servedPlan.days[0].exercises[position].id;
+    const header = renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exerciseId}` && node.props.onPress)[0];
+    if (!header.props.accessibilityState.expanded) await act(async () => header.props.onPress());
     expect(renderer.root.findAllByType(TextInput).filter(node => node.props.editable !== false)).toHaveLength(0);
     const scroll = renderer.root.findAllByType(ScrollView)[0];
     const nativeScroll = scroll.find(node => typeof node.instance?.getNativeScrollRef === 'function').instance.getNativeScrollRef();
     jest.spyOn(nativeScroll, 'measureInWindow').mockImplementation((...args: unknown[]) => {
       (args[0] as (x: number, y: number, width: number, height: number) => void)(0, 120, 400, 680);
     });
-    const rows = renderer.root.findAllByType(View).filter(node => node.props.testID?.startsWith('accessory-row-'));
+    const rows = renderer.root.findAllByType(View).filter(node => node.props.testID?.startsWith('all-day-row-'));
     expect(rows.length).toBeGreaterThan(0);
     const contentY = position * 400 + 600;
     let offset = position * 400;
@@ -147,7 +147,7 @@ test.each(['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => (
         (args[0] as (x: number, y: number, width: number, height: number) => void)(0, 120 + contentY - offset, 400, 52);
       });
     }
-    await press(kind === 'main_lift' ? t('loadTypes.requiredWeight', ['kg']) : t('student.accessory.weightLabel', [1]));
+    await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.onPress)[0].props.onPress());
     const pad = () => renderer.root.findByType(NumberPad);
     await act(async () => pad().props.onPanelLayout(500, 300));
     await act(async () => scroll.props.onContentSizeChange(400, contentY + 120 + padding()));

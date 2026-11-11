@@ -196,7 +196,7 @@ test('foreground pending page polls at 30 seconds, accepted opens welcome, Conti
   await act(async () => press('Continue'));
   expect(track).toHaveBeenCalledWith(AnalyticsEvent.BindWelcomeViewed);
   expect(track).toHaveBeenCalledWith(AnalyticsEvent.BindWelcomeContinue);
-  expect(mockReplace).toHaveBeenCalledWith('/(student)/today');
+  expect(mockReplace).toHaveBeenCalledWith('/(student)/training');
   expect(hasText('tabs')).toBe(true);
   act(() => renderer.unmount());
   await renderGate();

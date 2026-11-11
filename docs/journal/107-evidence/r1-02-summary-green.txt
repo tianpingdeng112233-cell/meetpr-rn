@@ -1,0 +1,13 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/exercise-summary.test.ts
+
+PASS src/features/training/__tests__/exercise-summary.test.ts
+  107 one-line prescription table
+    ✓ uniform weight: 4×8 130 (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.405 s
+Ran all test suites matching /src\/features\/training\/__tests__\/exercise-summary.test.ts/i.

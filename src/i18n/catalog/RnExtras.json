@@ -1,4 +1,13 @@
 {
+"student.bodyWeight.latest": {"en": "Latest", "zh": "最新"},
+"student.bodyWeight.empty": {"en": "No weight records yet", "zh": "还没有体重记录"},
+"student.bodyWeight.single": {"en": "Log on another day to see the trend", "zh": "换一天再记一次就能看到趋势"},
+"student.bodyWeight.log": {"en": "Log today's weight", "zh": "记录今天的体重"},
+"student.bodyWeight.update": {"en": "Update today's weight", "zh": "修改今天的体重"},
+"student.bodyWeight.records": {"en": "Records", "zh": "记录"},
+"student.bodyWeight.delete": {"en": "Delete record for {0}", "zh": "删除 {0} 的记录"},
+"student.bodyWeight.confirmDelete": {"en": "Delete this record? This cannot be undone.", "zh": "删除这条记录？此操作无法撤销。"},
+"student.bodyWeight.deleteAction": {"en": "Delete", "zh": "删除"},
 "student.accessory.pad.context": {"en": "{0} · Set {1} · {2}", "zh": "{0} · 第 {1} 组 · {2}"},
 "student.accessory.pad.weight": {"en": "Weight", "zh": "重量"},
 "student.accessory.pad.reps": {"en": "Reps", "zh": "次数"},
@@ -123,7 +132,6 @@
 "student.trainingFlow.completedAccessibilityMany": {"en": "{0}, completed, {1} sets", "zh": "{0}，已完成，{1} 组"},
 "student.accessory.completeAll": {"en": "Complete all as planned", "zh": "全部按计划完成"},
 "student.accessory.needsWeightMany": {"en": "{0} sets still need a weight", "zh": "还有 {0} 组需要填重量"},
-
 "student.accessory.videoWarning": {"en": "This set has a video. Open the set to manage it", "zh": "这组带有视频，请点组号进入处理"},
 "student.accessory.accessory": {"en": "Accessory", "zh": "辅助项"},
 "student.accessory.bodyweight": {"en": "bodyweight", "zh": "自重"},
@@ -140,14 +148,12 @@
 "student.accessory.useLast": {"en": "Use last time for set {0}", "zh": "第 {0} 组填入上次数值"},
 "student.accessory.hint": {"en": "Tap a set number to record video or mark it failed", "zh": "点组号可拍视频或标记未完成"},
 "student.accessory.needsWeightOne": {"en": "1 set still needs a weight", "zh": "还有 1 组需要填重量"},
-
 "student.accessory.mainLifts": {"en": "Main lifts and variations", "zh": "主项与主项变式"},
 "student.accessory.exercises": {"en": "Accessory exercises", "zh": "辅助项"},
 "student.accessory.rest": {"en": "Rest after each set", "zh": "每组后休息"},
 "student.accessory.range": {"en": "30 sec to 5 min", "zh": "30 秒到 5 分钟"},
 "student.accessory.less": {"en": "15 seconds less", "zh": "减少 15 秒"},
 "student.accessory.more": {"en": "15 seconds more", "zh": "增加 15 秒"},
-
 "student.rn.profile.noInjuries": { "en": "No injuries", "zh": "无伤病" },
 "student.rn.profile.about": {"en": "About me", "zh": "关于我"},
 "student.rn.profile.health": {"en": "Injury history", "zh": "伤病记录"},
@@ -160,7 +166,6 @@
 "student.rn.profile.account": {"en": "Account", "zh": "账号"},
 "student.rn.profile.notify": {"en": "Your coach will be notified of changes", "zh": "改动会通知你的教练"},
 "student.rn.profile.oneRMLabel": {"en": "Training 1RM: squat {0}, bench {1}, deadlift {2}, total {3} kilograms", "zh": "训练 1RM：深蹲 {0}，卧推 {1}，硬拉 {2}，合计 {3} 千克"},
-
 "student.rn.profile.added": { "en": "Added", "zh": "已填写" },
 "training.restNotification.title": { "en": "Rest between sets", "zh": "组间休息" },
 "training.restNotification.completeBody": { "en": "Time for your next set", "zh": "该做下一组了" },
@@ -267,80 +272,80 @@
 "en": "Cancelling…",
 "zh": "取消中…"
 },
-  "chat.sendsSetQuestion": {
+"chat.sendsSetQuestion": {
     "en": "Sends Set %@ of %@ with your question",
     "zh": "发送 %@ 组（%@）和你的问题"
   },
-  "chat.pickerPlanned": {
+"chat.pickerPlanned": {
     "en": "Planned",
     "zh": "计划"
   },
-  "chat.pickerLogged": {
+"chat.pickerLogged": {
     "en": "Logged",
     "zh": "已记录"
   },
-  "chat.pickerLoggedVideo": {
+"chat.pickerLoggedVideo": {
     "en": "Logged · video",
     "zh": "已记录 · 视频"
   },
-  "chat.pickerLoggedRPE": {
+"chat.pickerLoggedRPE": {
     "en": "Logged · RPE %@",
     "zh": "已记录 · RPE %@"
   },
-  "chat.whichSet": {
+"chat.whichSet": {
     "en": "Which set is this about?",
     "zh": "想问哪一组？"
   },
-  "chat.yourQuestion": {
+"chat.yourQuestion": {
     "en": "Your question",
     "zh": "你的问题"
   },
-  "chat.questionPlaceholder": {
+"chat.questionPlaceholder": {
     "en": "What do you want your coach to look at?",
     "zh": "想请教练帮你看什么？"
   },
-  "chat.sendToCoach": {
+"chat.sendToCoach": {
     "en": "Send to coach",
     "zh": "发送给教练"
   },
-  "chat.attachmentReps": { "en": "%@ reps", "zh": "%@ 次" },
-  "training.previewPause": {
+"chat.attachmentReps": { "en": "%@ reps", "zh": "%@ 次" },
+"training.previewPause": {
     "en": "Pause",
     "zh": "暂停"
   },
-  "training.previewProgress": {
+"training.previewProgress": {
     "en": "Playback progress",
     "zh": "播放进度"
   },
-  "training.previewSpeed": {
+"training.previewSpeed": {
     "en": "Playback speed",
     "zh": "播放速度"
   },
-  "training.previewExpand": {
+"training.previewExpand": {
     "en": "Expand video",
     "zh": "放大视频"
   },
-  "training.previewCollapse": {
+"training.previewCollapse": {
     "en": "Collapse video",
     "zh": "缩小视频"
   },
-  "training.restBelowSeven": {
+"training.restBelowSeven": {
     "en": "RPE below 7",
     "zh": "RPE 低于 7"
   },
-  "training.restBelowNine": {
+"training.restBelowNine": {
     "en": "RPE 7 to below 9",
     "zh": "RPE 7 至低于 9"
   },
-  "training.restNineOrAbove": {
+"training.restNineOrAbove": {
     "en": "RPE 9 or above",
     "zh": "RPE 9 或以上"
   },
-  "training.restMinutes": {
+"training.restMinutes": {
     "en": "%@ min",
     "zh": "%@ 分钟"
   },
-  "training.restSettingsLink": {
+"training.restSettingsLink": {
     "en": "Change in Profile → Rest between sets",
     "zh": "前往个人资料 → 组间休息修改"
   },
@@ -358,17 +363,10 @@
 "student.rn.meet.removeAction": {"en": "Remove", "zh": "移除"},
 "student.rn.meet.addOptional": {"en": "Add a meet (optional)", "zh": "添加比赛（可选）"},
 "student.rn.meet.help": {"en": "Opens meet date, federation and weight class. Skip it if you are not competing.", "zh": "展开后填写比赛日期、赛事方和体重级别；不比赛可跳过。"},
-"student.rn.profile.note": {"en": "Note to coach", "zh": "给教练的留言"},
+"student.rn.profile.note": {"en": "Goals and concerns", "zh": "目标与顾虑"},
 "student.rn.today.session": {"en": "Today's session", "zh": "今日训练"},
 "student.rn.today.upcoming": {"en": "Upcoming", "zh": "待练"},
 "student.rn.today.selectedChart": {"en": "Selected day · e1RM chart", "zh": "所选训练日 · e1RM 曲线"},
-"student.rn.nutrition.title": {"en": "Nutrition", "zh": "营养"},
-"student.rn.nutrition.soon": {"en": "Coming soon", "zh": "暂未开放"},
-"student.rn.nutrition.accessibility": {"en": "Nutrition, coming soon", "zh": "营养，暂未开放"},
-"student.rn.nutrition.carbs": {"en": "Carbs", "zh": "碳水"},
-"student.rn.nutrition.protein": {"en": "Protein", "zh": "蛋白质"},
-"student.rn.nutrition.fat": {"en": "Fat", "zh": "脂肪"},
-"student.rn.nutrition.fiber": {"en": "Fiber", "zh": "膳食纤维"},
 "student.rn.today.exercises": { "en": "{0} exercises", "zh": "{0} 个动作" },
 "student.rn.today.exercises.one": { "en": "{0} exercise", "zh": "{0} 个动作" },
 "student.rn.today.sets.one": { "en": "{0} set", "zh": "{0} 组" },
@@ -451,7 +449,7 @@
 "student.firstRun.welcome.title": {"en": "You're now training with {0}", "zh": "你现在是{0}的学员了"},
 "student.firstRun.welcome.step1": {"en": "Your coach builds your plan", "zh": "教练为你排计划"},
 "student.firstRun.welcome.detail1": {"en": "Based on your profile and big-three numbers", "zh": "参考你填的资料和三大项成绩"},
-"student.firstRun.welcome.step2": {"en": "Your plan shows up in Today", "zh": "计划出现在「今日」"},
+"student.firstRun.welcome.step2": {"en": "Your plan shows up in Training", "zh": "计划出现在「训练」"},
 "student.firstRun.welcome.detail2": {"en": "Open the app to see what to train", "zh": "每次打开 App，先看今天练什么"},
 "student.firstRun.welcome.step3": {"en": "Log it and your coach sees it", "zh": "练完记录，教练就能看到"},
 "student.firstRun.welcome.detail3": {"en": "Weight, reps and RPE sync to your coach", "zh": "每组重量、次数和 RPE 同步给教练"},
@@ -464,11 +462,6 @@
 "student.firstRun.waiting.profileDetail": {"en": "A fuller profile means a better-fit plan", "zh": "资料越全，计划越贴合你"},
 "student.firstRun.waiting.meet": {"en": "Add a meet date", "zh": "填比赛日"},
 "student.firstRun.waiting.meetDetail": {"en": "Your coach will plan around it", "zh": "有比赛计划？教练会按比赛日来排"},
-"student.firstRun.plan.eyebrow": {"en": "First plan", "zh": "第一份计划"},
-"student.firstRun.plan.title": {"en": "{0} published your first plan", "zh": "{0}发布了你的第一份计划"},
-"student.firstRun.plan.summary": {"en": "W1 – W{0} · {1} sessions", "zh": "W1 – W{0} · 共 {1} 节"},
-"student.firstRun.plan.start": {"en": "Start W1D1", "zh": "开始 W1D1"},
-"student.firstRun.plan.close": {"en": "Dismiss first plan", "zh": "关闭第一份计划提示"},
 "student.firstRun.saveError": {"en": "Could not save. Please try again.", "zh": "保存失败，请重试"},
 "training.effort.switch": {"en": "Switch RPE / RIR", "zh": "切换 RPE / RIR"},
 "training.effort.rirLabel": {"en": "Set %@ RIR", "zh": "第 %@ 组 RIR"},
@@ -509,5 +502,58 @@
 "student.videoDelivery.completeOne": {"en": "Workout complete. 1 video delivered.", "zh": "今日训练已完成，1 条视频已送达"},
 "student.videoDelivery.videoTimeout": {"en": "{0} videos didn't upload. Tap to retry.", "zh": "还有 {0} 条视频没传上，点击重试"},
 "student.videoDelivery.videoTimeoutOne": {"en": "1 video didn't upload. Tap to retry.", "zh": "还有 1 条视频没传上，点击重试"},
-"training.numberPad.dismiss": {"en": "Done", "zh": "收起"}
+"training.numberPad.dismiss": {"en": "Done", "zh": "收起"},
+"training.allDay.summary": {"en": "{0} · {1} exercises", "zh": "{0} · {1} 个动作"},
+"training.allDay.hint": {"en": "Tap a row to edit or film", "zh": "点一行可改、可拍"},
+"training.allDay.setCount": {"en": "{0} sets", "zh": "{0} 组"},
+"training.allDay.note": {"en": "Message coach · {0}", "zh": "给教练留言 · {0}"},
+"training.allDay.expand": {"en": "Expand exercise", "zh": "展开动作"},
+"training.allDay.completeExercise": {"en": "Complete exercise", "zh": "完成动作"},
+"training.allDay.lastSet": {"en": "Last set {0}", "zh": "末组 {0}"},
+"training.allDay.coachNote": {"en": "Coach note · {0}", "zh": "教练备注 · {0}"},
+"training.allDay.editSet": {"en": "Edit set {0}", "zh": "编辑第 {0} 组"},
+"training.allDay.original": {"en": "was {0}", "zh": "原 {0}"},
+"training.allDay.weightUnit": {"en": "Weight {0}", "zh": "重量 {0}"},
+"training.allDay.weight": {"en": "Weight kg", "zh": "重量 kg"},
+"training.allDay.done": {"en": "Done", "zh": "完成"},
+"training.allDay.today": {"en": "Today", "zh": "今天"},
+"training.allDay.asPrescribed": {"en": "As prescribed", "zh": "按计划"},
+"training.allDay.notePlaceholder": {"en": "How did this set feel, or what would you like to ask your coach?", "zh": "这组感觉怎么样，或想问教练什么"},
+"training.allDay.noteSent": {"en": "Sent to coach", "zh": "已发给教练"},
+"training.allDay.freeWeight": {"en": "Choose", "zh": "自选"},
+"training.allDay.topSet": {"en": "top set", "zh": "顶组"},
+"training.allDay.unrecorded": {"en": "Not recorded", "zh": "未记录"},
+"training.allDay.studentNote": {"en": "Student note", "zh": "学员留言"},
+"training.allDay.send": {"en": "Send", "zh": "发送"},
+"student.coachTab.title": {"en": "Coach", "zh": "教练"},
+"student.weightStrip.panelTitle": {"en": "Today's weight", "zh": "今天的体重"},
+"student.weightStrip.done": {"en": "Done", "zh": "完成"},
+"student.weightStrip.last": {"en": "Last {0} · {1}", "zh": "上次 {0} · {1}"},
+"student.weightStrip.explanation": {"en": "One record per day. Saving again replaces today’s record. Find your records in Progress › Body weight.", "zh": "一天记一条，今天再记会覆盖。记录在 成长 › 体重。"},
+"student.weightStrip.log": {"en": "Log weight", "zh": "记一下"},
+"student.weightStrip.today": {"en": "Today's weight", "zh": "今天体重"},
+"student.weightStrip.meetToday": {"en": "Meet today", "zh": "今天比赛"},
+"student.weightStrip.untilMeet": {"en": "{0} days until meet", "zh": "距比赛 {0} 天"},
+"student.weightStrip.untilMeet.one": {"en": "1 day until meet", "zh": "距比赛 1 天"},
+"student.weightStrip.setting": {"en": "Log weight daily", "zh": "每天记录体重"},
+"student.weightStrip.settingDetail": {"en": "Show the weight strip above training. An upcoming meet shows it automatically.", "zh": "打开后训练页顶部会出现体重条。设了比赛会自动显示。"},
+"student.weightStrip.dismiss": {"en": "Dismiss", "zh": "收起"},
+"student.trainingEmpty.firstTitle": {"en": "{0} is preparing your first plan", "zh": "{0}正在为你排第一份计划"},
+"student.trainingEmpty.firstDetail": {"en": "Your first training day will appear here when it is ready. We’ll notify you too.", "zh": "排好后这里会直接显示第一天要练的内容，也会通知你。"},
+"student.trainingEmpty.nextTitle": {"en": "{0} is preparing W{1}", "zh": "{0}正在为你排 W{1}"},
+"student.trainingEmpty.nextDetail": {"en": "All {1} sessions in W{0} are complete. The next week will appear here when ready, and we’ll notify you.", "zh": "W{0} 的 {1} 节都练完了。排好后这里直接显示，也会通知你。"},
+"student.trainingEmpty.completedTitle": {"en": "All {0} weeks completed", "zh": "{0} 周计划已全部完成"},
+"student.trainingEmpty.completedDetail": {"en": "{0} will prepare your next plan. We’ll notify you when it is ready.", "zh": "下一份计划由{0}来排，排好会通知你。"},
+"student.trainingEmpty.message": {"en": "Message your coach", "zh": "跟教练说一声"},
+"student.coachTab.add": {"en": "Add attachment", "zh": "添加附件"},
+"student.coachTab.takePhoto": {"en": "Take a photo", "zh": "拍照"},
+"student.coachTab.shareVideo": {"en": "Send a video of a set from today", "zh": "发今天某一组的视频"},
+"student.coachTab.subtitle": {"en": "Feedback, messages and plan updates", "zh": "反馈、留言和计划通知都在这里"},
+"student.coachTab.placeholder": {"en": "Message {0}", "zh": "发消息给{0}"},
+"student.coachTab.cameraTitle": {"en": "Camera access", "zh": "相机权限"},
+"student.coachTab.cameraPermission": {"en": "Allow camera access in Settings to take a photo.", "zh": "请在系统设置中允许使用相机后拍照。"},
+"student.coachTab.settings": {"en": "Open Settings", "zh": "去设置"},
+"student.coachTab.retake": {"en": "Retake", "zh": "重拍"},
+"student.coachTab.planPublished": {"en": "W{0} plan published · View training ›", "zh": "W{0} 计划已发布 · 去训练看看 ›"},
+"student.coachTab.annotations": {"en": "{0} annotations", "zh": "{0} 处标注"}
 }

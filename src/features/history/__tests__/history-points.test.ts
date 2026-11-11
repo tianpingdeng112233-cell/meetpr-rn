@@ -1,6 +1,6 @@
 import { beforeEach, expect, jest, test } from '@jest/globals';
 import { InMemoryE1RMRepository, type E1RMHistoryPoint } from '@/domain/e1rm';
-import { replayE1RMHistoryPoints } from '@/features/dashboard/model';
+import { replayE1RMHistoryPoints } from '@/features/history/summary-model';
 import { loadGrowthHistory } from '../history-points';
 import { buildGrowthCurves, growthSnapshot } from '../model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -82,3 +82,13 @@ test.each(['not-json', '{"points":null,"prs":[]}', '{"points":[],"prs":[],"rpeTa
     expect(await AsyncStorage.getItem(STORAGE_KEYS.e1rm)).toBe(raw);
   },
 );
+
+test('107 a server-confirmed null weight retires only that set estimate, retaining orphaned history', async () => {
+  const log: SetLog = { id: 'cleared', student_id: 'student', plan_exercise_id: null, exercise_id: 'squat', set_index: 0, weight_kg: '100', reps: 5, rpe: '8', completed: true, failed: false, assumed: false, adhoc: true, logged_date: '2026-11-10', logged_at: '2026-11-10T12:00:00Z' };
+  const repository = new InMemoryE1RMRepository();
+  const families = new Map([['squat', 'squat' as const]]);
+  await loadGrowthHistory(repository, 'student', [log, { ...log, id: 'orphan' }], families);
+  const points = await loadGrowthHistory(repository, 'student', [{ ...log, weight_kg: null }], families);
+  expect(points.map(point => point.setLogId)).toEqual(['orphan']);
+  expect((await repository.historySnapshot('student')).points.map(point => point.setLogId)).toEqual(['orphan']);
+});
