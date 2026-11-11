@@ -127,17 +127,22 @@ afterEach(async () => {
 
 const record = () => useVideoUploadStore.getState().records[`${studentId}:${plan.days[0].exercises[0].sets[0].id}`];
 
-const openCamera = async () => {
+const openCamera = async (week = 1) => {
   await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
   await mount();
+  if (week === 2) await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Next week' && node.props.onPress)[0].props.onPress());
   await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${plan.days[0].exercises[0].id}` && node.props.onPress)[0].props.onPress());
   await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001') && node.props.onPress)[0].props.onPress());
   expect(renderer.root.findAllByType(CameraRecorder)).toHaveLength(1);
 };
 
-test.each(['weight', 'free_weight'] as const)('107 camera uploads with %s without opening set entry or requiring weight', async mode => {
+test.each<['weight' | 'free_weight', number]>([['weight', 1], ['free_weight', 1], ['weight', 2], ['free_weight', 2]])('107 camera uploads with %s in W%s without opening set entry or requiring weight', async (mode, week) => {
   if (mode === 'free_weight') servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...plan.days[0].exercises[0], sets: [{ ...plan.days[0].exercises[0].sets[0], load_mode: mode, intensity_mode: null, target_value: null }] }] }] };
-  await openCamera();
+  if (week === 2) servedPlan = { ...servedPlan, days: [
+    { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', exercises: [] },
+    { ...servedPlan.days[0], week_number: 2 },
+  ] };
+  await openCamera(week);
   expect(renderer.root.findAllByType(SetEntrySheet)).toHaveLength(0);
   expect(renderer.root.findByType(CameraRecorder).props.onLibrary).toEqual(expect.any(Function));
   await act(async () => renderer.root.findByType(CameraRecorder).props.onUse('file:///cache/captured.mp4'));

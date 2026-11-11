@@ -111,13 +111,12 @@ test('107 retired training entry points are unreachable and all exercise rows st
   expect(exerciseRows.every(node => node.props.accessibilityState.expanded === false)).toBe(true);
 });
 
-test('107 a future week is read only and previous week returns to editable rows', async () => {
+test('107 unsettled future and previous weeks both allow row editing', async () => {
   servedPlan = { ...plan, days: [plan.days[0], { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', week_number: 2 }] };
   await mount();
   await press('Next week');
   await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
-  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === true).length).toBeGreaterThan(0);
-  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false)).toHaveLength(0);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false).length).toBeGreaterThan(0);
   await press('Previous week');
   await act(async () => renderer.root.findAll(node => node.props.testID?.startsWith('all-day-exercise-') && node.props.onPress)[0].props.onPress());
   expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.disabled === false).length).toBeGreaterThan(0);

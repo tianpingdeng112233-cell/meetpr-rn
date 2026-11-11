@@ -1,7 +1,6 @@
 import { test, expect } from '@jest/globals';
 import {
   workoutDayState,
-  defaultTrainingDay,
   canWriteTrainingDay,
   canUndoCompletion,
   weekDayOrdinals,
@@ -115,7 +114,7 @@ test('selects published_at newest, breaking ties by created_at then id, ignoring
   expect(selectCurrentPlan([a, { ...a, id: 'z' }])?.id).toBe('z');
   expect(selectCurrentPlan([{ ...a, status: 'draft' }])).toBeNull();
 });
-test('other weeks are read-only and only latest completion within the undo window can undo', () => {
+test('unsettled weeks are trainable and only latest completion within the undo window can undo', () => {
   const now = new Date(2026, 8, 5, 12);
   const days = [
     day('a', { completed_at: now.toISOString() }),
@@ -132,10 +131,7 @@ test('other weeks are read-only and only latest completion within the undo windo
     canUndo: true,
   });
   expect(workoutDayState(days, days[2], now)).toEqual({ kind: 'current' });
-  expect(workoutDayState(days, days[3], now)).toMatchObject({
-    kind: 'upcoming',
-    previousDay: { id: 'c' },
-  });
+  expect(workoutDayState(days, days[3], now)).toEqual({ kind: 'current' });
 });
 test('published instants with different UTC offsets are compared as instants', () => {
   expect(
@@ -176,24 +172,15 @@ test('weekly labels count completed training days, not weekday slots, and reorde
 });
 
 
-test('every unsettled day in the cursor week is writable, other weeks and unpublished plans are not', () => {
+test('every unsettled day is writable regardless of week; settled days and unpublished plans are not', () => {
   const days = [day('past', { completed_at: done }), day('d2', { week_number: 2 }), day('d4', { week_number: 2, day_of_week: 4 }), day('next', { week_number: 3 })];
   expect(workoutDayState(days, days[2])).toEqual({ kind: 'current' });
-  expect(days.map(d => canWriteTrainingDay(plan(days), d.id))).toEqual([false, true, true, false]);
-  expect(canWriteTrainingDay(plan(days, { status: 'paused' }), 'd4')).toBe(false);
+  expect(days.map(d => canWriteTrainingDay(plan(days), d.id))).toEqual([false, true, true, true]);
+  for (const status of ['draft', 'paused', 'completed'] as const) {
+    expect(canWriteTrainingDay(plan(days, { status }), 'd4')).toBe(false);
+    expect(canWriteTrainingDay(plan(days, { status }), 'next')).toBe(false);
+  }
   expect(canWriteTrainingDay(plan(days), 'missing')).toBe(false);
-});
-
-test('default returns to latest real log in the gym-day and resets across 04:00', () => {
-  const days = [day('d2', { exercises: [{ id: 'e2', plan_day_id: 'd2', exercise_id: 'squat', is_main_lift: true, sort_order: 0, notes: null, sets: [] }] }), day('d4', { day_of_week: 4 })];
-  const logs = [
-    { plan_exercise_id: 'e2', plan_day_id: null, logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 18).toISOString(), assumed: false, completed: true, failed: false },
-    { plan_exercise_id: null, plan_day_id: 'd4', logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 19).toISOString(), assumed: false, completed: true, failed: false },
-  ];
-  expect(defaultTrainingDay(days, logs, new Date(2026, 9, 15, 3, 59))?.id).toBe('d4');
-  expect(defaultTrainingDay(days, logs, new Date(2026, 9, 15, 4))?.id).toBe('d2');
-  expect(defaultTrainingDay(days, logs.map(l => ({ ...l, assumed: true })), new Date(2026, 9, 14, 20))?.id).toBe('d2');
-  expect(defaultTrainingDay([days[0], { ...days[1], completed_at: done }], logs, new Date(2026, 9, 14, 20))?.id).toBe('d2');
 });
 
 test('out-of-order completion can only undo the latest actual completion', () => {

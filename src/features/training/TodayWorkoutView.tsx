@@ -10,7 +10,6 @@ import {
   completedToday,
   cursorDay,
   dayCode,
-  defaultTrainingDay,
   planLogRange,
   recommendedDate,
   selectCurrentPlan,
@@ -204,7 +203,7 @@ export function TodayWorkoutView() {
   );
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
-  const initialDayID = completedToday(orderedDays, clockNow)?.id ?? defaultTrainingDay(orderedDays, logs, clockNow)?.id;
+  const initialDayID = cursor?.id ?? completedToday(orderedDays, clockNow)?.id;
   if (trainingVisible && requestedDayID === null && serverLogs && initialDayID) setRequestedDayID(initialDayID);
   const weekStrip = trainingWeekStrip(plan, requestedDayID ?? initialDayID, today);
   const viewedWeek = weekStrip.week;
@@ -546,7 +545,7 @@ export function TodayWorkoutView() {
           t('student.setEntrySheet.copy010'),
           t('student.todayWorkoutScreen.copy024'),
         );
-        throw new Error('Selected day is no longer current');
+        throw new Error('Selected day is no longer writable');
       }
       const logDate = !input.quickLogDate && draft.sourceLog && !isLocalSetId(draft.sourceLog.id)
         ? draft.sourceLog.logged_date
@@ -749,7 +748,7 @@ export function TodayWorkoutView() {
   };
 
   const emptyState = studentEmptyState(plan);
-  // Keep the completed day and its undo visible after finishing or reopening today.
+  // Keep an explicitly selected completed day and its undo visible after finishing.
   const showEmpty = state.kind === 'noPlan' || (state.kind === 'loaded' && emptyState !== null && !completedToday(orderedDays, clockNow) && requestedDayID === null);
   const realDrafts = liveDrafts.filter(
     (draft) => draft.sourceLog && !draft.sourceLog.assumed,

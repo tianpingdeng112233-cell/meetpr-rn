@@ -15,6 +15,7 @@ import { NumberPad } from '@/design/NumberPad';
 import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
 import { ChatExerciseNoteCard } from '@/features/chat/ChatExerciseNoteCard';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+import { CoachDayDetailView } from '@/features/coach/student-detail/CoachDayDetailView';
 import { setLocaleOverride, t, type Locale } from '@/i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
@@ -24,6 +25,7 @@ import { TrainingWeekStrip } from '../TrainingWeekStrip';
 import { AllDayBody } from '../AllDayBody';
 import { StudentExercisePicker } from '../StudentExercisePicker';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
+import { VideoAttachmentControls } from '../video-upload/VideoAttachmentControls';
 import { resetVideoUploadStoreForTests } from '../video-upload/store';
 
 
@@ -140,6 +142,87 @@ test('107 long hold records untouched prescriptions before completing the day', 
     .toMatchObject({ weight_kg: '80', reps: 5, rpe: null });
   expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
 });
+
+test('acceptance 16: W2 can be edited, checked and completed while W1 remains unsettled', async () => {
+  const dayId = '40000000-0000-4000-8000-000000000002';
+  const exerciseId = '50000000-0000-4000-8000-000000000002';
+  const later = { ...plan.days[0], id: dayId, week_number: 2, exercises: [{
+    ...plan.days[0].exercises[0], id: exerciseId, plan_day_id: dayId,
+    sets: [{ ...plan.days[0].exercises[0].sets[0], id: '70000000-0000-4000-8000-000000000002', plan_exercise_id: exerciseId }],
+  }] };
+  servedPlan = { ...plan, days: [...plan.days, later] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/bind-requests/mine') return { bind_request: { status: 'accepted', coach_id: 'coach' } } as never;
+    if (path === `/plans/days/${dayId}/complete`) {
+      const completed_at = new Date().toISOString();
+      servedPlan = { ...servedPlan, days: servedPlan.days.map(day => day.id === dayId ? { ...day, completed_at } : day) };
+      return { id: 'completion', plan_day_id: dayId, student_id: studentId, source: 'manual', completed_at } as never;
+    }
+    return original(path, options);
+  });
+  await mount();
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
+  await press('Next week');
+  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(1);
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exerciseId}` && node.props.onPress)[0].props.onPress());
+  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(1);
+  expect(renderer.root.findByType(VideoAttachmentControls).props.editable).toBe(true);
+  await press('Edit set 1');
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('85'));
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
+    .toMatchObject({ plan_exercise_id: exerciseId, weight_kg: '85' });
+  const pressText = async (label: string) => {
+    await act(async () => renderer.root.findAll(node => node.props.onPress && node.findAllByType(Text).some(text => text.props.children === label))[0].props.onPress());
+  };
+  await pressText(t('student.added.addSet'));
+  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(2);
+  await pressText(t('student.added.addExercise'));
+  expect(renderer.root.findAllByType(StudentExercisePicker)).toHaveLength(1);
+  await act(async () => renderer.root.findByType(StudentExercisePicker).props.onClose());
+  await act(async () => renderer.root.findAll(node => node.props.onPress && String(node.props.accessibilityLabel).startsWith('Message coach ·'))[0].props.onPress());
+  expect(renderer.root.findByType(ExerciseNoteSheet).props.reference.plan_day_id).toBe(dayId);
+  await act(async () => renderer.root.findByType(ExerciseNoteSheet).props.onClose());
+  await press('Complete exercise');
+  expect(renderer.root.findAllByProps({ testID: `all-day-check-${exerciseId}` })[0].props.accessibilityState.checked).toBe(true);
+  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+  const strip = renderer.root.findByType(TrainingWeekStrip).props.strip;
+  expect(strip.selectedDay).toMatchObject({ id: dayId, completed_at: expect.any(String) });
+  expect(strip.todayDay.id).toBe(plan.days[0].id);
+  expect(servedPlan.days[0].completed_at).toBeUndefined();
+  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(0);
+  expect(Alert.alert).not.toHaveBeenCalled();
+  await act(async () => renderer.unmount());
+  await mount();
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
+  await act(async () => renderer.update(<CoachDayDetailView
+    day={{ date: new Date(), planDay: servedPlan.days[1], logs: [] }} planDays={servedPlan.days}
+    exerciseName={() => 'Squat'} onClose={() => {}} />));
+  expect(copy()).toContain(`W2D1 · ${t('coach.detail.completed')}`);
+});
+
+test.each<[number, number, boolean]>([[1, 0, true], [2, 0, true], [2, 8, false]])(
+  'settled W%s remains read-only with a %s-day-old completion (undo %s)', async (week, age, undo) => {
+    const completed_at = new Date(Date.now() - age * 86_400_000).toISOString();
+    const settled = { ...plan.days[0], week_number: week, completed_at };
+    const open = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000001', week_number: 2, day_of_week: 4, exercises: [] };
+    servedPlan = { ...plan, days: [settled, open] };
+    await mount();
+    await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(settled.id));
+    await expandFirst();
+    expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(0);
+    expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(0);
+    expect(renderer.root.findAll(node => node.props.onPress && node.props.accessibilityRole === 'checkbox')).toHaveLength(0);
+    expect(renderer.root.findAll(node => node.props.onPress && node.props.accessibilityLabel === 'Edit set 1').every(node => node.props.disabled)).toBe(true);
+    expect(copy()).not.toContain(t('student.added.addSet'));
+    expect(copy()).not.toContain(t('student.added.addExercise'));
+    expect(copy().includes(t('student.todayWorkoutScreen.copy023'))).toBe(undo);
+    expect(jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
+  },
+);
 
 
 test('107 row fields remain reachable while the keypad is open and only the edited row changes', async () => {
