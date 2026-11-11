@@ -460,7 +460,7 @@ test('108 logging weight from the training strip updates today without leaving t
 });
 
 
-test('current collapsed exercise retains its gold highlight and completion moves it without expanding', async () => {
+test('completion moves the current highlight to the next exercise even when it has no rows', async () => {
   const first = plan.days[0].exercises[0];
   const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
   servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
@@ -730,4 +730,50 @@ test('editing a set retains its camera control and supplies the edited values', 
   });
   await press(t('student.videoAttachmentV3Controls.copy001'));
   expect(Alert.alert).toHaveBeenCalled();
+});
+
+test('the first exercise starts collapsed and checking each exercise expands the next one', async () => {
+  const first = plan.days[0].exercises[0];
+  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1,
+    sets: [{ ...first.sets[0], id: '70000000-0000-4000-8000-000000000001', plan_exercise_id: '50000000-0000-4000-8000-000000000001' }] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
+  await mount();
+  const expanded = (id: string) => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0].props.accessibilityState.expanded;
+  const check = async (id: string) => {
+    await act(async () => {
+      renderer.root.findAll(node => node.props.testID === `all-day-check-${id}` && node.props.onPress)[0].props.onPress();
+      await new Promise(resolve => setTimeout(resolve, 30));
+    });
+  };
+  expect(expanded(first.id)).toBe(false); expect(expanded(second.id)).toBe(false);
+  await expandFirst();
+  expect(expanded(first.id)).toBe(true);
+  await check(first.id);
+  expect(expanded(first.id)).toBe(false); expect(expanded(second.id)).toBe(true);
+  await check(second.id);
+  expect(expanded(first.id)).toBe(false); expect(expanded(second.id)).toBe(false);
+  await check(first.id);
+  expect(expanded(first.id)).toBe(true); expect(expanded(second.id)).toBe(false);
+});
+
+test.each(['saved', 'failed'])('cancelling a pending check stays on that exercise after its save %s', async outcome => {
+  const first = plan.days[0].exercises[0];
+  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1,
+    sets: [{ ...first.sets[0], id: '70000000-0000-4000-8000-000000000001', plan_exercise_id: '50000000-0000-4000-8000-000000000001' }] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
+  await mount();
+  await expandFirst();
+  let release: (() => void) | undefined;
+  jest.mocked(AsyncStorage.setItem).mockImplementationOnce(() => new Promise<void>((resolve, reject) => { release = () => outcome === 'saved' ? resolve() : reject(new Error('Storage unavailable')); }));
+  const check = () => renderer.root.findAll(node => node.props.testID === `all-day-check-${first.id}` && node.props.onPress)[0];
+  try {
+    await act(async () => { check().props.onPress(); await new Promise(resolve => setTimeout(resolve, 10)); });
+    expect(release).toBeDefined();
+    expect(check().props.accessibilityState.checked).toBe(true);
+    await act(async () => check().props.onPress());
+    await act(async () => { release!(); await new Promise(resolve => setTimeout(resolve, 30)); });
+    expect(check().props.accessibilityState.checked).toBe(false);
+    const expanded = (id: string) => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0].props.accessibilityState.expanded;
+    expect(expanded(first.id)).toBe(true); expect(expanded(second.id)).toBe(false);
+  } finally { release?.(); }
 });

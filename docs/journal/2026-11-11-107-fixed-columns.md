@@ -29,3 +29,12 @@ David 拒收仅上下排布，要求如 Excel 同类数据固定位置，并统�
 - 根因：VideoAttachmentControls只存在于resting分支，active编辑分支缺失。移动至两种状态共用的行右侧，编辑切换保持同一实例及stableSetId，构建上传请求读取display最新输入。
 - 新增先红后绿页面回归：进入编辑后仍有相机、组件不重建、组ID正确、RPE9更新用于请求、点击进入须知。训练页46项通过，tsc/ESLint通过；定向审查CLEAN。
 - 5570原生确认编辑行相机显示且点击进入虚拟相机预览，已关闭返回编辑；outputs/fixed-columns/android-edit-camera.png 与 android-edit-camera-preview.png。未发布。
+
+## 勾选完成后自动展开下一动作（David 现场明确要求）
+
+- 已定行为：初次进入仍全部折叠，第一个动作手动展开。完成某动作并成功保存后，收起该动作、展开按显示顺序紧接的下一动作；最后一个完成后无下一项。取消勾选仍展开自身。保留手动展开任意动作。
+- 范围仅同日动作展开状态；不自动勾选、不改记录口径、不自动跨日、不新增导航或滚动规则。测试沿用本卡既有 TodayWorkoutView 页面与 TodayWorkoutViewModel seam。
+- iOS 在 toggleAllDayExercise 成功保存且日期仍一致后设置下一项；原 allDayWriting 防重入保留。RN 在 saveRow 成功后推进；日级操作版本阻止较早保存覆盖后续勾选，动作级版本确保失败仅撤销该次仍有效的本项勾选。
+- 先红后绿：iOS 顺序推进测试旧行为为 nil，新行为为第二项；AllDay 46项通过。RN页面49项通过，包含初始折叠、手动首项、推进、末项收起、取消；存储挂起→取消→旧保存成功/失败的交错回归。TS、ESLint通过。
+- 原生：iPhone17e Demo真实VM勾选深蹲后下一条自加动作展开；Android5570真实AllDayBody画廊演示深蹲勾选后竞技卧推展开。Android画廊用本地状态模拟勾选，不写真实训练数据；实际保存路径由页面集成回归覆盖。截图 outputs/fixed-columns/ios-auto-expand.png 与 android-auto-expand.png。
+- 定向独立审查指出RN取消竞态，修复并补回归后CLEAN。验收仍由David决定，未合入发版线、未打包发布。

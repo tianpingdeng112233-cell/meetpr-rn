@@ -215,6 +215,8 @@ export function TodayWorkoutView() {
   const editable = Boolean(plan && selectedDayID && canWriteTrainingDay(plan, selectedDayID));
   const reviewKey = `${studentId}:${selectedDayID}`;
   const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null>>({});
+  const exerciseCheckVersions = useRef<Record<string, number>>({});
+  const exerciseCheckOperations = useRef<Record<string, number>>({});
   const review =
     reviewState.key === reviewKey && reviewState.status === 'loaded'
       ? reviewState.value
@@ -704,13 +706,30 @@ export function TodayWorkoutView() {
   };
   const editor = useAllDayEditor(row => { void saveRow(row).catch(() => undefined); }, id => exerciseTitle(resolveExerciseMetadata(id)), onAccessoryPadLayout, `${reviewKey}:${trainingVisible}:${editable}:${workoutProfile?.unit_preference}`, workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg');
   const toggleExercise = async (id: string) => {
+    const version = (exerciseCheckVersions.current[reviewKey] ?? 0) + 1;
+    exerciseCheckVersions.current[reviewKey] = version;
+    const checkKey = `${reviewKey}:${id}`;
+    exerciseCheckOperations.current[checkKey] = version;
     const old = checkedExercises[reviewKey] ?? new Set<string>();
     const next = new Set(old);
     if (next.has(id)) { next.delete(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next })); setExpandedExercises(current => ({ ...current, [reviewKey]: id })); return; }
-    setExpandedExercises(current => ({ ...current, [reviewKey]: null }));
     next.add(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next }));
-    try { for (const { row, request } of completionWrites(sheet, id)) await saveRow(row, request); }
-    catch { setCheckedExercises(current => ({ ...current, [reviewKey]: old })); }
+    try {
+      for (const { row, request } of completionWrites(sheet, id)) await saveRow(row, request);
+      if (exerciseCheckVersions.current[reviewKey] !== version) return;
+      const index = sheet.exercises.findIndex(block => block.exercise.id === id);
+      const following = index < 0 ? null : sheet.exercises[index + 1]?.exercise.id ?? null;
+      setExpandedExercises(current => ({ ...current, [reviewKey]: following }));
+    }
+    catch {
+      if (exerciseCheckOperations.current[checkKey] === version) {
+        setCheckedExercises(current => {
+          const remaining = new Set(current[reviewKey]);
+          remaining.delete(id);
+          return { ...current, [reviewKey]: remaining };
+        });
+      }
+    }
   };
   const requestRemoval = (rows: readonly WorkoutSetDraft[], wholeExercise: boolean) => {
     if (!editable || rows.some(row => !row.kind)) return;
