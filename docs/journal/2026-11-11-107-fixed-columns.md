@@ -70,3 +70,14 @@ David 拒收仅上下排布，要求如 Excel 同类数据固定位置，并统�
 - 本卡源码和临时QA入口已分离；发布只使用正式入口。iOS既有Archive树的用户改动保留，不清理。
 - 本次改动、测试、独立审查和原生证据见上文。实际值保留真实类型；未填按教练、同动作偏好、默认RPE。
 - 正典 RELEASES/NEXT-RELEASE/PARITY 仍待 Opus 按已核实发布事实定稿；此处记录执行证据，不宣称已上传或已上线。Archive/ASC上传及Android签名密码、OSS上传仍由David手动。
+
+## 2026-11-11 发布执行证据（12:40 UTC 核实）
+
+- Android PR #187 已合入 main：a30e7169e2897ce37a383de39b39bc852d37370c，代码树与已通过PR CI的1d4ed6a一致；PR CI 43013684579和main CI 43017228770均成功，2310项测试通过。升号时漏同步build-track测试预期，首次CI发现后修为13并重跑通过。
+- CN正式包0.1.0(13)、包名com.meetpr.app，David手动签名。证书SHA256为bef954dce0a6c56c6586b2d375f1067f1c29eca7e8a6b58e5e8102966508b746，与线上11一致；APK SHA256为0acdc854411b4c6486d2d45c24f9c0ab4bfdd009e8be24c97b4479a7c9dee9b6。
+- 5570正式包12→13通过adb install -r覆盖安装，无卸载/清数据；实读versionCode=13，冷启动进入原账号已完成计划页。训练历史3次、体重75.00kg、RPE8.5保持一致。期间模拟器Launcher/System UI提示ANR，选择Wait后恢复，未据此归因App。5556未操作。
+- David上传后，https://dl.meetpr.cn/android/releases/13/meetpr-cn.apk 与 /android/meetpr-cn.apk 实际下载SHA256均与正式包相同；/android/latest.json实读13、下载地址指向releases/13，内容与签名产物JSON完全一致。固定APK/JSON均HTTP200、Cache-Control:no-cache；Content-Type分别为application/vnd.android.package-archive与application/json。
+- 未为验证更新弹窗而降级或清空5570。旧客户端更新弹窗本轮未再次原生观察；更新清单、下载文件及升级数据已验证。相机真机取景仍不在本轮已验证证据内。
+- iOS1.0(39)最终候选beta/1.0-39-rc2与release/1.0同为c89bcff6b6873edceb4b09194579d8243255b131，CI43013765230全绿。首次beta/1.0-39因函数长度lint失败，原样提取偏好恢复函数后用新tag重跑；未覆盖旧tag。两台demo从最终SHA构建，安装容器Info.plist均实读39，并核对教练/学员角色截图。准确工程已打开给David手动Archive/Upload；39上传成功和Ceshi提交状态尚待明确确认。
+- 用户可查证据：当前Codex会话outputs/release-39-cn13/release-evidence.json、installed-demo-versions.json、android13-verification.json，以及升级前后/双demo截图。原始HTTP头和下载哈希在work/release-39-cn13。
+- 本节为执行证据；正典RELEASES/NEXT-RELEASE/PARITY及active记忆仍由Opus按已核实状态定稿，不将待确认iOS状态记作已发布。
