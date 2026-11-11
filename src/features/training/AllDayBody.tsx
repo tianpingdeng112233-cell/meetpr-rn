@@ -83,7 +83,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                     <Text testID={`all-day-load-${block.exercise.id}-${index}`} style={{ ...font.body(13), fontVariant: ['tabular-nums'], color: colors.textPrimary }}>{segment.loadParts.map((part, partIndex) => <Text key={partIndex} style={{ color: part.changed ? colors.goldText : colors.textPrimary }}>{part.text.replace(/ \/ /g, '/')}</Text>)}</Text>
                   </View>
                   <View style={{ flexBasis: 0, flexGrow: 1.34, minWidth: 0 }}>
-                    <Text testID={`all-day-effort-${block.exercise.id}-${index}`} style={{ ...font.body(13), fontVariant: ['tabular-nums'], color: segment.effortChanged ? colors.goldText : colors.textPrimary }}>{(segment.effort === '—' ? 'RPE —' : segment.effort).replace(/\s*\/\s*/g, '/').replace(/(RIR|RPE) /g, '$1\u00a0')}</Text>
+                    <Text testID={`all-day-effort-${block.exercise.id}-${index}`} style={{ ...font.body(13), fontVariant: ['tabular-nums'], color: colors.goldText }}>{(segment.effort === '—' ? 'RPE —' : segment.effort).replace(/\s*\/\s*/g, '/').replace(/(RIR|RPE) /g, '$1\u00a0')}</Text>
                   </View>
                 </View>)}
               </View>

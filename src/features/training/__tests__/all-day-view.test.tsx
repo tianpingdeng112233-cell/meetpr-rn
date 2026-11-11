@@ -665,7 +665,8 @@ test('summary columns reserve missing load and use the same typography for RPE a
   expect(cell('effort', intensity.id).props.children).toBe('RPE\u00a08');
   expect(cell('effort', weighted.id).props.children).toBe('RPE\u00a0—');
   const style = (field: string, id: string) => StyleSheet.flatten(cell(field, id).props.style);
-  expect(style('effort', intensity.id)).toEqual(style('load', weighted.id));
+  expect(style('effort', intensity.id)).toEqual({ ...style('load', weighted.id), color: '#9A4A06' });
+  expect(style('effort', weighted.id).color).toBe('#9A4A06');
   expect(style('reps', weighted.id)).toEqual(style('load', weighted.id));
   const title = renderer.root.findAllByType(Text).find(node => node.props.testID === `all-day-name-${weighted.id}`)!;
   expect(style('load', weighted.id).fontSize).toBeLessThan(StyleSheet.flatten(title.props.style).fontSize);
