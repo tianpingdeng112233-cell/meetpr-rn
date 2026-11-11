@@ -38,7 +38,6 @@ export function GrowthScreen() {
     { id: 'e1rm', title: t('student.progressMenu.e1rm'), value: values?.e1rm ?? '', icon: 'chart-line', onPress: () => router.push('/progress/e1rm') },
     { id: 'history', title: t('student.e1rmSourceHistory'), value: values?.history ?? '', icon: 'clock-outline', onPress: () => router.push('/training-history') },
     { id: 'body-weight', title: t('student.dashboardProfileMetricsView.copy001'), value: weightValue, icon: 'scale-bathroom', onPress: () => router.navigate('/(student)/body-weight') },
-    { id: 'feedback', title: t('student.feedbackInboxView.copy006'), value: vm.state.status !== 'loaded' ? '' : vm.state.feedback.length ? String(vm.state.feedback.length) : '—', icon: 'message-outline', onPress: () => router.navigate('/(student)/feedback') },
     { id: 'intensity', title: t('student.progressMenu.intensity'), value: values?.intensity ?? '', icon: 'chart-bar', onPress: () => router.push('/progress/intensity') },
   ] as const;
   return <Screen edges={['top', 'left', 'right']}>

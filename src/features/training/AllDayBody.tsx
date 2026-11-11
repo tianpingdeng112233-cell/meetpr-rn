@@ -20,6 +20,15 @@ function displayWeight(text: string, unit: 'kg' | 'lb') {
   return text && unit === 'lb' ? metricDisplay(text, POUNDS_PER_KG) || '0' : text;
 }
 
+function TimelineConnector({ exerciseId, current, color }: { exerciseId: string; current: boolean; color: string }) {
+  const colors = useColors();
+  const [height, setHeight] = useState(0);
+  return <View testID={`all-day-line-${exerciseId}`} onLayout={event => setHeight(event.nativeEvent.layout.height)}
+    style={{ position: 'absolute', top: 16, bottom: -16, width: 3, backgroundColor: color, overflow: 'hidden' }}>
+    {current ? <GradientFill direction="vertical" size={{ width: 3, height }} stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}
+  </View>;
+}
+
 export function AllDayBody({ sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, unit = 'kg' }: {
   unit?: 'kg' | 'lb'; onExpand: (id: string) => void;
   sheet: AllDaySheet; editable: boolean; studentId: string; title: string;
@@ -52,14 +61,14 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
       const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
       return <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ width: 22, alignItems: 'center' }}>
-          {index < sheet.exercises.length - 1 ? <View testID={`all-day-line-${block.exercise.id}`} style={{ position: 'absolute', top: 16, bottom: -16, width: 3, backgroundColor: nodeColor, overflow: 'hidden' }}>{current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}</View> : null}
+          {index < sheet.exercises.length - 1 ? <TimelineConnector exerciseId={block.exercise.id} current={current} color={nodeColor} /> : null}
           <View style={{ width: 22, height: 22, borderRadius: 11, overflow: 'hidden', backgroundColor: nodeColor, alignItems: 'center', justifyContent: 'center', marginTop: 5, outlineColor: colors.goldSoft, outlineWidth: current ? 4 : 0 }}>
             {current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}
             {done ? <MaterialCommunityIcons name="check" size={15} color={colors.inkOnCTAFill} /> : null}
           </View>
         </View>
         <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: expanded || current ? colors.goldSoft : undefined }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: current ? colors.goldSoft : undefined }}>
             <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 {!block.repeatName ? <Text numberOfLines={2} testID={`all-day-name-${block.exercise.id}`} style={{ ...font.body(15, 'bold'), color: done ? colors.textSecondary : colors.textPrimary }}>{name}{block.rows[0]?.kind === 'added' ? ` · ${t('student.added.added')}` : ''}</Text> : null}
@@ -78,12 +87,13 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
           </View>
           {expanded ? <>
             {editable && block.rows[0]?.kind === 'added' ? <Pressable onPress={() => onRemoveExercise(block.exercise)}><Text style={{ color: colors.danger }}>{t('student.added.remove')}</Text></Pressable> : null}
-            {block.exercise.notes ? <Text numberOfLines={1} style={{ ...font.body(12), color: colors.goldText }}>{t('training.allDay.coachNote', [block.exercise.notes])}</Text> : null}
+            {block.exercise.notes ? <Text style={{ ...font.body(12), color: colors.goldText }}>{t('training.allDay.coachNote', [block.exercise.notes])}</Text> : null}
             <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
               {block.rows.map(row => {
                 const active = editing?.row.stableSetId === row.stableSetId;
                 const display = active ? editing.row : row;
                 const prescription = decodePrescription(row.planSet);
+                const percentage = prescription.intensity?.kind === 'pct' ? <Text style={{ ...font.body(11), color: colors.textSecondary, marginRight: 8 }}>{`${prescription.intensity.value}%`}</Text> : null;
                 const short = !row.kind && Number(display.repsText) < prescription.reps;
                 const differences = row.kind ? null : prescriptionDifferences(allDayLogRequest(display), row.planSet);
                 const weightChanged = differences?.weight != null;
@@ -97,6 +107,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                       }}><Text style={{ ...font.body(11), color: colors.textSecondary }}>{field === 'weight' ? t('training.allDay.weightUnit', [unit]) : field === 'reps' ? t('student.accessory.pad.reps') : field.toUpperCase()}</Text></Pressable>
                       <Pressable accessibilityRole="button" accessibilityLabel={field} onPress={() => edit(display, field)} style={{ minHeight: 38, borderRadius: 8, borderWidth: 1.5, borderColor: editing.field === field ? colors.gold500 : colors.borderDefault, outlineWidth: editing.field === field ? 2 : 0, outlineColor: colors.goldSoft, justifyContent: 'center', paddingHorizontal: 8 }}><Text style={{ ...font.mono(16), color: colors.textPrimary }}>{(field === 'weight' ? editing.weightInput ?? displayWeight(display.weightText, unit) : field === 'reps' ? display.repsText : display.rpeText) || '—'}</Text></Pressable>
                     </View>)}
+                    {percentage}
                   </View> : <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
                     <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t('training.allDay.editSet', [row.setIndex + 1])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
                       <Text style={{ ...font.mono(12), color: colors.textMuted, width: 18 }}>{row.setIndex + 1}</Text>
@@ -110,6 +121,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                     </Pressable>
                     {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(row)} ensureSetLog={() => ensureSetLog(row)} /> : null}
                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
+                    {percentage}
                   </View>}
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
                 </View>;
@@ -117,7 +129,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
             </View>
             {editable ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Pressable onPress={() => onAddSet(block.exercise)}><Text style={{ ...font.body(13), color: colors.goldText }}>{t('student.added.addSet')}</Text></Pressable>
-              {onNote && block.rows[0] ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 40 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /><Text style={{ ...font.body(13), color: colors.textSecondary }}>{t('training.allDay.askCoach')}</Text></Pressable> : null}
+              {onNote && block.rows[0] ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /></Pressable> : null}
             </View> : null}
           </> : null}
         </View>

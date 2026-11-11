@@ -16,7 +16,7 @@ import { exerciseDisplayName, t } from '@/i18n';
 
 export function exerciseNoteTitle(reference: ExerciseRef) {
   const [, month, day] = reference.day_date.split('-').map(Number);
-  return `${month}/${day} · ${reference.exercise_name}`;
+  return `${month}/${day} · ${reference.exercise_name} · ${t('training.allDay.studentNote')}`;
 }
 export function ChatExerciseNoteCard({ message, outgoing, student = false }: { message: Pick<ChatMessage, 'body' | 'exercise_ref' | 'sender_id'>; outgoing: boolean; student?: boolean }) {
   const colors = useColors();

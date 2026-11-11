@@ -9,7 +9,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { PlanDetail } from '@/api/domains/plans';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Svg, { LinearGradient, Rect } from 'react-native-svg';
 import { NumberPad } from '@/design/NumberPad';
+import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
+import { ChatExerciseNoteCard } from '@/features/chat/ChatExerciseNoteCard';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 import { setLocaleOverride, t, type Locale } from '@/i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -168,7 +172,7 @@ test('107 exercise note queues offline and retries canonical text plus exercise_
   });
   await mount();
   await expandFirst();
-  const note = renderer.root.findAll(node => node.props.onPress && String(node.props.accessibilityLabel).startsWith('Ask coach ·'))[0];
+  const note = renderer.root.findAll(node => node.props.onPress && String(node.props.accessibilityLabel).startsWith('Message coach ·'))[0];
   await act(async () => note.props.onPress());
   await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Check my pause, please.'));
   await act(async () => renderer.root.findAll(node => node.props.onPress && node.props.label === 'Send')[0].props.onPress());
@@ -415,4 +419,101 @@ test('switching an RIR prescription to empty RPE keeps the chosen column label a
   await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
   expect(copy()).toContain('RPE —');
   expect(copy()).not.toContain('RIR —');
+});
+
+test('107-1 expanding a noncurrent exercise adds only a gold border', async () => {
+  const first = plan.days[0].exercises[0];
+  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
+  await mount();
+  const row = (id: string) => renderer.root.findByType(AllDayBody).findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0];
+  await act(async () => row(second.id).props.onPress());
+  expect(StyleSheet.flatten(row(second.id).parent!.props.style)).toMatchObject({ borderWidth: 1 });
+  expect(StyleSheet.flatten(row(second.id).parent!.props.style).borderColor).not.toBe('transparent');
+  expect(StyleSheet.flatten(row(second.id).parent!.props.style).backgroundColor).toBeUndefined();
+  expect(StyleSheet.flatten(row(first.id).parent!.props.style).backgroundColor).toBeTruthy();
+  await expandFirst();
+  expect(StyleSheet.flatten(row(first.id).parent!.props.style).backgroundColor).toBeTruthy();
+});
+
+test('107-2 expanded coach notes show every line without truncation', async () => {
+  const exercise = plan.days[0].exercises[0];
+  const notes = 'Pause at the bottom.\nKeep your knees out.\nRest fully before the next set.';
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, notes }] }] };
+  await mount();
+  await expandFirst();
+  const note = renderer.root.findAllByType(Text).find(node => node.props.children === t('training.allDay.coachNote', [notes]))!;
+  expect(note).toBeDefined();
+  expect(note.props.numberOfLines).toBeUndefined();
+});
+
+
+test('107-3 current connector stretches one continuous gradient to its measured height', async () => {
+  const first = plan.days[0].exercises[0];
+  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
+  await mount();
+  const line = () => renderer.root.findAllByType(View).find(node => node.props.testID === `all-day-line-${first.id}`)!;
+  for (const height of [64, 240, 64]) {
+    if (height === 240) await expandFirst();
+    if (height === 64 && line().findByType(Svg).props.height === 240) await expandFirst();
+    expect(line().props.onLayout).toEqual(expect.any(Function));
+    await act(async () => line().props.onLayout({ nativeEvent: { layout: { width: 3, height } } }));
+    expect(line().findAllByType(Svg)).toHaveLength(1);
+    expect(line().findByType(Svg).props.height).toBe(height);
+    expect(line().findByType(Rect).props.height).toBe(height);
+    expect(line().findAllByType(LinearGradient)).toHaveLength(1);
+    expect(line().findByType(LinearGradient).props).toMatchObject({ y1: '0%', y2: '100%' });
+  }
+});
+
+
+test('107-4 exercise note entry is icon-only with a 44pt touch target', async () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/bind-requests/mine'
+    ? { bind_request: { status: 'accepted', coach_id: 'coach' } } as never : original(path, options));
+  await mount();
+  await expandFirst();
+  const note = renderer.root.findByType(AllDayBody).findAll(node => node.props.onPress && String(node.props.accessibilityLabel).includes(' · '))[0];
+  const icon = note.findByType(MaterialCommunityIcons);
+  expect(icon.props.name).toBe('message-outline');
+  expect(note.findAllByType(Text)).toEqual(icon.findAllByType(Text));
+  expect(StyleSheet.flatten(note.props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
+});
+
+test.each<[Locale, string, string, string]>([
+  ['zh', '给教练留言 · Squat', '这组感觉怎么样，或想问教练什么', '学员留言'],
+  ['zh-Hant', '給教練留言 · Squat', '這組感覺怎麼樣，或想問教練什麼', '學員留言'],
+  ['en', 'Message coach · Squat', 'How did this set feel, or what would you like to ask your coach?', 'Student note'],
+])('107-4 centered note dialog and both chat cards use revised copy in %s', async (locale, title, placeholder, label) => {
+  setLocaleOverride(locale);
+  const reference = { ...ExerciseRefSchema.parse(contract.exerciseRef), exercise_name: 'Squat', day_date: '2026-11-10' };
+  const close = jest.fn();
+  await act(async () => { renderer = create(<ExerciseNoteSheet studentId={studentId} coachId="coach" reference={reference} onClose={close} />); });
+  expect(copy()).toContain(title);
+  expect(renderer.root.findByType(TextInput).props).toMatchObject({ placeholder, multiline: true });
+  const backdrop = renderer.root.findByType(Modal).findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.flex === 1)!;
+  expect(StyleSheet.flatten(backdrop.props.style).justifyContent).toBe('center');
+  await act(async () => renderer.root.findAll(node => node.props.label === t('designSystem.action.cancel') && node.props.onPress)[0].props.onPress());
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(useExerciseNoteOutbox.getState().notes).toHaveLength(0);
+  for (const student of [true, false]) {
+    await act(async () => renderer.update(<ChatExerciseNoteCard student={student} outgoing={student} message={{ sender_id: studentId, exercise_ref: reference, body: '[Exercise note] Squat · 11/10\nHelp with my pause' }} />));
+    expect(copy()).toContain(`11/10 · Squat · ${label}`);
+    expect(copy()).toContain('Help with my pause');
+  }
+});
+
+
+test('107-6 expanded percentage prescriptions place the original percent at each set row end', async () => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
+    ...exercise.sets[0], load_mode: 'pct', pct_anchor: 'one_rm', target_pct: '60',
+  }] }] }] };
+  await mount();
+  await expandFirst();
+  const row = renderer.root.findAllByType(View).find(node => String(node.props.testID).startsWith('all-day-row-'))!;
+  const percent = row.findAllByType(Text).find(node => node.props.children === '60%');
+  expect(percent).toBeDefined();
+  expect(StyleSheet.flatten(percent!.props.style)).toMatchObject({ fontSize: 11, color: '#4B5563' });
 });

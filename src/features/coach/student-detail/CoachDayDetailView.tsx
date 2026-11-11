@@ -1,3 +1,4 @@
+import { decodePrescription, prescribed } from '@/domain/plan/prescription';
 import { prescriptionDifferences } from '@/domain/plan/prescription-result';
 import { ScrollView, View } from 'react-native';
 import { Screen, radius, useColors } from '@/design';
@@ -8,7 +9,7 @@ import { executionExercises, isExecutionDayComplete, type ExecutionDay } from '@
 import { dayCode } from '@/domain/plan/sequence';
 import { t } from '@/i18n';
 import { Capsule, Copy, Empty, SectionCard, styles } from './components';
-import { dateText, deviceLocale, isAsPrescribed } from './presentation';
+import { dateText, deviceLocale } from './presentation';
 
 function ReadOnlySet({ log, prescription }: { log: SetLog; prescription?: PlanSet }) {
   const colors = useColors();
@@ -19,14 +20,17 @@ function ReadOnlySet({ log, prescription }: { log: SetLog; prescription?: PlanSe
     { original: differences?.reps, title: t('coach.videoFeedback.reps'), value: String(log.reps) },
     { original: differences?.effort, title: log.actual_rir != null ? 'RIR' : t('coach.videoFeedback.rpe'), value: log.actual_rir != null ? String(log.actual_rir) : log.rpe == null ? t('coach.profile.notProvided') : number(log.rpe) },
   ];
-  return <View accessible style={[styles.row, { padding: 10, borderRadius: radius.inset, backgroundColor: colors.bgStack }]}>
+  return <View accessible style={{ padding: 10, gap: 6, borderRadius: radius.inset, backgroundColor: colors.bgStack }}>
+    <View style={styles.row}>
     <Copy mono size={12} tone="textTertiary" style={{ width: 32 }}>{`#${log.set_index + 1}`}</Copy>
-    {prescription && isAsPrescribed(log, prescription) ? <Copy size={14} bold style={{ flex: 1 }}>{t('training.allDay.asPrescribed')}</Copy> : metrics.map((metric) => <View key={metric.title} style={{ flex: 1, gap: 2 }}>
+    {metrics.map((metric) => <View key={metric.title} style={{ flex: 1, gap: 2 }}>
       <Copy size={10} tone="textTertiary">{metric.title}</Copy>
       <Copy size={14} bold numberOfLines={1} adjustsFontSizeToFit tone={metric.original ? 'goldText' : 'textPrimary'}>{metric.value}</Copy>
       {metric.original ? <Copy size={11} tone="textTertiary">{t('training.allDay.original', [metric.original])}</Copy> : null}
     </View>)}
     <Ionicons name={log.completed ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={log.completed ? colors.success : colors.textTertiary} accessibilityLabel={t(log.completed ? 'coach.detail.completed' : 'coach.detail.notStarted')} />
+    </View>
+    {prescription ? <Copy size={11} tone="textTertiary">{t('loadTypes.target', [prescribed(decodePrescription(prescription))])}</Copy> : null}
   </View>;
 }
 export function CoachDayDetailView({ day, planDays, exerciseName, onClose }: { day: ExecutionDay; planDays: readonly PlanDay[]; exerciseName: (id: string) => string; onClose: () => void }) {

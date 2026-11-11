@@ -17,6 +17,9 @@ import { feedbackRepository } from '@/api/domains/feedback';
 import { chatRepository } from '@/api/domains/chat';
 import { readinessRepository } from '@/api/domains/readiness';
 import { videosRepository } from '@/api/domains/videos';
+import { bodyWeightsRepository } from '@/api/domains/body-weights';
+import { localDay } from '@/domain/coach/detail-week';
+import { offsetDate } from '../seed';
 import { resetDemoBackend } from '../backend';
 import { gymDayToday } from '@/domain/plan/workout-date-policy';
 import { ChatSetCardPresentation } from '@/features/chat/set-ref';
@@ -48,7 +51,7 @@ test('S1: existing student readers validate demo DTOs without fetch; unknown rou
   const plan = await plansRepository.detail(plans[0].id);
   expect(plan.days).toHaveLength(24);
   expect((await setsRepository.range(user.id, { from: plan.start_date, to: plan.end_date })).logs.length).toBeGreaterThan(0);
-  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe('83.5');
+  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe('83.50');
   expect((await exercisesRepository.list()).exercises).toHaveLength(12);
   expect((await bindRepository.mine()).bind_request?.status).toBe('accepted');
   expect((await feedbackRepository.list(user.id)).items).toHaveLength(3);
@@ -190,5 +193,30 @@ test('S1: account, auth and onboarding lifecycle endpoints succeed locally', asy
   await bindRepository.cancel(binding.id);
   expect((await bindRepository.mine()).bind_request?.status).toBe('cancelled');
   await accountRepository.deleteAccount();
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+
+test('108-3 demo body weights read, overwrite today, delete and sync the profile without network', async () => {
+  const today = localDay(new Date());
+  resetDemoBackend(today);
+  const user = await useSessionStore.getState().loginWithEmail({ email: 'any@example.test', password: '' });
+  const initial = (await bodyWeightsRepository.list()).records;
+  expect(initial.length).toBeGreaterThan(2);
+  expect(new Set(initial.map(record => record.recorded_on)).size).toBe(initial.length);
+  expect(initial.every(record => record.recorded_on >= offsetDate(today, -29) && record.recorded_on <= today)).toBe(true);
+  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe(initial.at(-1)!.weight_kg);
+  await bodyWeightsRepository.saveToday('84.00');
+  const updated = await bodyWeightsRepository.saveToday('83.75');
+  expect(updated).toEqual({ record: { recorded_on: today, weight_kg: '83.75' }, current_weight_kg: '83.75' });
+  expect((await bodyWeightsRepository.list()).records.filter(record => record.recorded_on === today)).toEqual([updated.record]);
+  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe('83.75');
+  await bodyWeightsRepository.remove(today);
+  const remaining = (await bodyWeightsRepository.list()).records;
+  expect(remaining.some(record => record.recorded_on === today)).toBe(false);
+  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe(remaining.at(-1)!.weight_kg);
+  for (const record of remaining) await bodyWeightsRepository.remove(record.recorded_on);
+  expect(await bodyWeightsRepository.list()).toEqual({ records: [] });
+  expect((await onboardingRepository.get(user.id))?.weight_kg).toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });

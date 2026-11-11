@@ -222,3 +222,22 @@ test.each([
   await press(t('student.trainingHistoryView.copy023'));
   expect(onboardingRepository.get).toHaveBeenCalledTimes(attempts + 1);
 });
+
+test.each<[Locale, string]>([['en', 'Goals and concerns'], ['zh', '目标与顾虑'], ['zh-Hant', '目標與顧慮']])('108-2 goals move into About me and save through the existing note field (%s)', async (locale, title) => {
+  setLocaleOverride(locale);
+  await mount(<><MyProfileScreen /><ProfileAboutScreen /></>);
+  const home = renderer.root.findByType(MyProfileScreen);
+  expect(home.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.rn.profile.note'));
+  const about = renderer.root.findByType(ProfileAboutScreen);
+  expect(about.findAllByType(Text).map(node => node.props.children)).toContain(title);
+  expect(about.findAllByType(Text).map(node => node.props.children)).toContain('Goal');
+  await press(title);
+  expect(renderer.root.findByType(ProfileEditor).props.section).toBe('note');
+  const input = renderer.root.findAllByType(TextInput).find(node => node.props.value === 'Goal')!;
+  await act(async () => input.props.onChangeText('Build confidence in my squat'));
+  await press(t('student.profileCardsSection.copy013'));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
+  expect(profile.note_to_coach).toBe('Build confidence in my squat');
+  expect(texts()).toContain('Build confidence in my squat');
+  expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
+});

@@ -19,10 +19,9 @@ jest.mock('@/api/session', () => ({ useSessionStore: (selector: (state: { user: 
 const mockNavigate = jest.fn();
 const mockOpenCoachChat = jest.fn();
 let mockChatUnread = 0;
-let mockFocus: (() => void) | undefined;
 // The growth header's message button is the coach-chat entry (iOS parity); the hook is exercised in chat tests.
 jest.mock('@/features/chat/open-coach-chat', () => ({ useOpenCoachChat: () => ({ totalUnread: mockChatUnread, openCoachChat: mockOpenCoachChat, isOpening: false }) }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockNavigate }), useFocusEffect: (callback: () => void) => { mockFocus = callback; } }));
+jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockNavigate }), useFocusEffect: jest.fn() }));
 jest.mock('@/analytics', () => ({ AnalyticsScreen: {}, AnalyticsEvent: {}, screen: jest.fn(), track: jest.fn() }));
 
 let renderer: ReactTestRenderer;
@@ -56,7 +55,7 @@ afterEach(() => {
 });
 
 
-const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.dashboardProfileMetricsView.copy001'), t('student.feedbackInboxView.copy006'), t('student.progressMenu.intensity')];
+const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.dashboardProfileMetricsView.copy001'), t('student.progressMenu.intensity')];
 function expectRows() {
   const rows = buttons().filter(node => rowLabels().some(label => node.props.accessibilityLabel?.startsWith(label)));
   expect(rows.map(node => node.props.accessibilityLabel)).toEqual(rowLabels());
@@ -66,12 +65,12 @@ function expectRows() {
   return rows;
 }
 
-test('five ordered rows remain tappable without charts or tiles in both languages', async () => {
+test('four ordered rows remain tappable without charts or tiles in both languages', async () => {
   await render();
   const rows = expectRows();
-  const routes = ['/progress/e1rm', '/training-history', '/(student)/body-weight', '/(student)/feedback', '/progress/intensity'];
+  const routes = ['/progress/e1rm', '/training-history', '/(student)/body-weight', '/progress/intensity'];
   rows.forEach((row, index) => { act(() => row.props.onPress()); expect(mockNavigate).toHaveBeenLastCalledWith(routes[index]); });
-  expect(texts().filter(text => text === '—')).toHaveLength(5);
+  expect(texts().filter(text => text === '—')).toHaveLength(4);
   setLocaleOverride('zh');
   act(() => renderer.update(<QueryClientProvider client={client}><GrowthScreen /></QueryClientProvider>));
   expectRows();
@@ -108,21 +107,12 @@ test('pending and failed requests keep blank tappable rows, with retry and pull-
   expectRows();
 });
 
-test('feedback navigates to the existing inbox and keeps only the total count with no second unread number', async () => {
+test('108-1 Progress has no coach-feedback entry even with unread feedback', async () => {
   const item = { id: 'feedback', coach_id: 'coach', student_id: 'student', day_date: '2026-08-03', plan_exercise_id: null, text: 'Keep your brace', posted_at: '2026-08-03T12:00:00Z', read_at: null };
   jest.mocked(feedbackRepository.list).mockResolvedValue({ items: [item] });
-  mockChatUnread = 1;
   await render();
-  expect(texts()).not.toContain('1 new');
+  expect(button(t('student.feedbackInboxView.copy006'))).toBeUndefined();
   expect(texts()).not.toContain(item.text);
-  act(() => button(t('student.feedbackInboxView.copy006')).props.onPress());
-  expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/feedback');
-  jest.mocked(feedbackRepository.list).mockResolvedValue({ items: [{ ...item, read_at: '2026-08-04' }] });
-  await act(async () => { mockFocus?.(); await new Promise(resolve => setTimeout(resolve, 20)); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
-  expect(texts()).not.toContain('1 new');
-  expect(button(t('student.feedbackInboxView.copy006')).props.accessibilityLabel).toBe(`${t('student.feedbackInboxView.copy006')}, 1`);
-  expect(button(t('student.trainingHistoryView.copy012'))).toBeUndefined();
 });
 
 test('weight row reads the newest record with two decimals independently of other Progress data', async () => {
@@ -135,7 +125,7 @@ test('weight row reads the newest record with two decimals independently of othe
 test('a missing weight endpoint shows a dash and retry, without blocking other rows', async () => {
   jest.mocked(bodyWeightsRepository.list).mockRejectedValue(new ApiError('server', 'Not found', { status: 404 }));
   await render();
-  expect(texts().filter(text => text === '—')).toHaveLength(5);
+  expect(texts().filter(text => text === '—')).toHaveLength(4);
   expect(texts()).toContain(t('student.trainingHistoryView.copy022'));
   act(() => button('Body weight').props.onPress());
   expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/body-weight');

@@ -55,11 +55,11 @@ test('1A weight plus uniform RPE keeps both; varying RPE is only in expanded set
   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100' }]);
 });
 
-test.each(['one_rm', 'e1rm'] as const)('percentage %s shows resolved weight and original percent, or only percent if unresolved', anchor => {
+test.each(['one_rm', 'e1rm'] as const)('percentage %s 107-6 shows only resolved weight, or percent if unresolved', anchor => {
   const planned = sets(5, { target_reps: 5, load_mode: 'pct', pct_anchor: anchor, target_pct: '75' });
   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '5×5', load: '75%', intensityOnly: true }]);
   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '112.5' }))))
-    .toMatchObject([{ setsReps: '5×5', load: '112.5 (75%)', intensityOnly: false }]);
+    .toMatchObject([{ setsReps: '5×5', load: '112.5', intensityOnly: false }]);
 });
 test('top-set percent waits for the top set and then shows its calculated weight', () => {
   const planned = sets(3, { target_reps: 5, load_mode: 'pct', pct_anchor: 'top_set', target_pct: '60' });

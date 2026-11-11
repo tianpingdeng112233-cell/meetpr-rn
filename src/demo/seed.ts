@@ -1,3 +1,4 @@
+import type { BodyWeightRecord } from '@/api/domains/body-weights';
 import type { User } from '@/api/auth';
 import type { Exercise } from '@/api/domains/exercises';
 import type { PlanDetail, PlanExercise } from '@/api/domains/plans';
@@ -30,7 +31,7 @@ export function buildDemoSeed(today: string) {
   const user: User = { id: id(), phone: null, email: 'alex@example.test', name: 'Alex Chen', role: 'coached_student', created_at: timestamp };
   const coach: User = { id: id(), phone: null, email: 'sam@example.test', name: 'Sam Carter', role: 'coach', created_at: timestamp };
   const profile: OnboardingProfile = {
-    user_id: user.id, unit_preference: 'kg', gender: 'male', birth_date: '1996-05-14', height_cm: '178', weight_kg: '83.5', training_years: 5,
+    user_id: user.id, unit_preference: 'kg', gender: 'male', birth_date: '1996-05-14', height_cm: '178', weight_kg: '83.50', training_years: 5,
     squat_stance: 'low_bar', deadlift_style: 'conventional', bench_grip: 'standard', squat_1rm_kg: '190', bench_1rm_kg: '115', deadlift_1rm_kg: '225',
     training_days: ['mon', 'wed', 'fri', 'sun'], gym_tier: 'professional', equipment_overrides: [], daily_life_intensity: 2, life_stress: 2,
     recovery_speed: 3, sleep_hours: 8, muscle_groups_to_strengthen: ['back'], injury_areas: ['knee'],
@@ -120,5 +121,8 @@ export function buildDemoSeed(today: string) {
   const conversation: Conversation = { id: conversationId, other_party: { id: coach.id, display_name: coach.name! },
     last_message: { id: last.id, seq: last.seq, kind: last.kind, preview: last.body, preview_kind: 'text', created_at: last.created_at, sender_id: last.sender_id },
     last_message_at: last.created_at, unread_count: 1, my_last_read: { message_id: messages[3].id, seq: 4 }, other_last_read: { message_id: messages[3].id, seq: 4 } };
-  return { user, coach, profile, exercises, plan, logs, binding, feedback, conversation, messages };
+  const bodyWeights: BodyWeightRecord[] = [84.2, 84.0, 84.1, 83.8, 83.9, 83.6, 83.7, 83.4, 83.6, 83.5].map((weight, index) => ({
+    recorded_on: offsetDate(today, -29 + index * 3), weight_kg: weight.toFixed(2),
+  }));
+  return { user, coach, profile, exercises, plan, logs, binding, feedback, conversation, messages, bodyWeights };
 }
