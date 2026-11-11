@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,10 +48,17 @@ export function WorkoutCompletionFlowView({ presentation, initialPhase, initialR
   const [reflection, setReflection] = useState(initialReflection ?? { goal: '', achieved: '', improve: '' });
   const [saving, setSaving] = useState(false);
   const finishing = useRef(false);
+  const autoCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [autoClosePending, setAutoClosePending] = useState(initialPhase === 'celebration');
+  const cancelAutoClose = () => {
+    if (autoCloseTimer.current !== null) clearTimeout(autoCloseTimer.current);
+    setAutoClosePending(false);
+  };
   const pendingWrites = useRef(Promise.resolve());
   const showSaveError = (error: unknown) => Alert.alert(t('student.todayWorkoutScreen.copy001'), saveErrorCopy(error));
   const finish = async () => {
     if (finishing.current) return;
+    cancelAutoClose();
     finishing.current = true;
     setSaving(true);
     try {
@@ -63,6 +70,14 @@ export function WorkoutCompletionFlowView({ presentation, initialPhase, initialR
       setSaving(false);
     }
   };
+  const finishRef = useRef(finish);
+  useEffect(() => { finishRef.current = finish; });
+  useEffect(() => {
+    if (phase !== 'celebration') return;
+    const timer = setTimeout(() => { void finishRef.current(); }, 5000);
+    autoCloseTimer.current = timer;
+    return () => clearTimeout(timer);
+  }, [phase]);
   const changeReflection = (next: SessionReflection) => {
     setReflection(next);
     // An older slow autosave must not overwrite newer text or completedAt.
@@ -70,9 +85,9 @@ export function WorkoutCompletionFlowView({ presentation, initialPhase, initialR
   };
   return (
     <Modal animationType="none" presentationStyle="fullScreen" visible onRequestClose={() => void finish()}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgBase }}>
+      <SafeAreaView testID="completion-flow-surface" onTouchStart={cancelAutoClose} style={{ flex: 1, backgroundColor: colors.bgBase }}>
         {phase === 'celebration'
-          ? <WorkoutCelebrationView sending={sending} presentation={presentation} streak={null} saving={saving} onOpenReview={() => setPhase('review')} onFinish={() => void finish()} />
+          ? <WorkoutCelebrationView autoClosePending={autoClosePending} sending={sending} presentation={presentation} streak={null} saving={saving} onOpenReview={() => { cancelAutoClose(); setPhase('review'); }} onFinish={() => void finish()} />
           : <SessionSummaryView presentation={presentation} reflection={reflection} onReflectionChange={changeReflection} onFinish={() => void finish()} saving={saving} />}
       </SafeAreaView>
     </Modal>

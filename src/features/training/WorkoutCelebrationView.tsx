@@ -43,13 +43,14 @@ function CelebrationMedal() {
   );
 }
 
-export function WorkoutCelebrationView({ presentation, streak = null, onOpenReview, onFinish, saving = false, sending = false }: {
+export function WorkoutCelebrationView({ presentation, streak = null, onOpenReview, onFinish, saving = false, sending = false, autoClosePending = false }: {
   presentation: WorkoutCompletionPresentation;
   streak?: number | null;
   onOpenReview: () => void;
   onFinish: () => void;
   saving?: boolean;
   sending?: boolean;
+  autoClosePending?: boolean;
 }) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -92,6 +93,7 @@ export function WorkoutCelebrationView({ presentation, streak = null, onOpenRevi
           <View style={{ borderRadius: radius.control, overflow: 'hidden' }}><AppButton haptic="none" variant="primary" fullWidth={false} label={t('student.workoutCompletionFlowView.copy002')} onPress={onOpenReview} disabled={saving} /><RewardShimmer /></View>
           <Pressable accessibilityRole="button" accessibilityLabel={t('student.workoutCompletionFlowView.copy003')} disabled={saving} onPress={onFinish} style={({ pressed }) => [styles.finish, { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}><Text style={styles.finishText}>{t('student.workoutCompletionFlowView.copy003')}</Text></Pressable>
         </RewardEntrance>
+        {autoClosePending ? <Text style={styles.meta}>{t('student.workoutCompletionFlowView.autoClose')}</Text> : null}
       </ScrollView>
     </View>
   );

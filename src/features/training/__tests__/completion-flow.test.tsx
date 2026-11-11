@@ -21,7 +21,7 @@ let renderer: ReactTestRenderer;
 const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
 const press = async (label: string) => { await act(async () => { await renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === label)[0].props.onPress(); }); };
 beforeEach(() => setLocaleOverride('en'));
-afterEach(() => { act(() => renderer?.unmount()); setLocaleOverride(null); });
+afterEach(() => { act(() => renderer?.unmount()); jest.useRealTimers(); setLocaleOverride(null); });
 
 test('celebration opens review and review finishes the same full-screen flow', async () => {
   const onFinish = jest.fn(async () => {});
@@ -57,4 +57,54 @@ test('celebration can finish directly and repeated finish presses are ignored', 
   await press(t('student.workoutCompletionFlowView.copy003'));
   await press(t('student.workoutCompletionFlowView.copy003'));
   expect(onFinish).toHaveBeenCalledTimes(1);
+});
+
+test('untouched celebration finishes at five seconds using the Done callback', async () => {
+  jest.useFakeTimers();
+  const onFinish = jest.fn(async () => {});
+  await act(async () => { renderer = create(<WorkoutCompletionFlowView presentation={presentation} initialPhase="celebration" onFinish={onFinish} onReflectionChange={async () => {}} />); });
+  expect(copy()).toContain("Closes automatically after 5 seconds");
+  await act(async () => { jest.advanceTimersByTime(4999); });
+  expect(onFinish).not.toHaveBeenCalled();
+  await act(async () => { jest.advanceTimersByTime(1); });
+  expect(onFinish).toHaveBeenCalledWith({ goal: '', achieved: '', improve: '' });
+  expect(onFinish).toHaveBeenCalledTimes(1);
+});
+
+test('touching any part of the reward cancels autoclose and leaves Done available', async () => {
+  jest.useFakeTimers();
+  const onFinish = jest.fn(async () => {});
+  await act(async () => { renderer = create(<WorkoutCompletionFlowView presentation={presentation} initialPhase="celebration" onFinish={onFinish} onReflectionChange={async () => {}} />); });
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  const surface = renderer.root.findByProps({ testID: 'completion-flow-surface' });
+  act(() => surface.props.onTouchStart());
+  expect(copy()).not.toContain("Closes automatically after 5 seconds");
+  await act(async () => { jest.advanceTimersByTime(10000); });
+  expect(onFinish).not.toHaveBeenCalled();
+  await press(t('student.workoutCompletionFlowView.copy003'));
+  expect(onFinish).toHaveBeenCalledTimes(1);
+});
+
+test('opening the report before the deadline never interrupts reading or reflection edits', async () => {
+  jest.useFakeTimers();
+  const onFinish = jest.fn(async () => {});
+  await act(async () => { renderer = create(<WorkoutCompletionFlowView presentation={presentation} initialPhase="celebration" onFinish={onFinish} onReflectionChange={async () => {}} />); });
+  await act(async () => { jest.advanceTimersByTime(4000); });
+  await press(t('student.workoutCompletionFlowView.copy002'));
+  await act(async () => { jest.advanceTimersByTime(10000); });
+  expect(copy()).toContain(t('student.sessionSummaryView.copy003'));
+  expect(onFinish).not.toHaveBeenCalled();
+});
+
+test('banner review has no timer and an unmounted celebration cannot finish', async () => {
+  jest.useFakeTimers();
+  const onFinish = jest.fn(async () => {});
+  await act(async () => { renderer = create(<WorkoutCompletionFlowView presentation={presentation} initialPhase="review" onFinish={onFinish} onReflectionChange={async () => {}} />); });
+  await act(async () => { jest.advanceTimersByTime(10000); });
+  expect(onFinish).not.toHaveBeenCalled();
+  act(() => renderer.unmount());
+  await act(async () => { renderer = create(<WorkoutCompletionFlowView presentation={presentation} initialPhase="celebration" onFinish={onFinish} onReflectionChange={async () => {}} />); });
+  act(() => renderer.unmount());
+  await act(async () => { jest.advanceTimersByTime(10000); });
+  expect(onFinish).not.toHaveBeenCalled();
 });

@@ -191,11 +191,12 @@ test('a 503 closes celebration, restores completion eligibility and keeps the re
   expect(copy()).toContain('Your coach received your training log');
 });
 
-test('30 seconds without a response closes celebration and rolls back, ignoring late success', async () => {
+test('30 seconds without a response closes a touched celebration and rolls back, ignoring late success', async () => {
   const request = delayCompletion();
   await mount();
   jest.useFakeTimers();
   await complete();
+  act(() => renderer.root.findByProps({ testID: 'completion-flow-surface' }).props.onTouchStart());
   await act(async () => { await jest.advanceTimersByTimeAsync(29_999); });
   expect(copy()).toContain('Sending to your coach…');
   expect(completedRow().length).toBeGreaterThan(0);
