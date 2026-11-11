@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { bodyWeightsRepository } from '@/api/domains/body-weights';
 import { bindRepository } from '@/api/domains/bind';
 import { OnboardingProfileSchema, onboardingRepository, type OnboardingProfile } from '@/api/domains/onboarding';
 import { readinessRepository } from '@/api/domains/readiness';
@@ -44,6 +45,10 @@ beforeEach(async () => {
   jest.spyOn(onboardingRepository, 'get').mockImplementation(async () => profile);
   jest.spyOn(readinessRepository, 'get').mockResolvedValue({ checkin: null });
   jest.spyOn(onboardingRepository, 'upsert').mockImplementation(async patch => { profile = { ...profile, ...patch }; return profile; });
+  jest.spyOn(bodyWeightsRepository, 'saveToday').mockImplementation(async weight => {
+    profile = { ...profile, weight_kg: weight };
+    return { record: { recorded_on: '2026-11-08', weight_kg: weight }, current_weight_kg: weight };
+  });
   jest.spyOn(bindRepository, 'mine').mockResolvedValue({ bind_request: null });
 });
 afterEach(() => { act(() => renderer?.unmount()); client.clear(); jest.restoreAllMocks(); setLocaleOverride(null); useSessionStore.setState({ user: null }); });
@@ -216,4 +221,23 @@ test.each([
   const attempts = jest.mocked(onboardingRepository.get).mock.calls.length;
   await press(t('student.trainingHistoryView.copy023'));
   expect(onboardingRepository.get).toHaveBeenCalledTimes(attempts + 1);
+});
+
+test.each<[Locale, string]>([['en', 'Goals and concerns'], ['zh', '目标与顾虑'], ['zh-Hant', '目標與顧慮']])('108-2 goals move into About me and save through the existing note field (%s)', async (locale, title) => {
+  setLocaleOverride(locale);
+  await mount(<><MyProfileScreen /><ProfileAboutScreen /></>);
+  const home = renderer.root.findByType(MyProfileScreen);
+  expect(home.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.rn.profile.note'));
+  const about = renderer.root.findByType(ProfileAboutScreen);
+  expect(about.findAllByType(Text).map(node => node.props.children)).toContain(title);
+  expect(about.findAllByType(Text).map(node => node.props.children)).toContain('Goal');
+  await press(title);
+  expect(renderer.root.findByType(ProfileEditor).props.section).toBe('note');
+  const input = renderer.root.findAllByType(TextInput).find(node => node.props.value === 'Goal')!;
+  await act(async () => input.props.onChangeText('Build confidence in my squat'));
+  await press(t('student.profileCardsSection.copy013'));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
+  expect(profile.note_to_coach).toBe('Build confidence in my squat');
+  expect(texts()).toContain('Build confidence in my squat');
+  expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
 });

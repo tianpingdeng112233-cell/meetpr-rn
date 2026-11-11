@@ -31,8 +31,7 @@ export function buildAllDaySheet(planDay: PlanDay, logs: readonly SetLog[], sugg
   let hasCurrent = false;
   const exercises = [...planDay.exercises].sort((a, b) => a.sort_order - b.sort_order);
   rows.forEach(row => { if (!exercises.some(exercise => exercise.id === row.exercise.id)) exercises.push(row.exercise); });
-  const expandedId = options.expandedExerciseId === undefined
-    ? exercises.find(exercise => !planDay.completed_at && !options.completedExercises?.has(exercise.id))?.id : options.expandedExerciseId;
+  const expandedId = options.expandedExerciseId;
   return { exercises: exercises.map((exercise, index) => {
     const exerciseRows = rows.filter(row => row.exercise.id === exercise.id).sort((a, b) => a.setIndex - b.setIndex);
     const complete = Boolean(planDay.completed_at) || (options.completedExercises?.has(exercise.id) ?? false);

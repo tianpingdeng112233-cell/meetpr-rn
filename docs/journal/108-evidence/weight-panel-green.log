@@ -1,0 +1,27 @@
+FAIL src/features/history/__tests__/body-weight-screen.test.tsx
+  ● the weight-page action uses the in-app decimal panel and updates one point and the profile after saving
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: ArrayContaining ["83.50 kg", "Profile: 83.50"]
+    Received: ["󰁍", "Body weight", "Latest", "30 days", "󰅀", "82.25", "kg", "", "Log on another day to see the trend", "Update today's weight", …]
+
+       97 |   expect(renderer.root.findAllByType(TextInput)).toHaveLength(0);
+       98 |   expect(renderer.root.findAllByType(Circle)).toHaveLength(1);
+    >  99 |   expect(texts()).toEqual(expect.arrayContaining(['83.50 kg', 'Profile: 83.50']));
+          |                   ^
+      100 | });
+      101 |
+      102 | test('deleting the latest record restores the previous current weight and keeps the older point', async () => {
+
+      at Object.toEqual (src/features/history/__tests__/body-weight-screen.test.tsx:99:19)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/design/__tests__/number-pad.test.ts
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 8 passed, 9 total
+Snapshots:   0 total
+Time:        0.905 s, estimated 1 s
+Ran all test suites matching /src\/features\/history\/__tests__\/body-weight-screen.test.tsx|src\/design\/__tests__\/number-pad.test.ts/i.

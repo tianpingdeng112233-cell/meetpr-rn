@@ -7,7 +7,6 @@ import { useSessionStore } from '@/api/session';
 import { Card, Screen, spacing, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { t } from '@/i18n';
-import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
 import { ProgressMenuRow } from '@/features/history/ProgressMenuRow';
 import { MyProfileHeader } from './MyProfileHeader';
 import { ProfileIdentityCard } from './ProfileIdentityCard';
@@ -20,21 +19,19 @@ export function MyProfileScreen({ editSection, onEditClose }: { editSection?: 'b
   const studentId = user?.id ?? '';
   const profile = useOnboardingProfile(studentId);
   const binding = useMineBindRequest();
-  const chat = useOpenCoachChat(studentId);
   const router = useRouter();
   const colors = useColors();
-  const [edit, setEdit] = useState<'competition' | 'note' | null>(null);
+  const [edit, setEdit] = useState<'competition' | null>(null);
   const blank = !profile.data && (profile.isPending || profile.isError);
   const values = !blank && profile.data ? profileMenuValues(profile.data) : { about: '', health: '', competition: '', note: '' };
   return <Screen edges={['top']}><ScrollView contentContainerStyle={{ padding: spacing.pageHorizontal, gap: spacing.base, paddingBottom: spacing.xl }} refreshControl={<RefreshControl tintColor={colors.gold500} refreshing={profile.isRefetching} onRefresh={() => void profile.refetch()} />}>
-    <MyProfileHeader unreadCount={chat.totalUnread} onOpenChat={() => void chat.openCoachChat()} />
+    <MyProfileHeader />
     <ProfileIdentityCard identity={profileIdentity(user)} coach={binding.isPending || binding.isError ? '' : profileCoachName(binding.data?.bind_request)} profile={profile.data ?? null} blank={blank} />
     <View style={{ gap: spacing.point10 }}>
       {!blank && !profile.data ? <Card><ProfileText>{t('student.myProfileView.copy001')}</ProfileText></Card> : <>
         <ProgressMenuRow icon="account-outline" title={t('student.rn.profile.about')} value={values.about} onPress={() => router.push('/profile/about')} />
         <ProgressMenuRow icon="heart-outline" title={t('student.rn.profile.health')} value={values.health} onPress={() => router.push('/profile/health')} />
         <ProgressMenuRow icon="flag-outline" title={t('student.rn.meet.title')} value={values.competition} onPress={() => setEdit('competition')} />
-        <ProgressMenuRow icon="pencil-outline" title={t('student.rn.profile.note')} value={values.note} onPress={() => setEdit('note')} />
       </>}
       <ProgressMenuRow icon="tune-variant" title={t('student.rn.profile.settings')} value="" onPress={() => router.push('/profile/settings')} />
     </View>

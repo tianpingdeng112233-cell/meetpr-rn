@@ -6,7 +6,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { getLocale, matchesExerciseSearch, t } from '@/i18n';
 import { Card, font, useColors, radius, Screen, spacing, typography } from '@/design';
-import { chineseMonthDay, formatKg } from '@/features/dashboard/model';
+import { chineseMonthDay, formatKg } from '@/features/history/summary-model';
 import { CompletedSetVideo, CompletedVideoGroup, CompletedVideoReplayProvider } from '@/features/training/video-upload/CompletedVideoReplay';
 import type { SetLog } from '@/api/domains';
 import { decodePrescription, prescribed } from '@/domain/plan/prescription';

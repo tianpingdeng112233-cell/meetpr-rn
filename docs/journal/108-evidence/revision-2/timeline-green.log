@@ -1,0 +1,119 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/training/__tests__/all-day-view.test.tsx src/features/training/__tests__/all-day-sheet.test.ts
+
+FAIL src/features/training/__tests__/all-day-view.test.tsx
+  ● Console
+
+    console.warn
+      expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go with the release of SDK 53. Use a development build instead of Expo Go. Learn more at https://docs.expo.dev/develop/development-builds/introduction/.
+
+      1 | import { SerialTaskQueue } from '../serial-task-queue';
+      2 | import { configureNotificationHandler } from '@/notifications/handler';
+    > 3 | import * as Notifications from 'expo-notifications';
+        | ^
+      4 | import { t } from '@/i18n';
+      5 | configureNotificationHandler();
+      6 | const publications = new SerialTaskQueue();
+
+      at warn (node_modules/expo-notifications/src/warnOfExpoGoPushUsage.ts:14:15)
+      at addPushTokenListener (node_modules/expo-notifications/src/TokenEmitter.ts:44:24)
+      at Object.<anonymous> (node_modules/expo-notifications/src/DevicePushTokenAutoRegistration.fx.ts:104:23)
+      at Object.require (node_modules/expo-notifications/src/getExpoPushTokenAsync.ts:5:1)
+      at Object.require (node_modules/expo-notifications/src/index.ts:16:1)
+      at Object.require (src/features/training/video-upload/failure-notifier.ts:3:1)
+      at Object.require (src/features/training/video-upload/manager.ts:39:1)
+      at Object.require (src/features/training/video-upload/VideoAttachmentControls.tsx:21:1)
+      at Object.require (src/features/training/AllDayBody.tsx:14:1)
+      at Object.require (src/features/training/TodayWorkoutView.tsx:33:1)
+      at Object.require (src/features/training/__tests__/all-day-view.test.tsx:13:1)
+
+  ● expanded effort column identifies rpe even when its value is 8
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "RPE 8"
+    Received array: ["W1", "󰅁", "Tue", "1", "Wed", "2", "Thu", "3", "Fri", "4", …]
+
+      374 |     await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+      375 |   }
+    > 376 |   expect(copy()).toContain(expected);
+          |                  ^
+      377 | });
+      378 |
+
+      at toContain (src/features/training/__tests__/all-day-view.test.tsx:376:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● expanded effort column identifies rpe even when its value is null
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "RPE —"
+    Received array: ["W1", "󰅁", "Tue", "1", "Wed", "2", "Thu", "3", "Fri", "4", …]
+
+      374 |     await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+      375 |   }
+    > 376 |   expect(copy()).toContain(expected);
+          |                  ^
+      377 | });
+      378 |
+
+      at toContain (src/features/training/__tests__/all-day-view.test.tsx:376:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● expanded effort column identifies rir even when its value is 2
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "RIR 2"
+    Received array: ["W1", "󰅁", "Tue", "1", "Wed", "2", "Thu", "3", "Fri", "4", …]
+
+      374 |     await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+      375 |   }
+    > 376 |   expect(copy()).toContain(expected);
+          |                  ^
+      377 | });
+      378 |
+
+      at toContain (src/features/training/__tests__/all-day-view.test.tsx:376:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● expanded effort column identifies rir even when its value is null
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      102 | const copy = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
+      103 | const press = async (label: string) => {
+    > 104 |   await act(async () => { renderer.root.findAll(node => node.props.onPress && node.props.accessibilityLabel === label)[0].props.onPress(); });
+          |                                                                                                                          ^
+      105 | };
+      106 | afterEach(async () => {
+      107 |   act(() => renderer?.unmount());
+
+      at src/features/training/__tests__/all-day-view.test.tsx:104:122
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at src/features/training/__tests__/all-day-view.test.tsx:104:12
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12
+      at apply (src/features/training/__tests__/all-day-view.test.tsx:103:12)
+      at press (src/features/training/__tests__/all-day-view.test.tsx:372:11)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/features/training/__tests__/all-day-sheet.test.ts
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       4 failed, 23 passed, 27 total
+Snapshots:   0 total
+Time:        2.663 s
+Ran all test suites matching /src\/features\/training\/__tests__\/all-day-view.test.tsx|src\/features\/training\/__tests__\/all-day-sheet.test.ts/i.

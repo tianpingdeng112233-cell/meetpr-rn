@@ -329,7 +329,7 @@ test('extra and student-added saves retain their identities and card date across
   expect(requests.at(-1)?.logged_date).toBe('2026-10-15');
 });
 
-test('restored non-cursor selection stays on the open day across 04:00 and a new visit returns to the cursor', async () => {
+test('opening defaults to the cursor despite recent logs; explicit selection survives 04:00 until the next visit', async () => {
   const d4 = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000004', day_of_week: 4,
     exercises: [{ ...plan.days[0].exercises[0], id: '50000000-0000-4000-8000-000000000004', plan_day_id: '40000000-0000-4000-8000-000000000004' }] };
   servedPlan = { ...plan, days: [...plan.days, d4] };
@@ -337,6 +337,8 @@ test('restored non-cursor selection stays on the open day across 04:00 and a new
   storedLogs = [{ id: '80000000-0000-4000-8000-000000000004', student_id: studentId, plan_exercise_id: d4.exercises[0].id, exercise_id: d4.exercises[0].exercise_id, set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-10-14', logged_at: new Date(2026, 9, 14, 20).toISOString() }];
   await act(async () => { renderer = create(<QueryClientProvider client={client}><TodayWorkoutView /></QueryClientProvider>); });
   for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(plan.days[0].id);
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(d4.id));
   expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(d4.id);
   await act(async () => { await jest.advanceTimersByTimeAsync(120_000); });
   for (let i = 0; i < 3; i++) await act(async () => { await jest.advanceTimersByTimeAsync(50); });

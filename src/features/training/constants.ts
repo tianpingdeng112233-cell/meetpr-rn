@@ -1,3 +1,6 @@
+// Spec 107 round 4: keep history suggestions available for a later opt-in.
+export const HISTORY_WEIGHT_PREFILL_ENABLED: boolean = false;
+
 export const TRAINING_LIMITS = Object.freeze({
   gymDayCutoffHour: 4,
   historyWindowDays: 84,

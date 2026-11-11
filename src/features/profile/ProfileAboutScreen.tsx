@@ -14,7 +14,7 @@ export function ProfileAboutScreen() {
   const values = profile.data ? profileRowValues(profile.data) : null;
   return <ProfilePage title={t('student.rn.profile.about')}>
     {values ? <MyProfileGroupCard>
-      {(['basics', 'background'] as const).map((section, index) => <Fragment key={section}>
+      {(['basics', 'background', 'note'] as const).map((section, index) => <Fragment key={section}>
         {index ? <MyProfileDivider inset /> : null}
         <ProfilePageRow title={t(section === 'basics' ? 'student.profileCardsSection.copy002' : profileTitles[section])} value={values[section]} onPress={() => setEdit(section)} />
       </Fragment>)}

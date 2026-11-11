@@ -15,8 +15,8 @@ import {
   buildResolvedExerciseFamilies,
   dashboardE1RMRange,
   utcDateText,
-} from '@/features/dashboard/model';
-import { useFeedbackInboxViewModel } from '@/features/dashboard/feedback-inbox';
+} from '@/features/history/summary-model';
+import { useFeedbackInboxViewModel } from '@/features/feedback/feedback-inbox';
 import { exerciseDisplayName, t } from '@/i18n';
 import { useStudentTabsStore } from '@/features/student-tabs';
 import { trainingE1RMRepository } from '@/features/training/storage';

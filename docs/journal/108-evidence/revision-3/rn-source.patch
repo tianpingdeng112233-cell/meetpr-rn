@@ -1,0 +1,749 @@
+diff --git a/src/demo/__tests__/transport.test.ts b/src/demo/__tests__/transport.test.ts
+index 07c4526..fa2542d 100644
+--- a/src/demo/__tests__/transport.test.ts
++++ b/src/demo/__tests__/transport.test.ts
+@@ -17,6 +17,9 @@ import { feedbackRepository } from '@/api/domains/feedback';
+ import { chatRepository } from '@/api/domains/chat';
+ import { readinessRepository } from '@/api/domains/readiness';
+ import { videosRepository } from '@/api/domains/videos';
++import { bodyWeightsRepository } from '@/api/domains/body-weights';
++import { localDay } from '@/domain/coach/detail-week';
++import { offsetDate } from '../seed';
+ import { resetDemoBackend } from '../backend';
+ import { gymDayToday } from '@/domain/plan/workout-date-policy';
+ import { ChatSetCardPresentation } from '@/features/chat/set-ref';
+@@ -48,7 +51,7 @@ test('S1: existing student readers validate demo DTOs without fetch; unknown rou
+   const plan = await plansRepository.detail(plans[0].id);
+   expect(plan.days).toHaveLength(24);
+   expect((await setsRepository.range(user.id, { from: plan.start_date, to: plan.end_date })).logs.length).toBeGreaterThan(0);
+-  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe('83.5');
++  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe('83.50');
+   expect((await exercisesRepository.list()).exercises).toHaveLength(12);
+   expect((await bindRepository.mine()).bind_request?.status).toBe('accepted');
+   expect((await feedbackRepository.list(user.id)).items).toHaveLength(3);
+@@ -192,3 +195,28 @@ test('S1: account, auth and onboarding lifecycle endpoints succeed locally', asy
+   await accountRepository.deleteAccount();
+   expect(global.fetch).not.toHaveBeenCalled();
+ });
++
++
++test('108-3 demo body weights read, overwrite today, delete and sync the profile without network', async () => {
++  const today = localDay(new Date());
++  resetDemoBackend(today);
++  const user = await useSessionStore.getState().loginWithEmail({ email: 'any@example.test', password: '' });
++  const initial = (await bodyWeightsRepository.list()).records;
++  expect(initial.length).toBeGreaterThan(2);
++  expect(new Set(initial.map(record => record.recorded_on)).size).toBe(initial.length);
++  expect(initial.every(record => record.recorded_on >= offsetDate(today, -29) && record.recorded_on <= today)).toBe(true);
++  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe(initial.at(-1)!.weight_kg);
++  await bodyWeightsRepository.saveToday('84.00');
++  const updated = await bodyWeightsRepository.saveToday('83.75');
++  expect(updated).toEqual({ record: { recorded_on: today, weight_kg: '83.75' }, current_weight_kg: '83.75' });
++  expect((await bodyWeightsRepository.list()).records.filter(record => record.recorded_on === today)).toEqual([updated.record]);
++  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe('83.75');
++  await bodyWeightsRepository.remove(today);
++  const remaining = (await bodyWeightsRepository.list()).records;
++  expect(remaining.some(record => record.recorded_on === today)).toBe(false);
++  expect((await onboardingRepository.get(user.id))?.weight_kg).toBe(remaining.at(-1)!.weight_kg);
++  for (const record of remaining) await bodyWeightsRepository.remove(record.recorded_on);
++  expect(await bodyWeightsRepository.list()).toEqual({ records: [] });
++  expect((await onboardingRepository.get(user.id))?.weight_kg).toBeNull();
++  expect(global.fetch).not.toHaveBeenCalled();
++});
+diff --git a/src/demo/backend.ts b/src/demo/backend.ts
+index 94ae64f..4bd4e30 100644
+--- a/src/demo/backend.ts
++++ b/src/demo/backend.ts
+@@ -1,4 +1,5 @@
+ import { demoVideoUrl, demoVideos, resetDemoUploads, uploadRoute } from './uploads';
++import { BodyWeightRecordSchema } from '@/api/domains/body-weights';
+ import { z } from 'zod';
+ import { ReadinessSubmitRequestSchema, type ReadinessCheckin } from '@/api/domains/readiness';
+ import { toSetRefWire, ChatSetRefFromWireSchema } from '@/api/domains/chat';
+@@ -49,6 +50,17 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
+   else if (method === 'GET' && route === `${student}/plans`) payload = { plans: [state.plan] };
+   else if (method === 'GET' && route === `/plans/${state.plan.id}`) payload = state.plan;
+   else if (method === 'GET' && route === `${student}/sets`) payload = { logs: state.logs.filter(log => log.logged_date >= (url.searchParams.get('from') ?? '') && log.logged_date < (url.searchParams.get('to') ?? '9999')) };
++  else if (method === 'GET' && route === '/students/me/body-weights') payload = { records: state.bodyWeights };
++  else if (['PUT', 'DELETE'].includes(method) && /^\/students\/me\/body-weights\/[^/]+$/.test(route)) {
++    const date = z.iso.date().parse(route.split('/').at(-1));
++    const record = method === 'PUT' ? BodyWeightRecordSchema.parse({ ...z.object({ weight_kg: z.string() }).parse(options.body), recorded_on: date }) : null;
++    state.bodyWeights = state.bodyWeights.filter(item => item.recorded_on !== date);
++    if (record) state.bodyWeights.push(record);
++    state.bodyWeights.sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
++    state.profile.weight_kg = state.bodyWeights.at(-1)?.weight_kg ?? null;
++    state.profile.updated_at = now;
++    payload = { ...(record ? { record } : {}), current_weight_kg: state.profile.weight_kg };
++  }
+   else if (method === 'GET' && route === `${student}/onboarding`) payload = state.profile;
+   else if (method === 'GET' && route === '/exercises') payload = { exercises: state.exercises };
+   else if (method === 'GET' && route === '/bind-requests/mine') payload = { bind_request: state.binding };
+diff --git a/src/demo/seed.ts b/src/demo/seed.ts
+index 243e19c..3bbf7cc 100644
+--- a/src/demo/seed.ts
++++ b/src/demo/seed.ts
+@@ -1,3 +1,4 @@
++import type { BodyWeightRecord } from '@/api/domains/body-weights';
+ import type { User } from '@/api/auth';
+ import type { Exercise } from '@/api/domains/exercises';
+ import type { PlanDetail, PlanExercise } from '@/api/domains/plans';
+@@ -30,7 +31,7 @@ export function buildDemoSeed(today: string) {
+   const user: User = { id: id(), phone: null, email: 'alex@example.test', name: 'Alex Chen', role: 'coached_student', created_at: timestamp };
+   const coach: User = { id: id(), phone: null, email: 'sam@example.test', name: 'Sam Carter', role: 'coach', created_at: timestamp };
+   const profile: OnboardingProfile = {
+-    user_id: user.id, unit_preference: 'kg', gender: 'male', birth_date: '1996-05-14', height_cm: '178', weight_kg: '83.5', training_years: 5,
++    user_id: user.id, unit_preference: 'kg', gender: 'male', birth_date: '1996-05-14', height_cm: '178', weight_kg: '83.50', training_years: 5,
+     squat_stance: 'low_bar', deadlift_style: 'conventional', bench_grip: 'standard', squat_1rm_kg: '190', bench_1rm_kg: '115', deadlift_1rm_kg: '225',
+     training_days: ['mon', 'wed', 'fri', 'sun'], gym_tier: 'professional', equipment_overrides: [], daily_life_intensity: 2, life_stress: 2,
+     recovery_speed: 3, sleep_hours: 8, muscle_groups_to_strengthen: ['back'], injury_areas: ['knee'],
+@@ -120,5 +121,8 @@ export function buildDemoSeed(today: string) {
+   const conversation: Conversation = { id: conversationId, other_party: { id: coach.id, display_name: coach.name! },
+     last_message: { id: last.id, seq: last.seq, kind: last.kind, preview: last.body, preview_kind: 'text', created_at: last.created_at, sender_id: last.sender_id },
+     last_message_at: last.created_at, unread_count: 1, my_last_read: { message_id: messages[3].id, seq: 4 }, other_last_read: { message_id: messages[3].id, seq: 4 } };
+-  return { user, coach, profile, exercises, plan, logs, binding, feedback, conversation, messages };
++  const bodyWeights: BodyWeightRecord[] = [84.2, 84.0, 84.1, 83.8, 83.9, 83.6, 83.7, 83.4, 83.6, 83.5].map((weight, index) => ({
++    recorded_on: offsetDate(today, -29 + index * 3), weight_kg: weight.toFixed(2),
++  }));
++  return { user, coach, profile, exercises, plan, logs, binding, feedback, conversation, messages, bodyWeights };
+ }
+diff --git a/src/features/chat/ChatExerciseNoteCard.tsx b/src/features/chat/ChatExerciseNoteCard.tsx
+index 1cacb04..178cf67 100644
+--- a/src/features/chat/ChatExerciseNoteCard.tsx
++++ b/src/features/chat/ChatExerciseNoteCard.tsx
+@@ -16,7 +16,7 @@ import { exerciseDisplayName, t } from '@/i18n';
+ 
+ export function exerciseNoteTitle(reference: ExerciseRef) {
+   const [, month, day] = reference.day_date.split('-').map(Number);
+-  return `${month}/${day} · ${reference.exercise_name}`;
++  return `${month}/${day} · ${reference.exercise_name} · ${t('training.allDay.studentNote')}`;
+ }
+ export function ChatExerciseNoteCard({ message, outgoing, student = false }: { message: Pick<ChatMessage, 'body' | 'exercise_ref' | 'sender_id'>; outgoing: boolean; student?: boolean }) {
+   const colors = useColors();
+diff --git a/src/features/chat/ExerciseNoteSheet.tsx b/src/features/chat/ExerciseNoteSheet.tsx
+index 28c231f..a2c8c24 100644
+--- a/src/features/chat/ExerciseNoteSheet.tsx
++++ b/src/features/chat/ExerciseNoteSheet.tsx
+@@ -11,9 +11,9 @@ export function ExerciseNoteSheet({ studentId, coachId, reference, onClose }: {
+   const [text, setText] = useState('');
+   const [sending, setSending] = useState(false);
+   const [error, setError] = useState(false);
+-  return <Modal transparent visible animationType="slide" onRequestClose={onClose}>
+-    <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: colors.numberPadScrim }}>
+-      <View style={{ padding: 20, gap: 16, borderTopLeftRadius: 20, borderTopRightRadius: 20, backgroundColor: colors.surfaceCard }}>
++  return <Modal transparent visible animationType="fade" onRequestClose={onClose}>
++    <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.numberPadScrim }}>
++      <View style={{ padding: 20, gap: 16, borderRadius: 20, width: '100%', maxWidth: 480, alignSelf: 'center', backgroundColor: colors.surfaceCard }}>
+         <Text style={{ ...font.body(18, 'bold'), color: colors.textPrimary }}>{t('training.allDay.note', [reference.exercise_name])}</Text>
+         <TextInput multiline autoFocus value={text} onChangeText={setText} placeholder={t('training.allDay.notePlaceholder')} placeholderTextColor={colors.textMuted} maxLength={4000 - exerciseNoteBody(reference, '').length} style={{ minHeight: 110, color: colors.textPrimary, ...font.body(16), textAlignVertical: 'top' }} />
+         {error ? <Text style={{ color: colors.danger }}>{t('chat.sendFailed')}</Text> : null}
+diff --git a/src/features/coach/student-detail/CoachDayDetailView.tsx b/src/features/coach/student-detail/CoachDayDetailView.tsx
+index 3db7063..9e658d1 100644
+--- a/src/features/coach/student-detail/CoachDayDetailView.tsx
++++ b/src/features/coach/student-detail/CoachDayDetailView.tsx
+@@ -1,3 +1,4 @@
++import { decodePrescription, prescribed } from '@/domain/plan/prescription';
+ import { prescriptionDifferences } from '@/domain/plan/prescription-result';
+ import { ScrollView, View } from 'react-native';
+ import { Screen, radius, useColors } from '@/design';
+@@ -8,7 +9,7 @@ import { executionExercises, isExecutionDayComplete, type ExecutionDay } from '@
+ import { dayCode } from '@/domain/plan/sequence';
+ import { t } from '@/i18n';
+ import { Capsule, Copy, Empty, SectionCard, styles } from './components';
+-import { dateText, deviceLocale, isAsPrescribed } from './presentation';
++import { dateText, deviceLocale } from './presentation';
+ 
+ function ReadOnlySet({ log, prescription }: { log: SetLog; prescription?: PlanSet }) {
+   const colors = useColors();
+@@ -19,14 +20,17 @@ function ReadOnlySet({ log, prescription }: { log: SetLog; prescription?: PlanSe
+     { original: differences?.reps, title: t('coach.videoFeedback.reps'), value: String(log.reps) },
+     { original: differences?.effort, title: log.actual_rir != null ? 'RIR' : t('coach.videoFeedback.rpe'), value: log.actual_rir != null ? String(log.actual_rir) : log.rpe == null ? t('coach.profile.notProvided') : number(log.rpe) },
+   ];
+-  return <View accessible style={[styles.row, { padding: 10, borderRadius: radius.inset, backgroundColor: colors.bgStack }]}>
++  return <View accessible style={{ padding: 10, gap: 6, borderRadius: radius.inset, backgroundColor: colors.bgStack }}>
++    <View style={styles.row}>
+     <Copy mono size={12} tone="textTertiary" style={{ width: 32 }}>{`#${log.set_index + 1}`}</Copy>
+-    {prescription && isAsPrescribed(log, prescription) ? <Copy size={14} bold style={{ flex: 1 }}>{t('training.allDay.asPrescribed')}</Copy> : metrics.map((metric) => <View key={metric.title} style={{ flex: 1, gap: 2 }}>
++    {metrics.map((metric) => <View key={metric.title} style={{ flex: 1, gap: 2 }}>
+       <Copy size={10} tone="textTertiary">{metric.title}</Copy>
+       <Copy size={14} bold numberOfLines={1} adjustsFontSizeToFit tone={metric.original ? 'goldText' : 'textPrimary'}>{metric.value}</Copy>
+       {metric.original ? <Copy size={11} tone="textTertiary">{t('training.allDay.original', [metric.original])}</Copy> : null}
+     </View>)}
+     <Ionicons name={log.completed ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={log.completed ? colors.success : colors.textTertiary} accessibilityLabel={t(log.completed ? 'coach.detail.completed' : 'coach.detail.notStarted')} />
++    </View>
++    {prescription ? <Copy size={11} tone="textTertiary">{t('loadTypes.target', [prescribed(decodePrescription(prescription))])}</Copy> : null}
+   </View>;
+ }
+ export function CoachDayDetailView({ day, planDays, exerciseName, onClose }: { day: ExecutionDay; planDays: readonly PlanDay[]; exerciseName: (id: string) => string; onClose: () => void }) {
+diff --git a/src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx b/src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx
+index fe00e41..4b56aed 100644
+--- a/src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx
++++ b/src/features/coach/student-detail/__tests__/coach-day-detail.test.tsx
+@@ -79,3 +79,13 @@ test('coach playback honors explicitly cleared weight over a stale video snapsho
+   expect(copy).toContain('— kg');
+   expect(copy).not.toContain('100 kg');
+ });
++
++test.each<[string, string | null, number]>([['matching', '100', 5], ['changed', '90', 4], ['empty', null, 5]])('107-5 %s actuals keep target values visible without an as-prescribed label', (_, weight, reps) => {
++  setLocaleOverride('en');
++  const exercise = { ...execution.planDay!.exercises[0], sets: [set({ target_value: '100', target_reps: 5 })] };
++  renderDay({ ...execution, planDay: { ...execution.planDay!, exercises: [exercise] }, logs: [{ ...log('first', 0), weight_kg: weight, reps, rpe: null }] });
++  expect(texts()).not.toContain('As prescribed');
++  expect(texts()).toContain(weight === null ? '—' : `${weight} kg`);
++  expect(texts()).toContain(String(reps));
++  expect(texts()).toContain('Target 100kg x 5');
++});
+diff --git a/src/features/history/GrowthScreen.tsx b/src/features/history/GrowthScreen.tsx
+index cc18797..2bc4917 100644
+--- a/src/features/history/GrowthScreen.tsx
++++ b/src/features/history/GrowthScreen.tsx
+@@ -38,7 +38,6 @@ export function GrowthScreen() {
+     { id: 'e1rm', title: t('student.progressMenu.e1rm'), value: values?.e1rm ?? '', icon: 'chart-line', onPress: () => router.push('/progress/e1rm') },
+     { id: 'history', title: t('student.e1rmSourceHistory'), value: values?.history ?? '', icon: 'clock-outline', onPress: () => router.push('/training-history') },
+     { id: 'body-weight', title: t('student.dashboardProfileMetricsView.copy001'), value: weightValue, icon: 'scale-bathroom', onPress: () => router.navigate('/(student)/body-weight') },
+-    { id: 'feedback', title: t('student.feedbackInboxView.copy006'), value: vm.state.status !== 'loaded' ? '' : vm.state.feedback.length ? String(vm.state.feedback.length) : '—', icon: 'message-outline', onPress: () => router.navigate('/(student)/feedback') },
+     { id: 'intensity', title: t('student.progressMenu.intensity'), value: values?.intensity ?? '', icon: 'chart-bar', onPress: () => router.push('/progress/intensity') },
+   ] as const;
+   return <Screen edges={['top', 'left', 'right']}>
+diff --git a/src/features/history/__tests__/growth-screen.test.tsx b/src/features/history/__tests__/growth-screen.test.tsx
+index 3855c0e..6f64510 100644
+--- a/src/features/history/__tests__/growth-screen.test.tsx
++++ b/src/features/history/__tests__/growth-screen.test.tsx
+@@ -19,10 +19,9 @@ jest.mock('@/api/session', () => ({ useSessionStore: (selector: (state: { user:
+ const mockNavigate = jest.fn();
+ const mockOpenCoachChat = jest.fn();
+ let mockChatUnread = 0;
+-let mockFocus: (() => void) | undefined;
+ // The growth header's message button is the coach-chat entry (iOS parity); the hook is exercised in chat tests.
+ jest.mock('@/features/chat/open-coach-chat', () => ({ useOpenCoachChat: () => ({ totalUnread: mockChatUnread, openCoachChat: mockOpenCoachChat, isOpening: false }) }));
+-jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockNavigate }), useFocusEffect: (callback: () => void) => { mockFocus = callback; } }));
++jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: mockNavigate, push: mockNavigate }), useFocusEffect: jest.fn() }));
+ jest.mock('@/analytics', () => ({ AnalyticsScreen: {}, AnalyticsEvent: {}, screen: jest.fn(), track: jest.fn() }));
+ 
+ let renderer: ReactTestRenderer;
+@@ -56,7 +55,7 @@ afterEach(() => {
+ });
+ 
+ 
+-const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.dashboardProfileMetricsView.copy001'), t('student.feedbackInboxView.copy006'), t('student.progressMenu.intensity')];
++const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.dashboardProfileMetricsView.copy001'), t('student.progressMenu.intensity')];
+ function expectRows() {
+   const rows = buttons().filter(node => rowLabels().some(label => node.props.accessibilityLabel?.startsWith(label)));
+   expect(rows.map(node => node.props.accessibilityLabel)).toEqual(rowLabels());
+@@ -66,12 +65,12 @@ function expectRows() {
+   return rows;
+ }
+ 
+-test('five ordered rows remain tappable without charts or tiles in both languages', async () => {
++test('four ordered rows remain tappable without charts or tiles in both languages', async () => {
+   await render();
+   const rows = expectRows();
+-  const routes = ['/progress/e1rm', '/training-history', '/(student)/body-weight', '/(student)/feedback', '/progress/intensity'];
++  const routes = ['/progress/e1rm', '/training-history', '/(student)/body-weight', '/progress/intensity'];
+   rows.forEach((row, index) => { act(() => row.props.onPress()); expect(mockNavigate).toHaveBeenLastCalledWith(routes[index]); });
+-  expect(texts().filter(text => text === '—')).toHaveLength(5);
++  expect(texts().filter(text => text === '—')).toHaveLength(4);
+   setLocaleOverride('zh');
+   act(() => renderer.update(<QueryClientProvider client={client}><GrowthScreen /></QueryClientProvider>));
+   expectRows();
+@@ -108,21 +107,12 @@ test('pending and failed requests keep blank tappable rows, with retry and pull-
+   expectRows();
+ });
+ 
+-test('feedback navigates to the existing inbox and keeps only the total count with no second unread number', async () => {
++test('108-1 Progress has no coach-feedback entry even with unread feedback', async () => {
+   const item = { id: 'feedback', coach_id: 'coach', student_id: 'student', day_date: '2026-08-03', plan_exercise_id: null, text: 'Keep your brace', posted_at: '2026-08-03T12:00:00Z', read_at: null };
+   jest.mocked(feedbackRepository.list).mockResolvedValue({ items: [item] });
+-  mockChatUnread = 1;
+   await render();
+-  expect(texts()).not.toContain('1 new');
++  expect(button(t('student.feedbackInboxView.copy006'))).toBeUndefined();
+   expect(texts()).not.toContain(item.text);
+-  act(() => button(t('student.feedbackInboxView.copy006')).props.onPress());
+-  expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/feedback');
+-  jest.mocked(feedbackRepository.list).mockResolvedValue({ items: [{ ...item, read_at: '2026-08-04' }] });
+-  await act(async () => { mockFocus?.(); await new Promise(resolve => setTimeout(resolve, 20)); });
+-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+-  expect(texts()).not.toContain('1 new');
+-  expect(button(t('student.feedbackInboxView.copy006')).props.accessibilityLabel).toBe(`${t('student.feedbackInboxView.copy006')}, 1`);
+-  expect(button(t('student.trainingHistoryView.copy012'))).toBeUndefined();
+ });
+ 
+ test('weight row reads the newest record with two decimals independently of other Progress data', async () => {
+@@ -135,7 +125,7 @@ test('weight row reads the newest record with two decimals independently of othe
+ test('a missing weight endpoint shows a dash and retry, without blocking other rows', async () => {
+   jest.mocked(bodyWeightsRepository.list).mockRejectedValue(new ApiError('server', 'Not found', { status: 404 }));
+   await render();
+-  expect(texts().filter(text => text === '—')).toHaveLength(5);
++  expect(texts().filter(text => text === '—')).toHaveLength(4);
+   expect(texts()).toContain(t('student.trainingHistoryView.copy022'));
+   act(() => button('Body weight').props.onPress());
+   expect(mockNavigate).toHaveBeenLastCalledWith('/(student)/body-weight');
+diff --git a/src/features/profile/MyProfileScreen.tsx b/src/features/profile/MyProfileScreen.tsx
+index 0bd0c3d..7fe11c4 100644
+--- a/src/features/profile/MyProfileScreen.tsx
++++ b/src/features/profile/MyProfileScreen.tsx
+@@ -21,7 +21,7 @@ export function MyProfileScreen({ editSection, onEditClose }: { editSection?: 'b
+   const binding = useMineBindRequest();
+   const router = useRouter();
+   const colors = useColors();
+-  const [edit, setEdit] = useState<'competition' | 'note' | null>(null);
++  const [edit, setEdit] = useState<'competition' | null>(null);
+   const blank = !profile.data && (profile.isPending || profile.isError);
+   const values = !blank && profile.data ? profileMenuValues(profile.data) : { about: '', health: '', competition: '', note: '' };
+   return <Screen edges={['top']}><ScrollView contentContainerStyle={{ padding: spacing.pageHorizontal, gap: spacing.base, paddingBottom: spacing.xl }} refreshControl={<RefreshControl tintColor={colors.gold500} refreshing={profile.isRefetching} onRefresh={() => void profile.refetch()} />}>
+@@ -32,7 +32,6 @@ export function MyProfileScreen({ editSection, onEditClose }: { editSection?: 'b
+         <ProgressMenuRow icon="account-outline" title={t('student.rn.profile.about')} value={values.about} onPress={() => router.push('/profile/about')} />
+         <ProgressMenuRow icon="heart-outline" title={t('student.rn.profile.health')} value={values.health} onPress={() => router.push('/profile/health')} />
+         <ProgressMenuRow icon="flag-outline" title={t('student.rn.meet.title')} value={values.competition} onPress={() => setEdit('competition')} />
+-        <ProgressMenuRow icon="pencil-outline" title={t('student.rn.profile.note')} value={values.note} onPress={() => setEdit('note')} />
+       </>}
+       <ProgressMenuRow icon="tune-variant" title={t('student.rn.profile.settings')} value="" onPress={() => router.push('/profile/settings')} />
+     </View>
+diff --git a/src/features/profile/ProfileAboutScreen.tsx b/src/features/profile/ProfileAboutScreen.tsx
+index b1f87c1..95a0df0 100644
+--- a/src/features/profile/ProfileAboutScreen.tsx
++++ b/src/features/profile/ProfileAboutScreen.tsx
+@@ -14,7 +14,7 @@ export function ProfileAboutScreen() {
+   const values = profile.data ? profileRowValues(profile.data) : null;
+   return <ProfilePage title={t('student.rn.profile.about')}>
+     {values ? <MyProfileGroupCard>
+-      {(['basics', 'background'] as const).map((section, index) => <Fragment key={section}>
++      {(['basics', 'background', 'note'] as const).map((section, index) => <Fragment key={section}>
+         {index ? <MyProfileDivider inset /> : null}
+         <ProfilePageRow title={t(section === 'basics' ? 'student.profileCardsSection.copy002' : profileTitles[section])} value={values[section]} onPress={() => setEdit(section)} />
+       </Fragment>)}
+diff --git a/src/features/profile/__tests__/profile-home.test.tsx b/src/features/profile/__tests__/profile-home.test.tsx
+index 6f593d7..ba1d1bf 100644
+--- a/src/features/profile/__tests__/profile-home.test.tsx
++++ b/src/features/profile/__tests__/profile-home.test.tsx
+@@ -41,17 +41,17 @@ async function press(label: string) {
+   expect(node).toBeDefined();
+   await act(async () => { node!.props.onPress(); });
+ }
+-test('home shows identity and exactly five ordered entries without old groups or sign out', async () => {
++test('home shows identity and exactly four ordered entries without old groups or sign out', async () => {
+   await mount();
+-  const titles = ['About me', 'Injury history', 'Meet', 'Note to coach', 'Settings'];
++  const titles = ['About me', 'Injury history', 'Meet', 'Settings'];
+   expect(texts().filter(text => titles.includes(text))).toEqual(titles);
+-  expect(texts()).toEqual(expect.arrayContaining(['student@example.test', 'S', '302.5', '115', '225', '642.5', '178 cm · 83.50 kg', '1 injury', 'Added']));
++  expect(texts()).toEqual(expect.arrayContaining(['student@example.test', 'S', '302.5', '115', '225', '642.5', '178 cm · 83.50 kg', '1 injury']));
+   for (const key of ['copy003', 'copy006', 'copy010', 'copy014', 'copy017', 'copy018', 'copy021', 'copy022', 'copy023', 'copy013'] as const) expect(texts()).not.toContain(t(`student.myProfileView.${key}`));
+ });
+ test.each([['About me', '/profile/about'], ['Injury history', '/profile/health'], ['Settings', '/profile/settings']])('%s opens its full-screen route', async (label, path) => {
+   await mount(); await press(label); expect(mockPush).toHaveBeenCalledWith(path);
+ });
+-test.each([['Meet', 'competition'], ['Note to coach', 'note']])('%s opens the existing editor', async (label, section) => {
++test.each([['Meet', 'competition']])('%s opens the existing editor', async (label, section) => {
+   await mount(); await press(label); expect(renderer.root.findByType(ProfileEditor).props.section).toBe(section);
+ });
+ test.each(['basics', 'competition', 'weight', 'note'] as const)('direct editSection %s opens and closes without a secondary page', async section => {
+diff --git a/src/features/profile/__tests__/profile-pages.test.tsx b/src/features/profile/__tests__/profile-pages.test.tsx
+index 73b0dc3..617612c 100644
+--- a/src/features/profile/__tests__/profile-pages.test.tsx
++++ b/src/features/profile/__tests__/profile-pages.test.tsx
+@@ -222,3 +222,22 @@ test.each([
+   await press(t('student.trainingHistoryView.copy023'));
+   expect(onboardingRepository.get).toHaveBeenCalledTimes(attempts + 1);
+ });
++
++test.each<[Locale, string]>([['en', 'Goals and concerns'], ['zh', '目标与顾虑'], ['zh-Hant', '目標與顧慮']])('108-2 goals move into About me and save through the existing note field (%s)', async (locale, title) => {
++  setLocaleOverride(locale);
++  await mount(<><MyProfileScreen /><ProfileAboutScreen /></>);
++  const home = renderer.root.findByType(MyProfileScreen);
++  expect(home.findAllByType(Text).map(node => node.props.children)).not.toContain(t('student.rn.profile.note'));
++  const about = renderer.root.findByType(ProfileAboutScreen);
++  expect(about.findAllByType(Text).map(node => node.props.children)).toContain(title);
++  expect(about.findAllByType(Text).map(node => node.props.children)).toContain('Goal');
++  await press(title);
++  expect(renderer.root.findByType(ProfileEditor).props.section).toBe('note');
++  const input = renderer.root.findAllByType(TextInput).find(node => node.props.value === 'Goal')!;
++  await act(async () => input.props.onChangeText('Build confidence in my squat'));
++  await press(t('student.profileCardsSection.copy013'));
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
++  expect(profile.note_to_coach).toBe('Build confidence in my squat');
++  expect(texts()).toContain('Build confidence in my squat');
++  expect(renderer.root.findAllByType(ProfileEditor)).toHaveLength(0);
++});
+diff --git a/src/features/training/AllDayBody.tsx b/src/features/training/AllDayBody.tsx
+index b95fa1f..4253e68 100644
+--- a/src/features/training/AllDayBody.tsx
++++ b/src/features/training/AllDayBody.tsx
+@@ -20,6 +20,15 @@ function displayWeight(text: string, unit: 'kg' | 'lb') {
+   return text && unit === 'lb' ? metricDisplay(text, POUNDS_PER_KG) || '0' : text;
+ }
+ 
++function TimelineConnector({ exerciseId, current, color }: { exerciseId: string; current: boolean; color: string }) {
++  const colors = useColors();
++  const [height, setHeight] = useState(0);
++  return <View testID={`all-day-line-${exerciseId}`} onLayout={event => setHeight(event.nativeEvent.layout.height)}
++    style={{ position: 'absolute', top: 16, bottom: -16, width: 3, backgroundColor: color, overflow: 'hidden' }}>
++    {current ? <GradientFill direction="vertical" size={{ width: 3, height }} stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}
++  </View>;
++}
++
+ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, unit = 'kg' }: {
+   unit?: 'kg' | 'lb'; onExpand: (id: string) => void;
+   sheet: AllDaySheet; editable: boolean; studentId: string; title: string;
+@@ -52,14 +61,14 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+       const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
+       return <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
+         <View style={{ width: 22, alignItems: 'center' }}>
+-          {index < sheet.exercises.length - 1 ? <View testID={`all-day-line-${block.exercise.id}`} style={{ position: 'absolute', top: 16, bottom: -16, width: 3, backgroundColor: nodeColor, overflow: 'hidden' }}>{current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}</View> : null}
++          {index < sheet.exercises.length - 1 ? <TimelineConnector exerciseId={block.exercise.id} current={current} color={nodeColor} /> : null}
+           <View style={{ width: 22, height: 22, borderRadius: 11, overflow: 'hidden', backgroundColor: nodeColor, alignItems: 'center', justifyContent: 'center', marginTop: 5, outlineColor: colors.goldSoft, outlineWidth: current ? 4 : 0 }}>
+             {current ? <GradientFill direction="vertical" stops={[{ color: colors.goldGradientStart, offset: 0 }, { color: colors.goldGradientEnd, offset: 1 }]} /> : null}
+             {done ? <MaterialCommunityIcons name="check" size={15} color={colors.inkOnCTAFill} /> : null}
+           </View>
+         </View>
+         <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
+-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: expanded || current ? colors.goldSoft : undefined }}>
++          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: current ? colors.goldSoft : undefined }}>
+             <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+               <View style={{ flex: 1 }}>
+                 {!block.repeatName ? <Text numberOfLines={2} testID={`all-day-name-${block.exercise.id}`} style={{ ...font.body(15, 'bold'), color: done ? colors.textSecondary : colors.textPrimary }}>{name}{block.rows[0]?.kind === 'added' ? ` · ${t('student.added.added')}` : ''}</Text> : null}
+@@ -78,12 +87,13 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+           </View>
+           {expanded ? <>
+             {editable && block.rows[0]?.kind === 'added' ? <Pressable onPress={() => onRemoveExercise(block.exercise)}><Text style={{ color: colors.danger }}>{t('student.added.remove')}</Text></Pressable> : null}
+-            {block.exercise.notes ? <Text numberOfLines={1} style={{ ...font.body(12), color: colors.goldText }}>{t('training.allDay.coachNote', [block.exercise.notes])}</Text> : null}
++            {block.exercise.notes ? <Text style={{ ...font.body(12), color: colors.goldText }}>{t('training.allDay.coachNote', [block.exercise.notes])}</Text> : null}
+             <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
+               {block.rows.map(row => {
+                 const active = editing?.row.stableSetId === row.stableSetId;
+                 const display = active ? editing.row : row;
+                 const prescription = decodePrescription(row.planSet);
++                const percentage = prescription.intensity?.kind === 'pct' ? <Text style={{ ...font.body(11), color: colors.textSecondary, marginRight: 8 }}>{`${prescription.intensity.value}%`}</Text> : null;
+                 const short = !row.kind && Number(display.repsText) < prescription.reps;
+                 const differences = row.kind ? null : prescriptionDifferences(allDayLogRequest(display), row.planSet);
+                 const weightChanged = differences?.weight != null;
+@@ -97,6 +107,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+                       }}><Text style={{ ...font.body(11), color: colors.textSecondary }}>{field === 'weight' ? t('training.allDay.weightUnit', [unit]) : field === 'reps' ? t('student.accessory.pad.reps') : field.toUpperCase()}</Text></Pressable>
+                       <Pressable accessibilityRole="button" accessibilityLabel={field} onPress={() => edit(display, field)} style={{ minHeight: 38, borderRadius: 8, borderWidth: 1.5, borderColor: editing.field === field ? colors.gold500 : colors.borderDefault, outlineWidth: editing.field === field ? 2 : 0, outlineColor: colors.goldSoft, justifyContent: 'center', paddingHorizontal: 8 }}><Text style={{ ...font.mono(16), color: colors.textPrimary }}>{(field === 'weight' ? editing.weightInput ?? displayWeight(display.weightText, unit) : field === 'reps' ? display.repsText : display.rpeText) || '—'}</Text></Pressable>
+                     </View>)}
++                    {percentage}
+                   </View> : <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
+                     <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t('training.allDay.editSet', [row.setIndex + 1])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
+                       <Text style={{ ...font.mono(12), color: colors.textMuted, width: 18 }}>{row.setIndex + 1}</Text>
+@@ -110,6 +121,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+                     </Pressable>
+                     {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(row)} ensureSetLog={() => ensureSetLog(row)} /> : null}
+                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
++                    {percentage}
+                   </View>}
+                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
+                 </View>;
+@@ -117,7 +129,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
+             </View>
+             {editable ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+               <Pressable onPress={() => onAddSet(block.exercise)}><Text style={{ ...font.body(13), color: colors.goldText }}>{t('student.added.addSet')}</Text></Pressable>
+-              {onNote && block.rows[0] ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 40 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /><Text style={{ ...font.body(13), color: colors.textSecondary }}>{t('training.allDay.askCoach')}</Text></Pressable> : null}
++              {onNote && block.rows[0] ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /></Pressable> : null}
+             </View> : null}
+           </> : null}
+         </View>
+diff --git a/src/features/training/__tests__/all-day-view.test.tsx b/src/features/training/__tests__/all-day-view.test.tsx
+index 13fd03b..5043f9d 100644
+--- a/src/features/training/__tests__/all-day-view.test.tsx
++++ b/src/features/training/__tests__/all-day-view.test.tsx
+@@ -9,7 +9,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
+ 
+ import type { PlanDetail } from '@/api/domains/plans';
+ import { authenticatedRequest, useSessionStore } from '@/api/session';
++import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
++import Svg, { LinearGradient, Rect } from 'react-native-svg';
+ import { NumberPad } from '@/design/NumberPad';
++import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
++import { ChatExerciseNoteCard } from '@/features/chat/ChatExerciseNoteCard';
+ import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
+ import { setLocaleOverride, t, type Locale } from '@/i18n';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+@@ -168,7 +172,7 @@ test('107 exercise note queues offline and retries canonical text plus exercise_
+   });
+   await mount();
+   await expandFirst();
+-  const note = renderer.root.findAll(node => node.props.onPress && String(node.props.accessibilityLabel).startsWith('Ask coach ·'))[0];
++  const note = renderer.root.findAll(node => node.props.onPress && String(node.props.accessibilityLabel).startsWith('Message coach ·'))[0];
+   await act(async () => note.props.onPress());
+   await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Check my pause, please.'));
+   await act(async () => renderer.root.findAll(node => node.props.onPress && node.props.label === 'Send')[0].props.onPress());
+@@ -416,3 +420,100 @@ test('switching an RIR prescription to empty RPE keeps the chosen column label a
+   expect(copy()).toContain('RPE —');
+   expect(copy()).not.toContain('RIR —');
+ });
++
++test('107-1 expanding a noncurrent exercise adds only a gold border', async () => {
++  const first = plan.days[0].exercises[0];
++  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
++  await mount();
++  const row = (id: string) => renderer.root.findByType(AllDayBody).findAll(node => node.props.testID === `all-day-exercise-${id}` && node.props.onPress)[0];
++  await act(async () => row(second.id).props.onPress());
++  expect(StyleSheet.flatten(row(second.id).parent!.props.style)).toMatchObject({ borderWidth: 1 });
++  expect(StyleSheet.flatten(row(second.id).parent!.props.style).borderColor).not.toBe('transparent');
++  expect(StyleSheet.flatten(row(second.id).parent!.props.style).backgroundColor).toBeUndefined();
++  expect(StyleSheet.flatten(row(first.id).parent!.props.style).backgroundColor).toBeTruthy();
++  await expandFirst();
++  expect(StyleSheet.flatten(row(first.id).parent!.props.style).backgroundColor).toBeTruthy();
++});
++
++test('107-2 expanded coach notes show every line without truncation', async () => {
++  const exercise = plan.days[0].exercises[0];
++  const notes = 'Pause at the bottom.\nKeep your knees out.\nRest fully before the next set.';
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, notes }] }] };
++  await mount();
++  await expandFirst();
++  const note = renderer.root.findAllByType(Text).find(node => node.props.children === t('training.allDay.coachNote', [notes]))!;
++  expect(note).toBeDefined();
++  expect(note.props.numberOfLines).toBeUndefined();
++});
++
++
++test('107-3 current connector stretches one continuous gradient to its measured height', async () => {
++  const first = plan.days[0].exercises[0];
++  const second = { ...first, id: '50000000-0000-4000-8000-000000000001', sort_order: 1, sets: [] };
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
++  await mount();
++  const line = () => renderer.root.findAllByType(View).find(node => node.props.testID === `all-day-line-${first.id}`)!;
++  for (const height of [64, 240, 64]) {
++    if (height === 240) await expandFirst();
++    if (height === 64 && line().findByType(Svg).props.height === 240) await expandFirst();
++    expect(line().props.onLayout).toEqual(expect.any(Function));
++    await act(async () => line().props.onLayout({ nativeEvent: { layout: { width: 3, height } } }));
++    expect(line().findAllByType(Svg)).toHaveLength(1);
++    expect(line().findByType(Svg).props.height).toBe(height);
++    expect(line().findByType(Rect).props.height).toBe(height);
++    expect(line().findAllByType(LinearGradient)).toHaveLength(1);
++    expect(line().findByType(LinearGradient).props).toMatchObject({ y1: '0%', y2: '100%' });
++  }
++});
++
++
++test('107-4 exercise note entry is icon-only with a 44pt touch target', async () => {
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/bind-requests/mine'
++    ? { bind_request: { status: 'accepted', coach_id: 'coach' } } as never : original(path, options));
++  await mount();
++  await expandFirst();
++  const note = renderer.root.findByType(AllDayBody).findAll(node => node.props.onPress && String(node.props.accessibilityLabel).includes(' · '))[0];
++  const icon = note.findByType(MaterialCommunityIcons);
++  expect(icon.props.name).toBe('message-outline');
++  expect(note.findAllByType(Text)).toEqual(icon.findAllByType(Text));
++  expect(StyleSheet.flatten(note.props.style)).toMatchObject({ minWidth: 44, minHeight: 44 });
++});
++
++test.each<[Locale, string, string, string]>([
++  ['zh', '给教练留言 · Squat', '这组感觉怎么样，或想问教练什么', '学员留言'],
++  ['zh-Hant', '給教練留言 · Squat', '這組感覺怎麼樣，或想問教練什麼', '學員留言'],
++  ['en', 'Message coach · Squat', 'How did this set feel, or what would you like to ask your coach?', 'Student note'],
++])('107-4 centered note dialog and both chat cards use revised copy in %s', async (locale, title, placeholder, label) => {
++  setLocaleOverride(locale);
++  const reference = { ...ExerciseRefSchema.parse(contract.exerciseRef), exercise_name: 'Squat', day_date: '2026-11-10' };
++  const close = jest.fn();
++  await act(async () => { renderer = create(<ExerciseNoteSheet studentId={studentId} coachId="coach" reference={reference} onClose={close} />); });
++  expect(copy()).toContain(title);
++  expect(renderer.root.findByType(TextInput).props).toMatchObject({ placeholder, multiline: true });
++  const backdrop = renderer.root.findByType(Modal).findAllByType(View).find(node => StyleSheet.flatten(node.props.style)?.flex === 1)!;
++  expect(StyleSheet.flatten(backdrop.props.style).justifyContent).toBe('center');
++  await act(async () => renderer.root.findAll(node => node.props.label === t('designSystem.action.cancel') && node.props.onPress)[0].props.onPress());
++  expect(close).toHaveBeenCalledTimes(1);
++  expect(useExerciseNoteOutbox.getState().notes).toHaveLength(0);
++  for (const student of [true, false]) {
++    await act(async () => renderer.update(<ChatExerciseNoteCard student={student} outgoing={student} message={{ sender_id: studentId, exercise_ref: reference, body: '[Exercise note] Squat · 11/10\nHelp with my pause' }} />));
++    expect(copy()).toContain(`11/10 · Squat · ${label}`);
++    expect(copy()).toContain('Help with my pause');
++  }
++});
++
++
++test('107-6 expanded percentage prescriptions place the original percent at each set row end', async () => {
++  const exercise = plan.days[0].exercises[0];
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [{
++    ...exercise.sets[0], load_mode: 'pct', pct_anchor: 'one_rm', target_pct: '60',
++  }] }] }] };
++  await mount();
++  await expandFirst();
++  const row = renderer.root.findAllByType(View).find(node => String(node.props.testID).startsWith('all-day-row-'))!;
++  const percent = row.findAllByType(Text).find(node => node.props.children === '60%');
++  expect(percent).toBeDefined();
++  expect(StyleSheet.flatten(percent!.props.style)).toMatchObject({ fontSize: 11, color: '#4B5563' });
++});
+diff --git a/src/features/training/__tests__/exercise-summary.test.ts b/src/features/training/__tests__/exercise-summary.test.ts
+index 94d27ef..75d738e 100644
+--- a/src/features/training/__tests__/exercise-summary.test.ts
++++ b/src/features/training/__tests__/exercise-summary.test.ts
+@@ -55,11 +55,11 @@ test('1A weight plus uniform RPE keeps both; varying RPE is only in expanded set
+   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '4×5', load: '100' }]);
+ });
+ 
+-test.each(['one_rm', 'e1rm'] as const)('percentage %s shows resolved weight and original percent, or only percent if unresolved', anchor => {
++test.each(['one_rm', 'e1rm'] as const)('percentage %s 107-6 shows only resolved weight, or percent if unresolved', anchor => {
+   const planned = sets(5, { target_reps: 5, load_mode: 'pct', pct_anchor: anchor, target_pct: '75' });
+   expect(summarizeExercise(planned, [], [])).toMatchObject([{ setsReps: '5×5', load: '75%', intensityOnly: true }]);
+   expect(summarizeExercise(planned, [], planned.map(s => ({ plan_set_id: s.id, weight_kg: '112.5' }))))
+-    .toMatchObject([{ setsReps: '5×5', load: '112.5 (75%)', intensityOnly: false }]);
++    .toMatchObject([{ setsReps: '5×5', load: '112.5', intensityOnly: false }]);
+ });
+ test('top-set percent waits for the top set and then shows its calculated weight', () => {
+   const planned = sets(3, { target_reps: 5, load_mode: 'pct', pct_anchor: 'top_set', target_pct: '60' });
+diff --git a/src/features/training/exercise-summary.ts b/src/features/training/exercise-summary.ts
+index 0e031e9..af79ca6 100644
+--- a/src/features/training/exercise-summary.ts
++++ b/src/features/training/exercise-summary.ts
+@@ -50,7 +50,7 @@ export function summarizeExercise(sets: readonly PlanSet[], logs: readonly Exerc
+     if (p.intensity?.kind === 'pct') {
+       const resolved = suggestions.find(suggestion => suggestion.plan_set_id === set?.id)?.weight_kg;
+       const percentage = `${p.intensity.value}%`;
+-      load = resolved != null ? `${weight(resolved)}${p.percentageAnchor === 'top_set' ? '' : ` (${percentage})`}`
++      load = resolved != null ? weight(resolved)
+         : `${percentage}${p.percentageAnchor === 'top_set' ? ` ${labels.topSet}` : ''}`;
+       intensityOnly = resolved == null;
+     }
+diff --git a/src/i18n/catalog/RnExtras.json b/src/i18n/catalog/RnExtras.json
+index 0156274..3cbf625 100644
+--- a/src/i18n/catalog/RnExtras.json
++++ b/src/i18n/catalog/RnExtras.json
+@@ -363,7 +363,7 @@
+ "student.rn.meet.removeAction": {"en": "Remove", "zh": "移除"},
+ "student.rn.meet.addOptional": {"en": "Add a meet (optional)", "zh": "添加比赛（可选）"},
+ "student.rn.meet.help": {"en": "Opens meet date, federation and weight class. Skip it if you are not competing.", "zh": "展开后填写比赛日期、赛事方和体重级别；不比赛可跳过。"},
+-"student.rn.profile.note": {"en": "Note to coach", "zh": "给教练的留言"},
++"student.rn.profile.note": {"en": "Goals and concerns", "zh": "目标与顾虑"},
+ "student.rn.today.session": {"en": "Today's session", "zh": "今日训练"},
+ "student.rn.today.upcoming": {"en": "Upcoming", "zh": "待练"},
+ "student.rn.today.selectedChart": {"en": "Selected day · e1RM chart", "zh": "所选训练日 · e1RM 曲线"},
+@@ -506,7 +506,7 @@
+ "training.allDay.summary": {"en": "{0} · {1} exercises", "zh": "{0} · {1} 个动作"},
+ "training.allDay.hint": {"en": "Tap a row to edit or film", "zh": "点一行可改、可拍"},
+ "training.allDay.setCount": {"en": "{0} sets", "zh": "{0} 组"},
+-"training.allDay.note": {"en": "Ask coach · {0}", "zh": "问教练 · {0}"},
++"training.allDay.note": {"en": "Message coach · {0}", "zh": "给教练留言 · {0}"},
+ "training.allDay.expand": {"en": "Expand exercise", "zh": "展开动作"},
+ "training.allDay.completeExercise": {"en": "Complete exercise", "zh": "完成动作"},
+ "training.allDay.lastSet": {"en": "Last set {0}", "zh": "末组 {0}"},
+@@ -518,12 +518,12 @@
+ "training.allDay.done": {"en": "Done", "zh": "完成"},
+ "training.allDay.today": {"en": "Today", "zh": "今天"},
+ "training.allDay.asPrescribed": {"en": "As prescribed", "zh": "按计划"},
+-"training.allDay.notePlaceholder": {"en": "What would you like your coach to help with?", "zh": "想请教练帮你看什么？"},
++"training.allDay.notePlaceholder": {"en": "How did this set feel, or what would you like to ask your coach?", "zh": "这组感觉怎么样，或想问教练什么"},
+ "training.allDay.noteSent": {"en": "Sent to coach", "zh": "已发给教练"},
+ "training.allDay.freeWeight": {"en": "Choose", "zh": "自选"},
+ "training.allDay.topSet": {"en": "top set", "zh": "顶组"},
+ "training.allDay.unrecorded": {"en": "Not recorded", "zh": "未记录"},
+-"training.allDay.askCoach": {"en": "Ask coach", "zh": "问教练"},
++"training.allDay.studentNote": {"en": "Student note", "zh": "学员留言"},
+ "training.allDay.send": {"en": "Send", "zh": "发送"},
+ "student.coachTab.title": {"en": "Coach", "zh": "教练"},
+ "student.weightStrip.panelTitle": {"en": "Today's weight", "zh": "今天的体重"},
+diff --git a/src/i18n/generated/zh-Hant.json b/src/i18n/generated/zh-Hant.json
+index 57e4fdc..0960a84 100644
+--- a/src/i18n/generated/zh-Hant.json
++++ b/src/i18n/generated/zh-Hant.json
+@@ -2262,7 +2262,7 @@
+   "student.rn.meet.removeAction": "移除",
+   "student.rn.meet.addOptional": "新增比賽（可選）",
+   "student.rn.meet.help": "展開後填寫比賽日期、賽事方和體重級別；不比賽可跳過。",
+-  "student.rn.profile.note": "給教練的留言",
++  "student.rn.profile.note": "目標與顧慮",
+   "student.rn.today.session": "今日訓練",
+   "student.rn.today.upcoming": "待練",
+   "student.rn.today.selectedChart": "所選訓練日 · e1RM 曲線",
+@@ -2405,7 +2405,7 @@
+   "training.allDay.summary": "{0} · {1} 個動作",
+   "training.allDay.hint": "點一行可改、可拍",
+   "training.allDay.setCount": "{0} 組",
+-  "training.allDay.note": "問教練 · {0}",
++  "training.allDay.note": "給教練留言 · {0}",
+   "training.allDay.expand": "展開動作",
+   "training.allDay.completeExercise": "完成動作",
+   "training.allDay.lastSet": "末組 {0}",
+@@ -2417,12 +2417,12 @@
+   "training.allDay.done": "完成",
+   "training.allDay.today": "今天",
+   "training.allDay.asPrescribed": "按課表",
+-  "training.allDay.notePlaceholder": "想請教練幫你看什麼？",
++  "training.allDay.notePlaceholder": "這組感覺怎麼樣，或想問教練什麼",
+   "training.allDay.noteSent": "已發給教練",
+   "training.allDay.freeWeight": "自選",
+   "training.allDay.topSet": "頂組",
+   "training.allDay.unrecorded": "未記錄",
+-  "training.allDay.askCoach": "問教練",
++  "training.allDay.studentNote": "學員留言",
+   "training.allDay.send": "傳送",
+   "student.coachTab.title": "教練",
+   "student.weightStrip.panelTitle": "今天的體重",
+--- /dev/null
++++ b/src/demo/__tests__/body-weight-ui.test.tsx
+@@ -0,0 +1,71 @@
++import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
++import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
++import { act, create, type ReactTestRenderer } from 'react-test-renderer';
++import { Text } from 'react-native';
++import * as SecureStore from 'expo-secure-store';
++import { Circle } from 'react-native-svg';
++import { resetSessionForTests, useSessionStore } from '@/api/session';
++import { useOnboardingProfile } from '@/api/domains/onboarding';
++import { BodyWeightScreen } from '@/features/history/BodyWeightScreen';
++import { MeetWeightStrip } from '@/features/training/MeetWeightStrip';
++import { NumberPad } from '@/design/NumberPad';
++import { localDay } from '@/domain/coach/detail-week';
++import { setLocaleOverride, t } from '@/i18n';
++import { resetDemoBackend } from '../backend';
++
++jest.mock('expo-secure-store');
++jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
++jest.mock('react-native-safe-area-context', () => (jest.requireActual('react-native-safe-area-context/jest/mock') as { default: unknown }).default);
++jest.mock('expo-router', () => ({ useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }) }));
++const originalFetch = global.fetch;
++const originalFlag = process.env.EXPO_PUBLIC_DEMO_MODE;
++let renderer: ReactTestRenderer;
++let client: QueryClient;
++function WeightSurfaces() {
++  const studentId = useSessionStore(state => state.user?.id ?? '');
++  const profile = useOnboardingProfile(studentId);
++  return <><MeetWeightStrip studentId={studentId} profile={profile.data} today={localDay(new Date())} /><BodyWeightScreen /></>;
++}
++const settle = async () => { await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); }); };
++const texts = () => renderer.root.findAllByType(Text).map(node => [node.props.children].flat().join(''));
++beforeEach(async () => {
++  process.env.EXPO_PUBLIC_DEMO_MODE = '1';
++  setLocaleOverride('zh');
++  resetDemoBackend(localDay(new Date()));
++  resetSessionForTests();
++  const storage = new Map<string, string>();
++  jest.mocked(SecureStore.getItemAsync).mockImplementation(async key => storage.get(key) ?? null);
++  jest.mocked(SecureStore.setItemAsync).mockImplementation(async (key, value) => { storage.set(key, value); });
++  jest.mocked(SecureStore.deleteItemAsync).mockImplementation(async key => { storage.delete(key); });
++  global.fetch = jest.fn<typeof fetch>().mockRejectedValue(new Error('Network forbidden'));
++  await useSessionStore.getState().loginWithEmail({ email: 'any@example.test', password: '' });
++  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
++});
++afterEach(() => {
++  act(() => renderer?.unmount());
++  client.clear();
++  resetSessionForTests();
++  global.fetch = originalFetch;
++  if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_DEMO_MODE; else process.env.EXPO_PUBLIC_DEMO_MODE = originalFlag;
++  setLocaleOverride(null);
++});
++
++test('108-3 demo weight page loads its curve and a strip entry updates both surfaces without a load error', async () => {
++  await act(async () => { renderer = create(<QueryClientProvider client={client}><WeightSurfaces /></QueryClientProvider>); });
++  await settle();
++  expect(renderer.root.findAllByType(Circle)).toHaveLength(10);
++  expect(texts()).toContain('83.50 kg');
++  expect(texts()).not.toContain('加载失败');
++  const strip = () => renderer.root.findByType(MeetWeightStrip);
++  const record = strip().findAll(node => node.props.onPress && node.props.accessibilityLabel === t('student.weightStrip.log'))[0];
++  await act(async () => record.props.onPress());
++  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('84.1'));
++  await act(async () => renderer.root.findByType(NumberPad).props.onCommit(84.1));
++  await settle();
++  expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
++  expect(strip().findAllByType(Text).map(node => node.props.children)).toContain('84.1');
++  expect(texts()).toContain('84.10 kg');
++  expect(renderer.root.findAllByType(Circle)).toHaveLength(11);
++  expect(texts()).not.toContain('加载失败');
++  expect(global.fetch).not.toHaveBeenCalled();
++});

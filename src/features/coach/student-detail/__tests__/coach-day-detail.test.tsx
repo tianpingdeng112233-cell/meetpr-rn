@@ -79,3 +79,13 @@ test('coach playback honors explicitly cleared weight over a stale video snapsho
   expect(copy).toContain('— kg');
   expect(copy).not.toContain('100 kg');
 });
+
+test.each<[string, string | null, number]>([['matching', '100', 5], ['changed', '90', 4], ['empty', null, 5]])('107-5 %s actuals keep target values visible without an as-prescribed label', (_, weight, reps) => {
+  setLocaleOverride('en');
+  const exercise = { ...execution.planDay!.exercises[0], sets: [set({ target_value: '100', target_reps: 5 })] };
+  renderDay({ ...execution, planDay: { ...execution.planDay!, exercises: [exercise] }, logs: [{ ...log('first', 0), weight_kg: weight, reps, rpe: null }] });
+  expect(texts()).not.toContain('As prescribed');
+  expect(texts()).toContain(weight === null ? '—' : `${weight} kg`);
+  expect(texts()).toContain(String(reps));
+  expect(texts()).toContain('Target 100kg x 5');
+});

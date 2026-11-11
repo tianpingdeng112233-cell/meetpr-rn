@@ -4,6 +4,7 @@ import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import type { WorkoutSetDraft } from './model';
 import { accessoryLogRequest, type AccessoryRow } from './accessory-quick-log';
 import type { SetLogInput } from './set-log-input';
+import { decodePrescription } from '@/domain/plan/prescription';
 import { planSetPrescription } from './policy';
 
 export function synthesizeDrafts(
@@ -41,7 +42,7 @@ export function synthesizeDrafts(
                   ? ''
                   : String(prescription.weightKg),
             repsText: String(log?.reps ?? prescription.reps),
-            effortKind: log?.actual_rir != null ? 'rir' : 'rpe',
+            effortKind: log?.actual_rir != null || (log?.rpe == null && decodePrescription(planSet).intensity?.kind === 'rir') ? 'rir' : 'rpe',
             rpeText:
               log?.actual_rir != null ? String(log.actual_rir) : log?.rpe != null
                 ? String(Number(log.rpe))

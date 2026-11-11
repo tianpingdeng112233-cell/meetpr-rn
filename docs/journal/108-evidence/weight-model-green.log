@@ -1,0 +1,8 @@
+PASS src/features/training/__tests__/weight-strip-model.test.ts
+  ✓ strip follows local today and active meets independently of the selected training day (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.26 s
+Ran all test suites matching /src\/features\/training\/__tests__\/weight-strip-model.test.ts/i.

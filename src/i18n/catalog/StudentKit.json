@@ -120,8 +120,8 @@
 "zh": "输入教练邀请码"
 },
 "student.bindEnterCodeSubviews.copy002": {
-"en": "After connecting, your coach's plan will appear in Today and every logged set will sync to them.",
-"zh": "绑定之后,教练排的计划会直接出现在你的「今日」,你的每组记录也会同步给他。"
+"en": "After connecting, your coach's plan will appear in Training and every logged set will sync to them.",
+"zh": "绑定之后,教练排的计划会直接出现在你的「训练」,你的每组记录也会同步给他。"
 },
 "student.bindEnterCodeSubviews.copy003": {
 "en": "Your coach can find the code in MeetPR Coach under Profile → My invite code,",
@@ -307,113 +307,9 @@
 "en": "Coach note {0}",
 "zh": "教练备注 {0}"
 },
-"student.dashboardE1Rmrail.copy001": {
-"en": "Not set",
-"zh": "未设定"
-},
-"student.dashboardE1Rmrail.copy002": {
-"en": "{0} kilograms",
-"zh": "{0} 千克"
-},
-"student.dashboardE1Rmrail.copy003": {
-"en": "e1RM · {0} days",
-"zh": "E1RM · {0} 天"
-},
-"student.dashboardE1Rmrail.copy003.one": {
-"en": "e1RM · {0} day",
-"zh": "E1RM · {0} 天"
-},
-"student.dashboardE1Rmrail.copy004": {
-"en": "First estimate",
-"zh": "首次估算"
-},
-"student.dashboardE1RmtrendViewModel.copy001": {
-"en": "Latest PR",
-"zh": "最新 PR"
-},
-"student.dashboardE1RmtrendViewModel.copy002": {
-"en": "Best",
-"zh": "最佳"
-},
 "student.dashboardE1RmtrendViewModel.copy003": {
 "en": "All-time best",
 "zh": "历史最佳"
-},
-"student.dashboardEmptyStatePresentation.copy001": {
-"en": "Tomorrow",
-"zh": "明天"
-},
-"student.dashboardEmptyStatePresentation.copy002": {
-"en": "See you tomorrow.",
-"zh": "明天见。"
-},
-"student.dashboardEmptyStatePresentation.copy003": {
-"en": "See you {0}.",
-"zh": "{0}见。"
-},
-"student.dashboardEmptyStatePresentation.copy004": {
-"en": "{0}",
-"zh": "{0}日"
-},
-"student.dashboardEmptyStatePresentation.copy005": {
-"en": "Training day",
-"zh": "训练日"
-},
-"student.dashboardFeedbackCard.copy001": {
-"en": "Show all {0} feedback",
-"zh": "展开全部 {0} 条反馈"
-},
-"student.dashboardFeedbackCard.copy002": {
-"en": "Coach feedback, show all {0}",
-"zh": "教练反馈，展开全部 {0} 条"
-},
-"student.dashboardFeedbackCard.copy003": {
-"en": "Coach feedback",
-"zh": "教练反馈"
-},
-"student.dashboardFeedbackCard.copy004": {
-"en": "{0} unread",
-"zh": "{0} 条未读"
-},
-"student.dashboardFeedbackCard.copy005": {
-"en": "Collapse",
-"zh": "收起"
-},
-"student.dashboardFeedbackCard.copy006": {
-"en": "View",
-"zh": "查看"
-},
-"student.dashboardFeedbackCard.copy007": {
-"en": "Coach feedback will appear here after you complete a workout.",
-"zh": "完成训练后，教练的点评会显示在这里。"
-},
-"student.dashboardFeedbackEmptyCards.copy001": {
-"en": "Coach feedback",
-"zh": "教练反馈"
-},
-"student.dashboardFeedbackEmptyCards.copy002": {
-"en": "· Feedback on the way",
-"zh": "· 点评在路上"
-},
-"student.dashboardFeedbackEmptyCards.copy003": {
-"en": "Today's ",
-"zh": "今天的 "
-},
-"student.dashboardFeedbackEmptyCards.copy004": {
-"en": " sets submitted at ",
-"zh": " 组已在 "
-},
-"student.dashboardFeedbackEmptyCards.copy005": {
-"en": " Submit, {0} usually responds within ",
-"zh": " 提交，{0}通常 "
-},
-"student.dashboardFeedbackEmptyCards.copy006": {
-"en": " hours to review the video.",
-"zh": " 小时内回看视频。"
-},
-"student.dashboardFeedbackEmptyCards.copy007": {
-"en": " Submit, and {0} will review the video before your next workout.",
-"zh": " 提交，{0}会在下次训练前回看视频。"
 },
 "student.dashboardFeedbackText.copy001": {
 "en": "Training feedback",
@@ -427,89 +323,9 @@
 "en": "{0} · Set {1}",
 "zh": "{0} · 第 {1} 组"
 },
-"student.dashboardFeedbackText.copy004": {
-"en": "Week {0}",
-"zh": "周{0}"
-},
-"student.dashboardHeader.copy001": {
-"en": "Messages and notifications",
-"zh": "消息与通知"
-},
-"student.dashboardPlanWaitingState.copy001": {
-"en": "{0} is programming W{1} for you",
-"zh": "{0}正在为你排 W{1}"
-},
-"student.dashboardPlanWaitingState.copy002": {
-"en": "Based on this week's RPE and completion · Usually published ",
-"zh": "会参考你这周的 RPE 和完成情况 · 通常 "
-},
-"student.dashboardPlanWaitingState.copy003": {
-"en": "Sun 21:00",
-"zh": "周日 21:00"
-},
-"student.dashboardPlanWaitingState.copy004": {
-"en": "  before publishing",
-"zh": " 前发布"
-},
-"student.dashboardPlanWaitingState.copy005": {
-"en": "Message coach",
-"zh": "给教练留言"
-},
-"student.dashboardPlanWaitingState.copy006": {
-"en": "Weekly summary · W{0}",
-"zh": "本周小结 · W{0}"
-},
-"student.dashboardPlanWaitingState.copy007": {
-"en": "Training completed",
-"zh": "训练完成"
-},
-"student.dashboardPlanWaitingState.copy008": {
-"en": "Weekly volume",
-"zh": "周总量"
-},
-"student.dashboardPlanWaitingState.copy009": {
-"en": "New PR",
-"zh": "新 PR"
-},
-"student.dashboardPrimaryAction.copy001": {
-"en": "Start training",
-"zh": "开始训练"
-},
-"student.dashboardPrimaryAction.copy002": {
-"en": "{0} Completed",
-"zh": "{0} 已完成"
-},
-"student.dashboardPrimaryAction.copy003": {
-"en": "Undo completion · Today only",
-"zh": "撤销完成 · 仅限今天"
-},
-"student.dashboardPrimaryAction.copy004": {
-"en": "Next session · {0}",
-"zh": "下一节 · {0}"
-},
-"student.dashboardPrimaryAction.copy005": {
-"en": "Continue to next session",
-"zh": "继续下一节"
-},
-"student.dashboardPrimaryAction.copy006": {
-"en": "All {0} weeks completed",
-"zh": "{0} 周计划已全部完成"
-},
-"student.dashboardPrimaryAction.copy006.one": {
-"en": "The {0}-week plan is complete",
-"zh": "{0} 周计划已全部完成"
-},
 "student.dashboardPrimaryAction.copy007": {
 "en": "W1–W{0} · {1} sessions total",
 "zh": "W1 – W{0} · 共 {1} 节"
-},
-"student.dashboardPrimaryAction.copy007.one": {
-"en": "W1–W{0} · {1} session total",
-"zh": "W1 – W{0} · 共 {1} 节"
-},
-"student.dashboardPrimaryAction.copy008": {
-"en": "Your coach will publish the next plan. W1D1 will appear here when it is ready.",
-"zh": "下一份计划由教练发布。发布后这里会直接出现 W1D1。"
 },
 "student.dashboardPrimaryAction.copy009": {
 "en": "Coach recommends {0}",
@@ -519,57 +335,9 @@
 "en": "Body weight",
 "zh": "体重"
 },
-"student.dashboardProfileMetricsView.copy002": {
-"en": "Body weight {0}",
-"zh": "体重 {0}"
-},
-"student.dashboardProfileMetricsView.copy003": {
-"en": "Meetday",
-"zh": "距比赛"
-},
 "student.dashboardProfileMetricsView.copy004": {
 "en": "days",
 "zh": "天"
-},
-"student.dashboardProfileMetricsView.copy005": {
-"en": "{0} days until meet",
-"zh": "距比赛 {0} 天"
-},
-"student.dashboardProfileMetricsView.copy005.one": {
-"en": "{0} day until meet",
-"zh": "距比赛 {0} 天"
-},
-"student.dashboardProfileMetricsView.copy006": {
-"en": "Not scheduled",
-"zh": "未安排"
-},
-"student.dashboardProfileMetricsView.copy007": {
-"en": "Add a meet",
-"zh": "填写比赛"
-},
-"student.dashboardProfileMetricsView.copy008": {
-"en": "Meet date not set. Add a meet",
-"zh": "距比赛，未安排，填写比赛"
-},
-"student.dashboardProfileMetricsView.copy009": {
-"en": "Not entered",
-"zh": "未填写"
-},
-"student.dashboardProfileMetricsView.copy010": {
-"en": "Add in Profile",
-"zh": "去我的资料填写"
-},
-"student.dashboardProfileMetricsView.copy011": {
-"en": "Body weight not entered. Add it in Profile",
-"zh": "体重未填写，去我的资料填写"
-},
-"student.dashboardTodayPresentation.copy001": {
-"en": "{0}/{1}",
-"zh": "{0}月{1}日"
-},
-"student.dashboardTodayPresentation.copy002": {
-"en": "Training day",
-"zh": "训练日"
 },
 "student.dashboardTodayPresentation.copy003": {
 "en": "Exercises: {0} · Sets: {1}",
@@ -578,34 +346,6 @@
 "student.dashboardTodayPresentation.copy004": {
 "en": "{0} · {1}",
 "zh": "{0} · {1}"
-},
-"student.dashboardTodayPresentation.copy005": {
-"en": "Mon",
-"zh": "一"
-},
-"student.dashboardTodayPresentation.copy006": {
-"en": "Tue",
-"zh": "二"
-},
-"student.dashboardTodayPresentation.copy007": {
-"en": "Wed",
-"zh": "三"
-},
-"student.dashboardTodayPresentation.copy008": {
-"en": "Thu",
-"zh": "四"
-},
-"student.dashboardTodayPresentation.copy009": {
-"en": "Fri",
-"zh": "五"
-},
-"student.dashboardTodayPresentation.copy010": {
-"en": "Sat",
-"zh": "六"
-},
-"student.dashboardTodayPresentation.copy011": {
-"en": "Sun",
-"zh": "日"
 },
 "student.dashboardTodayPresentation.copy012": {
 "en": "Squat",
@@ -631,145 +371,13 @@
 "en": "Deadlift",
 "zh": "拉"
 },
-"student.dashboardTodayScreen.copy001": {
-"en": "Today",
-"zh": "今日"
-},
-"student.dashboardTodayScreen.copy002": {
-"en": "Completed",
-"zh": "已完成"
-},
-"student.dashboardTodayScreen.copy003": {
-"en": "This session · e1RM chart",
-"zh": "本节 · E1RM 曲线"
-},
-"student.dashboardTodayScreen.copy004": {
-"en": "Loading was interrupted. Please retry.",
-"zh": "加载已中断，请重试。"
-},
-"student.dashboardTodayScreen.copy005": {
-"en": "Planning",
-"zh": "编排中"
-},
-"student.dashboardTodayScreen.copy006": {
-"en": "Rest day",
-"zh": "休息日"
-},
-"student.dashboardTodayScreen.copy007": {
-"en": "Loading today's plan",
-"zh": "正在加载今日计划"
-},
 "student.dashboardTodayScreen.copy008": {
 "en": "Couldn't load data",
 "zh": "数据加载失败"
 },
-"student.dashboardTodayScreen.copy009": {
-"en": "Retry",
-"zh": "重试"
-},
-"student.dashboardV3Previews.copy001": {
-"en": "Demo Coach",
-"zh": "演示教练"
-},
-"student.dashboardV3Previews.copy002": {
-"en": "W2a · Normal day · Dark",
-"zh": "W2a · 正常日 · Dark"
-},
-"student.dashboardV3Previews.copy003": {
-"en": "W2a · Normal day · Light",
-"zh": "W2a · 正常日 · Light"
-},
-"student.dashboardV3Previews.copy004": {
-"en": "W2a · Today completed · Light",
-"zh": "W2a · 今日已完成 · Light"
-},
-"student.dashboardV3Previews.copy005": {
-"en": "W2a · Feedback expanded · Dark",
-"zh": "W2a · 反馈展开 · Dark"
-},
-"student.dashboardV3Previews.copy006": {
-"en": "W2a · Feedback expanded · Light",
-"zh": "W2a · 反馈展开 · Light"
-},
-"student.dashboardV3Previews.copy007": {
-"en": "W2a · No feedback · Dark",
-"zh": "W2a · 无反馈 · Dark"
-},
-"student.dashboardV3Previews.copy008": {
-"en": "W2a · No feedback · Light",
-"zh": "W2a · 无反馈 · Light"
-},
-"student.dashboardView.copy001": {
-"en": "Cannot undo",
-"zh": "无法撤销"
-},
-"student.dashboardView.copy002": {
-"en": "Got it",
-"zh": "知道了"
-},
 "student.dashboardView.copy003": {
 "en": "Coach",
 "zh": "教练"
-},
-"student.dashboardView.copy004": {
-"en": "Cannot undo right now. Try again later.",
-"zh": "暂时无法撤销，请稍后重试。"
-},
-"student.dashboardWeekCalendar.copy001": {
-"en": "Week {0}, day {1}, {2}",
-"zh": "第{0}周第{1}天，{2}"
-},
-"student.dashboardWeekCalendar.copy002": {
-"en": "Sun",
-"zh": "周日"
-},
-"student.dashboardWeekCalendar.copy003": {
-"en": "Mon",
-"zh": "周一"
-},
-"student.dashboardWeekCalendar.copy004": {
-"en": "Tue",
-"zh": "周二"
-},
-"student.dashboardWeekCalendar.copy005": {
-"en": "Wed",
-"zh": "周三"
-},
-"student.dashboardWeekCalendar.copy006": {
-"en": "Thu",
-"zh": "周四"
-},
-"student.dashboardWeekCalendar.copy007": {
-"en": "Fri",
-"zh": "周五"
-},
-"student.dashboardWeekCalendar.copy008": {
-"en": "Sat",
-"zh": "周六"
-},
-"student.dashboardWeekCalendar.copy009": {
-"en": "Completed",
-"zh": "已完成"
-},
-"student.dashboardWeekCalendar.copy010": {
-"en": "Current",
-"zh": "当前"
-},
-"student.dashboardWeekCalendar.copy011": {
-"en": "Not available yet",
-"zh": "未轮到"
-},
-"student.dashboardWeekCalendar.copy012": {
-"en": "Weekly progress",
-"zh": "本周进度"
-},
-"student.dashboardWeekCalendar.copy013": {
-"en": "Current week",
-"zh": "当前周"
-},
-"student.dashboardWeekCalendar.copy014": {
-"en": "Coach-recommended date",
-"zh": "教练推荐日期"
 },
 "student.dayCompletionBanner.copy001": {
 "en": "Today's workout completed · {0} sets",
@@ -1014,10 +622,6 @@
 "student.evaluationPeriodView.copy011": {
 "en": "Adaptation-week training (this week)",
 "zh": "适应周训练(本周)"
-},
-"student.evaluationPeriodView.copy012": {
-"en": "Start training",
-"zh": "开始训练"
 },
 "student.evaluationPeriodView.copy013": {
 "en": "Your coach is preparing your adaptation week",
@@ -1324,8 +928,8 @@
 "zh": "完成第一次训练后，这里开始记录 e1RM、总量和 PR"
 },
 "student.growthEmptyStates.copy009": {
-"en": "View today's plan",
-"zh": "去看今天的安排"
+"en": "Go to Training",
+"zh": "去训练"
 },
 "student.growthProfileV3Previews.copy001": {
 "en": "W2c · Progress with data · Dark",
@@ -2376,8 +1980,8 @@
 "zh": "动作表现"
 },
 "student.sessionSummaryView.copy002": {
-"en": "Done · Back to Today",
-"zh": "完成 · 回到今日"
+"en": "Done · Back to Training",
+"zh": "完成 · 回到训练"
 },
 "student.sessionSummaryView.copy003": {
 "en": "Workout review",
@@ -3043,10 +2647,6 @@
 "en": "Set manually",
 "zh": "手动设置"
 },
-"student.studentRootView.copy001": {
-"en": "Today",
-"zh": "今日"
-},
 "student.studentRootView.copy002": {
 "en": "Training",
 "zh": "训练"
@@ -3593,7 +3193,7 @@
 },
 "student.trainingWeekStrip.backToToday": {
 "en": "Back to today",
-"zh": "回到今日"
+"zh": "回到训练"
 },
 "student.trainingWeekStrip.rest": {
 "en": "Rest",
@@ -4195,13 +3795,13 @@
 "en": "The original calculation cannot be fully reproduced. The saved estimate is shown.",
 "zh": "原始计算明细不可完整还原，展示已保存的估算值。"
 },
-  "student.setSync.syncing": {"en": "Syncing your sets…", "zh": "正在同步训练记录…"},
-  "student.setSync.failedTitle": {"en": "Your sets haven't uploaded yet", "zh": "训练记录还没传上去"},
-  "student.setSync.failedBody": {"en": "They're saved on this phone. Try again when your connection is better.", "zh": "记录都存在手机里，不会丢。网络好一点再试。"},
-  "student.setSync.retry": {"en": "Try again", "zh": "重试"},
-  "student.setSync.logoutTitle": {"en": {"one": "{n} set hasn't uploaded yet", "other": "{n} sets haven't uploaded yet"}, "zh": "还有 {n} 组没上传"},
-  "student.setSync.logoutBody": {"en": "They'll stay on this phone and upload next time you log in.", "zh": "直接退出也会保留，下次登录这个账号时接着传。"},
-  "student.setSync.uploadLogout": {"en": "Upload, then log out", "zh": "先上传再退出"},
-  "student.setSync.logoutNow": {"en": "Log out now", "zh": "直接退出"},
-  "student.setSync.logoutProgress": {"en": {"one": "{n} set hasn't uploaded yet", "other": "{n} sets haven't uploaded yet"}, "zh": "还有 {n} 组没上传"}
+"student.setSync.syncing": {"en": "Syncing your sets…", "zh": "正在同步训练记录…"},
+"student.setSync.failedTitle": {"en": "Your sets haven't uploaded yet", "zh": "训练记录还没传上去"},
+"student.setSync.failedBody": {"en": "They're saved on this phone. Try again when your connection is better.", "zh": "记录都存在手机里，不会丢。网络好一点再试。"},
+"student.setSync.retry": {"en": "Try again", "zh": "重试"},
+"student.setSync.logoutTitle": {"en": {"one": "{n} set hasn't uploaded yet", "other": "{n} sets haven't uploaded yet"}, "zh": "还有 {n} 组没上传"},
+"student.setSync.logoutBody": {"en": "They'll stay on this phone and upload next time you log in.", "zh": "直接退出也会保留，下次登录这个账号时接着传。"},
+"student.setSync.uploadLogout": {"en": "Upload, then log out", "zh": "先上传再退出"},
+"student.setSync.logoutNow": {"en": "Log out now", "zh": "直接退出"},
+"student.setSync.logoutProgress": {"en": {"one": "{n} set hasn't uploaded yet", "other": "{n} sets haven't uploaded yet"}, "zh": "还有 {n} 组没上传"}
 }

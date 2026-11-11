@@ -7,10 +7,10 @@ function setup() {
   let tapped: (id: string, data: unknown) => void = () => {};
   let session = student;
   let resolveLast!: (value: { id: string; data: unknown } | null) => void;
-  const remove = jest.fn(); const refresh = jest.fn(); const openTraining = jest.fn();
-  const stop = startPlanNotifications({ studentId: student, currentStudent: () => session, refresh, openTraining,
+  const remove = jest.fn(); const refresh = jest.fn(); const openTraining = jest.fn(); const openCoach = jest.fn();
+  const stop = startPlanNotifications({ studentId: student, currentStudent: () => session, refresh, openTraining, openCoach,
     transport: { onReceive: listener => { received = listener; return remove; }, onResponse: listener => { tapped = listener; return remove; }, lastResponse: () => new Promise(resolve => { resolveLast = resolve; }), clearResponse: async () => {} } });
-  return { received, tapped, refresh, openTraining, stop, remove, resolveLast, changeAccount: () => { session = 'other'; } };
+  return { received, tapped, refresh, openTraining, openCoach, stop, remove, resolveLast, changeAccount: () => { session = 'other'; } };
 }
 const data = (kind: string) => ({ kind, student_id: student, plan_id: plan });
 test.each(['plan_shifted', 'plan_shift_undone', 'plan_updated', 'plan_published'])('%s refreshes on arrival and opens training only on tap', kind => {
@@ -28,4 +28,14 @@ test('logout and disposal cannot route delayed responses into a different sessio
   const s = setup(); s.changeAccount(); s.tapped('old', data('plan_shifted')); expect(s.refresh).not.toHaveBeenCalled();
   s.stop(); s.resolveLast({ id: 'cold', data: data('plan_shifted') }); await Promise.resolve();
   s.received(data('plan_shifted')); expect(s.openTraining).not.toHaveBeenCalled(); expect(s.remove).toHaveBeenCalledTimes(2);
+});
+
+test('chat notification opens coach only on tap, including cold start, and is account scoped', async () => {
+  const s = setup();
+  const message = { kind: 'chat_message', student_id: student, conversation_id: plan };
+  s.received(message); expect(s.openCoach).not.toHaveBeenCalled();
+  s.resolveLast({ id: 'chat', data: message }); await Promise.resolve();
+  expect(s.openCoach).toHaveBeenCalledTimes(1); expect(s.openTraining).not.toHaveBeenCalled();
+  s.tapped('chat', message); expect(s.openCoach).toHaveBeenCalledTimes(1);
+  s.changeAccount(); s.tapped('another', message); expect(s.openCoach).toHaveBeenCalledTimes(1); s.stop();
 });

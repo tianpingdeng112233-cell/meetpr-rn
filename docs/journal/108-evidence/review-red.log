@@ -1,0 +1,46 @@
+FAIL src/features/history/__tests__/body-weight-screen.test.tsx
+  ● 404 history still allows logging today through the repository fallback
+
+    TypeError: Cannot read properties of undefined (reading 'props')
+
+      126 |   await render(<BodyWeightScreen />);
+      127 |   expect(texts()).toContain('Failed to load');
+    > 128 |   act(() => button("Log today's weight").props.onPress());
+          |                                         ^
+      129 |   for (const key of ['7', '7', 'Decimal point', '4']) act(() => button(key).props.onPress());
+      130 |   await act(async () => { button('Done').props.onPress(); });
+      131 |   await settle();
+
+      at src/features/history/__tests__/body-weight-screen.test.tsx:128:41
+      at Object.<anonymous>.process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:814:22)
+      at Object.<anonymous> (src/features/history/__tests__/body-weight-screen.test.tsx:128:6)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+FAIL src/features/chat/__tests__/chat-photos.test.tsx
+  ● switching accounts while persisting a photo blocks the subsequent upload initiation
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: {"content_type": "image/jpeg", "filename": "photo.jpg", "kind": "chat_image", "part_count": 1, "size_bytes": 100}
+
+      76 |   useSessionStore.setState({ user: { id: 'other', role: 'coached_student', phone: '', created_at: '' } });
+      77 |   await act(async () => { release(); await sending; });
+    > 78 |   expect(initiate).not.toHaveBeenCalled();
+         |                        ^
+      79 |   expect(await readChatPhotos('student', 'conversation')).toHaveLength(1);
+      80 | });
+      81 |
+
+      at Object.toHaveBeenCalled (src/features/chat/__tests__/chat-photos.test.tsx:78:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 2 failed, 2 total
+Tests:       2 failed, 8 passed, 10 total
+Snapshots:   0 total
+Time:        1.073 s
+Ran all test suites matching /src\/features\/chat\/__tests__\/chat-photos.test.tsx|src\/features\/history\/__tests__\/body-weight-screen.test.tsx/i.

@@ -21,5 +21,5 @@ export default function SessionRouter() {
     return <Redirect href="/(coach)/(tabs)/today" />;
   }
 
-  return <Redirect href="/(student)/today" />;
+  return <Redirect href="/(student)/training" />;
 }

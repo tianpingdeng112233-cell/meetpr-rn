@@ -50,7 +50,7 @@ export function summarizeExercise(sets: readonly PlanSet[], logs: readonly Exerc
     if (p.intensity?.kind === 'pct') {
       const resolved = suggestions.find(suggestion => suggestion.plan_set_id === set?.id)?.weight_kg;
       const percentage = `${p.intensity.value}%`;
-      load = resolved != null ? `${weight(resolved)}${p.percentageAnchor === 'top_set' ? '' : ` (${percentage})`}`
+      load = resolved != null ? weight(resolved)
         : `${percentage}${p.percentageAnchor === 'top_set' ? ` ${labels.topSet}` : ''}`;
       intensityOnly = resolved == null;
     }

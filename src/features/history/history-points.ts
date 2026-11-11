@@ -1,6 +1,6 @@
 import type { SetLog } from '@/api/domains';
 import { isE1RMPointEligible, type E1RMHistoryPoint, type E1RMHistorySnapshot, type E1RMRepository, type LiftFamily } from '@/domain/e1rm';
-import { replayE1RMHistoryPoints } from '@/features/dashboard/model';
+import { replayE1RMHistoryPoints } from '@/features/history/summary-model';
 
 /** Repair and backfill in one transaction. Saved estimates and PRs remain authoritative. */
 export async function loadGrowthHistory(

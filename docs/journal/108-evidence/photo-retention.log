@@ -1,0 +1,10 @@
+PASS src/features/chat/__tests__/chat-photos.test.tsx
+  ✓ failed image survives remount and retries the same attachment and client id before deleting its file (36 ms)
+  ✓ camera denial offers system settings without opening the camera (15 ms)
+  ✓ pending photos belong to the account and cannot send after account switching (14 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.52 s
+Ran all test suites matching /src\/features\/chat\/__tests__\/chat-photos.test.tsx/i.

@@ -1,0 +1,8 @@
+PASS src/navigation/__tests__/student-tabs-layout.test.tsx
+  ✓ cold start lands on training and coached tabs keep one unread badge, hidden while reading (38 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        1.318 s
+Ran all test suites matching /src\/navigation\/__tests__\/student-tabs-layout.test.tsx/i.

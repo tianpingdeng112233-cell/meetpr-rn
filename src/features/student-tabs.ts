@@ -14,15 +14,12 @@ type StudentTabsStore = {
   handoffTraining: (handoff: TrainingHandoff) => void;
   completionRevision: number;
   bumpCompletionRevision: () => void;
-  /** Bumped when returning to the 今日 tab — Dashboard reloads. */
-  todayReloadToken: number;
-  /** Bumped by the Dashboard CTA — 训练 tab consumes a day-ID handoff. */
+  /** Bumped by a training deep link — 训练 tab consumes a day-ID handoff. */
   trainingJumpToken: number;
   /** Bumped after a plan change — plan-derived views reload. */
   planRevision: number;
   /** Bumped after imported-history backfill — 成长 tab reloads. */
   importedHistoryRefreshToken: number;
-  bumpTodayReload: () => void;
   bumpTrainingJump: () => void;
   bumpPlanRevision: () => void;
   bumpImportedHistoryRefresh: () => void;
@@ -34,11 +31,9 @@ export const useStudentTabsStore = create<StudentTabsStore>((set) => ({
   handoffTraining: (trainingHandoff) => set(s => ({ trainingHandoff, trainingJumpToken: s.trainingJumpToken + 1 })),
   completionRevision: 0,
   bumpCompletionRevision: () => set(s => ({ completionRevision: s.completionRevision + 1, planRevision: s.planRevision + 1 })),
-  todayReloadToken: 0,
   trainingJumpToken: 0,
   planRevision: 0,
   importedHistoryRefreshToken: 0,
-  bumpTodayReload: () => set((s) => ({ todayReloadToken: s.todayReloadToken + 1 })),
   bumpTrainingJump: () => set((s) => ({ trainingJumpToken: s.trainingJumpToken + 1 })),
   bumpPlanRevision: () => set((s) => ({ planRevision: s.planRevision + 1 })),
   bumpImportedHistoryRefresh: () =>

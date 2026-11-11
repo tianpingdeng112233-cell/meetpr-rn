@@ -1,4 +1,5 @@
 import { demoVideoUrl, demoVideos, resetDemoUploads, uploadRoute } from './uploads';
+import { BodyWeightRecordSchema } from '@/api/domains/body-weights';
 import { z } from 'zod';
 import { ReadinessSubmitRequestSchema, type ReadinessCheckin } from '@/api/domains/readiness';
 import { toSetRefWire, ChatSetRefFromWireSchema } from '@/api/domains/chat';
@@ -49,6 +50,17 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
   else if (method === 'GET' && route === `${student}/plans`) payload = { plans: [state.plan] };
   else if (method === 'GET' && route === `/plans/${state.plan.id}`) payload = state.plan;
   else if (method === 'GET' && route === `${student}/sets`) payload = { logs: state.logs.filter(log => log.logged_date >= (url.searchParams.get('from') ?? '') && log.logged_date < (url.searchParams.get('to') ?? '9999')) };
+  else if (method === 'GET' && route === '/students/me/body-weights') payload = { records: state.bodyWeights };
+  else if (['PUT', 'DELETE'].includes(method) && /^\/students\/me\/body-weights\/[^/]+$/.test(route)) {
+    const date = z.iso.date().parse(route.split('/').at(-1));
+    const record = method === 'PUT' ? BodyWeightRecordSchema.parse({ ...z.object({ weight_kg: z.string() }).parse(options.body), recorded_on: date }) : null;
+    state.bodyWeights = state.bodyWeights.filter(item => item.recorded_on !== date);
+    if (record) state.bodyWeights.push(record);
+    state.bodyWeights.sort((a, b) => a.recorded_on.localeCompare(b.recorded_on));
+    state.profile.weight_kg = state.bodyWeights.at(-1)?.weight_kg ?? null;
+    state.profile.updated_at = now;
+    payload = { ...(record ? { record } : {}), current_weight_kg: state.profile.weight_kg };
+  }
   else if (method === 'GET' && route === `${student}/onboarding`) payload = state.profile;
   else if (method === 'GET' && route === '/exercises') payload = { exercises: state.exercises };
   else if (method === 'GET' && route === '/bind-requests/mine') payload = { bind_request: state.binding };

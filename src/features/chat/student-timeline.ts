@@ -2,7 +2,7 @@ import { t } from '@/i18n';
 import type { ChatMessage } from '@/api/domains/chat';
 import { feedbackVideoName } from '@/features/feedback/video-presentation';
 import type { FeedbackItem, FeedbackVideo } from '@/api/domains/feedback';
-import type { DashboardPlanSignature } from '@/features/dashboard/plan-seen';
+import type { DashboardPlanSignature } from '@/features/chat/plan-seen';
 
 export type StudentPlanNotice = { signature: DashboardPlanSignature; weekIndex: number };
 

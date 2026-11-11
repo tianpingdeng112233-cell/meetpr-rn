@@ -7,9 +7,9 @@ import type { SetLog, SetLogUpsertRequest } from '@/api/domains/sets';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import {
   canWriteTrainingDay,
+  completedToday,
   cursorDay,
   dayCode,
-  defaultTrainingDay,
   planLogRange,
   recommendedDate,
   selectCurrentPlan,
@@ -19,10 +19,11 @@ import {
 import { trainingWeekStrip } from '@/domain/plan/week-strip';
 import { localDateText } from '@/domain/plan/workout-date-policy';
 import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
-import { useOpenCoachChat } from '@/features/chat/open-coach-chat';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { StudentEmptyState } from './StudentEmptyState';
+import { studentEmptyState } from './student-empty-state';
+import { MeetWeightStrip } from './MeetWeightStrip';
 import { useQueryClient } from '@tanstack/react-query';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { isAccessoryExercise } from './accessory-quick-log';
@@ -56,7 +57,7 @@ import { localNoon } from './quick-log';
 
 import { workoutCompletionPresentation, type CompletionReference } from './completion-presentation';
 import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
-import { TRAINING_LIMITS } from './constants';
+import { HISTORY_WEIGHT_PREFILL_ENABLED, TRAINING_LIMITS } from './constants';
 import { addExtraDraft, addStudentExercise, addStudentSet, studentAddedDrafts, synthesizeDrafts } from './drafts';
 import { recordTrainingSetE1RM } from './e1rm-live';
 import { createExerciseMetadataResolver, exerciseTitle } from './exercise-metadata';
@@ -108,7 +109,6 @@ export function TodayWorkoutView() {
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const savedWorkout = useWorkoutSnapshot(studentId);
   const catalogQuery = useExerciseCatalog(Boolean(studentId));
-  const { totalUnread: unreadCount, openCoachChat, isOpening } = useOpenCoachChat(studentId);
   const [clockNow, setClockNow] = useState(() => new Date());
   const today = gymDayText(clockNow);
   const handoff = useStudentTabsStore((state) => state.trainingHandoff);
@@ -123,7 +123,6 @@ export function TodayWorkoutView() {
       useStudentTabsStore.setState({ videoNotificationDay: null });
     });
   }, [notificationDay, studentId]);
-  const router = useRouter();
   const throttle = useRef(new StudentTodayRefreshThrottle());
   const bumpCompletion = useStudentTabsStore(
     (state) => state.bumpCompletionRevision,
@@ -204,7 +203,7 @@ export function TodayWorkoutView() {
   );
   const orderedDays = sequenceDays(plan?.days ?? []);
   const cursor = cursorDay(orderedDays);
-  const initialDayID = defaultTrainingDay(orderedDays, logs, clockNow)?.id;
+  const initialDayID = cursor?.id ?? completedToday(orderedDays, clockNow)?.id;
   if (trainingVisible && requestedDayID === null && serverLogs && initialDayID) setRequestedDayID(initialDayID);
   const weekStrip = trainingWeekStrip(plan, requestedDayID ?? initialDayID, today);
   const viewedWeek = weekStrip.week;
@@ -215,7 +214,7 @@ export function TodayWorkoutView() {
     : null;
   const editable = Boolean(plan && selectedDayID && canWriteTrainingDay(plan, selectedDayID));
   const reviewKey = `${studentId}:${selectedDayID}`;
-  const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null | undefined>>({});
+  const [expandedExercises, setExpandedExercises] = useState<Record<string, string | null>>({});
   const review =
     reviewState.key === reviewKey && reviewState.status === 'loaded'
       ? reviewState.value
@@ -239,12 +238,14 @@ export function TodayWorkoutView() {
   const synthesizedIDs = new Set(synthesizedDrafts.map(draft => draft.stableSetId));
   synthesizedDrafts.push(...Object.values({ ...syncSnapshot.drafts, ...draftOverrides }).filter(draft => draft.kind && draft.exercise.plan_day_id === selectedDayID && !synthesizedIDs.has(draft.stableSetId) && (syncSnapshot.drafts?.[draft.stableSetId] || (!syncSnapshot.pending.some(entry => entry.stableSetId === draft.stableSetId && entry.remove) && !syncSnapshot.confirmed[draft.stableSetId]?.remove)) &&
     (draft.kind === 'added' || planDay?.exercises.some(exercise => exercise.id === draft.exercise.id))));
-  const baseDrafts = synthesizedDrafts.map((draft) =>
-    draftOverrides[draft.stableSetId] && !draftOverrides[draft.stableSetId].sourceLog && !draft.sourceLog
-      ? draftOverrides[draft.stableSetId]
-      : draft,
-  );
-  const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', editable);
+  const baseDrafts = synthesizedDrafts.map(draft => {
+    const local = draftOverrides[draft.stableSetId];
+    if (local && !local.sourceLog && !draft.sourceLog) return local;
+    // Empty effort has no RPE/RIR discriminator on the wire; retain this session's choice.
+    return local && !local.rpeText && !draft.rpeText
+      ? { ...draft, effortKind: local.effortKind } : draft;
+  });
+  const suggestionsQuery = useWeightSuggestions(studentId, selectedDayID ?? '', HISTORY_WEIGHT_PREFILL_ENABLED && editable);
   const prefilledDrafts = baseDrafts.map(draft => {
     const prescription = decodePrescription(draft.planSet);
     if (draft.sourceLog || draft.kind || draft.weightText || prescription.intensity?.kind !== 'pct') return draft;
@@ -256,7 +257,7 @@ export function TodayWorkoutView() {
       registeredOneRMKg: registered == null ? null : Number(registered), family });
     return outcome.suggestion ? { ...draft, weightText: String(outcome.suggestion.weightKg) } : draft;
   });
-  const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, suggestionsQuery.data?.suggestions ?? [], {
+  const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, HISTORY_WEIGHT_PREFILL_ENABLED ? suggestionsQuery.data?.suggestions ?? [] : [], {
     drafts: prefilledDrafts, completedExercises: checkedExercises[reviewKey], expandedExerciseId: expandedExercises[reviewKey],
   }) : { exercises: [] };
   const liveDrafts = sheet.exercises.flatMap(block => block.rows);
@@ -544,7 +545,7 @@ export function TodayWorkoutView() {
           t('student.setEntrySheet.copy010'),
           t('student.todayWorkoutScreen.copy024'),
         );
-        throw new Error('Selected day is no longer current');
+        throw new Error('Selected day is no longer writable');
       }
       const logDate = !input.quickLogDate && draft.sourceLog && !isLocalSetId(draft.sourceLog.id)
         ? draft.sourceLog.logged_date
@@ -605,7 +606,7 @@ export function TodayWorkoutView() {
                 weightText: input.weightText,
                 repsText: input.repsText,
                 rpeText: actualRIR == null ? input.rpeText : String(actualRIR),
-                effortKind: actualRIR == null ? 'rpe' : 'rir',
+                effortKind: input.effortKind ?? (actualRIR == null ? 'rpe' : 'rir'),
                 sourceLog: {
                   id: response.id,
                   student_id: studentId,
@@ -706,7 +707,7 @@ export function TodayWorkoutView() {
     const old = checkedExercises[reviewKey] ?? new Set<string>();
     const next = new Set(old);
     if (next.has(id)) { next.delete(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next })); setExpandedExercises(current => ({ ...current, [reviewKey]: id })); return; }
-    setExpandedExercises(current => ({ ...current, [reviewKey]: undefined }));
+    setExpandedExercises(current => ({ ...current, [reviewKey]: null }));
     next.add(id); setCheckedExercises(current => ({ ...current, [reviewKey]: next }));
     try { for (const { row, request } of completionWrites(sheet, id)) await saveRow(row, request); }
     catch { setCheckedExercises(current => ({ ...current, [reviewKey]: old })); }
@@ -746,6 +747,9 @@ export function TodayWorkoutView() {
     ]);
   };
 
+  const emptyState = studentEmptyState(plan);
+  // Keep an explicitly selected completed day and its undo visible after finishing.
+  const showEmpty = state.kind === 'noPlan' || (state.kind === 'loaded' && emptyState !== null && !completedToday(orderedDays, clockNow) && requestedDayID === null);
   const realDrafts = liveDrafts.filter(
     (draft) => draft.sourceLog && !draft.sourceLog.assumed,
   );
@@ -756,11 +760,8 @@ export function TodayWorkoutView() {
   return (
     <Screen style={styles.screen}>
       <View style={[styles.nav, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-        <Text style={{ ...font.display(30), color: colors.textPrimary }}>W{viewedWeek?.number ?? '—'}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('student.todayWorkoutScreen.copy007')} disabled={isOpening} onPress={() => void openCoachChat()} style={styles.navButton}>
-          <MaterialCommunityIcons name="message-outline" size={22} color={colors.textPrimary} />
-          {unreadCount > 0 ? <View style={styles.unreadBadge}><Text style={styles.unreadCount}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View> : null}
-        </Pressable>
+        <Text style={{ ...font.display(30), color: colors.textPrimary }}>{showEmpty ? emptyState?.kind === 'next' ? `W${emptyState.week}` : t('student.studentRootView.copy002') : `W${viewedWeek?.number ?? '—'}`}</Text>
+
       </View>
       <View style={{ flex: 1 }} onTouchEnd={() => editor.pad.current?.dismiss()}><ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refreshToday()} tintColor={colors.gold500} />} ref={workoutScroll} innerViewRef={workoutContent}
         onScrollBeginDrag={() => { userScrolling.current = true; completedRowToReveal.current = null; }}
@@ -770,7 +771,8 @@ export function TodayWorkoutView() {
         onContentSizeChange={revealAccessoryRow}
         onLayout={revealAccessoryRow}
         contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding + (accessoryPadHeight > 0 ? accessoryPadHeight + spacing.lg : 0) }]}>
-        {state.kind !== 'loading' && plan ? (
+        <MeetWeightStrip studentId={studentId} profile={profileQuery.data} today={localDateText(clockNow)} />
+        {state.kind !== 'loading' && !showEmpty && plan ? (
           <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} />
         ) : null}
         {state.kind === 'loading' ? (
@@ -797,27 +799,8 @@ export function TodayWorkoutView() {
             </Pressable>
           </Card>
         ) : null}
-        {state.kind === 'noPlan' ? (
-          <Card style={styles.empty}>
-            <Text style={styles.emptyTitle}>
-              {t('student.todayWorkoutScreen.copy002')}
-            </Text>
-            <Text style={styles.emptySub}>
-              {t('student.todayWorkoutScreen.copy003', [coachName])}
-            </Text>
-            <AppButton haptic="none"
-              variant="secondary"
-              label={t('student.todayWorkoutScreen.copy004')}
-              onPress={() => router.navigate('/(student)/growth')}
-            />
-            <AppButton
-              variant="link"
-              label={t('student.todayWorkoutScreen.copy005')}
-              onPress={() => void refreshToday()}
-            />
-          </Card>
-        ) : null}
-        {state.kind === 'loaded' ? (
+        {showEmpty && emptyState ? <StudentEmptyState state={emptyState} coachName={coachName} hasCoach={binding.data?.bind_request?.status === 'accepted'} /> : null}
+        {state.kind === 'loaded' && !showEmpty ? (
           <>
             {dayState?.kind === 'completed' ? <View testID="training.completedDay"><Text style={styles.emptySub}>{t('student.trainingWeekStrip.completed')}</Text>{dayState.canUndo ? <AppButton variant="link" label={t('student.todayWorkoutScreen.copy023')} disabled={undoCompletion.isPending} onPress={() => void completeDay(true)} /> : null}</View> : null}
             <AllDayBody key={startKey} sheet={sheet} editable={editable} studentId={studentId} unit={workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg'}
@@ -903,9 +886,6 @@ export function TodayWorkoutView() {
               void retryWaitingVideos(selectedDayID!).catch(() => {});
               return;
             }
-            const latest = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan.id));
-            setRequestedDayID(cursorDay(latest?.days ?? orderedDays)?.id ?? null);
-            router.navigate('/(student)/today');
             await track(AnalyticsEvent.WorkoutLogSave, {
               date: today,
               sets: liveDrafts.length,

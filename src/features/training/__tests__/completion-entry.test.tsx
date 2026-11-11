@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { ApiError } from '@/api/client';
 import type { PlanDetail } from '@/api/domains/plans';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
+import { useStudentTabsStore } from '@/features/student-tabs';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 import { setLocaleOverride, t } from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -98,22 +99,24 @@ afterEach(async () => {
   setLocaleOverride(null);
   jest.restoreAllMocks();
   jest.useRealTimers();
+  useStudentTabsStore.setState({ trainingHandoff: null });
   await AsyncStorage.clear();
   resetVideoUploadStoreForTests();
 });
 
-test('successful settlement opens celebration and direct finish persists review and navigates to Today', async () => {
+test('successful settlement opens celebration and direct finish persists review and stays on the completed training day', async () => {
   await mount();
   await act(async () => { renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction(); });
   expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
   await press(t('student.workoutCompletionFlowView.copy003'));
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/today');
+  expect(mockNavigate).not.toHaveBeenCalled();
   expect(await readReview(studentId, plan.days[0].id)).toMatchObject({ completedAt: expect.stringMatching(/^\d{4}-/), reflection: { goal: '', achieved: '', improve: '' } });
   expect(copy()).not.toContain(t('student.workoutCompletionFlowView.copy001'));
 });
 
 test('completed-day banner opens review directly and reflection survives reopening', async () => {
   servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
+  useStudentTabsStore.setState({ trainingHandoff: { plan: servedPlan, dayID: servedPlan.days[0].id, existingLogs: [] } });
   await mount();
   await press(t('student.dayCompletionBanner.copy003', [1]));
   expect(copy()).toContain(t('student.sessionSummaryView.copy003'));
@@ -121,7 +124,7 @@ test('completed-day banner opens review directly and reflection survives reopeni
   await act(async () => { renderer.root.findAllByType(TextInput)[0].props.onChangeText('Steady pace'); });
   expect((await readReview(studentId, plan.days[0].id))?.reflection.goal).toBe('Steady pace');
   await press(t('student.sessionSummaryView.copy002'));
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/today');
+  expect(mockNavigate).not.toHaveBeenCalled();
   await press(t('student.dayCompletionBanner.copy003', [1]));
   expect(renderer.root.findAllByType(TextInput)[0].props.value).toBe('Steady pace');
 });
@@ -229,7 +232,7 @@ test('failure after leaving celebration rolls back without reopening it or losin
   await mount();
   await complete();
   await press(t('student.workoutCompletionFlowView.copy003'));
-  expect(mockNavigate).toHaveBeenCalledWith('/(student)/today');
+  expect(mockNavigate).not.toHaveBeenCalled();
   await act(async () => { request.reject(new Error('Offline')); });
   expectRetryable();
 });
@@ -273,6 +276,7 @@ test('a day completed today shows one status row whose undo reopens the day', as
 
 test('a day completed on an earlier day shows the status row without undo', async () => {
   servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
+  useStudentTabsStore.setState({ trainingHandoff: { plan: servedPlan, dayID: servedPlan.days[0].id, existingLogs: [] } });
   await mount();
   expect(completedRow().length).toBeGreaterThan(0);
   expect(renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy023'))).toHaveLength(0);

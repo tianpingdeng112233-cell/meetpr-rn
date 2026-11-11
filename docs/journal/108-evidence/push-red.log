@@ -1,0 +1,33 @@
+FAIL src/features/notifications/__tests__/plan-notifications.test.ts
+  ✓ plan_shifted refreshes on arrival and opens training only on tap (2 ms)
+  ✓ plan_shift_undone refreshes on arrival and opens training only on tap
+  ✓ plan_updated refreshes on arrival and opens training only on tap
+  ✓ plan_published refreshes on arrival and opens training only on tap
+  ✓ cold-start response drains once and ignores payloads belonging to another student or kind
+  ✓ logout and disposal cannot route delayed responses into a different session
+  ✕ chat notification opens coach only on tap, including cold start, and is account scoped
+
+  ● chat notification opens coach only on tap, including cold start, and is account scoped
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 0
+
+      36 |   s.received(message); expect(s.openCoach).not.toHaveBeenCalled();
+      37 |   s.resolveLast({ id: 'chat', data: message }); await Promise.resolve();
+    > 38 |   expect(s.openCoach).toHaveBeenCalledTimes(1); expect(s.openTraining).not.toHaveBeenCalled();
+         |                       ^
+      39 |   s.tapped('chat', message); expect(s.openCoach).toHaveBeenCalledTimes(1);
+      40 |   s.changeAccount(); s.tapped('another', message); expect(s.openCoach).toHaveBeenCalledTimes(1); s.stop();
+      41 | });
+
+      at Object.toHaveBeenCalledTimes (src/features/notifications/__tests__/plan-notifications.test.ts:38:23)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 passed, 7 total
+Snapshots:   0 total
+Time:        0.405 s, estimated 1 s
+Ran all test suites matching /src\/features\/notifications\/__tests__\/plan-notifications.test.ts/i.
