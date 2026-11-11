@@ -1,10 +1,13 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Text } from 'react-native';
-import { setLocaleOverride } from '@/i18n';
+import { Modal, Text } from 'react-native';
+import { CameraView } from 'expo-camera';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OverlayHostProvider } from '../../OverlayHost';
+import { setLocaleOverride, t } from '@/i18n';
 import { videoUploadManager } from '../manager';
-import { EMPTY_VIDEO_UPLOAD } from '../model';
+import { EMPTY_VIDEO_UPLOAD, VIDEO_UPLOAD_CONSENT_KEY } from '../model';
 import { VideoAttachmentControls } from '../VideoAttachmentControls';
 import { flushVideoUploads, resetVideoUploadStoreForTests, useVideoUploadStore } from '../store';
 
@@ -12,6 +15,17 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('@react-native-community/netinfo', () => jest.requireActual('@react-native-community/netinfo/jest/netinfo-mock'));
 jest.mock('expo-media-library', () => ({}));
+jest.mock('expo-camera', () => ({
+  Camera: {
+    requestCameraPermissionsAsync: async () => ({ granted: true }),
+    requestMicrophonePermissionsAsync: async () => ({ granted: true }),
+    isAvailableAsync: async () => true,
+  },
+  CameraView: 'NativeCameraView',
+}));
+jest.mock('expo-keep-awake', () => ({
+  activateKeepAwakeAsync: async () => {}, deactivateKeepAwake: async () => {},
+}));
 jest.mock('react-native-compressor', () => ({}));
 jest.mock('react-native-video', () => 'Video');
 jest.mock('react-native-safe-area-context', () =>
@@ -22,6 +36,7 @@ afterEach(async () => {
   act(() => renderer?.unmount());
   await flushVideoUploads();
   resetVideoUploadStoreForTests();
+  await AsyncStorage.clear();
   setLocaleOverride(null);
 });
 
@@ -114,4 +129,27 @@ test('all-day capture button uses a video camera before, during and after delive
   act(() => { useVideoUploadStore.setState({ records: { 'student:set': { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded', attachmentId: 'attachment' } } }); });
   expect(camera().props.name).toBe('video-outline');
   expect(camera().props.color).not.toBe(uploadingColor);
+});
+
+
+test.each([
+  { compact: true, hosted: false }, { compact: false, hosted: false },
+  { compact: true, hosted: true }, { compact: false, hosted: true },
+])('opening capture presents one camera window and Back closes it ($compact, $hosted)', async ({ compact, hosted }) => {
+  setLocaleOverride('en');
+  await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
+  const controls = <VideoAttachmentControls compact={compact} studentId="student" stableSetId="set" editable
+    ensureSetLog={async () => 'set-log'} buildLogRequest={() => { throw new Error('Opening capture must not upload'); }} />;
+  await act(async () => {
+    renderer = create(hosted ? <OverlayHostProvider>{controls}</OverlayHostProvider> : controls);
+  });
+  await act(async () => {
+    renderer.root.findAll(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001') && node.props.onPress)[0].props.onPress();
+  });
+  // Native Modal is the window boundary: an empty outer window can cover the recorder's window on Android.
+  const windows = renderer.root.findAllByType(Modal).filter(node => node.props.visible);
+  expect(windows).toHaveLength(1);
+  expect(windows[0].findAllByType(CameraView)).toHaveLength(1);
+  await act(async () => { windows[0].props.onRequestClose(); });
+  expect(renderer.root.findAllByType(Modal).filter(node => node.props.visible)).toHaveLength(0);
 });

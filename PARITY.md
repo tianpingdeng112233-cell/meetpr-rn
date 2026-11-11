@@ -182,3 +182,10 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 ## 2026-11-03 095 资料向导缩成 4 步 + 待接收页修正
 
 与 iOS 同批（meetpr#382）。David 11-02 拍板向导只留基础信息 / 训练背景 / 三大项 1RM / 补充信息（`AMEND-wizard-trim.md`），训练环境、恢复能力、训练资料三块在向导与「我的资料」同时隐藏，数据库列与接口字段保留；旧草稿续填落在保留步骤、不再上传退役字段、不清服务端旧值；待接收页「登出」不压标题、副标题拼名、资料行「基础资料」；「健康与恢复」改名「伤病记录」。依赖 backend #359（完成必填 17→12，2026-11-03 已部署国内 staging；Global 未部署，Global 包不得带此改动）。rn#121 合入后全量 197 suites / 2061 tests、tsc、lint、繁体校验通过，PR CI check / android-build 绿。AVD `meetpr` + 本地 fixture 亲验：Step 1 of 4、旧草稿续填落 Step 4 of 4、提交成功、待接收页「Basic profile」，fixture 证 patch 不含退役字段、旧值保留（截图 `docs/evidence/spec095-trim-2026-11-02/opus/`）。缺口：老学员「我的资料」实屏未看（模拟器断连，单测覆盖）。随 CN 0.1.0(7) 发布（2026-11-04 `latest.json` versionCode=7 实读）。
+
+
+## 2026-11-11 · CN 11 训练页回归修复
+
+- David 已批准 Android 动作名在上、摘要在下；密集重量和 RPE/RIR 保留原字号与完整内容。360dp 默认/1.3 倍、深浅色与英文 lb 原生验证通过，改动未发布。
+- 拍摄入口移除重复 fallback Modal，消除空窗口遮挡相机；原生入口 6/6 打开成功，13 秒录制→剪辑已验证，窗口边界回归先红后绿。
+- 开发证据见 `docs/journal/2026-11-11-107-summary-readability.md` 和 `docs/journal/2026-11-11-107-camera-window.md`。
