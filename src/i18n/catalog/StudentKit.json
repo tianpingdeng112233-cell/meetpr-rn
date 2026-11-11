@@ -3575,6 +3575,10 @@
 "en": "Deadlift",
 "zh": "硬拉"
 },
+"student.workoutCompletionFlowView.autoClose": {
+"en": "Closes automatically after 5 seconds",
+"zh": "5 秒后自动关闭"
+},
 "student.workoutCompletionFlowView.copy001": {
 "en": "Today's workout completed",
 "zh": "今日训练完成"
