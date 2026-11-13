@@ -1,4 +1,5 @@
 {
+"training.allDay.previousWeight": {"en": "Last", "zh": "上次"},
 "student.bodyWeight.latest": {"en": "Latest", "zh": "最新"},
 "student.bodyWeight.empty": {"en": "No weight records yet", "zh": "还没有体重记录"},
 "student.bodyWeight.single": {"en": "Log on another day to see the trend", "zh": "换一天再记一次就能看到趋势"},

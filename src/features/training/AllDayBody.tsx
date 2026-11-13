@@ -1,3 +1,4 @@
+import { allowsHistoricalWeight } from './accessory-history-weight';
 import { EffortHelpButton } from './EffortHelpButton';
 import { prescriptionDifferences } from '@/domain/plan/prescription-result';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -101,12 +102,14 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
               {block.rows.map(row => {
                 const active = editing?.row.stableSetId === row.stableSetId;
                 const display = active ? editing.row : row;
+                const historyPrefill = Boolean(display.weightPrefilledFromHistory && !row.sourceLog);
                 const prescription = decodePrescription(row.planSet);
                 const percentage = prescription.intensity?.kind === 'pct' ? <Text style={{ ...font.body(11), color: colors.textSecondary, marginRight: 8 }}>{`${prescription.intensity.value}%`}</Text> : null;
                 const short = !row.kind && Number(display.repsText) < prescription.reps;
                 const differences = row.kind ? null : prescriptionDifferences(allDayLogRequest(display), row.planSet);
                 const weightChanged = differences?.weight != null;
-                const textColor = weightChanged ? colors.goldText : colors.textPrimary;
+                const historicalWeight = display.previousWeightKg != null && allowsHistoricalWeight(prescription);
+                const textColor = (historyPrefill || (weightChanged && !historicalWeight)) ? colors.goldText : colors.textPrimary;
                 return <View onTouchEnd={event => event.stopPropagation()} testID={`all-day-row-${row.stableSetId}`} key={row.stableSetId} ref={view => { if (view) rowViews.current.set(row.stableSetId, view); else rowViews.current.delete(row.stableSetId); }} style={{ borderBottomWidth: 1, borderBottomColor: colors.borderDefault, backgroundColor: active ? colors.goldSoft : short ? colors.dangerSoft : undefined }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {active ? <View style={{ flex: 1, flexDirection: 'row', padding: 8, gap: 8 }}>
@@ -118,14 +121,19 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                       }}><Text style={{ ...font.body(11), color: colors.textSecondary }}>{field === 'weight' ? t('training.allDay.weightUnit', [unit]) : field === 'reps' ? t('student.accessory.pad.reps') : field.toUpperCase()}</Text></Pressable>
                       {field === 'rpe' || field === 'rir' ? <EffortHelpButton kind={field} inline /> : null}
                       </View>
-                      <Pressable accessibilityRole="button" accessibilityLabel={field} onPress={() => edit(display, field)} style={{ minHeight: 38, borderRadius: 8, borderWidth: 1.5, borderColor: editing.field === field ? colors.gold500 : colors.borderDefault, outlineWidth: editing.field === field ? 2 : 0, outlineColor: colors.goldSoft, justifyContent: 'center', paddingHorizontal: 8 }}><Text style={{ ...font.mono(16), color: colors.textPrimary }}>{(field === 'weight' ? editing.weightInput ?? displayWeight(display.weightText, unit) : field === 'reps' ? display.repsText : display.rpeText) || '—'}</Text></Pressable>
+                      <Pressable accessibilityRole="button" accessibilityLabel={field} onPress={() => edit(display, field)} style={{ minHeight: 38, borderRadius: 8, borderWidth: 1.5, borderColor: editing.field === field ? colors.gold500 : colors.borderDefault, outlineWidth: editing.field === field ? 2 : 0, outlineColor: colors.goldSoft, justifyContent: 'center', paddingHorizontal: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                          <Text style={{ ...font.mono(16), color: field === 'weight' && historyPrefill ? colors.goldText : colors.textPrimary }}>{(field === 'weight' ? editing.weightInput ?? displayWeight(display.weightText, unit) : field === 'reps' ? display.repsText : display.rpeText) || '—'}</Text>
+                          {field === 'weight' && historyPrefill ? <Text style={{ ...font.body(9), color: colors.goldText }}>{t('training.allDay.previousWeight')}</Text> : null}
+                        </View>
+                      </Pressable>
                     </View>)}
                     {percentage}
                   </View> : <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
                     <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t('training.allDay.editSet', [row.setIndex + 1])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
                       <Text style={{ ...font.mono(12), color: colors.textMuted, width: 18 }}>{row.setIndex + 1}</Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 3 }}>
-                        <Text style={{ ...font.mono(15, 'semibold'), color: textColor }}>{displayWeight(display.weightText, unit) || '—'}</Text><Text style={{ ...font.body(12), color: colors.textMuted }}>{unit}</Text>
+                        <Text testID={`all-day-weight-${row.stableSetId}`} style={{ ...font.mono(15, 'semibold'), color: textColor }}>{displayWeight(display.weightText, unit) || '—'}</Text><Text style={{ ...font.body(12), color: colors.textMuted }}>{unit}</Text>
                         {weightChanged && differences?.weight !== '—' ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [unit === 'lb' ? differences!.weight!.replace(/\d+(?:\.\d+)?/g, value => displayWeight(value, unit)) : differences!.weight!])}</Text> : null}
                         <Text style={{ ...font.mono(15, 'semibold'), color: short ? colors.danger : differences?.reps ? colors.goldText : colors.textPrimary }}>× {short ? `${display.repsText}/${prescription.reps}` : display.repsText || '—'}</Text>
                         {differences?.reps && !short ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [differences.reps])}</Text> : null}
@@ -183,7 +191,8 @@ export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exercise
     if (!current) return;
     const key = current.field === 'weight' ? 'weightText' : current.field === 'reps' ? 'repsText' : 'rpeText';
     const value = current.field === 'weight' && unit === 'lb' && text.trim() && Number(text) !== 0 ? metricStored(text, POUNDS_PER_KG) : text;
-    const row = { ...current.row, [key]: value };
+    const row = { ...current.row, [key]: value,
+      ...(current.field === 'weight' ? { weightEdited: true, weightPrefilledFromHistory: false } : {}) };
     input.current = { ...current, row, ...(current.field === 'weight' ? { weightInput: text } : {}) }; setEditing(input.current);
     if (accessoryValue(text, current.field) !== undefined) {
       if (current.field === 'rpe' || current.field === 'rir') onEffortChoice?.(row);
