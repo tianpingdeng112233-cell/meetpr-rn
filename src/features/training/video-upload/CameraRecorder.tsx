@@ -229,8 +229,8 @@ export function CameraRecorder({
         current.own(result.uri);
         if (!current.active || closed.current) return;
       } catch (error) {
-        warnTrimPreparation('export', error);
         if (!closed.current && current.active) {
+          warnTrimPreparation('export', error);
           ToastAndroid.show(t('student.cameraRecorderView.copy011'), ToastAndroid.LONG);
           usingRef.current = false;
           setUsing(false);

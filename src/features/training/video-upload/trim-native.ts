@@ -18,7 +18,7 @@ export async function copyTrimSource(uri: string): Promise<string> {
   const copy = new File(Paths.cache, `training-trim-${uuid.v4()}.mp4`);
   try {
     await new File(uri).copy(copy);
-    if (!copy.exists || copy.size <= 0) throw new Error('Empty trim source');
+    if (!copy.exists || copy.size <= 0) throw Object.assign(new Error('Empty trim source'), { code: 'EMPTY_SOURCE' });
     return copy.uri;
   } catch (error) {
     deleteLocalVideo(copy.uri);

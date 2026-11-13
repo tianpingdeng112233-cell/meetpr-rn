@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { configure, flushNow, resetAnalyticsForTests } from '@/analytics/client';
+import { ANALYTICS_PRIVACY_NOTICE_KEY } from '@/analytics/storage';
 import { useSessionStore } from '@/api/session';
 import { plansRepository } from '@/api/domains/plans';
 import { setsRepository } from '@/api/domains/sets';
@@ -118,6 +120,7 @@ test.each([
   });
 });
 afterEach(() => {
+  resetAnalyticsForTests();
   useSessionStore.setState({ user: null });
   jest.restoreAllMocks();
 });
@@ -391,4 +394,32 @@ test.each(['success', 'copy failure', 'cancel', 'new video'])('a replacement cop
   expect(prematureCompletions).toBe(0);
   expect(complete).toHaveBeenCalledTimes(1);
   expect(useVideoUploadStore.getState().records['student:set']?.status ?? 'none').toBe(outcome === 'cancel' ? 'none' : 'uploaded');
+});
+
+
+test('upload lifecycle emits the backend stage/context contract', async () => {
+  const { track } = jest.requireMock<typeof import('@/analytics')>('@/analytics');
+  jest.mocked(track).mockClear();
+  await videoUploadManager.attach(id, source, async () => 'set-log');
+  expect(track).toHaveBeenCalledWith('media_upload', { stage: 'started', context: 'set_log' });
+  expect(track).toHaveBeenCalledWith('media_upload', { stage: 'succeeded', context: 'set_log' });
+});
+
+
+test('a retry whose retained file disappeared sends a source-file diagnostic', async () => {
+  const events: { name: string; props: Record<string, unknown> }[] = [];
+  await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await configure({ accessTokenProvider: async () => 'test-token', fetch: async (_url, request) => {
+    if (request?.method === 'POST') events.push(...JSON.parse(String(request.body)).events);
+    return { status: request?.method === 'POST' ? 204 : 200,
+      json: async () => ({ enabled: true, sample_rate: 1 }) } as Response;
+  } });
+  mockUploadAsync.mockRejectedValueOnce(new TypeError('offline'));
+  await videoUploadManager.attach(id, source, async () => 'original-log');
+  mockFiles.delete(useVideoUploadStore.getState().records['student:set'].localUri!);
+  await videoUploadManager.retry(id);
+  await flushNow();
+  expect(events).toEqual([expect.objectContaining({ name: 'client_error', props: {
+    domain: 'persistence', code: 'video.source_file.SOURCE_UNAVAILABLE', screen: 'today_workout',
+  } })]);
 });

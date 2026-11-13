@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { configure, flushNow, resetAnalyticsForTests, confirmPrivacyNotice } from '@/analytics/client';
+import { ANALYTICS_PRIVACY_NOTICE_KEY } from '@/analytics/storage';
 import { ColorSchemeProvider, resolveColors } from '@/design/theme';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import Video from 'react-native-video';
 import * as Compressor from 'react-native-compressor';
 import { File } from 'expo-file-system';
 import { videosRepository } from '@/api/domains/videos';
-import { prepareTrainingVideo, cleanOrphanVideos } from '../native';
+import { prepareTrainingVideo, retainVideoSource, cleanOrphanVideos } from '../native';
 import { Image, Modal, StatusBar, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ExpoModules from 'expo-modules-core';
@@ -20,6 +22,7 @@ import { VIDEO_UPLOAD_CONSENT_KEY, EMPTY_VIDEO_UPLOAD } from '../model';
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('@/api/domains/videos', () => ({ videosRepository: { list: jest.fn() } }));
+jest.mock('@react-native-community/netinfo', () => ({ addEventListener: () => () => {} }));
 jest.mock('expo-media-library', () => ({}));
 jest.mock('react-native-compressor', () => ({ getVideoMetaData: jest.fn(async () => ({ duration: 8 })), Video: { compress: jest.fn(), cancelCompression: jest.fn() } }));
 const mockSeek = jest.fn();
@@ -77,7 +80,7 @@ beforeEach(async () => {
     { uri: 'file:///cache/picked.mp4', width: 1280, height: 720, duration: 8000, type: 'video' },
   ] });
 });
-afterEach(async () => { act(() => renderer?.unmount()); await flushVideoUploads(); resetVideoUploadStoreForTests(); setLocaleOverride(null); });
+afterEach(async () => { resetAnalyticsForTests(); act(() => renderer?.unmount()); await flushVideoUploads(); resetVideoUploadStoreForTests(); setLocaleOverride(null); });
 const press = async (label: string) => {
   await act(async () => {
     const button = renderer.root.findAll(n => n.props.accessibilityLabel === label && n.props.onPress)[0];
@@ -144,7 +147,8 @@ test.each(['copyTrimSource', 'trimInfo', 'thumbnails', 'player.onError'])('prepa
       }); });
     }
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(`[VideoTrim] ${step}`, { name: 'Error', message: '[redacted]' });
+    const stage = { copyTrimSource: 'trim_copy', trimInfo: 'trim_info', thumbnails: 'trim_thumbnails', 'player.onError': 'trim_preview' }[step];
+    expect(warn).toHaveBeenCalledWith('[VideoProcessing]', `video.${stage}.UNKNOWN`);
     if (step === 'thumbnails') {
       await act(async () => { renderer.root.findByType(Video).props.onLoad({ duration: 8 }); });
       await press(t('student.videoTrimView.copy003'));
@@ -432,4 +436,197 @@ test.each(['light', 'dark'] as const)('trim presentation uses %s theme tokens an
   expect(node('trim-time-bubble').findAllByType(Text)[0].props.style.color).toBe(colors.inkOnGold);
   act(() => scrubber.props.onResponderRelease(touch));
   expect(renderer.root.findAllByProps({ testID: 'trim-time-bubble' })).toHaveLength(0);
+});
+
+
+// Exercise the real persisted analytics queue through its HTTP boundary.
+async function collectDiagnostics(options: { offline?: boolean; consent?: boolean } = {}) {
+  const bodies: { events: { name: string; props: Record<string, unknown> }[] }[] = [];
+  await AsyncStorage.clear();
+  await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
+  if (options.consent !== false) await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await configure({
+    accessTokenProvider: async () => 'test-token',
+    retryDelaysMs: [],
+    fetch: async (_url, request) => {
+      if (request?.method === 'POST' && options.offline) throw new Error('offline');
+      if (request?.method === 'POST') bodies.push(JSON.parse(String(request.body)));
+      return { status: request?.method === 'POST' ? 204 : 200,
+        json: async () => ({ enabled: true, sample_rate: 1 }) } as Response;
+    },
+  });
+  return async () => {
+    await flushNow();
+    return bodies.flatMap(body => body.events).filter(event => event.name === 'client_error');
+  };
+}
+
+test('an album picker failure reaches the backend with its stage and native code, without file details', async () => {
+  const diagnostics = await collectDiagnostics();
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce(Object.assign(
+    new Error('Cannot read content://photos/private-training.mp4?token=secret'),
+    { code: 'ERR_READ_FILE' },
+  ));
+  await mount();
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: {
+    domain: 'decode', code: 'video.picker.ERR_READ_FILE', screen: 'today_workout',
+  } })]);
+  expect(videoUploadManager.attach).not.toHaveBeenCalled();
+});
+
+
+test.each([
+  ['copy', 'video.trim_copy.ERR_FILE_READ'],
+  ['info', 'video.trim_info.ERR_MEDIA_EXTRACTOR'],
+  ['invalid', 'video.trim_info.INVALID_SOURCE'],
+  ['preview', 'video.trim_preview.22001'],
+  ['export', 'video.trim_export.ERR_VIDEO_TRIM_MEDIA3_4001'],
+])('a %s failure is delivered once with a safe stage-specific code', async (stage, code) => {
+  const diagnostics = await collectDiagnostics();
+  if (stage === 'copy') mockCopy.mockRejectedValueOnce({ code: 'ERR_FILE_READ', message: 'file:///private.mp4' });
+  if (stage === 'info') mockMedia.trimInfo.mockRejectedValueOnce({ code: 'ERR_MEDIA_EXTRACTOR' });
+  if (stage === 'invalid') mockMedia.trimInfo.mockResolvedValueOnce({ durationMs: 0, videoTrackCount: 0 });
+  await mount();
+  if (stage === 'preview') {
+    const onError = renderer.root.findByType(Video).props.onError;
+    await act(async () => {
+      onError({ error: { errorCode: '22001', errorString: 'content://private.mp4' } });
+      onError({ error: { errorCode: '22001', errorString: 'content://private.mp4' } });
+    });
+  }
+  if (stage === 'export') {
+    mockMedia.trim.mockRejectedValueOnce({ code: 'ERR_VIDEO_TRIM_MEDIA3_4001', message: 'secret path' });
+    await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 8 }));
+    await press(t('student.videoTrimView.copy003'));
+  }
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: {
+    domain: stage === 'copy' ? 'persistence' : 'decode', code, screen: 'today_workout',
+  } })]);
+  expect(videoUploadManager.attach).not.toHaveBeenCalled();
+});
+
+
+test.each([
+  ['retain', 'video.retain_source.ERR_FILE_WRITE'],
+  ['metadata', 'video.metadata.ERR_METADATA'],
+  ['tracks', 'video.tracks.ERR_TRACKS'],
+  ['compress', 'video.compress.ERR_COMPRESS'],
+])('a %s failure before upload is delivered with its processing stage', async (stage, code) => {
+  const diagnostics = await collectDiagnostics();
+  const source = { uri: 'file:///cache/source.mp4', width: 1920, height: 1080, durationMs: 8000,
+    mimeType: 'video/mp4', fileName: null, codec: null, rotationDegrees: 0 };
+  if (stage === 'retain') mockCopy.mockRejectedValueOnce({ code: 'ERR_FILE_WRITE' });
+  if (stage === 'metadata') jest.mocked(Compressor.getVideoMetaData).mockRejectedValueOnce({ code: 'ERR_METADATA' });
+  if (stage === 'tracks') mockMedia.readTracks.mockRejectedValueOnce({ code: 'ERR_TRACKS' });
+  if (stage === 'compress') jest.mocked(Compressor.Video.compress).mockRejectedValueOnce({ code: 'ERR_COMPRESS' });
+  const operation = stage === 'retain' ? retainVideoSource(source) : prepareTrainingVideo(source,
+    { signal: new AbortController().signal, setCompressionCancellationId: () => {} });
+  await expect(operation).rejects.toThrow();
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: {
+    domain: stage === 'retain' ? 'persistence' : 'decode', code, screen: 'today_workout',
+  } })]);
+});
+
+
+test('a persisted local failure can be delivered after analytics restarts and the network returns', async () => {
+  const network = { offline: true };
+  const diagnostics = await collectDiagnostics(network);
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce({ code: 'ERR_READ_FILE' });
+  await mount();
+  expect(await diagnostics()).toEqual([]);
+  resetAnalyticsForTests();
+  const bodies: { events: { name: string; props: Record<string, unknown> }[] }[] = [];
+  await configure({ accessTokenProvider: async () => 'test-token', fetch: async (_url, request) => {
+    if (request?.method === 'POST') bodies.push(JSON.parse(String(request.body)));
+    return { status: request?.method === 'POST' ? 204 : 200,
+      json: async () => ({ enabled: true, sample_rate: 1 }) } as Response;
+  } });
+  await flushNow();
+  expect(bodies.flatMap(body => body.events)).toEqual([expect.objectContaining({
+    name: 'client_error', props: { domain: 'decode', code: 'video.picker.ERR_READ_FILE', screen: 'today_workout' },
+  })]);
+});
+
+test('diagnostics respect the existing privacy gate', async () => {
+  const diagnostics = await collectDiagnostics({ consent: false });
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce({ code: 'ERR_READ_FILE' });
+  await mount();
+  expect(await diagnostics()).toEqual([]);
+  await confirmPrivacyNotice({ waitForFlush: true });
+  expect(await diagnostics()).toHaveLength(1);
+});
+
+test.each(['cancel picker', 'close trim', 'late failure'])('%s does not report a processing failure', async action => {
+  const diagnostics = await collectDiagnostics();
+  let fail!: (error: unknown) => void;
+  if (action === 'cancel picker') jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValueOnce({ canceled: true, assets: null });
+  if (action === 'late failure') mockMedia.trimInfo.mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+  await mount();
+  if (action !== 'cancel picker') await press(t('student.cameraRecorderView.copy005'));
+  if (action === 'late failure') await act(async () => fail({ code: 'ERR_READ_FILE' }));
+  expect(await diagnostics()).toEqual([]);
+});
+
+test('untrusted exception text, paths, and malformed codes never reach logs or requests', async () => {
+  const diagnostics = await collectDiagnostics();
+  const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce({
+    code: 'file:///private.mp4', name: 'private-name', message: 'token=secret', stack: 'secret stack',
+  });
+  await mount();
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: {
+    domain: 'decode', code: 'video.picker.UNKNOWN', screen: 'today_workout',
+  } })]);
+  expect(warning).toHaveBeenCalledWith('[VideoProcessing]', 'video.picker.UNKNOWN');
+  expect(JSON.stringify(warning.mock.calls)).not.toMatch(/private|secret/);
+  warning.mockRestore();
+});
+
+
+test('aborting during export retention suppresses a late copy failure', async () => {
+  const diagnostics = await collectDiagnostics();
+  const controller = new AbortController();
+  let rejectCopy!: (error: unknown) => void;
+  jest.mocked(Compressor.Video.compress).mockResolvedValueOnce('file:///cache/compressed.mp4');
+  mockCopy.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectCopy = reject; }));
+  const pending = prepareTrainingVideo({ uri: 'file:///cache/source.mp4', width: 1920, height: 1080,
+    durationMs: 8000, mimeType: 'video/mp4', fileName: null, codec: null, rotationDegrees: 0 },
+    { signal: controller.signal, setCompressionCancellationId: () => {} }).catch(() => {});
+  await act(async () => { for (let i = 0; i < 10; i++) await Promise.resolve(); });
+  expect(rejectCopy).toBeDefined();
+  controller.abort();
+  rejectCopy({ code: 'ERR_FILE_WRITE' });
+  await pending;
+  expect(await diagnostics()).toEqual([]);
+});
+
+test.each([
+  ['Dolby Vision profile 5 has no HEVC base layer; cannot transcode', 'DOLBY_VISION_UNSUPPORTED'],
+  ['Failed to extract video metadata, please try again', 'METADATA_UNAVAILABLE'],
+  ['Compressed video output is invalid', 'INVALID_COMPRESSED_OUTPUT'],
+  ['Failed to read the input video dimensions', 'DIMENSIONS_UNAVAILABLE'],
+])('the compressor message-only failure %s maps to a fixed code', async (message, code) => {
+  const diagnostics = await collectDiagnostics();
+  // NitroPromiseAdapter drops the RN symbolic code and forwards a Throwable.
+  jest.mocked(Compressor.Video.compress).mockRejectedValueOnce(new Error(message));
+  await expect(prepareTrainingVideo({ uri: 'file:///cache/source.mp4', width: 1920, height: 1080,
+    durationMs: 8000, mimeType: 'video/mp4', fileName: null, codec: null, rotationDegrees: 0 },
+    { signal: new AbortController().signal, setCompressionCancellationId: () => {} })).rejects.toThrow();
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: {
+    domain: 'decode', code: `video.compress.${code}`, screen: 'today_workout',
+  } })]);
+});
+
+
+test('the Android Nitro Throwable prefix and stack are classified without being uploaded', async () => {
+  const diagnostics = await collectDiagnostics();
+  jest.mocked(Compressor.Video.compress).mockRejectedValueOnce(new Error(
+    'java.lang.Throwable: Dolby Vision profile 5 has no HEVC base layer; cannot transcode\n\tat content://private.mp4?token=secret',
+  ));
+  await expect(prepareTrainingVideo({ uri: 'file:///cache/source.mp4', width: 1920, height: 1080,
+    durationMs: 8000, mimeType: 'video/mp4', fileName: null, codec: null, rotationDegrees: 0 },
+    { signal: new AbortController().signal, setCompressionCancellationId: () => {} })).rejects.toThrow();
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: {
+    domain: 'decode', code: 'video.compress.DOLBY_VISION_UNSUPPORTED', screen: 'today_workout',
+  } })]);
 });

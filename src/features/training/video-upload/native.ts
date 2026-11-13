@@ -12,6 +12,7 @@ import { UploadCancelledError } from './multipart';
 import * as ImagePicker from 'expo-image-picker';
 import * as Compressor from 'react-native-compressor';
 import { VideoNativeError } from './native-error';
+import { reportVideoProcessingFailure, type VideoProcessingStage } from './diagnostics';
 export type VideoSource = 'camera' | 'library';
 export { VideoNativeError } from './native-error';
 const exportsQueue = new SerialTaskQueue();
@@ -93,6 +94,9 @@ export async function pickTrainingVideo(
     allowsEditing: false,
     quality: 1,
     selectionLimit: 1,
+  }).catch(error => {
+    reportVideoProcessingFailure('picker', error);
+    throw error;
   });
   if (result.canceled || !result.assets[0]) return null;
   const asset = result.assets[0];
@@ -107,14 +111,21 @@ export async function pickTrainingVideo(
     rotationDegrees: 0,
   };
 }
-export async function retainVideoSource(
-  source: SelectedVideo,
-): Promise<SelectedVideo> {
+export async function retainVideoSource(source: SelectedVideo): Promise<SelectedVideo> {
+  try {
+    return await copyVideoSource(source);
+  } catch (error) {
+    reportVideoProcessingFailure('retain_source', error);
+    throw error;
+  }
+}
+
+async function copyVideoSource(source: SelectedVideo): Promise<SelectedVideo> {
   let file: File | undefined;
   try {
     file = new File(directory(), `${uuid.v4()}.mp4`);
     await new File(source.uri).copy(file);
-    if (!file.exists || file.size <= 0) throw new Error('Empty retained video');
+    if (!file.exists || file.size <= 0) throw Object.assign(new Error('Empty retained video'), { code: 'EMPTY_SOURCE' });
     const deletionError = deleteLocalVideo(source.uri);
     if (deletionError) throw deletionError;
     return { ...source, uri: file.uri };
@@ -138,40 +149,50 @@ export async function prepareTrainingVideo(
     if (control.signal.aborted) throw new UploadCancelledError();
   };
   check();
-  if (!localVideoSize(source.uri))
+  if (!localVideoSize(source.uri)) {
+    reportVideoProcessingFailure('source_file', { code: 'SOURCE_UNAVAILABLE' });
     throw new VideoNativeError(t('student.videoDelivery.missingBody'), {
       deterministic: true,
     });
+  }
   let output: string | null = null;
+  let stage: VideoProcessingStage = 'metadata';
   try {
     const metadata = await Compressor.getVideoMetaData(source.uri);
     check();
+    stage = 'tracks';
     const tracks = await requireNativeModule<{
       readTracks(uri: string): Promise<TrackMetadata>;
     }>('TrainingVideo').readTracks(source.uri);
     check();
     // Muxed tails can extend a full-limit selection by a fraction of a frame.
     // Unknown frame rate gets no tolerance; never permit more than one frame.
+    stage = 'duration';
     const fps = tracks.frameRate;
     const allowance = fps && Number.isFinite(fps) && fps > 0 ? Math.min(0.1, 1 / fps) : 0;
     const durationLimit = VIDEO_MAX_DURATION_SECONDS + allowance;
     if (metadata.duration > durationLimit || (source.durationMs ?? 0) > durationLimit * 1000) {
       throw new VideoNativeError(
         VIDEO_UPLOAD_ERRORS.tooLong(VIDEO_MAX_DURATION_SECONDS),
-        { deterministic: true },
+        { deterministic: true, cause: { code: 'DURATION_EXCEEDED' } },
       );
     }
     if (passthroughEligibility(tracks) === 'passthrough')
       return { localUri: source.uri, sizeBytes: new File(source.uri).size };
+    stage = 'compress';
     output = await compressVideo(source, control);
     check();
-    const retained = await retainVideoSource({ ...source, uri: output });
+    stage = 'retain_export';
+    const retained = await copyVideoSource({ ...source, uri: output });
+    stage = 'export_file';
     output = retained.uri;
     const file = new File(output);
-    if (!file.exists || file.size <= 0) throw new Error('Empty export');
+    if (!file.exists || file.size <= 0) throw Object.assign(new Error('Empty export'), { code: 'EMPTY_EXPORT' });
     return { localUri: output, sizeBytes: file.size };
   } catch (cause) {
     if (output && output !== source.uri) deleteLocalVideo(output);
+    if (!control.signal.aborted && !(cause instanceof UploadCancelledError))
+      reportVideoProcessingFailure(stage, cause);
     if (
       cause instanceof UploadCancelledError ||
       cause instanceof VideoNativeError
