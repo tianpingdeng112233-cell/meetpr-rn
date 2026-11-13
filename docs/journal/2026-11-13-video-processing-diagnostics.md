@@ -46,3 +46,13 @@ OR (name = 'media_upload' AND props->>'context' = 'set_log')
 - Spec 首轮 2 个 P2：manager 缺文件入口绕过新日志；Compressor 2.0.3 Nitro 只传消息型异常。先红后绿覆盖真实 manager HTTP 和库异常形状。
 - 第二轮定向返修：核对 Nitro/fbjni 桥接实际把 `java.lang.Throwable: ...` 及栈放到 Error.message；仅提取首行、剥固定前缀并匹配精确常量，剩余内容不出机。对应隐私回归先红后绿。Spec 最终未决 0。
 - 后端 schema 只读校验：3 个生命周期载荷 + 6 个诊断载荷通过；旧 `status/kind` 载荷被拒绝（未向线上注入测试数据）。
+
+## 2026-11-13 下一包纳入记录
+
+- David 明确「进下一包」，授权合入 Android 发版线并纳入下一次 CN 包。
+- PR #188 已于 2026-11-13 03:36 UTC squash 合入 `main`，提交 `b163075bdeeab25427a1dd0693ab77214d95e698`；合并树与通过审查的 `ae99de4524c9b7e053977cd6e4494e0e8983810f` 一致。
+- PR CI [43357390523](https://github.com/tianpingdeng112233-cell/meetpr-rn/actions/runs/43357390523) 的 `check`、`android-build` 均成功：219 suites / 2334 JS tests，3 项原生 JUnit，Android debug 构建通过。
+- 本轮实读 `https://dl.meetpr.cn/android/latest.json`：`com.meetpr.app`、`0.1.0(13)`、下载地址 `/android/releases/13/meetpr-cn.apk`。线上 CN13 不含本卡改动；本次只完成合入与下一包登记，尚未签名、上传或发布新 APK。
+- 下一次 Android CN 切包必须包含 `b163075`；版本号切包时结合已发布与占号状态核定，不在本卡预占。保持原包名、签名及覆盖升级的数据保留要求。
+- 新包验收：在授权测试账号用受控失败样本触发本地视频失败，确认后端 `client_error` 的 `video.<stage>.<code>`、账号、时间、版本可查询；正常上传确认 `media_upload.stage/context` 入库；取消操作不产生失败事件，原始视频/路径/消息/栈不进入事件。实际入库未核验前不得记为通过。
+- 学员需升级新包后重试才能收集本次新增诊断。旧故障不能追补；原始鸿蒙视频兼容根因仍待真实错误码或样本验证。
