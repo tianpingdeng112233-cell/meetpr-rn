@@ -2,6 +2,7 @@ import { writeEffortChoice } from '../effort-preferences';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { writeDailyWeight } from '@/features/settings/daily-weight';
 import { bodyWeightsRepository } from '@/api/domains/body-weights';
+import { gymDayToday } from '@/domain/plan/workout-date-policy';
 import { localDay } from '@/domain/coach/detail-week';
 import { useExerciseNoteOutbox, flushExerciseNotes } from '@/features/chat/exercise-note-outbox';
 import { chatRepository, ChatMessageSchema, ExerciseRefSchema } from '@/api/domains/chat';
@@ -843,4 +844,144 @@ test('adding an empty exercise loads its previous choice into summary, row and e
   await act(async () => renderer.root.findByType(AllDayBody).props.onExpand(block.exercise.id));
   await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-edit-effort-${block.rows[0].stableSetId}` && node.props.onPress)[0].props.onPress());
   expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
+});
+
+function serveAccessoryWeights(weights = ['20', '20', '17.5']) {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise,
+    sets: weights.map((_, index) => ({ ...exercise.sets[0], id: `70000000-0000-4000-8000-00000000000${index}`,
+      set_number: index + 1, target_reps: 12, load_mode: 'rpe', target_rpe: '8', intensity_mode: 'rpe', target_value: '8' })),
+  }] }] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path === '/exercises') return { exercises: [{ id: exercise.exercise_id, name: 'Row', name_en: 'Row', exercise_type: 'accessory' }] } as never;
+    if (path.includes('/sets?') && path.includes('from=1970-01-01')) return { logs: weights.map((weight, index) => ({
+      id: `90000000-0000-4000-8000-00000000000${index}`, student_id: studentId,
+      plan_exercise_id: '50000000-0000-4000-8000-000000000009', exercise_id: exercise.exercise_id,
+      set_index: index, weight_kg: weight, reps: 10, rpe: '7', completed: true, failed: false,
+      assumed: false, adhoc: false, logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z',
+    })) } as never;
+    return original(path, options);
+  });
+}
+
+test('109 accessory history starts compact, opening shows weight-only history and dismissing writes nothing', async () => {
+  serveAccessoryWeights();
+  await mount();
+  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows.map((row: { weightText: string }) => row.weightText))
+    .toEqual(['20', '20', '17.5']);
+  expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+  expect(copy().filter(text => text.startsWith('Last'))).toEqual([]);
+  await expandFirst();
+  const weights = renderer.root.findAllByType(Text).filter(node => node.props.testID?.startsWith('all-day-weight-'));
+  expect(weights).toHaveLength(3);
+  expect(weights.every(node => StyleSheet.flatten(node.props.style).color === '#9A4A06')).toBe(true);
+  await press('Edit set 1');
+  expect(copy().filter(text => text === 'Last')).toEqual(['Last']);
+  const badge = renderer.root.findAllByType(Text).find(node => node.props.children === 'Last')!;
+  expect(badge.parent!.findAllByType(Text).map(node => node.props.children)).toEqual(['20', 'Last']);
+  expect(StyleSheet.flatten(badge.parent!.props.style).flexDirection).toBe('row');
+  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('20');
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toHaveLength(0);
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/weight-suggestions'))).toHaveLength(0);
+});
+
+test('109 changing one history weight clears its gold and preserves other groups and the HTTP contract', async () => {
+  serveAccessoryWeights();
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('22.5'));
+  const weightField = renderer.root.findAll(node => node.props.accessibilityLabel === 'weight' && node.props.onPress)[0];
+  expect(StyleSheet.flatten(weightField.findAllByType(Text)[0].props.style).color).toBe('#111827');
+  expect(copy().filter(text => text.startsWith('Last'))).toEqual([]);
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows.map((row: { weightText: string }) => row.weightText))
+    .toEqual(['22.5', '20', '17.5']);
+  const compactWeights = renderer.root.findAllByType(Text).filter(node => node.props.testID?.startsWith('all-day-weight-'));
+  expect(compactWeights.map(node => StyleSheet.flatten(node.props.style).color)).toEqual(['#111827', '#9A4A06', '#9A4A06']);
+  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log');
+  expect(writes.length).toBeGreaterThan(0);
+  expect(writes[0][1]?.body).toMatchObject({ weight_kg: '22.5', completed: true });
+  for (const key of ['previousWeightKg', 'weightPrefilledFromHistory', 'weightEdited']) expect(writes[0][1]?.body).not.toHaveProperty(key);
+});
+
+test('109 pound history uses the displayed unit and includes earlier sessions today in the exclusive query range', async () => {
+  serveAccessoryWeights();
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/onboarding')) return { unit_preference: 'lb' } as never;
+    const result = await original(path, options);
+    if (path.includes('from=1970-01-01')) return { logs: (result as { logs: Record<string, unknown>[] }).logs.map(log => ({ ...log, logged_date: gymDayToday() })) } as never;
+    return result;
+  });
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('44.1');
+  expect(copy().filter(text => text === 'Last')).toEqual(['Last']);
+  const historyPath = jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path.includes('from=1970-01-01'))![0];
+  expect(new URL(historyPath, 'https://fixture.test').searchParams.get('to')! > gymDayToday()).toBe(true);
+});
+
+test('109 late history cannot overwrite a manually cleared weight', async () => {
+  serveAccessoryWeights();
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  let deliver!: () => void;
+  const waiting = new Promise<void>(resolve => { deliver = resolve; });
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.includes('from=1970-01-01')) await waiting;
+    return original(path, options);
+  });
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText(''));
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  await act(async () => { deliver(); await new Promise(resolve => setTimeout(resolve, 30)); });
+  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows.map((row: { weightText: string }) => row.weightText))
+    .toEqual(['', '20', '17.5']);
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
+    .toMatchObject({ weight_kg: null });
+});
+
+test('109 retains the existing gold comparison when an accessory coach weight is changed', async () => {
+  serveAccessoryWeights();
+  servedPlan.days[0].exercises[0].sets[0] = { ...servedPlan.days[0].exercises[0].sets[0],
+    load_mode: 'fixed_weight', target_weight: '22.5' };
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  expect(renderer.root.findByType(NumberPad).props.initialValue).toBe('22.5');
+  expect(copy().filter(text => text.startsWith('Last'))).toEqual([]);
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('25'));
+  await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
+  const weight = renderer.root.findAllByType(Text).find(node => node.props.testID?.startsWith('all-day-weight-'))!;
+  expect(StyleSheet.flatten(weight.props.style).color).toBe('#9A4A06');
+});
+
+test.each(['bodyweight', 'pct', 'weight_range'] as const)('109 leaves %s editors free of history hints', async load_mode => {
+  serveAccessoryWeights();
+  servedPlan.days[0].exercises[0].sets[0] = { ...servedPlan.days[0].exercises[0].sets[0],
+    load_mode, target_pct: '70', weight_low: '22.5', weight_high: '25' };
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  expect(copy().filter(text => text.startsWith('Last'))).toEqual([]);
+});
+
+test.each<[string, string]>([['reps', '13'], ['rpe', '9']])('109 saving only %s removes history provenance while the editor stays open', async (field, value) => {
+  serveAccessoryWeights();
+  await mount();
+  await expandFirst();
+  await press('Edit set 1');
+  expect(copy()).toContain('Last');
+  await press(field);
+  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText(value));
+  expect(renderer.root.findByType(NumberPad).props.field).toBe(field);
+  expect(copy().filter(text => text.startsWith('Last'))).toEqual([]);
+  const weightField = renderer.root.findAll(node => node.props.accessibilityLabel === 'weight' && node.props.onPress)[0];
+  expect(weightField.findAllByType(Text)[0].props.children).toBe('20');
+  expect(StyleSheet.flatten(weightField.findAllByType(Text)[0].props.style).color).toBe('#111827');
 });

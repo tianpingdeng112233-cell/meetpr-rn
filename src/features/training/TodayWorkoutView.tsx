@@ -18,7 +18,7 @@ import {
   workoutDayState,
 } from '@/domain/plan/sequence';
 import { trainingWeekStrip } from '@/domain/plan/week-strip';
-import { localDateText } from '@/domain/plan/workout-date-policy';
+import { dayRange, localDateText } from '@/domain/plan/workout-date-policy';
 import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
 import { StudentEmptyState } from './StudentEmptyState';
 import { studentEmptyState } from './student-empty-state';
@@ -226,7 +226,7 @@ export function TodayWorkoutView() {
     reviewState.key === reviewKey && reviewState.status === 'loaded';
   const historyQuery = useSetLogs(
     studentId,
-    { from: '1970-01-01', to: localDateText(clockNow), scope: 'all' },
+    { from: '1970-01-01', to: localDateText(dayRange(today).end), scope: 'all' },
     Boolean(plan),
   );
   const upsert = useUpsertSetLog();
@@ -264,6 +264,8 @@ export function TodayWorkoutView() {
   });
   const sheet = planDay ? buildAllDaySheet(planDay, availableLogs, HISTORY_WEIGHT_PREFILL_ENABLED ? suggestionsQuery.data?.suggestions ?? [] : [], {
     effortPreferences: { ...historicalEffortChoices(historyQuery.data?.logs ?? [], studentId, today), ...effortChoices.choices },
+    accessoryHistory: editable ? { logs: historyQuery.data?.logs ?? [], studentId, throughDate: today,
+      isAccessory: id => resolveExerciseMetadata(id)?.exerciseType === 'accessory' } : undefined,
     drafts: prefilledDrafts, completedExercises: checkedExercises[reviewKey], expandedExerciseId: expandedExercises[reviewKey],
   }) : { exercises: [] };
   const liveDrafts = sheet.exercises.flatMap(block => block.rows);
@@ -883,7 +885,7 @@ export function TodayWorkoutView() {
             date: recommendedDate(plan, planDay),
             coachName: binding.data?.bind_request?.coach_display_name ?? null,
             exerciseNames: new Map(planDay.exercises.map(exercise => [exercise.exercise_id, exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))])),
-            references: (historyQuery.data?.logs ?? []).reduce((best, log) => {
+            references: (historyQuery.data?.logs ?? []).filter(log => log.logged_date < localDateText(clockNow)).reduce((best, log) => {
               if (!log.completed || log.failed || log.assumed ||
                 planDay.exercises.some(exercise => exercise.id === log.plan_exercise_id)) return best;
               const weightKg = Number(log.weight_kg);

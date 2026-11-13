@@ -31,6 +31,10 @@ export type WorkoutSetDraft = {
   rpeText: string;
   effortKind?: 'rpe' | 'rir';
   sourceLog: SetLog | null;
+  /** Local display provenance; absent in older persisted drafts and never sent to the API. */
+  previousWeightKg?: number | null;
+  weightPrefilledFromHistory?: boolean;
+  weightEdited?: boolean;
 };
 
 export type WeightSuggestion = {

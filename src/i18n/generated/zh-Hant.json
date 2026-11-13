@@ -2031,6 +2031,7 @@
   "student.setSync.uploadLogout": "先上傳再退出",
   "student.setSync.logoutNow": "直接退出",
   "student.setSync.logoutProgress": "還有 {n} 組沒上傳",
+  "training.allDay.previousWeight": "上次",
   "student.bodyWeight.latest": "最新",
   "student.bodyWeight.empty": "還沒有體重記錄",
   "student.bodyWeight.single": "換一天再記一次就能看到趨勢",
