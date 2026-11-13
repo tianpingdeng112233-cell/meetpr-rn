@@ -1,21 +1,16 @@
+import { reportVideoProcessingFailure } from './diagnostics';
 import { useEffect, useRef, useState } from 'react';
 import { deleteLocalVideo } from './native';
 import { copyTrimSource, trainingVideoTrim } from './trim-native';
 import { TrimSession, type TrimOutcome } from './trim-session';
 import { useTrimPlayback } from './useTrimPlayback';
 
-export function warnTrimPreparation(step: string, error: unknown) {
-  const detail = error && typeof error === 'object' ? error as { name?: unknown; message?: unknown } : {};
-  const safeText = (value: unknown, fallback: string) => {
-    if (typeof value !== 'string') return fallback;
-    // Native errors can embed source paths, including filenames with spaces.
-    // Omit the whole field in that case; never log the error object or stack.
-    return /[/\\]|\b[a-z][a-z0-9+.-]*:/i.test(value) ? '[redacted]' : value;
-  };
-  console.warn(`[VideoTrim] ${step}`, {
-    name: safeText(detail.name, 'Error'),
-    message: safeText(detail.message ?? error, 'Unknown error'),
-  });
+const trimStages = {
+  copyTrimSource: 'trim_copy', trimInfo: 'trim_info', thumbnails: 'trim_thumbnails',
+  export: 'trim_export', 'player.onError': 'trim_preview',
+} as const;
+export function warnTrimPreparation(step: keyof typeof trimStages, error: unknown) {
+  reportVideoProcessingFailure(trimStages[step], error);
 }
 
 /** Owns only trim work files; the caller retains ownership of the original video. */
@@ -31,7 +26,7 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
   useEffect(() => {
     if (!uri) return;
     let source: string | null = null;
-    let step = 'copyTrimSource';
+    let step: keyof typeof trimStages = 'copyTrimSource';
     const current = new TrimSession({
       remove: deleteLocalVideo,
       cancelExport: () => {
@@ -55,7 +50,7 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
       const info = await trainingVideoTrim().trimInfo(source);
       if (!current.active) return;
       if (info.videoTrackCount !== 1 || !Number.isFinite(info.durationMs) || info.durationMs <= 0) {
-        throw new Error('Invalid trim source');
+        throw Object.assign(new Error('Invalid trim source'), { code: 'INVALID_SOURCE' });
       }
       initialize(info.durationMs / 1000);
       if (mode === 'standalone') setStatus('ready');
@@ -64,7 +59,7 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
       step = 'thumbnails';
       const images = await trainingVideoTrim().thumbnails(source, 10).catch(error => {
         if (mode === 'review') throw error;
-        warnTrimPreparation('thumbnails', error);
+        if (current.active) warnTrimPreparation('thumbnails', error);
         return [];
       });
       images.forEach(image => current.own(image));
@@ -73,8 +68,9 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
         setStatus('ready');
       }
     })().catch(error => {
+      if (!current.active) return;
       warnTrimPreparation(step, error);
-      if (current.active) setStatus('failed');
+      setStatus('failed');
       current.failed();
     });
     return () => current.dispose();

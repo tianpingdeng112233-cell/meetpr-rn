@@ -1,3 +1,4 @@
+import { reportVideoProcessingFailure } from './diagnostics';
 import { ensureVideoSet } from '../set-sync/runtime';
 import { t } from '@/i18n';
 import { hasVideoDeliveryFailure } from './delivery-failures';
@@ -168,8 +169,10 @@ async function run(
     let record = recordFor(id);
     if (!record) return;
     const uri = record.prepared ? record.localUri : record.source?.uri;
-    if (!uri || !localVideoSize(uri))
+    if (!uri || !localVideoSize(uri)) {
+      reportVideoProcessingFailure('source_file', { code: 'SOURCE_UNAVAILABLE' });
       throw new VideoNativeError(t('student.videoDelivery.missingBody'), { deterministic: true });
+    }
     let setLogId = record.setLogId;
     if (!setLogId) {
       try {
@@ -272,9 +275,8 @@ async function run(
     await flushVideoUploads();
     if (original && original !== record.localUri) deleteLocalVideo(original);
     void track(AnalyticsEvent.MediaUpload, {
-      status: 'succeeded',
-      kind: 'set_video',
-      attachment_id: attachmentId,
+      stage: 'succeeded',
+      context: 'set_log',
     });
   } catch (error) {
     if (!job.networkChanged && (signal.aborted || error instanceof UploadCancelledError)) return;
@@ -308,8 +310,8 @@ async function run(
       terminal(id, error instanceof VideoNativeError ? error.copy : undefined);
     await flushVideoUploads();
     void track(AnalyticsEvent.MediaUpload, {
-      status: 'failed',
-      kind: 'set_video',
+      stage: 'failed',
+      context: 'set_log',
     });
   }
 }
@@ -463,8 +465,8 @@ export const videoUploadManager = {
         return retained.uri;
       });
       void track(AnalyticsEvent.MediaUpload, {
-        status: 'started',
-        kind: 'set_video',
+        stage: 'started',
+        context: 'set_log',
       });
       await sweep();
       if (

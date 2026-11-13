@@ -36,6 +36,7 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
       const result = await trainingVideoTrim().trim(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
       current.saved(result);
     } catch (error) {
+      if (!current.active) return;
       warnTrimPreparation('export', error);
       current.failed();
     }
@@ -56,10 +57,8 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
         <View testID="trim-video" style={{ flex: 1, minHeight: 180, marginHorizontal: spacing.base, backgroundColor: colors.chatImageBackground }}>
           {workingUri ? <Video ref={player} source={{ uri: workingUri }} paused={!playing} resizeMode="contain" style={StyleSheet.absoluteFill}
             progressUpdateInterval={50} onLoad={playback.onLoad} onError={event => {
-              warnTrimPreparation('player.onError', event.error ? {
-                name: event.error.errorException ?? 'VideoError',
-                message: event.error.errorString ?? event.error.localizedDescription,
-              } : event);
+              if (!session.current?.active) return;
+              warnTrimPreparation('player.onError', event.error ?? event);
               session.current?.failed();
             }}
             onSeek={playback.onSeek} onProgress={playback.onProgress} onEnd={playback.onEnd} /> : null}

@@ -37,7 +37,7 @@ internal class VideoTrimExporter {
   fun trim(context: Context, uri: String, startMs: Double, endMs: Double, promise: Promise) {
     check(Looper.myLooper() == Looper.getMainLooper())
     if (!startMs.isFinite() || !endMs.isFinite() || startMs < 0 || endMs <= startMs || endMs - startMs > 120_000 || jobs.containsKey(uri)) {
-      promise.reject("ERR_VIDEO_TRIM", "Invalid or busy trim selection", null)
+      promise.reject("ERR_VIDEO_TRIM_INVALID_SELECTION", "Invalid or busy trim selection", null)
       return
     }
     val job = Job(File(context.cacheDir, "training-trim-${UUID.randomUUID()}.mp4"), promise)
@@ -116,7 +116,7 @@ internal class VideoTrimExporter {
     job.work?.cancel(true)
     runCatching { job.transformer?.cancel() }
     job.output.delete()
-    job.promise.reject("ERR_VIDEO_TRIM", error.message ?: "Video trim failed", error)
+    job.promise.reject(videoTrimErrorCode(error), error.message ?: "Video trim failed", error)
   }
 
   fun cancel(uri: String) {
