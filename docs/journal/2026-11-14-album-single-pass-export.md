@@ -112,10 +112,23 @@ manager 的直通与隐私保护是既有正确行为，新增相应断言首次
 
 返修实现与本轮获准自检完成，**不等于设备收货完成**。原生单测由 Opus 复跑，真实编码器短片超目标码率时的交付/压缩、缩略图失败仍可预览播放、HDR / Dolby Vision 等素材和原先设备验收仍待 Opus；未运行 adb、模拟器或生成验收包。
 
-## 收货记录（Opus，2026-11-14）— 未完成，不算收货通过
+## 收货记录（Opus，2026-11-14）
 
 - 亲读全量 diff（Standards / Spec 两轴）。首轮两条返修，第 1 轮收敛：成品未命中直通不再判失败（任务卡目标 2 写得过死，已改卡）；缩略图失败不再连带关掉预览。
-- 本机独立复跑：`npm test -- --runInBand` 219 suites / 2359 tests 通过；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。首轮代码上 `./gradlew :training-video:testDebugUnitTest --offline` 6 项通过（`VideoTrimErrorCodeTest` 3、`VideoTrimExportSpecTest` 3）；**返修后的 Kotlin 改动尚未重跑 Gradle 单测**。
-- **模拟器实测未做**：出验收包时本机磁盘耗尽（`mergeReleaseNativeLibs` 报 No space left on device），未产出 APK。真实 Transformer 行为——选区帧与时长、横竖与旋转、音轨、降级、HDR 压 SDR、成品是否免二次压缩、整段达标素材只拷贝——全部未验证。验收素材已推到 AVD `meetpr16`（5570）的 `/sdcard/Movies/audit2/`。
-- 已知小尾巴：`useTrimSource` 的 `previewAvailable` 状态在返修后恒为 true，属残留，随设备验收那一轮一并清。
-- 结论：代码与宿主测试就绪，设备验收缺口未补之前 PR 保持草稿，不请放行。
+- 本机独立复跑：`npm test -- --runInBand` 219 suites / 2359 tests；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过；返修后 `./gradlew :training-video:testDebugUnitTest --offline` 6 项通过（`VideoTrimErrorCodeTest` 3、`VideoTrimExportSpecTest` 3）。
+- 设备验收：AVD `meetpr16`（5570，Android 16 模拟器）上并排安装演示包 `com.meetpr.global.albumfix`（arm64 release、Demo 模式，未覆盖正式包，5570 上正式包仍为 CN 0.1.0(14)）。七个合成素材从训练页组行 → 录像页 → 系统相册 → 剪辑页 → 保存：
+
+| 素材 | 剪辑页就绪 | 保存耗时 | 结果 |
+| --- | --- | --- | --- |
+| 720p H.264 2 Mbps AAC（已达上传规格） | 3 s | 6 s | 未启动 Transformer、未启动压缩器，直接送达（拷贝快路） |
+| 1080p H.264 8 Mbps | 3 s | 20 s | Transformer 一次导出，压缩器未启动，送达 |
+| 1080p 竖拍（旋转 90°） | 3 s | 17 s | 同上，送达；原生方向/宽高比校验通过 |
+| 1080p HEVC（hev1） | 3 s | 17 s | 同上，送达。修复前同机 8 秒 1080p HEVC 第一遍裁剪需 4 分 21 秒 |
+| 音轨比视频长 2 秒 | 3 s | 15 s | 同上，送达 |
+| E-AC-3 5.1 音轨 | 3 s | 6 s | 失败 `video.trim_export.ERR_VIDEO_TRIM_MEDIA3_3003`（`ERROR_CODE_DECODING_FORMAT_UNSUPPORTED`，模拟器无 E-AC-3 解码器）；系统弹窗提示，原组已送达的视频保留 |
+| 10-bit HLG HEVC | 3 s | 6 s | 预览与缩略图失败（`trim_preview.24003`、`trim_thumbnails`），剪辑页仍可拖选和保存（返修目标生效）；导出失败 `ERR_VIDEO_TRIM_MEDIA3_5001`（视频帧处理失败），原组视频保留 |
+
+- 两个失败都是模拟器硬件能力（无 E-AC-3 解码器、解不了 10-bit HEVC），修复前同样失败，不是回归；真机能否通过未验证。
+- 替换失败时原组已送达的视频保留；组行失败提示为系统弹窗，组行内无错误文字。
+- 未覆盖：真机 HDR / 杜比视界 / 4K60；真实服务器送达（Demo 模式）。`useTrimSource` 的 `previewAvailable` 返修后恒为 true，属无害残留，未清。
+- 素材在 5570 的 `/sdcard/Movies/audit2/`，截图在 `~/Projects/scratch/album-upload-audit-20261114/evidence/android-fixed-*.png`。
