@@ -11,11 +11,12 @@ internal fun videoTrimErrorCode(error: Exception): String {
   val reason = when (error.message) {
     "Invalid video source" -> "INVALID_SOURCE"
     "Selection exceeds source" -> "INVALID_SELECTION"
-    "Cannot preserve unknown source bitrate" -> "BITRATE_UNKNOWN"
     "Empty trim output" -> "EMPTY_OUTPUT"
     "Trim lost audio" -> "AUDIO_LOST"
-    "Trim changed display dimensions" -> "DIMENSIONS_CHANGED"
-    "Trim format fallback is not permitted" -> "FORMAT_FALLBACK"
+    "Trim changed display aspect or orientation" -> "ASPECT_RATIO_CHANGED"
+    "Trim enlarged source" -> "OUTPUT_UPSCALED"
+    "Trim output is HDR" -> "HDR_NOT_SDR"
+    "Trim added audio" -> "UNEXPECTED_AUDIO"
     "Video trim cancelled" -> "CANCELLED"
     else -> when {
       error.message?.startsWith("Inaccurate trim duration requested ") == true -> "DURATION_MISMATCH"

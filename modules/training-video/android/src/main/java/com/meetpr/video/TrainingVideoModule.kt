@@ -11,7 +11,6 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.functions.Queues
-import java.nio.ByteBuffer
 
 /** Local video inspection and trim; upload compression remains in the existing JS pipeline. */
 class TrainingVideoModule : Module() {
@@ -47,7 +46,7 @@ class TrainingVideoModule : Module() {
           val format = extractor.getTrackFormat(index)
           val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
           if (!mime.startsWith("video/") && !mime.startsWith("audio/")) continue
-          val rate = bitrate(extractor, index, format)
+          val rate = VideoTrimMedia.trackBitrate(extractor, index, format)
           if (mime.startsWith("video/")) {
             video = mapOf("codec" to mime, "width" to format.getInteger(MediaFormat.KEY_WIDTH),
               "height" to format.getInteger(MediaFormat.KEY_HEIGHT), "bitrate" to rate, "frameRate" to frameRate(format))
@@ -70,26 +69,4 @@ class TrainingVideoModule : Module() {
     }
   }
 
-  private fun bitrate(extractor: MediaExtractor, index: Int, format: MediaFormat): Double? {
-    if (format.containsKey(MediaFormat.KEY_BIT_RATE)) {
-      val rate = format.getInteger(MediaFormat.KEY_BIT_RATE)
-      if (rate > 0) return rate.toDouble()
-    }
-    if (!format.containsKey(MediaFormat.KEY_DURATION)) return null
-    val duration = format.getLong(MediaFormat.KEY_DURATION)
-    if (duration <= 0) return null
-    extractor.selectTrack(index)
-    try {
-      extractor.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-      var bytes = 0L
-      val buffer = if (Build.VERSION.SDK_INT < 28) ByteBuffer.allocate(8 * 1024 * 1024) else null
-      while (extractor.sampleTrackIndex >= 0) {
-        val size = if (Build.VERSION.SDK_INT >= 28) extractor.sampleSize else extractor.readSampleData(requireNotNull(buffer), 0).toLong()
-        if (size < 0) break
-        bytes += size
-        if (!extractor.advance()) break
-      }
-      return bytes * 8.0 * 1_000_000 / duration
-    } finally { extractor.unselectTrack(index) }
-  }
 }

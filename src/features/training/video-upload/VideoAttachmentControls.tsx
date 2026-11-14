@@ -99,12 +99,13 @@ export function VideoAttachmentControls({
     if (select(next) !== select(previous)) setIsPreparing(false);
   }), [studentId, stableSetId]);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
-  const showActionError = useCallback((error: unknown) =>
-    setActionErrorMessage(
-      error instanceof VideoNativeError
-        ? error.copy
-        : t('student.videoAttachmentViewModel.copy001'),
-    ), []);
+  const showActionError = useCallback((error: unknown) => {
+    const message = error instanceof VideoNativeError
+      ? error.copy
+      : t('student.videoAttachmentViewModel.copy001');
+    if (cameraOnly) Alert.alert('', message, [{ text: t('student.cameraRecorderView.copy005') }]);
+    else setActionErrorMessage(message);
+  }, [cameraOnly]);
   const hasCamera = useCameraAvailability();
   const overlay = useOverlayHost();
   // CameraRecorder owns its native Modal; a second window can cover it with a blank screen.
@@ -220,7 +221,6 @@ export function VideoAttachmentControls({
       {failed ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable} onPress={() => void retry([{ stableSetId }])} /> : null}
       <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable} onPress={() => void remove().then(() => setDetailVisible(false))} />
     </View></Modal> : null}
-    {actionErrorMessage ? <Text style={{ color: colors.danger }}>{actionErrorMessage}</Text> : null}
     {recovery}
     {videoToTrim ? <VideoTrimView uri={videoToTrim.uri} onOutcome={outcome => {
       releaseOriginal.current?.(); releaseOriginal.current = null; deleteLocalVideo(pickedUri.current); pickedUri.current = null; setVideoToTrim(null);

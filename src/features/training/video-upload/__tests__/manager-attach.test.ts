@@ -9,6 +9,8 @@ import { uploadsRepository } from '@/api/domains/uploads';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { videoUploadManager } from '../manager';
 import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../store';
+import * as Compressor from 'react-native-compressor';
+import type { TrackMetadata } from '../passthrough';
 import { VideoNativeError } from '../native';
 import { EMPTY_VIDEO_UPLOAD, type SelectedVideo } from '../model';
 
@@ -21,6 +23,7 @@ let mockCopyFailure: Error | null = null;
 let mockDeleteFailure: string | null = null;
 let mockOnCopied: (() => void) | undefined;
 let mockNeedsTranscode = false;
+const mockReadTracks = jest.fn(async (): Promise<TrackMetadata> => ({ codec: mockNeedsTranscode ? 'hevc' : 'h264', width: 1280, height: 720, bitrate: 700000, audio: null }));
 const mockReadMetadata = jest.fn(async (uri: string) => {
   mockOperations.push(`prepare:${uri}:${mockFiles.get(uri) ?? 0}`);
   return { duration: 4, width: 1280, height: 720 };
@@ -37,18 +40,18 @@ jest.mock('expo-modules-core', () => ({
   ...jest.requireActual<typeof import('expo-modules-core')>('expo-modules-core'),
   uuid: { v4: () => `retained-${++mockSequence}` },
   requireNativeModule: (name: string) => name === 'TrainingVideo'
-    ? { readTracks: async () => ({ codec: mockNeedsTranscode ? 'hevc' : 'h264', width: 1280, height: 720, bitrate: 700000, audio: null }) }
+    ? { readTracks: mockReadTracks }
     : jest.requireActual<typeof import('expo-modules-core')>('expo-modules-core').requireNativeModule(name),
 }));
 jest.mock('react-native-compressor', () => ({
   getVideoMetaData: (uri: string) => mockReadMetadata(uri),
   Video: {
     cancelCompression: jest.fn(),
-    compress: async () => {
+    compress: jest.fn(async () => {
       const uri = 'file:///cache/11111111-1111-4111-8111-111111111111.mp4';
       mockFiles.set(uri, 200000);
       return uri;
-    },
+    }),
   },
 }));
 const mockUploadAsync = jest.fn(async () => ({ status: 200, headers: { ETag: 'etag' }, body: '' }));
@@ -136,6 +139,8 @@ beforeEach(async () => {
   mockOnCopied = undefined;
   mockNeedsTranscode = false;
   mockReadMetadata.mockClear();
+  mockReadTracks.mockClear();
+  jest.mocked(Compressor.Video.compress).mockClear();
   mockFiles.set(source.uri, 350000);
 });
 
@@ -422,4 +427,63 @@ test('a retry whose retained file disappeared sends a source-file diagnostic', a
   expect(events).toEqual([expect.objectContaining({ name: 'client_error', props: {
     domain: 'persistence', code: 'video.source_file.SOURCE_UNAVAILABLE', screen: 'today_workout',
   } })]);
+});
+
+
+test.each([
+  { width: 1280, height: 720, bitrate: 2750000, audio: { codec: 'audio/mp4a-latm', bitrate: 96000 } },
+  { width: 720, height: 1280, bitrate: 2750000, audio: { codec: 'audio/mp4a-latm', bitrate: 128000 } },
+  { width: 640, height: 480, bitrate: 700000, audio: null },
+])('an upload-compatible album export bypasses compression: %j', async tracks => {
+  const exported = { ...source, uri: 'file:///cache/training-trim-export.mp4', ...tracks };
+  mockFiles.set(exported.uri, 350000);
+  mockReadTracks.mockResolvedValueOnce({ codec: 'video/avc', ...tracks });
+  await videoUploadManager.attach(id, exported, async () => 'set-log');
+  expect(Compressor.Video.compress).not.toHaveBeenCalled();
+  const record = useVideoUploadStore.getState().records['student:set'];
+  expect(record).toMatchObject({ status: 'uploaded', prepared: true, sizeBytes: 350000 });
+  expect(mockFiles.get(record.localUri!)).toBe(350000);
+});
+
+test('an album export above the passthrough bitrate is compressed and uploaded without a diagnostic', async () => {
+  const events: { name: string; props: Record<string, unknown> }[] = [];
+  await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await configure({ accessTokenProvider: async () => 'test-token', fetch: async (_url, request) => {
+    if (request?.method === 'POST') events.push(...JSON.parse(String(request.body)).events);
+    return { status: request?.method === 'POST' ? 204 : 200,
+      json: async () => ({ enabled: true, sample_rate: 1 }) } as Response;
+  } });
+  const exported = { ...source, uri: 'file:///cache/training-trim-export.mp4' };
+  mockFiles.set(exported.uri, 2000000);
+  mockReadTracks.mockResolvedValueOnce({ codec: 'video/avc', width: 1280, height: 720, bitrate: 4000000, audio: null });
+  await videoUploadManager.attach(id, exported, async () => 'set-log');
+  expect(Compressor.Video.compress).toHaveBeenCalledTimes(1);
+  const record = useVideoUploadStore.getState().records['student:set'];
+  expect(record).toMatchObject({ status: 'uploaded', prepared: true, sizeBytes: 200000 });
+  expect(mockFiles.get(record.localUri!)).toBe(200000);
+  await flushNow();
+  expect(events.filter(event => event.name === 'client_error')).toEqual([]);
+});
+
+test('an album export inspection failure sends only its symbolic code and keeps the retained file', async () => {
+  const events: { name: string; props: Record<string, unknown> }[] = [];
+  await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await configure({ accessTokenProvider: async () => 'test-token', fetch: async (_url, request) => {
+    if (request?.method === 'POST') events.push(...JSON.parse(String(request.body)).events);
+    return { status: request?.method === 'POST' ? 204 : 200,
+      json: async () => ({ enabled: true, sample_rate: 1 }) } as Response;
+  } });
+  const exported = { ...source, uri: 'file:///cache/training-trim-private.mp4' };
+  mockFiles.set(exported.uri, 350000);
+  mockReadTracks.mockRejectedValueOnce({ code: 'ERR_TRACKS', message: 'content://private.mp4?token=secret', stack: 'private stack' });
+  await videoUploadManager.attach(id, exported, async () => 'set-log');
+  await flushNow();
+  expect(events).toEqual([expect.objectContaining({ name: 'client_error', props: {
+    domain: 'decode', code: 'video.tracks.ERR_TRACKS', screen: 'today_workout',
+  } })]);
+  expect(JSON.stringify(events)).not.toMatch(/file:|content:|private|secret|stack/);
+  expect(Compressor.Video.compress).not.toHaveBeenCalled();
+  const record = useVideoUploadStore.getState().records['student:set'];
+  expect(record.status).toBe('waiting');
+  expect(mockFiles.get(record.source!.uri)).toBe(350000);
 });
