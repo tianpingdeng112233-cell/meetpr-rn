@@ -20,6 +20,7 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
   useEffect(() => { callback.current = onOutcome; }, [onOutcome]);
   const [workingUri, setWorkingUri] = useState<string | null>(null);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
+  const [previewAvailable, setPreviewAvailable] = useState(true);
   const [status, setStatus] = useState<'preparing' | 'ready' | 'failed'>('preparing');
   const playback = useTrimPlayback(mode === 'review');
   const { initialize, reset } = playback;
@@ -43,6 +44,7 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
       setWorkingUri(null);
       setThumbnails([]);
       setStatus('preparing');
+      setPreviewAvailable(true);
       source = await copyTrimSource(uri);
       current.own(source);
       if (!current.active) return;
@@ -55,11 +57,13 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
       initialize(info.durationMs / 1000);
       if (mode === 'standalone') setStatus('ready');
       setWorkingUri(source);
-      // Standalone keeps its decorative-thumbnail fallback; review falls back to the original clip.
+      // Album editing remains usable without preview; camera review keeps its existing fallback.
       step = 'thumbnails';
       const images = await trainingVideoTrim().thumbnails(source, 10).catch(error => {
         if (mode === 'review') throw error;
-        if (current.active) warnTrimPreparation('thumbnails', error);
+        if (current.active) {
+          warnTrimPreparation('thumbnails', error);
+        }
         return [];
       });
       images.forEach(image => current.own(image));
@@ -76,5 +80,5 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
     return () => current.dispose();
   }, [uri, initialize, reset, mode]);
 
-  return { session, workingUri, thumbnails, status, playback };
+  return { session, workingUri, thumbnails, status, previewAvailable, playback };
 }

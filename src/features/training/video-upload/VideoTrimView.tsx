@@ -10,14 +10,19 @@ import { TrimPlayButton } from './TrimPlayButton';
 import { t } from '@/i18n';
 import { trainingVideoTrim } from './trim-native';
 import { type TrimOutcome } from './trim-session';
+import { isTrimSelectionValid } from './trim-selection';
 import { TrimTimeline } from './TrimTimeline';
 import { useTrimSource, warnTrimPreparation } from './useTrimSource';
 
 export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (outcome: TrimOutcome) => void }) {
   const colors = useColors();
   const { scheme } = useTheme();
-  const { session, workingUri, thumbnails, playback } = useTrimSource(uri, onOutcome);
-  const { player, selection, ready, playing, setPlaying } = playback;
+  const { session, workingUri, thumbnails, status, previewAvailable, playback } = useTrimSource(uri, onOutcome);
+  const { player, selection, playing, setPlaying } = playback;
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const previewFailureReported = useRef(false);
+  const ready = status === 'ready' && isTrimSelectionValid(selection);
+  const canPreview = previewAvailable && !previewFailed;
   const [exporting, setExporting] = useState(false);
   const exportingRef = useRef(false);
   const move = (edge: 'start' | 'end', seconds: number) => {
@@ -55,16 +60,18 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
           </Pressable>
         </View>
         <View testID="trim-video" style={{ flex: 1, minHeight: 180, marginHorizontal: spacing.base, backgroundColor: colors.chatImageBackground }}>
-          {workingUri ? <Video ref={player} source={{ uri: workingUri }} paused={!playing} resizeMode="contain" style={StyleSheet.absoluteFill}
+          {workingUri && canPreview ? <Video ref={player} source={{ uri: workingUri }} paused={!playing} resizeMode="contain" style={StyleSheet.absoluteFill}
             progressUpdateInterval={50} onLoad={playback.onLoad} onError={event => {
-              if (!session.current?.active) return;
+              if (!session.current?.active || previewFailureReported.current) return;
+              previewFailureReported.current = true;
               warnTrimPreparation('player.onError', event.error ?? event);
-              session.current?.failed();
+              setPlaying(false);
+              setPreviewFailed(true);
             }}
             onSeek={playback.onSeek} onProgress={playback.onProgress} onEnd={playback.onEnd} /> : null}
           {!ready ? <View style={styles.loading}><ActivityIndicator color={colors.inkOnCTAFill} /><Text style={{ color: colors.inkOnCTAFill, ...font.body(14) }}>{t('student.videoTrimView.copy001')}</Text></View> : null}
           <View style={{ position: 'absolute', bottom: spacing.base, alignSelf: 'center' }}>
-            <TrimPlayButton playing={playing} disabled={!ready || exporting} onPress={() => { if (ready && !exportingRef.current) playback.toggle(); }} />
+            <TrimPlayButton playing={playing && canPreview} disabled={!canPreview || !playback.ready || exporting} onPress={() => { if (canPreview && playback.ready && !exportingRef.current) playback.toggle(); }} />
           </View>
         </View>
         <TrimTimeline selection={selection} thumbnails={thumbnails} enabled={ready && !exporting} onMove={move}
