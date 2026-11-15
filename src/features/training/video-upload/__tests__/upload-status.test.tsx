@@ -1,13 +1,15 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Path } from 'react-native-svg';
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Modal, Text } from 'react-native';
+import { FeedbackPressable } from '@/design/FeedbackPressable';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import { CameraView } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OverlayHostProvider } from '../../OverlayHost';
 import { setLocaleOverride, t } from '@/i18n';
 import { videoUploadManager } from '../manager';
 import { EMPTY_VIDEO_UPLOAD, VIDEO_UPLOAD_CONSENT_KEY } from '../model';
+import { SetVideoCamera } from '../SetVideoCamera';
 import { VideoAttachmentControls } from '../VideoAttachmentControls';
 import { flushVideoUploads, resetVideoUploadStoreForTests, useVideoUploadStore } from '../store';
 
@@ -119,16 +121,25 @@ test('all-day capture button uses a video camera before, during and after delive
     renderer = create(<VideoAttachmentControls compact studentId="student" stableSetId="set" editable
       ensureSetLog={async () => 'set-log'} buildLogRequest={() => { throw new Error('unused'); }} />);
   });
-  const camera = () => renderer.root.findAllByType(MaterialCommunityIcons)[0];
-  expect(camera().props.name).toBe('video-outline');
-  const idleColor = camera().props.color;
-  act(() => { useVideoUploadStore.getState().dispatch('student', 'set', { type: 'uploadStarted', attachmentId: 'attachment' }); });
-  expect(camera().props.name).toBe('video-outline');
-  const uploadingColor = camera().props.color;
-  expect(uploadingColor).not.toBe(idleColor);
-  act(() => { useVideoUploadStore.setState({ records: { 'student:set': { ...EMPTY_VIDEO_UPLOAD, status: 'uploaded', attachmentId: 'attachment' } } }); });
-  expect(camera().props.name).toBe('video-outline');
-  expect(camera().props.color).not.toBe(uploadingColor);
+  const camera = () => renderer.root.findByType(SetVideoCamera);
+  const surface = () => StyleSheet.flatten(camera().findAllByType(View).find(node => node.props.testID === 'set-video-fill')!.props.style);
+  const dispatch = useVideoUploadStore.getState().dispatch;
+  expect(camera().props.state).toBe('empty');
+  act(() => {
+    dispatch('student', 'set', { type: 'uploadStarted', attachmentId: 'attachment' });
+    dispatch('student', 'set', { type: 'setLogReady', setLogId: 'set-log' });
+    dispatch('student', 'set', { type: 'progress', progress: 0.42 });
+  });
+  expect(camera().props.state).toBe('sending');
+  expect(renderer.root.findAllByType(FeedbackPressable)[0].props.accessibilityLabel).toBe(t('student.videoUpload.sending'));
+  expect(surface().height).toBeCloseTo(20 * 29 / 45 * 0.42);
+  expect(surface().bottom).toBe(0);
+  act(() => { dispatch('student', 'set', { type: 'progress', progress: 1 }); });
+  expect(camera().props.state).toBe('sending');
+  expect(camera().findByType(Path).props.fill).toBe(camera().findByType(Path).props.stroke);
+  act(() => { dispatch('student', 'set', { type: 'succeeded', attachmentId: 'attachment' }); });
+  expect(camera().props.state).toBe('delivered');
+  expect(camera().findByType(Path).props.fill).toBe(camera().findByType(Path).props.stroke);
 });
 
 

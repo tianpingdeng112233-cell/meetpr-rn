@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeAll, beforeEach, expect, jest, test } from '@jest/globals';
 import { configure, flushNow, resetAnalyticsForTests, confirmPrivacyNotice } from '@/analytics/client';
 import { ANALYTICS_PRIVACY_NOTICE_KEY } from '@/analytics/storage';
 import { ColorSchemeProvider, resolveColors } from '@/design/theme';
@@ -74,7 +74,7 @@ jest.mock('expo-file-system', () => ({
 }));
 
 let renderer: ReactTestRenderer;
-beforeEach(async () => {
+async function setUpTrimFixture() {
   jest.clearAllMocks();
   mockTrimListeners.clear();
   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireNativeModule').mockReturnValue(mockMedia);
@@ -87,8 +87,16 @@ beforeEach(async () => {
   jest.mocked(ImagePicker.launchImageLibraryAsync).mockResolvedValue({ canceled: false, assets: [
     { uri: 'file:///cache/picked.mp4', width: 1280, height: 720, duration: 8000, type: 'video' },
   ] });
-});
-afterEach(async () => { resetAnalyticsForTests(); act(() => renderer?.unmount()); await flushVideoUploads(); resetVideoUploadStoreForTests(); setLocaleOverride(null); });
+}
+async function tearDownTrimFixture() {
+  resetAnalyticsForTests();
+  act(() => renderer?.unmount());
+  await flushVideoUploads();
+  resetVideoUploadStoreForTests();
+  setLocaleOverride(null);
+}
+beforeEach(setUpTrimFixture);
+afterEach(tearDownTrimFixture);
 const press = async (label: string) => {
   await act(async () => {
     const button = renderer.root.findAll(n => n.props.accessibilityLabel === label && n.props.onPress)[0];
@@ -103,6 +111,16 @@ const mount = async (replace = false, scheme: 'light' | 'dark' = 'light') => {
     editable ensureSetLog={async () => 'log'} buildLogRequest={() => { throw new Error('not used'); }} /></ColorSchemeProvider>); });
   await press(t(replace ? 'student.videoAttachmentV3Controls.copy004' : 'student.videoAttachmentV3Controls.copy002'));
 };
+
+// Mount the native controls and trim view once on cold CI workers.
+beforeAll(async () => {
+  await setUpTrimFixture();
+  try {
+    await mount();
+  } finally {
+    await tearDownTrimFixture();
+  }
+}, 30_000);
 
 test('Photos waits for the working copy to finish before calling trimInfo', async () => {
   let finishCopy!: () => void;
