@@ -55,6 +55,13 @@ function textContent(value: ReactNode): string {
   return value == null ? '' : String(value);
 }
 const copy = () => renderer.root.findAllByType(Text).map(node => textContent(node.props.children));
+async function waitForScreen(condition: () => boolean) {
+  const deadline = Date.now() + 3000;
+  while (!condition() && Date.now() < deadline) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  }
+  expect(condition()).toBe(true);
+}
 function expectFeedbackBodyIsStatic(text: string) {
   let node = renderer.root.findAllByType(Text).find(item => item.props.children === text)!;
   expect(node).toBeDefined();
@@ -184,16 +191,13 @@ test.each(['loaded', 'failed'] as const)('reading the published plan keeps it ta
     <HeaderProbe />
     {coach && <StudentConversationScreen conversationId={conversationId} coachName="Alex" />}
   </QueryClientProvider>;
-  const settle = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
   await act(async () => { renderer = create(tree(false)); });
-  await settle();
-  expect(copy()).toContain('1');
+  await waitForScreen(() => copy().includes('1'));
   await act(async () => { renderer.update(tree(true)); });
-  await settle();
+  await waitForScreen(() => copy().includes('0'));
   expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.studentBlackGoldChatView.copy020') }).length).toBeGreaterThan(0);
   await act(async () => { renderer.update(tree(false)); });
-  await settle();
-  expect(copy()).toContain('0');
+  await waitForScreen(() => copy().includes('0'));
   expect(await AsyncStorage.getItem(dashboardPlanSeenKey(studentId))).toBe(JSON.stringify({ planId: 'plan-tab', publishedAt }));
 });
 test('a later publication received in the background remains unread until Coach returns to the foreground', async () => {
@@ -208,7 +212,7 @@ test('a later publication received in the background remains unread until Coach 
   const signature = JSON.stringify({ planId: 'late-plan', publishedAt });
   plans = [{ id: 'late-plan', status: 'published', published_at: publishedAt, created_at: publishedAt }];
   await act(async () => { await client.invalidateQueries({ queryKey: planKeys.list(studentId) }); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  await waitForScreen(() => renderer.root.findAllByProps({ accessibilityLabel: t('student.studentBlackGoldChatView.copy020') }).length > 0);
   expect(await AsyncStorage.getItem(dashboardPlanSeenKey(studentId))).not.toBe(signature);
   AppState.currentState = 'active';
   await act(async () => { for (const listener of [...listeners]) listener('active'); });
@@ -280,8 +284,7 @@ test('revisiting visible video feedback retries a failed receipt before clearing
   });
   expect(attempted).toBe(true);
   await act(async () => { scroll(0); scroll(300); });
-  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
-  expect(renderer.root.findAllByProps({ testID: `feedback-unread-${coachId}` })).toHaveLength(0);
+  await waitForScreen(() => renderer.root.findAllByProps({ testID: `feedback-unread-${coachId}` }).length === 0);
 });
 test('initial scroll aligns the first unread feedback bottom, and prepending history preserves the visible message', async () => {
   // This renderer test supplies layout explicitly, then advances the frame.
