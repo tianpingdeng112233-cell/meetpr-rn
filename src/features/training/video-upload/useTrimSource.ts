@@ -55,11 +55,13 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
       initialize(info.durationMs / 1000);
       if (mode === 'standalone') setStatus('ready');
       setWorkingUri(source);
-      // Standalone keeps its decorative-thumbnail fallback; review falls back to the original clip.
+      // Album editing remains usable without preview; camera review keeps its existing fallback.
       step = 'thumbnails';
       const images = await trainingVideoTrim().thumbnails(source, 10).catch(error => {
         if (mode === 'review') throw error;
-        if (current.active) warnTrimPreparation('thumbnails', error);
+        if (current.active) {
+          warnTrimPreparation('thumbnails', error);
+        }
         return [];
       });
       images.forEach(image => current.own(image));

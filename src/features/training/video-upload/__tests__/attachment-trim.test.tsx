@@ -8,11 +8,12 @@ import * as Compressor from 'react-native-compressor';
 import { File } from 'expo-file-system';
 import { videosRepository } from '@/api/domains/videos';
 import { prepareTrainingVideo, retainVideoSource, cleanOrphanVideos } from '../native';
-import { Image, Modal, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Modal, StatusBar, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ExpoModules from 'expo-modules-core';
 import * as ImagePicker from 'expo-image-picker';
 import { setLocaleOverride, t } from '@/i18n';
+import { CameraRecorder } from '../CameraRecorder';
 import { VideoAttachmentControls } from '../VideoAttachmentControls';
 import { videoUploadManager } from '../manager';
 import { useVideoUploadStore, resetVideoUploadStoreForTests, flushVideoUploads, hydrateRemoteVideoAttachments } from '../store';
@@ -37,7 +38,13 @@ jest.mock('react-native-safe-area-context', () =>
   jest.requireActual<{ default: unknown }>('react-native-safe-area-context/jest/mock').default);
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 jest.mock('../manager', () => ({ videoUploadManager: { attach: jest.fn(async () => {}), remove: jest.fn() } }));
+type TrimDiagnosticEvent = { uri: string; code: string; message?: string; stack?: string };
+const mockTrimListeners = new Set<(event: TrimDiagnosticEvent) => void>();
 const mockMedia = {
+  addListener: jest.fn((_event: string, listener: (event: TrimDiagnosticEvent) => void) => {
+    mockTrimListeners.add(listener);
+    return { remove: () => mockTrimListeners.delete(listener) };
+  }),
   hasCamera: async () => true,
   readTracks: jest.fn(async () => ({ codec: 'h264', width: 1920, height: 1080, bitrate: 8000000, audio: null, frameRate: 30 })),
   trimInfo: jest.fn(async () => ({ durationMs: 8000, videoTrackCount: 1 })),
@@ -69,6 +76,7 @@ jest.mock('expo-file-system', () => ({
 let renderer: ReactTestRenderer;
 beforeEach(async () => {
   jest.clearAllMocks();
+  mockTrimListeners.clear();
   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireNativeModule').mockReturnValue(mockMedia);
   jest.spyOn(ExpoModules.uuid, 'v4').mockReturnValue('11111111-1111-4111-8111-111111111111');
   mockDeleted.length = 0;
@@ -149,8 +157,19 @@ test.each(['copyTrimSource', 'trimInfo', 'thumbnails', 'player.onError'])('prepa
     expect(warn).toHaveBeenCalledTimes(1);
     const stage = { copyTrimSource: 'trim_copy', trimInfo: 'trim_info', thumbnails: 'trim_thumbnails', 'player.onError': 'trim_preview' }[step];
     expect(warn).toHaveBeenCalledWith('[VideoProcessing]', `video.${stage}.UNKNOWN`);
-    if (step === 'thumbnails') {
-      await act(async () => { renderer.root.findByType(Video).props.onLoad({ duration: 8 }); });
+    if (step === 'thumbnails' || step === 'player.onError') {
+      if (step === 'thumbnails') {
+        expect(renderer.root.findAllByType(Image)).toHaveLength(0);
+        expect(renderer.root.findAllByType(Video)).toHaveLength(1);
+        await act(async () => { renderer.root.findByType(Video).props.onLoad({ duration: 8 }); });
+        await press(t('student.videoTrimView.copy005'));
+        expect(renderer.root.findByType(Video).props.paused).toBe(false);
+      } else {
+        expect(renderer.root.findAllByType(Video)).toHaveLength(0);
+        const play = renderer.root.findAll(n => n.props.accessibilityLabel === t('student.videoTrimView.copy005') && n.props.onPress)[0];
+        expect(play.props.disabled).toBe(true);
+      }
+      await act(async () => { renderer.root.findAll(n => n.props.accessibilityLabel === t('student.videoTrimTimeline.copy003') && n.props.onAccessibilityAction)[0].props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } }); });
       await press(t('student.videoTrimView.copy003'));
       expect(videoUploadManager.attach).toHaveBeenCalledTimes(1);
     } else {
@@ -284,17 +303,17 @@ test('cold startup reclaims abandoned trim files while preserving referenced and
   expect(mockDeleted).not.toContain('file:///cache/unrelated.jpg');
 });
 
-test('a player failure during Save cancels export and never attaches a late output', async () => {
+test('a player failure during Save leaves export active and attaches its output', async () => {
   let finish!: (value: { uri: string; durationMs: number }) => void;
   mockMedia.trim.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await mount();
   await act(async () => { renderer.root.findByType(Video).props.onLoad({ duration: 8 }); });
   await press(t('student.videoTrimView.copy003'));
   await act(async () => { renderer.root.findByType(Video).props.onError(new Error('decoder failed')); });
-  expect(mockMedia.cancelTrim).toHaveBeenCalledTimes(1);
+  expect(mockMedia.cancelTrim).not.toHaveBeenCalled();
   await act(async () => { finish({ uri: 'file:///cache/late.mp4', durationMs: 4000 }); });
-  expect(videoUploadManager.attach).not.toHaveBeenCalled();
-  expect(mockDeleted).toContain('file:///cache/late.mp4');
+  expect(videoUploadManager.attach).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ uri: 'file:///cache/late.mp4' }), expect.any(Function), expect.any(Function));
+  expect(mockDeleted).not.toContain('file:///cache/late.mp4');
 });
 
 
@@ -461,6 +480,57 @@ async function collectDiagnostics(options: { offline?: boolean; consent?: boolea
   };
 }
 
+test('a silent album export is accepted while fallback diagnostics contain only fixed codes', async () => {
+  const diagnostics = await collectDiagnostics();
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const codes = ['AUDIO_DROPPED_NO_DECODER', 'HDR_FALLBACK_MEDIACODEC', 'HDR_FALLBACK_INTERPRET_AS_SDR'];
+  mockMedia.trim.mockImplementationOnce(async (...args: unknown[]) => {
+    for (const code of codes) {
+      for (const listener of mockTrimListeners) {
+        listener({ uri: String(args[0]), code, message: 'content://private.mp4?token=secret', stack: 'private stack' });
+      }
+    }
+    return { uri: 'file:///cache/export.mp4', durationMs: 4000 };
+  });
+  await mount();
+  await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 8 }));
+  await press(t('student.videoTrimView.copy003'));
+  expect(await diagnostics()).toEqual(codes.map(code => expect.objectContaining({ props: {
+    domain: 'decode', code: `video.trim_export.${code}`, screen: 'today_workout',
+  } })));
+  const exported = jest.mocked(videoUploadManager.attach).mock.calls[0][1];
+  mockMedia.readTracks.mockResolvedValueOnce({ codec: 'h264', width: 1280, height: 720, bitrate: 2000000, audio: null, frameRate: 30 });
+  await expect(prepareTrainingVideo(exported, { signal: new AbortController().signal, setCompressionCancellationId: () => {} }))
+    .resolves.toEqual({ localUri: 'file:///cache/export.mp4', sizeBytes: 100 });
+  expect(Compressor.Video.compress).not.toHaveBeenCalled();
+  expect(alert).not.toHaveBeenCalled();
+  expect(mockTrimListeners.size).toBe(0);
+  expect(JSON.stringify(await diagnostics())).not.toMatch(/file:|content:|private|secret|stack/);
+  alert.mockRestore();
+});
+
+test.each([true, false])('audio retry diagnostics are scoped and cleaned up after final export failure (consent=%s)', async consent => {
+  const diagnostics = await collectDiagnostics({ consent });
+  mockMedia.trim.mockImplementationOnce(async (...args: unknown[]) => {
+    for (const listener of mockTrimListeners) {
+      listener({ uri: 'file:///another-job.mp4', code: 'HDR_FALLBACK_MEDIACODEC' });
+      listener({ uri: String(args[0]), code: 'UNKNOWN_TOKEN' });
+      listener({ uri: String(args[0]), code: 'file:///private.mp4' });
+      listener({ uri: String(args[0]), code: 'AUDIO_DROPPED_PROCESSING', message: 'private audio', stack: 'private stack' });
+    }
+    throw { code: 'ERR_VIDEO_TRIM_MEDIA3_5001', message: 'content://private.mp4' };
+  });
+  await mount();
+  await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 8 }));
+  await press(t('student.videoTrimView.copy003'));
+  expect(await diagnostics()).toEqual(consent ? [
+    expect.objectContaining({ props: { domain: 'decode', code: 'video.trim_export.AUDIO_DROPPED_PROCESSING', screen: 'today_workout' } }),
+    expect.objectContaining({ props: { domain: 'decode', code: 'video.trim_export.ERR_VIDEO_TRIM_MEDIA3_5001', screen: 'today_workout' } }),
+  ] : []);
+  expect(videoUploadManager.attach).not.toHaveBeenCalled();
+  expect(mockTrimListeners.size).toBe(0);
+});
+
 test('an album picker failure reaches the backend with its stage and native code, without file details', async () => {
   const diagnostics = await collectDiagnostics();
   jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce(Object.assign(
@@ -481,6 +551,10 @@ test.each([
   ['invalid', 'video.trim_info.INVALID_SOURCE'],
   ['preview', 'video.trim_preview.22001'],
   ['export', 'video.trim_export.ERR_VIDEO_TRIM_MEDIA3_4001'],
+  ['export', 'video.trim_export.ERR_VIDEO_TRIM_ASPECT_RATIO_CHANGED'],
+  ['export', 'video.trim_export.ERR_VIDEO_TRIM_OUTPUT_UPSCALED'],
+  ['export', 'video.trim_export.ERR_VIDEO_TRIM_HDR_NOT_SDR'],
+  ['export', 'video.trim_export.ERR_VIDEO_TRIM_UNEXPECTED_AUDIO'],
 ])('a %s failure is delivered once with a safe stage-specific code', async (stage, code) => {
   const diagnostics = await collectDiagnostics();
   if (stage === 'copy') mockCopy.mockRejectedValueOnce({ code: 'ERR_FILE_READ', message: 'file:///private.mp4' });
@@ -495,7 +569,7 @@ test.each([
     });
   }
   if (stage === 'export') {
-    mockMedia.trim.mockRejectedValueOnce({ code: 'ERR_VIDEO_TRIM_MEDIA3_4001', message: 'secret path' });
+    mockMedia.trim.mockRejectedValueOnce({ code: code.split('.').at(-1), message: 'file:///private.mp4?token=secret', stack: 'private stack' });
     await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 8 }));
     await press(t('student.videoTrimView.copy003'));
   }
@@ -629,4 +703,24 @@ test('the Android Nitro Throwable prefix and stack are classified without being 
   expect(await diagnostics()).toEqual([expect.objectContaining({ props: {
     domain: 'decode', code: 'video.compress.DOLBY_VISION_UNSUPPORTED', screen: 'today_workout',
   } })]);
+});
+
+
+test.each(['picker', 'export'])('compact %s failure uses an Alert without adding text to the set row', async failure => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  try {
+    await act(async () => { renderer = create(<VideoAttachmentControls compact initialCamera studentId="trim-student" stableSetId="trim-set"
+      editable ensureSetLog={async () => 'log'} buildLogRequest={() => { throw new Error('not used'); }} />); });
+    if (failure === 'picker') jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce(new Error('private path'));
+    await act(async () => { renderer.root.findByType(CameraRecorder).props.onLibrary!(); });
+    if (failure === 'export') {
+      mockMedia.trim.mockRejectedValueOnce(new Error('encoder failed'));
+      await press(t('student.videoTrimView.copy003'));
+    }
+    expect(alert).toHaveBeenCalledWith('', t('student.videoAttachmentViewModel.copy001'), [
+      { text: t('student.cameraRecorderView.copy005') },
+    ]);
+    expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.videoAttachmentViewModel.copy001'));
+    expect(videoUploadManager.attach).not.toHaveBeenCalled();
+  } finally { alert.mockRestore(); }
 });
