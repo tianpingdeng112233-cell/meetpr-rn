@@ -650,6 +650,10 @@ test.each<[Locale, string, string, string]>([
   expect(useExerciseNoteOutbox.getState().notes).toHaveLength(0);
   for (const student of [true, false]) {
     await act(async () => renderer.update(<ChatExerciseNoteCard student={student} outgoing={student} message={{ sender_id: studentId, exercise_ref: reference, body: '[Exercise note] Squat · 11/10\nHelp with my pause' }} />));
+    const card = renderer.root.findAllByType(View)[0];
+    expect(StyleSheet.flatten(card.props.style)).toMatchObject({
+      width: '88%', alignSelf: student ? 'flex-end' : 'flex-start',
+    });
     expect(copy()).toContain(`11/10 · Squat · ${label}`);
     expect(copy()).toContain('Help with my pause');
   }
