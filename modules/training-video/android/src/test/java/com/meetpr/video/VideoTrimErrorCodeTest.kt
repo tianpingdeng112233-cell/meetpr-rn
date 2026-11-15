@@ -5,6 +5,34 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class VideoTrimErrorCodeTest {
+  @Test fun fallbackDiagnosticsAreFixedTokensAndOnlyDescribeActualTransitions() {
+    val initial = VideoTrimAttempt(1, TrimHdrMode.OPEN_GL, true)
+    assertEquals(null, videoTrimFallbackCode(true, null, initial))
+    assertEquals("AUDIO_DROPPED_NO_DECODER", videoTrimFallbackCode(true, null, initial.copy(retainAudio = false)))
+    assertEquals(null, videoTrimFallbackCode(false, null, initial.copy(retainAudio = false)))
+    val silent = initial.copy(number = 2, retainAudio = false)
+    assertEquals("AUDIO_DROPPED_PROCESSING", videoTrimFallbackCode(true, initial, silent))
+    val codec = silent.copy(number = 3, hdrMode = TrimHdrMode.MEDIA_CODEC)
+    assertEquals("HDR_FALLBACK_MEDIACODEC", videoTrimFallbackCode(true, silent, codec))
+    val interpreted = codec.copy(number = 4, hdrMode = TrimHdrMode.INTERPRET_AS_SDR)
+    assertEquals("HDR_FALLBACK_INTERPRET_AS_SDR", videoTrimFallbackCode(true, codec, interpreted))
+    assertEquals(null, videoTrimFallbackCode(true, interpreted, interpreted))
+  }
+
+  @Test fun audioAndHdrFailuresAreClassifiedWithoutInspectingPrivateCodecText() {
+    for (code in listOf(3001, 3002, 3003, 4001, 4002, 4003)) {
+      assertEquals(TrimFailure.AUDIO, videoTrimFailureCategory(code, false))
+      assertEquals(TrimFailure.HDR, videoTrimFailureCategory(code, true))
+      assertEquals(TrimFailure.OTHER, videoTrimFailureCategory(code, null))
+    }
+    assertEquals(TrimFailure.AUDIO, videoTrimFailureCategory(6001, null))
+    assertEquals(TrimFailure.HDR, videoTrimFailureCategory(5001, null))
+    for (code in listOf(1001, 2000, 2005, 7001, 7002)) {
+      assertEquals(TrimFailure.OTHER, videoTrimFailureCategory(code, false))
+      assertEquals(TrimFailure.OTHER, videoTrimFailureCategory(code, true))
+    }
+  }
+
   @Test fun transformerFailureKeepsItsNumericCode() {
     val error = ExportException.createForUnexpected(IllegalStateException("file:///private.mp4"))
     assertEquals("ERR_VIDEO_TRIM_MEDIA3_1001", videoTrimErrorCode(error))

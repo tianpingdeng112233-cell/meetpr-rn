@@ -38,7 +38,13 @@ jest.mock('react-native-safe-area-context', () =>
   jest.requireActual<{ default: unknown }>('react-native-safe-area-context/jest/mock').default);
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 jest.mock('../manager', () => ({ videoUploadManager: { attach: jest.fn(async () => {}), remove: jest.fn() } }));
+type TrimDiagnosticEvent = { uri: string; code: string; message?: string; stack?: string };
+const mockTrimListeners = new Set<(event: TrimDiagnosticEvent) => void>();
 const mockMedia = {
+  addListener: jest.fn((_event: string, listener: (event: TrimDiagnosticEvent) => void) => {
+    mockTrimListeners.add(listener);
+    return { remove: () => mockTrimListeners.delete(listener) };
+  }),
   hasCamera: async () => true,
   readTracks: jest.fn(async () => ({ codec: 'h264', width: 1920, height: 1080, bitrate: 8000000, audio: null, frameRate: 30 })),
   trimInfo: jest.fn(async () => ({ durationMs: 8000, videoTrackCount: 1 })),
@@ -70,6 +76,7 @@ jest.mock('expo-file-system', () => ({
 let renderer: ReactTestRenderer;
 beforeEach(async () => {
   jest.clearAllMocks();
+  mockTrimListeners.clear();
   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireNativeModule').mockReturnValue(mockMedia);
   jest.spyOn(ExpoModules.uuid, 'v4').mockReturnValue('11111111-1111-4111-8111-111111111111');
   mockDeleted.length = 0;
@@ -472,6 +479,57 @@ async function collectDiagnostics(options: { offline?: boolean; consent?: boolea
     return bodies.flatMap(body => body.events).filter(event => event.name === 'client_error');
   };
 }
+
+test('a silent album export is accepted while fallback diagnostics contain only fixed codes', async () => {
+  const diagnostics = await collectDiagnostics();
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const codes = ['AUDIO_DROPPED_NO_DECODER', 'HDR_FALLBACK_MEDIACODEC', 'HDR_FALLBACK_INTERPRET_AS_SDR'];
+  mockMedia.trim.mockImplementationOnce(async (...args: unknown[]) => {
+    for (const code of codes) {
+      for (const listener of mockTrimListeners) {
+        listener({ uri: String(args[0]), code, message: 'content://private.mp4?token=secret', stack: 'private stack' });
+      }
+    }
+    return { uri: 'file:///cache/export.mp4', durationMs: 4000 };
+  });
+  await mount();
+  await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 8 }));
+  await press(t('student.videoTrimView.copy003'));
+  expect(await diagnostics()).toEqual(codes.map(code => expect.objectContaining({ props: {
+    domain: 'decode', code: `video.trim_export.${code}`, screen: 'today_workout',
+  } })));
+  const exported = jest.mocked(videoUploadManager.attach).mock.calls[0][1];
+  mockMedia.readTracks.mockResolvedValueOnce({ codec: 'h264', width: 1280, height: 720, bitrate: 2000000, audio: null, frameRate: 30 });
+  await expect(prepareTrainingVideo(exported, { signal: new AbortController().signal, setCompressionCancellationId: () => {} }))
+    .resolves.toEqual({ localUri: 'file:///cache/export.mp4', sizeBytes: 100 });
+  expect(Compressor.Video.compress).not.toHaveBeenCalled();
+  expect(alert).not.toHaveBeenCalled();
+  expect(mockTrimListeners.size).toBe(0);
+  expect(JSON.stringify(await diagnostics())).not.toMatch(/file:|content:|private|secret|stack/);
+  alert.mockRestore();
+});
+
+test.each([true, false])('audio retry diagnostics are scoped and cleaned up after final export failure (consent=%s)', async consent => {
+  const diagnostics = await collectDiagnostics({ consent });
+  mockMedia.trim.mockImplementationOnce(async (...args: unknown[]) => {
+    for (const listener of mockTrimListeners) {
+      listener({ uri: 'file:///another-job.mp4', code: 'HDR_FALLBACK_MEDIACODEC' });
+      listener({ uri: String(args[0]), code: 'UNKNOWN_TOKEN' });
+      listener({ uri: String(args[0]), code: 'file:///private.mp4' });
+      listener({ uri: String(args[0]), code: 'AUDIO_DROPPED_PROCESSING', message: 'private audio', stack: 'private stack' });
+    }
+    throw { code: 'ERR_VIDEO_TRIM_MEDIA3_5001', message: 'content://private.mp4' };
+  });
+  await mount();
+  await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 8 }));
+  await press(t('student.videoTrimView.copy003'));
+  expect(await diagnostics()).toEqual(consent ? [
+    expect.objectContaining({ props: { domain: 'decode', code: 'video.trim_export.AUDIO_DROPPED_PROCESSING', screen: 'today_workout' } }),
+    expect.objectContaining({ props: { domain: 'decode', code: 'video.trim_export.ERR_VIDEO_TRIM_MEDIA3_5001', screen: 'today_workout' } }),
+  ] : []);
+  expect(videoUploadManager.attach).not.toHaveBeenCalled();
+  expect(mockTrimListeners.size).toBe(0);
+});
 
 test('an album picker failure reaches the backend with its stage and native code, without file details', async () => {
   const diagnostics = await collectDiagnostics();

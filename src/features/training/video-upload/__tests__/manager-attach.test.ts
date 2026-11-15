@@ -434,6 +434,8 @@ test.each([
   { width: 1280, height: 720, bitrate: 2750000, audio: { codec: 'audio/mp4a-latm', bitrate: 96000 } },
   { width: 720, height: 1280, bitrate: 2750000, audio: { codec: 'audio/mp4a-latm', bitrate: 128000 } },
   { width: 640, height: 480, bitrate: 700000, audio: null },
+  // An export whose unsupported source audio was dropped remains eligible.
+  { width: 1280, height: 720, bitrate: 2750000, audio: null },
 ])('an upload-compatible album export bypasses compression: %j', async tracks => {
   const exported = { ...source, uri: 'file:///cache/training-trim-export.mp4', ...tracks };
   mockFiles.set(exported.uri, 350000);

@@ -134,3 +134,84 @@ manager 的直通与隐私保护是既有正确行为，新增相应断言首次
 - 替换失败时原组已送达的视频保留；组行失败提示为系统弹窗，组行内无错误文字。
 - 未覆盖：真机 HDR / 杜比视界 / 4K60；真实服务器送达（Demo 模式）。`useTrimSource` 的 `previewAvailable` 返修后恒为 true，属无害残留，未清。
 - 素材在 5570 的 `/sdcard/Movies/audit2/`，截图在 `~/Projects/scratch/album-upload-audit-20261114/evidence/android-fixed-*.png`。
+
+
+## 返修第 2 轮（2026-11-15）
+
+**状态：返修实现与可运行的开发自检完成，未通过设备收货。** 本节替代上文“源有音轨必须交付音轨”与“只有 OpenGL HDR 映射”的口径；历史证据不改写。本轮以当前 HEAD `43fd85b` 为固定点，在 `fix/album-single-pass-export` 上增量修改；开工工作区干净，前两轮实现已在该分支提交中。仍为 Claude 委派实现，无 commit / push / PR 操作。
+
+### 本轮修改与验收对应
+
+- 新增原生 `VideoTrimAttempt.kt` 与 `VideoTrimAttemptTest.kt`，只在卡内纯函数 seam 建模尝试序列。输入源 HDR/音轨信息、解码器可用性、上次尝试/失败类别与取消状态，返回配置或放弃。无音轨/无音频 MIME/无解码器均不保留音轨；音频失败最多去除一次，后续 HDR 降级不会恢复音轨。HDR 顺序为 OpenGL → MediaCodec → interpret-as-SDR；实际最长 4 次（初次 + 两次 HDR 降级 + 一次音频重试），另有 5 次硬上限；取消或无关失败不再尝试。
+- `VideoTrimExporter.kt`：达标整段拷贝仍先行，不查询 decoder、不启动 Transformer；其余源在 worker 用 `MediaCodecList.REGULAR_CODECS` 的非 encoder `supportedTypes` 检查音轨 MIME。每次按配置设置 `setRemoveAudio`、音视频 sequence 与 HDR 模式。仅本次保留音轨时要求成品有音轨，去音轨后要求输出无音轨；单视频轨、非空、选区时长、SDR、不放大、宽高比/朝向及下游兜底不变。
+- 重试与取消都在 main looper 决定，取消后的排队 start 会检查 job/attempt 身份。每次重试使用独立输出文件，先失效旧 listener、cancel 旧 Transformer、删除旧产物；晚到回调只清理自己的文件，不误删下一次产物。worker 成品检查返回主线程后再次核对 job/attempt，未送达文件与 TrimSession 归属协议不变。
+- `VideoTrimErrorCode.kt` / Test：只依据 Media3 数值错误码及 `codecInfo.isVideo` 分类。音频 codec 的 3001–3003 / 4001–4003 与 6001 允许去音轨；视频 codec 的相同码及 5001 仅在 HDR 尝试序列内推进降级，SDR 不重试；I/O、muxer、未知/无轨道归属的 codec 错误不猜测。原生输出校验“Trim lost audio”/“Trim output is HDR”同样进入相应降级；最终仍按既有错误码失败。没有添加视频解码器或绕过不可解的视频轨。
+- `TrainingVideoModule.kt`、`trim-native.ts`：新增本地 `onTrimDiagnostic` 桥接，`uri` 只供本机匹配当前导出，分析事件只接收四个固定码：`AUDIO_DROPPED_NO_DECODER`、`AUDIO_DROPPED_PROCESSING`、`HDR_FALLBACK_MEDIACODEC`、`HDR_FALLBACK_INTERPRET_AS_SDR`。沿用既有 `video.trim_export.<code>`、ClientError 队列及 consent/retry gates；不上传音轨格式、URI、文件名、message 或 stack，不产生失败 UI。成功/最终失败均释放订阅，非当前 job 与非白名单码被丢弃。
+- `VideoTrimView.tsx` 仅改用带诊断的相册适配器并去除恒真条件；`useTrimSource.ts` 仅删除 `previewAvailable` 状态、重置和返回字段。CameraRecorder、相机直拍、回看流程、manager、压缩器与上传重试生产代码未改。
+- JS 测试仍在 `attachment-trim.test.tsx` / `manager-attach.test.ts`：静音成品可保存、直通、不弹 Alert；丢音轨/HDR 降级事件隐私、成功/失败订阅清理、当前 job 隔离、consent；manager 新增上传规格静音成品一行。
+- 台账只同步 `PARITY.md` 和本 JOURNAL；未改任务卡、依赖、lint/TS 配置、文案、版本、签名或后端。未运行 assemble / expo prebuild / adb，未清理任何目录。现场 `df -h .` 开工约 21GiB、收尾约 19GiB；即使空间增加仍遵守本轮构建限制。
+
+### Media3 1.9.0 本地核实依据（用前核实）
+
+唯一 API 二进制来源：`/Users/david/.gradle/caches/modules-2/files-2.1/androidx.media3/media3-transformer/1.9.0/daa8de4b18b88328c03b7b37f4b9c0bda89ba45f/media3-transformer-1.9.0.aar`，SHA-256 `2a2f75caffe2d14725a6b7525b4210fd767e170f2626c97ec9e384f0c64d0388`。只提取 `classes.jar` 至 `/tmp/album-r2-api/transformer.jar`，使用本机 JDK 21 `javap -constants` / `javap -c -p` 核实，未下载/更换依赖。
+
+| API | AAR 实际结果及采用方式 |
+| --- | --- |
+| `Composition` HDR 常量 | `HDR_MODE_KEEP_HDR=0`；`HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_MEDIACODEC=1`；`HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL=2`；`HDR_MODE_EXPERIMENTAL_FORCE_INTERPRET_HDR_AS_SDR=3`。请求顺序是 2 → 1 → 3，SDR 用 0。输出 `/tmp/album-r2-api/Composition.txt`。 |
+| `EditedMediaItem.Builder.setRemoveAudio(boolean)` | 公共方法返回 Builder；字节码将参数写入 `removeAudio:Z` 并返回自身。声明 `/tmp/album-r2-api/EditedMediaItem$Builder.txt`；字节码 `/tmp/album-r2-api/EditedMediaItem-Builder-bytecode.txt`。 |
+| `ExportException` | `ERROR_CODE_DECODER_INIT_FAILED=3001`、`DECODING_FAILED=3002`、`DECODING_FORMAT_UNSUPPORTED=3003`；`ENCODER_INIT_FAILED=4001`、`ENCODING_FAILED=4002`、`ENCODING_FORMAT_UNSUPPORTED=4003`；`VIDEO_FRAME_PROCESSING_FAILED=5001`、`AUDIO_PROCESSING_FAILED=6001`；其他错误仍不降级。完整常量 `/tmp/album-r2-api/ExportException.txt`。 |
+| `ExportException.CodecInfo` | `isVideo` / `isDecoder` 为公开 boolean；`configurationFormat` / `name` 为原始字符串，本轮不读取。输出 `/tmp/album-r2-api/ExportException$CodecInfo.txt`。 |
+| tone-mapping 不支持的错误归属 | `DefaultDecoderFactory` 字节码显示不支持 tone-mapping 时调用 `createExportException`，用 3003 + 基于 sampleMimeType 的 `CodecInfo.isVideo`；因此不能把所有 3003 视为音频错误，也不能把视频 3003 全部排除在 HDR 降级之外。证据 `/tmp/album-r2-api/DefaultDecoderFactory.txt`。 |
+
+按仓规已读 [Expo SDK 57 文档](https://docs.expo.dev/versions/v57.0.0/)。本次 Media3 结论来自上述缓存 AAR，不以网页或记忆代替版本核验；全部原生文件另用实际缓存类路径编译。
+
+### 红 → 绿证据
+
+Gradle 在启动阶段被沙箱拒绝，因此新增原生测试用 `/tmp/album-r2-native-tests.py`（复用上轮执行器，只调整本轮文件清单）直接运行缓存 Kotlin compiler / JUnit；输出仅 `/tmp/album-r2-native/`。这是纯函数测试证据，**不是 AGP / Gradle 或真实 Transformer 编解码通过**。序列 seam 的初始实现保持原有“有音轨就保留/出错即结束”的行为，下面各次均为断言失败，随后才补该行为实现。
+
+| 切片 | 红 | 绿 |
+| --- | --- | --- |
+| SDR 无 decoder 去音轨 | `python3 /tmp/album-r2-native-tests.py`：1 failed / 4，期望 retainAudio=false 实际 true；`/tmp/album-r2-native-red1.log`。 | 同命令 4 passed；`/tmp/album-r2-native-green1.log`。 |
+| HDR 三档 | 同命令 1 failed / 5，第二档期望 MediaCodec 实际 null；`/tmp/album-r2-native-red2.log`。 | 5 passed；`/tmp/album-r2-native-green2.log`。 |
+| 音频单重试、不恢复音轨 | 同命令 1 failed / 6，期望静音第二次尝试实际 null；`/tmp/album-r2-native-red3.log`。 | 6 passed；`/tmp/album-r2-native-green3.log`。 |
+| 取消与硬上限 | 同命令 1 failed / 7，取消后仍返回第一次尝试；`/tmp/album-r2-native-red4.log`。 | 7 passed；`/tmp/album-r2-native-green4.log`。随后增加音频失败落在每个 HDR 档位的组合回归，最终 8 passed。 |
+| 错误分类 | `python3 /tmp/album-r2-native-tests.py --all --errors`：1 failed / 3，期望 AUDIO 实际 OTHER；`/tmp/album-r2-errors-red1.log`。 | 3 passed；`/tmp/album-r2-errors-green1.log`。 |
+| 固定降级码 | 同命令 1 failed / 4，期望 AUDIO_DROPPED_NO_DECODER 实际 null；`/tmp/album-r2-errors-red2.log`。 | 4 passed；`/tmp/album-r2-errors-green2.log`。 |
+| JS 成功降级诊断与静音交付 | `npm test -- --runInBand src/features/training/video-upload/__tests__/attachment-trim.test.tsx`：1 failed / 65，期望三条降级事件实际空数组；`/tmp/album-r2-js-red1.log`。 | 同命令 65 passed；`/tmp/album-r2-js-green1.log`。随后加入最终失败/consent/隔离回归，组件最终 67 passed。 |
+
+manager 新静音素材行与新增诊断过滤/consent 回归首次即绿，分别验证既有直通逻辑和本轮桥接边界，不冒称旧实现上的红测试。无音轨输出接受通过原生配置测试与 JS 原生适配器故障注入分别覆盖；宿主测试没有执行真实 MediaExtractor/Transformer。
+
+### 最终自检与独立只读审查
+
+| 验收 | 结果 |
+| --- | --- |
+| `npm test -- --runInBand` | **219 suites / 2363 tests passed**，40.958s；`/tmp/album-r2-full-test.log`。 |
+| 两个卡内 JS seam | 99 passed（组件 67 + manager 32）；`/tmp/album-r2-seams.log`。 |
+| `npx tsc --noEmit` / `npm run lint` | 通过，无新增错误；`/tmp/album-r2-tsc.log`、`/tmp/album-r2-lint.log`。 |
+| `git diff --check` | 通过。 |
+| `./gradlew :training-video:testDebugUnitTest --offline`（android/） | **未进入编译或测试**：`~/.gradle/wrapper/dists/gradle-9.3.1-bin/23ovyewtku6u96viwx3xl3oks/gradle-9.3.1-bin.zip.lck (Operation not permitted)`；`/tmp/album-r2-gradle.log`。未请求提权、未复制 Gradle 缓存绕过；由 Opus 在有权限环境复跑。 |
+| `python3 /tmp/album-r2-native-tests.py --all --exporter --compile-only` | exit 0，全部原生生产文件及三份测试文件以缓存 Media3 1.9.0 / Android 36 / Expo / RN 类路径编译通过；`/tmp/album-r2-native-compile.log`。 |
+| 原生直接 JUnit | 8 项规格/尝试序列 + 4 项错误分类/码/隐私通过；`/tmp/album-r2-native-final.log`、`/tmp/album-r2-errors-final.log`。既有 `transformerFailureKeepsItsNumericCode` 依赖 Android SystemClock 的 mockable runtime，直接 runner 未执行；正式 Gradle 应共 13 项。 |
+
+按 `code-review` 对 `43fd85b` 后本轮工作区增量（含两份新增文件）做独立只读双轴审查：**Standards 0 项，Spec 0 项**。reviewer 未写文件或构建。仓内仍缺 `docs/agents/issue-tracker.md`，已说明完整 tracker 流程需 `/setup-matt-pocock-skills`；本轮以已给任务卡为 spec，不私建配置。两轴结论不替代设备验收。
+
+### 交回 Opus / David 的剩余验收
+
+- Opus 在沙箱外复跑上述 Gradle 单测；本轮未生成 APK。
+- Opus 按卡在指定模拟器核验 E-AC-3 成品静音交付、可解 8-bit HLG 经降级后输出 SDR、每次降级诊断一次及失败/取消后的旧产物清理；验证原规格、拷贝快路与已通过路径无回归。
+- David 真机核验 10-bit HDR 主路径与颜色；模拟器不能解的视频轨仍可能全部失败。本轮只加获准降级，没有处理视频轨本身不可解的问题，不宣称 HDR / Dolby Vision 全机型可用。
+
+## 第 2 轮返修的设备复验（Opus，2026-11-15）— 仍未通过收货
+
+- 本机复跑：`npm test -- --runInBand` 219 suites / 2363 tests；`tsc`、lint、`git diff --check` 通过；`./gradlew :training-video:testDebugUnitTest --offline` 13 项通过（`VideoTrimAttemptTest` 5、`VideoTrimErrorCodeTest` 5、`VideoTrimExportSpecTest` 3）。
+- **发布包才暴露的缺陷（已修）**：第 2 轮代码装成 release 包后，`VideoTrimExporter` 整个类被 ART 校验器拒绝加载（`java.lang.VerifyError … VideoTrimExporter.start … register v12 has type Reference: VideoTrimExporter but expected Reference: java.lang.Exception`），所有相册裁剪都以 `video.trim_export.ERR_UNEXPECTED` 失败，Transformer 根本没启动。原因是 `start()` 里「try 启动、catch 里直接调多参数的重试函数」经 R8 优化后生成了非法字节码。JVM 单测与 debug 构建不经过 R8，测不出来。返修已超过 2 轮，这一处由 Opus 接管直接改：catch 里只取出异常，重试调用移到 try/catch 之外。重出 release 包后 `VerifyError` 为 0。
+- AVD `meetpr16`（5570）、release 演示包复验：
+
+| 素材 | 结果 |
+| --- | --- |
+| E-AC-3 5.1 音轨 | **送达**。开始前判定本机无该音轨解码器，直接按无音轨导出；诊断 `video.trim_export.AUDIO_DROPPED_NO_DECODER`；Transformer 一次导出 |
+| 8-bit HEVC、带 HLG / BT.2020 标记（模拟器可解） | **送达**，保存 18 秒。降级链逐档走过：OpenGL 色调映射失败 → `HDR_FALLBACK_MEDIACODEC` 失败 → `HDR_FALLBACK_INTERPRET_AS_SDR` 成功。落在最后一档，颜色未做正确转换 |
+| 10-bit HLG HEVC（Main10） | **失败**，三档都试过后以 `ERR_VIDEO_TRIM_MEDIA3_3002`（解码失败）结束，7 秒内返回，原视频保留。该模拟器两个 HEVC 解码器都不支持 Main10 |
+
+- 结论：音轨兜底已实测；HDR 降级链的接线与次数上限已实测，但只走到了最差一档。**10-bit HDR 在能解码、能做 OpenGL 色调映射的真机上是否走主路径、颜色是否正确，仍未验证**——这是本卡的目标场景，未变绿前不算收货，PR 保持草稿。
+- 已知缺口：没有任何自动化能拦住「release 包里类加载失败」这一类问题，目前只靠装 release 包上机。是否在 CI 加一条 release 构建后的冒烟，另议，不在本卡。

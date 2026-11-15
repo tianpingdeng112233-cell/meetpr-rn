@@ -20,7 +20,6 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
   useEffect(() => { callback.current = onOutcome; }, [onOutcome]);
   const [workingUri, setWorkingUri] = useState<string | null>(null);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
-  const [previewAvailable, setPreviewAvailable] = useState(true);
   const [status, setStatus] = useState<'preparing' | 'ready' | 'failed'>('preparing');
   const playback = useTrimPlayback(mode === 'review');
   const { initialize, reset } = playback;
@@ -44,7 +43,6 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
       setWorkingUri(null);
       setThumbnails([]);
       setStatus('preparing');
-      setPreviewAvailable(true);
       source = await copyTrimSource(uri);
       current.own(source);
       if (!current.active) return;
@@ -80,5 +78,5 @@ export function useTrimSource(uri: string | null, onOutcome: (outcome: TrimOutco
     return () => current.dispose();
   }, [uri, initialize, reset, mode]);
 
-  return { session, workingUri, thumbnails, status, previewAvailable, playback };
+  return { session, workingUri, thumbnails, status, playback };
 }

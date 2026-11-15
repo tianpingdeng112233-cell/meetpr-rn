@@ -14,9 +14,12 @@ import expo.modules.kotlin.functions.Queues
 
 /** Local video inspection and trim; upload compression remains in the existing JS pipeline. */
 class TrainingVideoModule : Module() {
-  private val trimExporter by lazy { VideoTrimExporter() }
+  private val trimExporter by lazy {
+    VideoTrimExporter { uri, code -> sendEvent("onTrimDiagnostic", mapOf("uri" to uri, "code" to code)) }
+  }
   override fun definition() = ModuleDefinition {
     Name("TrainingVideo")
+    Events("onTrimDiagnostic")
     AsyncFunction("trimInfo") { uri: String ->
       VideoTrimMedia.inspect(requireNotNull(appContext.reactContext), uri).toMap()
     }
