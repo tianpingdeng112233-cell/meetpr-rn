@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { Path } from 'react-native-svg';
+import { SetVideoCamera } from '../video-upload/SetVideoCamera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Video from 'react-native-video';
 import { StyleSheet, View } from 'react-native';
@@ -50,7 +51,7 @@ function remote(id = 'delivered', created_at = '2026-11-15T12:00:00Z'): StudentV
     weight_kg: '100', reps: 5, content_type: 'video/mp4', size_bytes: 100, filename: null, logged_at: log.logged_at };
 }
 let renderer: ReactTestRenderer;
-const cameras = () => renderer.root.findAllByType(MaterialCommunityIcons).filter(node => node.props.name === 'video-outline');
+const cameras = () => renderer.root.findAllByType(SetVideoCamera);
 const buttons = () => renderer.root.findAllByType(FeedbackPressable);
 const press = async (label: string) => {
   const button = buttons().find(node => node.props.accessibilityLabel === label);
@@ -77,7 +78,8 @@ afterEach(async () => {
 test('completed AllDayBody keeps a green video entry and opens the existing read-only replay', async () => {
   await mount();
   expect(cameras()).toHaveLength(1);
-  expect(cameras()[0].props.color).toBe(colors.success);
+  expect(cameras()[0].findAllByType(Path)[0].props.stroke).toBe(colors.success);
+  expect(cameras()[0].findByType(Path).props.fill).toBe(colors.success);
   await press(t('chat.playVideo'));
   expect(renderer.root.findByType(Video).props.source.uri).toBe('https://video.test/delivered.mp4');
   for (const key of ['student.videoAttachmentV3Controls.copy001', 'student.videoAttachmentV3Controls.copy004', 'student.videoAttachmentV3Controls.copy005'] as const) {
@@ -109,23 +111,26 @@ test.each(['delivered', 'uploading', 'failed'] as const)('completed blocks reser
   }
   for (const id of ['empty-one', 'empty-two', 'empty-three']) {
     expect(placeholders(id)).toHaveLength(0);
-    expect(row(id).findAllByType(MaterialCommunityIcons)).toHaveLength(0);
+    expect(row(id).findAllByType(SetVideoCamera)).toHaveLength(0);
   }
 });
 
 test('completion preserves yellow upload status and upload events turn it green without reopening the day', async () => {
   jest.mocked(videosRepository.list).mockResolvedValue({ videos: [] });
   const dispatch = useVideoUploadStore.getState().dispatch;
+  dispatch('student', 'one', { type: 'failed', message: 'Previous attempt failed' });
   dispatch('student', 'one', { type: 'uploadStarted', attachmentId: 'delivered' });
   dispatch('student', 'one', { type: 'setLogReady', setLogId: 'log' });
   await mount(true);
-  expect(cameras()[0].props.color).toBe(colors.gold500);
+  expect(cameras()[0].findAllByType(Path)[0].props.stroke).toBe(colors.gold500);
   await act(async () => { renderer.update(<Screen />); });
   expect(cameras()).toHaveLength(1);
-  expect(cameras()[0].props.color).toBe(colors.gold500);
+  expect(cameras()[0].findAllByType(Path)[0].props.stroke).toBe(colors.gold500);
+  await act(async () => { dispatch('student', 'one', { type: 'progress', progress: 0.5 }); });
+  expect(cameras()[0].props.fraction).toBe(0.5);
   expect(buttons().filter(node => node.props.accessibilityLabel === t('chat.playVideo'))).toHaveLength(0);
   await act(async () => { dispatch('student', 'one', { type: 'succeeded', attachmentId: 'delivered' }); });
-  expect(cameras()[0].props.color).toBe(colors.success);
+  expect(cameras()[0].findAllByType(Path)[0].props.stroke).toBe(colors.success);
   await press(t('chat.playVideo'));
   expect(renderer.root.findByType(Video).props.source.uri).toBe('https://video.test/delivered.mp4');
 });
@@ -137,7 +142,7 @@ test.each(['failed', 'waiting'] as const)('completed sets retain red %s status w
   } } });
   await mount();
   expect(cameras()).toHaveLength(1);
-  expect(cameras()[0].props.color).toBe(colors.danger);
+  expect(cameras()[0].findAllByType(Path)[0].props.stroke).toBe(colors.danger);
   expect(buttons().filter(node => node.props.accessibilityLabel === t('chat.playVideo'))).toHaveLength(0);
   expect(buttons().filter(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001'))).toHaveLength(0);
 });
@@ -150,7 +155,7 @@ test.each([false, true])('an uploaded file without a set binding never turns gre
   } } });
   await mount();
   expect(cameras()).toHaveLength(1);
-  expect(cameras()[0].props.color).toBe(colors.gold500);
+  expect(cameras()[0].findAllByType(Path)[0].props.stroke).toBe(colors.gold500);
   expect(buttons().filter(node => node.props.accessibilityLabel === t('chat.playVideo'))).toHaveLength(0);
 });
 
@@ -161,7 +166,7 @@ test('a completed set without video has neither video icon nor capture entry; ed
   expect(buttons().filter(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001'))).toHaveLength(0);
   await act(async () => { renderer.update(<Screen editable />); });
   expect(cameras()).toHaveLength(1);
-  expect(cameras()[0].props.color).toBe(colors.textMuted);
+  expect(cameras()[0].findAllByType(Path)[0].props.stroke).toBe(colors.textMuted);
   expect(buttons().filter(node => node.props.accessibilityLabel === t('student.videoAttachmentV3Controls.copy001'))).toHaveLength(1);
 });
 

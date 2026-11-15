@@ -1,3 +1,4 @@
+import { SetVideoCamera, setVideoCameraState } from './SetVideoCamera';
 import { hasVideoDeliveryFailure } from './delivery-failures';
 import { useVideoDeliveryRetry } from './VideoDeliveryRecovery';
 import type { VideoBadgeInfo } from '@/features/video-player/types';
@@ -21,6 +22,13 @@ import { requestVideoUploadConsent } from './consent';
 import { videoUploadManager } from './manager';
 import { deleteLocalVideo, pickTrainingVideo, VideoNativeError, type VideoSource } from './native';
 import { preserveVideoAttachment, selectVideoUpload, useVideoUploadStore } from './store';
+
+const cameraLabels = {
+  empty: 'student.videoAttachmentV3Controls.copy001',
+  sending: 'student.videoUpload.sending',
+  delivered: 'student.videoAttachmentV3Controls.copy006',
+  failed: 'student.videoDelivery.notUploaded',
+} as const;
 
 type Props = {
   compact?: boolean;
@@ -210,9 +218,13 @@ export function VideoAttachmentControls({
   const statusLabel = failed ? t('student.videoAttachmentV3Controls.copy008') : record.status === 'uploading'
     ? t(percentage > 0 ? 'student.videoUpload.sendingProgress' : 'student.videoUpload.sending', [percentage])
     : t(record.status === 'failed' ? 'student.videoAttachmentV3Controls.copy008' : record.status === 'uploaded' ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy007');
+  const delivered = record.status === 'uploaded' && Boolean(record.setLogId && record.attachmentId);
+  const transferring = record.status === 'uploading';
+  const cameraState = setVideoCameraState(record, delivered, isPreparing);
   if (cameraOnly) return <>
-    <Pressable accessibilityRole="button" accessibilityLabel={t(playable ? 'student.videoAttachmentV3Controls.copy006' : 'student.videoAttachmentV3Controls.copy001')} onPress={() => { if (playable || failed) setDetailVisible(true); else void choose('camera'); }} style={{ width: 40, minHeight: 38, justifyContent: 'center', alignItems: 'center' }}>
-      <MaterialCommunityIcons name="video-outline" size={20} color={record.status === 'uploaded' ? colors.success : record.status !== 'none' || isPreparing ? colors.gold500 : colors.textMuted} />
+    <Pressable accessibilityRole="button" accessibilityValue={transferring ? { min: 0, max: 100, now: percentage } : undefined} accessibilityLabel={t(cameraLabels[cameraState])} onPress={() => { if (playable || failed) setDetailVisible(true); else void choose('camera'); }} style={{ width: 40, minHeight: 38, justifyContent: 'center', alignItems: 'center' }}>
+      <SetVideoCamera state={cameraState}
+        fraction={record.status === 'uploaded' ? 1 : transferring ? record.progress : 0} />
     </Pressable>
     {detailVisible ? <Modal visible animationType="slide" onRequestClose={() => setDetailVisible(false)}><View style={{ flex: 1, backgroundColor: colors.bgBase, padding: 16, paddingTop: 48 }}>
       <VideoAction icon="close" label={t('training.allDay.done')} disabled={false} onPress={() => setDetailVisible(false)} />

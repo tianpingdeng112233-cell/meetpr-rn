@@ -13,6 +13,7 @@ import type { VideoBadgeInfo } from '@/features/video-player/types';
 import { hydrateVideoUploads, useVideoUploadStore } from './store';
 import { EMPTY_VIDEO_UPLOAD, type VideoUploadRecord } from './model';
 import { latestVideoFeedbackId, playableSetVideo, type ReplayVideo } from './completed-replay';
+import { SetVideoCamera, setVideoCameraState } from './SetVideoCamera';
 import { hasVideoDeliveryFailure } from './delivery-failures';
 import { useVideoDeliveryRetry } from './VideoDeliveryRecovery';
 
@@ -88,15 +89,17 @@ export function CompletedSetVideo({ setLogId, stableSetId, badge, compact = fals
   const records = useVideoUploadStore(state => state.records);
   const { entry, indicatorSetId, video } = resolveSetVideo(studentId, videos, records, { setLogId, stableSetId });
   if (compact) {
-    const failed = hasVideoDeliveryFailure(entry);
     // Upload completion alone is not delivery: the selected clip must belong to this set.
     const delivered = video && (videos.some(remote => remote.id === video.attachmentId && setLogId && remote.set_log_id === setLogId)
       || (entry.status === 'uploaded' && entry.setLogId && entry.attachmentId));
     if (!video && entry.status === 'none') return reserveColumn ? <View testID="completed-video-placeholder" style={{ width: 40 }} /> : null;
-    return <Pressable accessibilityRole="button" accessibilityLabel={t(delivered ? 'chat.playVideo' : failed ? 'student.videoDelivery.notUploaded' : 'student.videoUpload.sending')}
+    const transferring = entry.status === 'uploading';
+    const state = setVideoCameraState(entry, Boolean(delivered));
+    return <Pressable accessibilityRole="button" accessibilityValue={transferring ? { min: 0, max: 100, now: Math.round(entry.progress * 100) } : undefined} accessibilityLabel={t(delivered ? 'chat.playVideo' : state === 'failed' ? 'student.videoDelivery.notUploaded' : 'student.videoUpload.sending')}
       disabled={!delivered} onPress={() => { if (delivered && video) play({ ...video, badge }); }}
       style={{ width: 40, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}>
-      <MaterialCommunityIcons name="video-outline" size={20} color={failed ? colors.danger : delivered ? colors.success : colors.gold500} />
+      <SetVideoCamera state={state}
+        fraction={delivered || entry.status === 'uploaded' ? 1 : transferring ? entry.progress : 0} />
     </Pressable>;
   }
   if (hasVideoDeliveryFailure(entry) && indicatorSetId) {
