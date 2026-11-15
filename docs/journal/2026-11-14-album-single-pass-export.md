@@ -112,7 +112,9 @@ manager 的直通与隐私保护是既有正确行为，新增相应断言首次
 
 返修实现与本轮获准自检完成，**不等于设备收货完成**。原生单测由 Opus 复跑，真实编码器短片超目标码率时的交付/压缩、缩略图失败仍可预览播放、HDR / Dolby Vision 等素材和原先设备验收仍待 Opus；未运行 adb、模拟器或生成验收包。
 
-## 收货记录（Opus，2026-11-14）
+## 设备实测记录（Opus，2026-11-14）— 2026-11-15 David 驳回，未通过收货
+
+> 更正：下表里 E-AC-3 与 10-bit HLG 两行失败，而这两类素材正是本卡要修的对象，本记录不构成收货通过。当时把 PR 转为正式是误判，已退回草稿；后续见任务卡「返修第 2 轮」。
 
 - 亲读全量 diff（Standards / Spec 两轴）。首轮两条返修，第 1 轮收敛：成品未命中直通不再判失败（任务卡目标 2 写得过死，已改卡）；缩略图失败不再连带关掉预览。
 - 本机独立复跑：`npm test -- --runInBand` 219 suites / 2359 tests；`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过；返修后 `./gradlew :training-video:testDebugUnitTest --offline` 6 项通过（`VideoTrimErrorCodeTest` 3、`VideoTrimExportSpecTest` 3）。

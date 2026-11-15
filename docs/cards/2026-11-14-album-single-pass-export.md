@@ -60,3 +60,32 @@
 2. **Spec（多做）· 缩略图失败不应关掉预览**。`useTrimSource` 在缩略图生成失败时 `setPreviewAvailable(false)`，把预览播放器也一起停了。缩略图失败只应让时间轴没有缩略图；只有播放器自身 `onError` 才停用预览与播放按钮。要求去掉这条联动，并在 `attachment-trim.test.tsx` 把对应用例改成：缩略图失败后预览与播放仍可用、可保存；播放器报错后预览停用、仍可保存。
 
 验收：新增/调整的测试先红后绿；`npm test`、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过。**本轮不要运行任何 Gradle 任务**（本机磁盘只剩约 1G，原生单测由 Opus 复跑）。结果追加写在同一份 JOURNAL 末尾，`PARITY.md` 如有措辞变化同步。仍然不 commit、不 push、不开 PR。
+
+## 返修第 2 轮（2026-11-15，David 驳回收货）
+
+David 结论：验收没过。本卡要修的正是 HDR 与非 AAC 音轨两类素材，而 5570 实测里失败的就是这两行，不能算收货。PR 已退回草稿。
+
+已查实的事实（AVD `meetpr16`，Android 16 模拟器）：
+- 系统里没有任何 AC-3 / E-AC-3 / AC-4 解码器；E-AC-3 素材导出报 `ERR_VIDEO_TRIM_MEDIA3_3003`（解码格式不支持）。
+- `c2.android.hevc.decoder` 与 `c2.goldfish.hevc.decoder` 对 `hvc1.2.4.L120.90`（HEVC Main10）均报 `NoSupport`，10-bit HLG 素材预览报解码失败、导出报 `ERR_VIDEO_TRIM_MEDIA3_5001`。这台模拟器解不了 10-bit，HDR 压 SDR 的主路径只能上真机验。
+
+本轮目标——**解不了或压不了的部分降级，视频本身不能因此丢**：
+
+1. **音轨处理不了时只交付画面**。源有音轨但本机无法解码该音轨格式时，导出不含音轨的成品，而不是整段失败。要求：
+   - 开始导出前先判断本机是否有该音轨格式的解码器，没有就直接按「无音轨」导出；有解码器但导出因音频环节失败时，去掉音轨重试一次。
+   - `complete` 里「源有音轨则成品必须有音轨」的校验相应放宽：仅在本次导出确实保留了音轨时才要求成品有音轨。
+   - 丢弃音轨时发一条诊断（沿用 `video.<stage>.<code>` 码制，新增固定码，如 `trim_export.AUDIO_DROPPED_<原因>`），不上传音轨格式以外的任何原始信息；这不是失败，不弹窗。
+   - 整段拷贝快路不受影响（源音轨已是达标 AAC 才会走）。
+2. **HDR 压 SDR 加降级链**。对判定为 HDR 的源依次尝试：OpenGL 色调映射 → MediaCodec 色调映射 → 把 HDR 当 SDR 解释（颜色可能偏，但视频能交付）。前一种因不支持或处理失败而报错时自动换下一种；全部失败才算失败。常量名与可用性以本仓锁定的 Media3 1.9.0 源码为准，不要凭印象。每次降级发一条诊断（固定码，区分落到了哪一档）。`complete` 里「成品不得是 HDR」的校验保留。
+3. 重试必须有上限且互不叠乘成长时间等待：初始化类失败通常在 1–2 秒内返回；一次导出总尝试次数不超过 5 次。取消语义不变：用户取消后不得再发起下一次尝试，晚到的产物要清理。
+
+不做：不改文案；不改相机直拍；不处理视频轨本身解不了的情况（那仍是失败）；不动 `useTrimSource` 的 `previewAvailable` 以外的 JS 行为——**但请顺手删掉 `previewAvailable` 这个恒为 true 的残留状态**。
+
+测试 seam（先红后绿）：
+- 原生纯函数层（`VideoTrimExportSpecTest` 同层）：把「尝试序列」做成纯函数——输入源信息（是否 HDR、音轨格式、是否有该音轨解码器）与上一次失败的类别，输出下一次尝试的配置或「放弃」；覆盖 SDR+可解音轨、SDR+不可解音轨、HDR 三档降级、音频失败后去音轨重试、次数上限、取消后不再尝试。
+- `VideoTrimErrorCodeTest`：新增诊断码映射与隐私约束。
+- `attachment-trim.test.tsx` / `manager-attach.test.ts`：成品无音轨（源有音轨）时仍被接受并走直通；丢音轨与降级的诊断事件载荷不含路径与原始文案。
+
+验收：新测试先红后绿；`npm test`、`npx tsc --noEmit`、`npm run lint`、`git diff --check` 通过；`./gradlew :training-video:testDebugUnitTest --offline` 通过（本机现在约 4G 可用，可以跑这一项；不要跑 assemble / prebuild）。结果追加写在同一份 JOURNAL 末尾。仍然不 commit、不 push、不开 PR。
+
+设备验收由 Opus 做：模拟器上 E-AC-3 素材应交付（无音轨）；一条模拟器能解的 8-bit、带 HLG 标记的素材应经降级链交付为 SDR；10-bit HDR 主路径由 David 在真机上验。
