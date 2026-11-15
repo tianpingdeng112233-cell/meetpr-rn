@@ -14,6 +14,7 @@ import { decodePrescription } from '@/domain/plan/prescription';
 import type { AllDaySheet } from './all-day-sheet';
 import type { WorkoutSetDraft } from './model';
 import { VideoAttachmentControls } from './video-upload/VideoAttachmentControls';
+import { CompletedSetVideo, CompletedVideoGroup, CompletedVideoReplayProvider } from './video-upload/CompletedVideoReplay';
 import { allDayLogRequest } from './all-day-sheet';
 import { summarizeExercise, type ExerciseSummaryActual } from './exercise-summary';
 import { metricDisplay, metricStored, POUNDS_PER_KG } from '@/domain/measurement';
@@ -45,7 +46,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
   const colors = useColors();
   const { editing, edit, pad, rowViews } = editor;
   const count = sheet.exercises.reduce((n, block) => n + block.rows.length, 0);
-  return <>
+  const body = <>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
       <Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t('training.allDay.summary', [title, sheet.exercises.length])}</Text>
       <Text style={{ ...font.body(12), color: colors.textMuted, flexShrink: 1 }}>{t(editable ? 'training.allDay.hint' : 'training.allDay.setCount', [count])}</Text>
@@ -62,7 +63,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
         block.rows.filter(row => !row.sourceLog && row.weightText).map(row => ({ plan_set_id: row.planSet.id, weight_kg: row.weightText })),
         { unit, effortKinds: Object.fromEntries(block.rows.map(row => [row.setIndex, row.effortKind ?? 'rpe'])), labels: { bodyweight: t('loadTypes.bodyweight'), freeWeight: t('training.allDay.freeWeight'), topSet: t('training.allDay.topSet'), unrecorded: t('training.allDay.unrecorded') } });
       const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
-      return <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
+      const content = <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ width: 22, alignItems: 'center' }}>
           {index < sheet.exercises.length - 1 ? <TimelineConnector exerciseId={block.exercise.id} current={current} color={nodeColor} /> : null}
           <View style={{ width: 22, height: 22, borderRadius: 11, overflow: 'hidden', backgroundColor: nodeColor, alignItems: 'center', justifyContent: 'center', marginTop: 5, outlineColor: colors.goldSoft, outlineWidth: current ? 4 : 0 }}>
@@ -145,7 +146,8 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
                     {percentage}
                   </View>}
-                  {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : null}
+                  {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
+                    badge={{ exerciseName: name, setOrdinal: row.setIndex + 1, weightKg: row.weightText ? Number(row.weightText) : null, reps: row.repsText ? Number(row.repsText) : null, rpe: row.effortKind !== 'rir' && row.rpeText ? Number(row.rpeText) : null }} />}
                   </View>
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
                 </View>;
@@ -158,11 +160,16 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
           </> : null}
         </View>
       </View>;
+      return editable ? content : <CompletedVideoGroup key={block.exercise.id} compact
+        sets={block.rows.map(row => ({ setLogId: row.sourceLog?.id ?? null, stableSetId: row.stableSetId }))}>
+        {() => content}
+      </CompletedVideoGroup>;
     })}
     </View>
     {editable ? <Pressable accessibilityRole="button" onPress={onAddExercise}><Text style={{ color: colors.goldText, ...font.body(14) }}>{t('student.added.addExercise')}</Text></Pressable> : null}
 
   </>;
+  return editable ? body : <CompletedVideoReplayProvider studentId={studentId}>{body}</CompletedVideoReplayProvider>;
 }
 
 
