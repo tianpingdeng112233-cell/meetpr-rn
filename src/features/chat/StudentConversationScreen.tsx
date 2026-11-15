@@ -7,7 +7,7 @@ import { useSessionStore } from '@/api/session';
 import { font, GradientFill, Screen, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { useFeedbackInboxViewModel } from '@/features/feedback/feedback-inbox';
-import { markDashboardPlanSeen } from '@/features/chat/plan-seen';
+import { dashboardPlanSignatureKey, markDashboardPlanSeen } from '@/features/chat/plan-seen';
 import { FeedbackVideoUnavailable, PlaybackLinkError } from '@/features/feedback/FeedbackComponents';
 import { FeedbackPlaybackModal } from '@/features/feedback/FeedbackPlaybackModal';
 import { FeedbackPlaybackSession } from '@/features/feedback/playback-session';
@@ -254,6 +254,27 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
   }, [staged]);
   const items = useMemo(() => mergeStudentTimeline(messages, plan.planNotice, inbox.items, localSentAt.current), [messages, plan.planNotice, inbox.items]);
   const ready = !loading && !inbox.isLoading && !plan.isLoading;
+  const unreadPlanId = plan.unread ? plan.planNotice?.signature.planId : undefined;
+  const publishedAt = plan.planNotice?.signature.publishedAt;
+  useFocusEffect(useCallback(() => {
+    if (!studentId || !unreadPlanId || !publishedAt) return;
+    const signature = { planId: unreadPlanId, publishedAt };
+    const queryKey = studentChatKeys.planSeen(studentId, dashboardPlanSignatureKey(signature));
+    const acknowledge = async () => {
+      try {
+        await markDashboardPlanSeen(studentId, signature);
+        await client.cancelQueries({ queryKey });
+        client.setQueryData(queryKey, true);
+      } catch {
+        // Keep the unread count until storage is available on a later visit.
+      }
+    };
+    if (AppState.currentState === 'active') void acknowledge();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void acknowledge();
+    });
+    return () => subscription.remove();
+  }, [client, studentId, unreadPlanId, publishedAt]));
   function markVisibleFeedback() {
     if (!initialPosition.current || !mounted.current || viewport.current.height <= 0) return;
     for (const item of items) {
@@ -328,7 +349,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       {items.map((item, index) => <Fragment key={item.id}><ChatTimeSeparator label={separators.get(index)} /><View testID={`student-chat-item-${item.id}`} onLayout={({ nativeEvent: { layout } }) => { frames.current.set(item.id, { y: layout.y, height: layout.height }); }}>
         {item.kind === 'message' ? <StudentChatMessageRow message={item.message} outgoing={item.message.sender_id === studentId} read={otherReadSeq >= item.message.seq} openImage={() => setSelectedImage(item.message.image_url ?? null)} openVideo={() => void openShareVideo(item.message)} />
           : item.kind === 'feedback' ? <StudentFeedbackChatCard feedback={item.feedback} videos={videos.data?.videos ?? []} onPlay={() => { if (item.feedback.video_id) void playback.session.open(item.feedback.id, item.feedback.video_id); }} />
-          : <StudentPlanChatCard notice={item.notice} onPress={async () => { await markDashboardPlanSeen(studentId, item.notice.signature); await client.cancelQueries({ queryKey: plan.queryKey }); client.setQueryData(plan.queryKey, true); router.navigate('/(student)/training'); }} />}
+          : <StudentPlanChatCard notice={item.notice} onPress={() => router.navigate('/(student)/training')} />}
         {item.kind === 'feedback' && playback.errorFeedbackId === item.feedback.id ? <PlaybackLinkError /> : null}
       </View></Fragment>)}
       {shareVideoError ? <PlaybackLinkError /> : null}
@@ -433,7 +454,7 @@ function StudentFeedbackChatCard({ feedback, videos, onPlay }: { feedback: Feedb
   </View>;
 }
 
-function StudentPlanChatCard({ notice, onPress }: { notice: StudentPlanNotice; onPress: () => Promise<void> }) {
+function StudentPlanChatCard({ notice, onPress }: { notice: StudentPlanNotice; onPress: () => void }) {
   const colors = useColors();
   return <Pressable accessibilityRole="button" accessibilityLabel={t('student.studentBlackGoldChatView.copy020')} onPress={onPress} style={{ alignSelf: 'center', maxWidth: '100%', paddingHorizontal: 14, paddingVertical: 13, backgroundColor: colors.surfaceCard, borderColor: colors.borderSubtle, borderWidth: 1, borderRadius: 14 }}>
     <Text style={{ ...font.body(13), color: colors.textSecondary, textAlign: 'center' }}>{t('student.coachTab.planPublished', [notice.weekIndex])}</Text>
@@ -461,7 +482,7 @@ function useStudentChatPlayback() {
       const request = feedbackRepository.markRead(id).then(async () => {
         await client.cancelQueries({ queryKey: feedbackKeys.all });
         client.setQueriesData<FeedbackResponse>({ queryKey: feedbackKeys.all }, previous => previous && ({ ...previous, items: previous.items.map(item => item.id === id ? { ...item, read_at: item.read_at ?? new Date().toISOString() } : item) }));
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => { readRequests.delete(id); });
       readRequests.set(id, request);
       return request;
     };
