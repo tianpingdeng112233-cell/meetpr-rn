@@ -10,6 +10,7 @@ MeetPR 安卓端(React Native/Expo)。⚖️2026-07-19 拍板 C:RN 只做安卓,
 - `PLAN.md` — 施工蓝图(W0-W4 分波、技术底座、三级分发路径)。改动方向先读它。
 - `PARITY.md` — 逐屏复刻台账,**每张卡收货必须更新**。
 - `docs/w0-reference/` — 从 iOS 仓提取的复刻参照包(tokens/auth/导航/埋点)+ backend 假设排查。
+- `NEXT-RELEASE.md` — 下一个 CN 包的候选台账;用户可见改动合入 main 当天登记一行,出包后清零开新目标。
 
 ## 技术底座(已定,别重新发明)
 - Expo SDK 57 + TypeScript + expo-router(src/app 布局);TanStack Query + Zustand;zod 做 DTO 运行时校验。
