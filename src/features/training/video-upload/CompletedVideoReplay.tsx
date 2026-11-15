@@ -69,23 +69,36 @@ function resolveSetVideo(studentId: string, videos: readonly StudentVideo[], rec
   return { entry, indicatorSetId, video: playableSetVideo(setLogId, videos, entry, exists) };
 }
 
-/** Reserve a trailing column for playback or a visible delivery failure within one exercise. */
-export function CompletedVideoGroup({ sets, children }: { sets: readonly ReplaySet[]; children: (hasVideo: boolean) => ReactNode }) {
+/** Reserve a trailing column within one exercise; compact rows also show pending uploads. */
+export function CompletedVideoGroup({ sets, children, compact = false }: { sets: readonly ReplaySet[]; children: (hasVideo: boolean) => ReactNode; compact?: boolean }) {
   const { studentId, videos } = useContext(ReplayContext);
   const records = useVideoUploadStore(state => state.records);
   const resolved = sets.map(set => resolveSetVideo(studentId, videos, records, set));
   const failed = resolved.some(set => hasVideoDeliveryFailure(set.entry));
-  const hasVideo = failed || resolved.some(set => set.video !== null);
-  return <VideoColumnContext.Provider value={failed ? 100 : hasVideo ? 22 : 0}>{children(hasVideo)}</VideoColumnContext.Provider>;
+  const hasVideo = failed || resolved.some(set => set.video !== null || (compact && set.entry.status !== 'none'));
+  const width = compact ? (hasVideo ? 40 : 0) : failed ? 100 : hasVideo ? 22 : 0;
+  return <VideoColumnContext.Provider value={width}>{children(hasVideo)}</VideoColumnContext.Provider>;
 }
 
-export function CompletedSetVideo({ setLogId, stableSetId, badge }: ReplaySet & { badge: VideoBadgeInfo }) {
+export function CompletedSetVideo({ setLogId, stableSetId, badge, compact = false }: ReplaySet & { badge: VideoBadgeInfo; compact?: boolean }) {
   const { studentId, videos, play } = useContext(ReplayContext);
   const reserveColumn = useContext(VideoColumnContext);
   const { retry, recovery } = useVideoDeliveryRetry(studentId);
   const colors = useColors();
   const records = useVideoUploadStore(state => state.records);
   const { entry, indicatorSetId, video } = resolveSetVideo(studentId, videos, records, { setLogId, stableSetId });
+  if (compact) {
+    const failed = hasVideoDeliveryFailure(entry);
+    // Upload completion alone is not delivery: the selected clip must belong to this set.
+    const delivered = video && (videos.some(remote => remote.id === video.attachmentId && setLogId && remote.set_log_id === setLogId)
+      || (entry.status === 'uploaded' && entry.setLogId && entry.attachmentId));
+    if (!video && entry.status === 'none') return reserveColumn ? <View testID="completed-video-placeholder" style={{ width: 40 }} /> : null;
+    return <Pressable accessibilityRole="button" accessibilityLabel={t(delivered ? 'chat.playVideo' : failed ? 'student.videoDelivery.notUploaded' : 'student.videoUpload.sending')}
+      disabled={!delivered} onPress={() => { if (delivered && video) play({ ...video, badge }); }}
+      style={{ width: 40, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}>
+      <MaterialCommunityIcons name="video-outline" size={20} color={failed ? colors.danger : delivered ? colors.success : colors.gold500} />
+    </Pressable>;
+  }
   if (hasVideoDeliveryFailure(entry) && indicatorSetId) {
     return <>
       <Pressable accessibilityRole="button" accessibilityLabel={t('student.videoDelivery.notUploaded') + ' · ' + t('student.videoAttachmentV3Controls.copy009')}
