@@ -33,9 +33,9 @@ export function useStudentPlanNotice(studentId: string) {
   const refetchSeen = seen.refetch;
   const signatureKey = signature ? dashboardPlanSignatureKey(signature) : null;
   useFocusEffect(useCallback(() => { if (studentId && signatureKey) void refetchSeen(); }, [studentId, signatureKey, refetchSeen]));
-  const planNotice: StudentPlanNotice | null = signature && (seen.data === false || seen.isError)
+  const planNotice: StudentPlanNotice | null = signature
     ? { signature, weekIndex: currentWeekDays(detail.data?.days ?? [])[0]?.week_number ?? 1 } : null;
-  return { planNotice, queryKey, isLoading: plans.isPending || (Boolean(signature) && seen.isPending) };
+  return { planNotice, unread: Boolean(signature && (seen.data === false || seen.isError)), isLoading: plans.isPending || (Boolean(signature) && seen.isPending) };
 }
 
 /** Shared student inbox cache: only the currently bound coach contributes chat unread. */
@@ -97,5 +97,5 @@ export function useOpenCoachChat(studentId: string) {
       } else failure('network');
     } finally { opening.current = false; setIsOpening(false); }
   }
-  return { openCoachChat, isOpening, totalUnread: totalUnreadCount({ hasPlanNotice: plan.planNotice !== null, feedbackUnread: feedback.unreadCount, chatUnread: coachConversation?.unread_count ?? 0 }) };
+  return { openCoachChat, isOpening, totalUnread: totalUnreadCount({ hasPlanNotice: plan.unread, feedbackUnread: feedback.unreadCount, chatUnread: coachConversation?.unread_count ?? 0 }) };
 }

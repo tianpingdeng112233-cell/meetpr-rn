@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { ApiError } from '@/api/client';
 import { ChatMessageSchema, chatRepository, toSetRefWire, type ChatMessage } from '@/api/domains/chat';
+import { planKeys } from '@/api/domains/plans';
 import { FeedbackItemSchema } from '@/api/domains/feedback';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import { dashboardPlanSeenKey } from '@/features/chat/plan-seen';
@@ -67,8 +68,10 @@ async function renderScreen() {
   await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen conversationId={conversationId} coachName="Alex" /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
 }
+const initialAppState = AppState.currentState;
 beforeEach(() => {
   jest.clearAllMocks();
+  AppState.currentState = 'active';
   useSetRefStagingStore.setState({ intents: {} });
   feedbackItems = []; plans = [];
   boundCoach = { status: 'accepted', coach_id: coachId, coach_display_name: 'Alex' };
@@ -91,6 +94,7 @@ beforeEach(() => {
   jest.mocked(chatRepository.read).mockResolvedValue({ unread_count: 0, my_last_read: { message_id: 'm', seq: 2 } });
 });
 afterEach(() => {
+  AppState.currentState = initialAppState;
   act(() => renderer?.unmount()); jest.restoreAllMocks(); client.clear(); useSessionStore.setState({ user: null }); setLocaleOverride(null);
 });
 
@@ -171,6 +175,45 @@ function HeaderProbe() {
   const chat = useOpenCoachChat(studentId);
   return <Pressable accessibilityLabel="open-coach" disabled={chat.isOpening} onPress={chat.openCoachChat}><Text>{chat.totalUnread}</Text></Pressable>;
 }
+test.each(['loaded', 'failed'] as const)('reading the published plan keeps it tappable and clears the badge with messages %s', async status => {
+  if (status === 'failed') jest.mocked(chatRepository.messages).mockRejectedValue(new Error('offline'));
+  await AsyncStorage.removeItem(dashboardPlanSeenKey(studentId));
+  const publishedAt = '2026-11-15T08:00:00Z';
+  plans = [{ id: 'plan-tab', status: 'published', published_at: publishedAt, created_at: publishedAt }];
+  const tree = (coach: boolean) => <QueryClientProvider client={client}>
+    <HeaderProbe />
+    {coach && <StudentConversationScreen conversationId={conversationId} coachName="Alex" />}
+  </QueryClientProvider>;
+  const settle = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
+  await act(async () => { renderer = create(tree(false)); });
+  await settle();
+  expect(copy()).toContain('1');
+  await act(async () => { renderer.update(tree(true)); });
+  await settle();
+  expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.studentBlackGoldChatView.copy020') }).length).toBeGreaterThan(0);
+  await act(async () => { renderer.update(tree(false)); });
+  await settle();
+  expect(copy()).toContain('0');
+  expect(await AsyncStorage.getItem(dashboardPlanSeenKey(studentId))).toBe(JSON.stringify({ planId: 'plan-tab', publishedAt }));
+});
+test('a later publication received in the background remains unread until Coach returns to the foreground', async () => {
+  AppState.currentState = 'background';
+  const listeners = new Set<(state: AppStateStatus) => void>();
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => {
+    listeners.add(listener);
+    return { remove: () => { listeners.delete(listener); } };
+  });
+  await renderScreen();
+  const publishedAt = '2026-11-15T10:00:00Z';
+  const signature = JSON.stringify({ planId: 'late-plan', publishedAt });
+  plans = [{ id: 'late-plan', status: 'published', published_at: publishedAt, created_at: publishedAt }];
+  await act(async () => { await client.invalidateQueries({ queryKey: planKeys.list(studentId) }); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+  expect(await AsyncStorage.getItem(dashboardPlanSeenKey(studentId))).not.toBe(signature);
+  AppState.currentState = 'active';
+  await act(async () => { for (const listener of [...listeners]) listener('active'); });
+  expect(await AsyncStorage.getItem(dashboardPlanSeenKey(studentId))).toBe(signature);
+});
 test('header opens the bound coach once and navigates with conversation ID and name', async () => {
   jest.mocked(chatRepository.open).mockResolvedValue({ conversation: { id: conversationId, other_party: { id: coachId, display_name: 'Alex' }, unread_count: 0 } });
   await act(async () => { renderer = create(<QueryClientProvider client={client}><HeaderProbe /></QueryClientProvider>); });
@@ -214,6 +257,32 @@ test('feedback becomes read only when at least 55 percent of its height is visib
   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === `/feedback/${coachId}/read`)).toHaveLength(1);
 });
 
+test('revisiting visible video feedback retries a failed receipt before clearing its unread badge', async () => {
+  feedbackItems = [{ id: coachId, student_id: studentId, coach_id: coachId, video_id: studentId,
+    text: 'Brace', posted_at: '2026-09-05T09:04:00Z', read_at: null }];
+  const path = `/feedback/${coachId}/read`;
+  const request = jest.mocked(authenticatedRequest);
+  const defaultRequest = request.getMockImplementation()!;
+  let attempted = false;
+  request.mockImplementation(async (url, options) => {
+    if (url === path && !attempted) { attempted = true; throw new Error('offline'); }
+    return defaultRequest(url, options);
+  });
+  await renderScreen();
+  const view = renderer.root.findByType(ScrollView);
+  const scroll = (y: number) => view.props.onScroll({ nativeEvent: {
+    contentOffset: { y }, layoutMeasurement: { height: 400 }, contentSize: { height: 900 },
+  } });
+  await act(async () => {
+    renderer.root.findAllByProps({ testID: `student-chat-item-feedback-${coachId}` })[0].props.onLayout({ nativeEvent: { layout: { y: 400, height: 200 } } });
+    view.props.onScrollBeginDrag();
+    scroll(300);
+  });
+  expect(attempted).toBe(true);
+  await act(async () => { scroll(0); scroll(300); });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+  expect(renderer.root.findAllByProps({ testID: `feedback-unread-${coachId}` })).toHaveLength(0);
+});
 test('initial scroll aligns the first unread feedback bottom, and prepending history preserves the visible message', async () => {
   // This renderer test supplies layout explicitly, then advances the frame.
   // Keep host timers from running RAF between the render and its layout events.
