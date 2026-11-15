@@ -31,6 +31,30 @@ internal data class VideoTrimInfo(
   fun toMap() = mapOf("durationMs" to durationMs, "videoTrackCount" to videoTrackCount)
 }
 
+internal data class VideoTrackSummary(
+  val mime: String,
+  val width: Int,
+  val height: Int,
+  val isHdr: Boolean,
+  val bitrate: Double?,
+)
+
+/**
+ * A backward-compatible Dolby Vision file (profile 8) is one stream that MediaExtractor
+ * exposes twice: as video/dolby-vision and as its HEVC/AVC base layer. Count the pair as
+ * one HDR track described by the base layer; any other multi-track layout is unchanged.
+ */
+internal fun foldDolbyVisionTwin(tracks: List<VideoTrackSummary>): Pair<Int, VideoTrackSummary?> {
+  if (tracks.size == 2) {
+    val dolby = tracks.singleOrNull { it.mime == "video/dolby-vision" }
+    val base = tracks.singleOrNull { it.mime != "video/dolby-vision" }
+    if (dolby != null && base != null && dolby.width == base.width && dolby.height == base.height) {
+      return 1 to base.copy(isHdr = true, bitrate = base.bitrate ?: dolby.bitrate)
+    }
+  }
+  return tracks.size to tracks.lastOrNull()
+}
+
 /** Inspection and thumbnails run off the UI thread; no modification of the source. */
 internal object VideoTrimMedia {
   fun inspect(context: Context, uri: String, measureBitrate: Boolean = false): VideoTrimInfo {
@@ -42,32 +66,34 @@ internal object VideoTrimMedia {
       retriever.setDataSource(context, source)
       val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0
       val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
-      var videoCount = 0
+      val videoTracks = mutableListOf<VideoTrackSummary>()
       var audioCount = 0
-      var width = 0
-      var height = 0
-      var videoMime: String? = null
       var audioMime: String? = null
-      var bitrate: Double? = null
       var audioBitrate: Double? = null
-      var isHdr = false
       for (index in 0 until extractor.trackCount) {
         val format = extractor.getTrackFormat(index)
         val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
         if (mime.startsWith("video/")) {
-          videoCount++
-          videoMime = mime
-          width = format.getInteger(MediaFormat.KEY_WIDTH)
-          height = format.getInteger(MediaFormat.KEY_HEIGHT)
           val transfer = if (format.containsKey(MediaFormat.KEY_COLOR_TRANSFER)) format.getInteger(MediaFormat.KEY_COLOR_TRANSFER) else 0
-          isHdr = mime == "video/dolby-vision" || transfer == MediaFormat.COLOR_TRANSFER_ST2084 || transfer == MediaFormat.COLOR_TRANSFER_HLG
-          if (measureBitrate) bitrate = trackBitrate(extractor, index, format)
+          videoTracks.add(VideoTrackSummary(
+            mime = mime,
+            width = format.getInteger(MediaFormat.KEY_WIDTH),
+            height = format.getInteger(MediaFormat.KEY_HEIGHT),
+            isHdr = mime == "video/dolby-vision" || transfer == MediaFormat.COLOR_TRANSFER_ST2084 || transfer == MediaFormat.COLOR_TRANSFER_HLG,
+            bitrate = if (measureBitrate) trackBitrate(extractor, index, format) else null,
+          ))
         } else if (mime.startsWith("audio/")) {
           audioCount++
           audioMime = mime
           if (measureBitrate) audioBitrate = trackBitrate(extractor, index, format)
         }
       }
+      val (videoCount, video) = foldDolbyVisionTwin(videoTracks)
+      val width = video?.width ?: 0
+      val height = video?.height ?: 0
+      val videoMime = video?.mime
+      val bitrate = video?.bitrate
+      val isHdr = video?.isHdr ?: false
       return VideoTrimInfo(durationMs, videoCount, audioCount, width, height, rotation, videoMime, audioMime, bitrate, audioBitrate, isHdr)
     } finally {
       extractor.release()

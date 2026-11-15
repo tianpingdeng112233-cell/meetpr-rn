@@ -223,3 +223,11 @@ manager 新静音素材行与新增诊断过滤/consent 回归首次即绿，分
 - 走的是哪一档：vivo 屏蔽了应用进程自己的日志，录到的 logcat 里没有验收包的任何一行，诊断码无从读取。改用回放画面取色判断——HLG 样本的画面本身是普通彩条、只是被标成 HLG，所以「按 SDR 解释」这一档会原样输出彩条，而真正做了色调映射的会改变颜色。三组回放截图同一位置取色：两组彩条一致（绿 `75fc4c`、青 `75fbfd`），一组明显不同（绿 `62d53f`、青 `69e4fc`）。即有一条素材被做了色彩转换，没有落到最差一档；是 OpenGL 档还是 MediaCodec 档分不出来。
 - 这台手机有 E-AC-3 解码器，杜比音轨素材按保留音轨导出；成品是否真带音轨没有单独核对。
 - 未覆盖：真实拍摄的 HDR / 杜比视界素材（`video/dolby-vision` 这条判定分支还没被任何实测走到）；颜色观感只有合成彩条的数值对比，没有人眼对真实画面的判断；其它机型。
+
+## 真机实拍杜比视界：选完即失败，已修（2026-11-15）
+
+- David 用 vivo X200 Pro 相机开杜比视界实拍一条（1080p 竖拍、HEVC Main10、Dolby Vision profile 8.4 / HLG 兼容、48 fps、AAC、14 秒、19 Mbps），在验收包里选完即弹「视频处理失败」，到不了保存。
+- vivo 屏蔽了应用进程日志，改把同一文件放到 AVD `meetpr16` 上复现：`video.trim_info.INVALID_SOURCE`。原因：向后兼容的杜比视界文件被 `MediaExtractor` 列成两条视频轨（`video/dolby-vision` 与其 HEVC 底层），`trimInfo` 与导出器都要求「恰好一条视频轨」。这是既有限制，不是本卡引入的，线上版本同样会拒。
+- 修复（返修已超过 2 轮，Opus 接管）：`VideoTrimMedia.inspect` 把「一条杜比视界轨 + 一条同尺寸的非杜比视界轨」折算为一条 HDR 视频轨，按底层轨描述；其它多轨布局不变。新增纯函数 `foldDolbyVisionTwin` 与 `VideoTrackFoldTest`（2 项）。`./gradlew :training-video:testDebugUnitTest --offline` 15 项通过。
+- 复验：模拟器上该文件已通过初始化进入剪辑页（预览因 10-bit 解不了而停用，属该模拟器既有限制）。真机上 David 重选同一条并保存，结果「已送达」。走的是哪一档、回放颜色是否正常，尚待 David 确认。
+- 为绕开 vivo 的日志屏蔽，验收包里临时加过一个把诊断码弹到屏幕上的探针（标记 `[DEBUG-dv-1115]`），未提交。
