@@ -21,13 +21,14 @@ import { CoachDayDetailView } from '@/features/coach/student-detail/CoachDayDeta
 import { setLocaleOverride, t, type Locale } from '@/i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Text, TextInput, Modal, StyleSheet, View } from 'react-native';
+import { Alert, Text, TextInput, Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { TrainingWeekStrip } from '../TrainingWeekStrip';
 import * as trainingConstants from '../constants';
 import { AllDayBody } from '../AllDayBody';
 import { StudentExercisePicker } from '../StudentExercisePicker';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
+import { DayCompletionBanner } from '../CompletionControls';
 import { VideoAttachmentControls } from '../video-upload/VideoAttachmentControls';
 import { resetVideoUploadStoreForTests } from '../video-upload/store';
 
@@ -274,6 +275,14 @@ test.each<[number, number, boolean]>([[1, 0, true], [2, 0, true], [2, 8, false]]
     expect(copy()).not.toContain(t('student.added.addSet'));
     expect(copy()).not.toContain(t('student.added.addExercise'));
     expect(copy().includes(t('student.todayWorkoutScreen.copy023'))).toBe(undo);
+    const dock = renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0];
+    expect(dock).toBeDefined();
+    expect(dock.findAllByType(DayCompletionBanner)).toHaveLength(1);
+    expect(dock.findAllByType(Text).some(node => node.props.children === t('student.todayWorkoutScreen.copy023'))).toBe(undo);
+    const scroll = renderer.root.findAllByType(ScrollView)[0];
+    expect(scroll.findAllByProps({ testID: 'training.completedDay' })).toHaveLength(0);
+    expect(scroll.findAllByType(DayCompletionBanner)).toHaveLength(0);
+    expect(scroll.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy023') })).toHaveLength(0);
     expect(jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0);
   },
 );
