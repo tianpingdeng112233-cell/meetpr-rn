@@ -8,9 +8,11 @@ import { setLocaleOverride, t } from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
-import { Alert, ScrollView, Text, TextInput } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { spacing } from '@/design';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
+import { DayCompletionBanner } from '../CompletionControls';
 import { readReview } from '../storage';
 import { EMPTY_VIDEO_UPLOAD } from '../video-upload/model';
 import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../video-upload/store';
@@ -257,9 +259,11 @@ test('090 all done docks exactly one completion control outside the scroll conte
   expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(1);
   expect(renderer.root.findAllByType(ScrollView)[0].findAllByType(HoldToCompleteButton)).toHaveLength(0);
   expect(renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0].findAllByType(HoldToCompleteButton)).toHaveLength(1);
+  expect(renderer.root.findAllByType(DayCompletionBanner)).toHaveLength(0);
+  expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy023') })).toHaveLength(0);
 });
 
-test('a day completed today shows one status row whose undo reopens the day', async () => {
+test('a completed day docks its banner and undo outside scroll content, and undo reopens the day', async () => {
   servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: new Date().toISOString() })) };
   const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
   jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
@@ -267,20 +271,68 @@ test('a day completed today shows one status row whose undo reopens the day', as
     return base(path, options);
   });
   await mount();
-  expect(completedRow().length).toBeGreaterThan(0);
-  expect(copy()).toContain(t('student.todayWorkoutScreen.copy009'));
+  const dock = renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0];
+  expect(dock).toBeDefined();
+  expect(dock.findAllByProps({ testID: 'training.completedDay' }).length).toBeGreaterThan(0);
+  expect(dock.findAllByType(DayCompletionBanner)).toHaveLength(1);
+  expect(renderer.root.findAllByType(DayCompletionBanner)).toHaveLength(1);
+  expect(dock.findAllByType(HoldToCompleteButton)).toHaveLength(0);
+  const undo = dock.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy023'))[0];
+  expect(undo).toBeDefined();
+  expect(StyleSheet.flatten(undo.props.style).minHeight).toBeGreaterThanOrEqual(spacing.minimumHitTarget);
+  const scroll = renderer.root.findAllByType(ScrollView)[0];
+  expect(scroll.findAllByProps({ testID: 'training.completedDay' })).toHaveLength(0);
+  expect(scroll.findAllByType(DayCompletionBanner)).toHaveLength(0);
+  expect(scroll.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy023') })).toHaveLength(0);
+  expect(copy()).not.toContain(t('student.trainingWeekStrip.completed'));
   expect(copy()).not.toContain(t('student.todayWorkoutScreen.copy024'));
+  await act(async () => dock.props.onLayout({ nativeEvent: { layout: { height: 160 } } }));
+  expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(160 + spacing.md);
   await press(t('student.todayWorkoutScreen.copy023'));
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
   expect(jest.mocked(authenticatedRequest).mock.calls.some(([path, options]) => path === `/plans/days/${plan.days[0].id}/complete` && options?.method === 'DELETE')).toBe(true);
+  expect(renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0].findAllByType(HoldToCompleteButton)).toHaveLength(1);
+  expect(renderer.root.findAllByType(DayCompletionBanner)).toHaveLength(0);
 });
 
-test('a day completed on an earlier day shows the status row without undo', async () => {
-  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
+test('a day completed eight days ago docks only the banner without undo', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: new Date(Date.now() - 8 * 86_400_000).toISOString() })) };
   useStudentTabsStore.setState({ trainingHandoff: { plan: servedPlan, dayID: servedPlan.days[0].id, existingLogs: [] } });
   await mount();
   expect(completedRow().length).toBeGreaterThan(0);
+  const dock = renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0];
+  expect(dock).toBeDefined();
+  expect(dock.findAllByType(DayCompletionBanner)).toHaveLength(1);
+  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(0);
+  expect(renderer.root.findAllByType(ScrollView)[0].findAllByType(DayCompletionBanner)).toHaveLength(0);
   expect(renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.todayWorkoutScreen.copy023'))).toHaveLength(0);
+});
+
+test('pending undo optimistically restores the completion control without another undo entry', async () => {
+  servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: new Date().toISOString() })) };
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => { release = resolve; });
+  const base = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/complete') && options?.method === 'DELETE') {
+      await pending;
+      servedPlan = plan;
+      return undefined as never;
+    }
+    return base(path, options);
+  });
+  await mount();
+  try {
+    await press(t('student.todayWorkoutScreen.copy023'));
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+    const dock = renderer.root.findAllByProps({ testID: 'workout-completion-dock' })[0];
+    expect(dock.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy023') })).toHaveLength(0);
+    expect(dock.findAllByType(DayCompletionBanner)).toHaveLength(0);
+    expect(dock.findAllByType(HoldToCompleteButton)).toHaveLength(1);
+    expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path, options]) => path.endsWith('/complete') && options?.method === 'DELETE')).toHaveLength(1);
+  } finally {
+    await act(async () => { release(); await pending; });
+  }
 });
 
 test('undelivered videos reward first, keep the training progress card after closing, and complete on delivery', async () => {

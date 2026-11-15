@@ -24,6 +24,7 @@ import { StudentEmptyState } from './StudentEmptyState';
 import { studentEmptyState } from './student-empty-state';
 import { MeetWeightStrip } from './MeetWeightStrip';
 import { useQueryClient } from '@tanstack/react-query';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator, Alert, AppState, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -49,7 +50,7 @@ import { AnalyticsEvent, track } from '@/analytics';
 import { planKeys, useDayCompletion, usePlan, usePlans, type PlanDetail } from '@/api/domains/plans';
 import { setKeys, useSetLogs, useUpsertSetLog, useWeightSuggestions } from '@/api/domains/sets';
 import { useSessionStore } from '@/api/session';
-import { AppButton, Card, Screen, font, radius, spacing, typography, useColors, type Colors } from '@/design';
+import { Card, Screen, font, radius, spacing, typography, useColors, type Colors } from '@/design';
 import { showToast } from '@/design/Toast';
 import { E1RMRecorder, buildE1RMSeries } from '@/domain/e1rm';
 import { useStudentTabsStore } from '@/features/student-tabs';
@@ -778,7 +779,7 @@ export function TodayWorkoutView() {
   const realDrafts = liveDrafts.filter(
     (draft) => draft.sourceLog && !draft.sourceLog.assumed,
   );
-  const stickyCompletion = (editable || waitingForVideos) && (state.kind === 'loaded');
+  const stickyCompletion = (editable || waitingForVideos || (!showEmpty && dayState?.kind === 'completed')) && (state.kind === 'loaded');
   const contentBottomPadding = stickyCompletion
     ? completionDockHeight + spacing.md
     : styles.content.paddingBottom;
@@ -827,7 +828,6 @@ export function TodayWorkoutView() {
         {showEmpty && emptyState ? <StudentEmptyState state={emptyState} coachName={coachName} hasCoach={binding.data?.bind_request?.status === 'accepted'} /> : null}
         {state.kind === 'loaded' && !showEmpty ? (
           <>
-            {dayState?.kind === 'completed' ? <View testID="training.completedDay"><Text style={styles.emptySub}>{t('student.trainingWeekStrip.completed')}</Text>{dayState.canUndo ? <AppButton variant="link" label={t('student.todayWorkoutScreen.copy023')} disabled={undoCompletion.isPending} onPress={() => void completeDay(true)} /> : null}</View> : null}
             <AllDayBody key={startKey} sheet={sheet} editable={editable} studentId={studentId} unit={workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg'}
               title={planDay && recommendedDate(plan!, planDay) !== today ? dayCode(planDay, orderedDays) : t('training.allDay.today')}
               exerciseName={id => exerciseTitle(resolveExerciseMetadata(id))}
@@ -847,12 +847,6 @@ export function TodayWorkoutView() {
                 if (row.sourceLog && !isLocalSetId(row.sourceLog.id)) return row.sourceLog.id;
                 await saveRow(row); return setSyncQueue.waitForSet(row.stableSetId);
               }} />
-            {dayState?.kind === 'completed' ? (
-              <DayCompletionBanner
-                count={realDrafts.length}
-                onPress={() => setCompletionPhase('review')}
-              />
-            ) : null}
           </>
         ) : null}
       </ScrollView></View>
@@ -861,10 +855,22 @@ export function TodayWorkoutView() {
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0,
           paddingVertical: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.borderDefault, backgroundColor: colors.bgBase }}>
-        <VideoCompletionControl studentId={studentId} videos={completionVideos} waiting={waitingForVideos}
+        {dayState?.kind === 'completed' ? <View testID="training.completedDay">
+          <DayCompletionBanner count={realDrafts.length} onPress={() => setCompletionPhase('review')} />
+          {dayState.canUndo ? <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('student.todayWorkoutScreen.copy023')}
+            accessibilityState={{ disabled: undoCompletion.isPending }}
+            disabled={undoCompletion.isPending}
+            onPress={() => void completeDay(true)}
+            style={styles.undoCompletion}>
+            <MaterialCommunityIcons name="undo-variant" size={spacing.point14} color={colors.textMuted} />
+            <Text style={styles.undoCompletionText}>{t('student.todayWorkoutScreen.copy023')}</Text>
+          </Pressable> : null}
+        </View> : <VideoCompletionControl studentId={studentId} videos={completionVideos} waiting={waitingForVideos}
           showSummary={syncCompletionState === 'idle'}>
           <SetSyncCompletionControl state={syncCompletionState} disabled={completion.isPending} onComplete={() => void completeDay()} />
-        </VideoCompletionControl>
+        </VideoCompletionControl>}
       </View> : null}
       {noteRow && binding.data?.bind_request?.status === 'accepted' ? <ExerciseNoteSheet studentId={studentId} coachId={binding.data.bind_request.coach_id}
         reference={{ v: 1, exercise_name: exerciseTitle(resolveExerciseMetadata(noteRow.exercise.exercise_id)), day_date: noteRow.sourceLog?.logged_date ?? today, plan_day_id: noteRow.exercise.plan_day_id, plan_exercise_id: noteRow.kind === 'added' ? null : noteRow.exercise.id, exercise_id: noteRow.exercise.exercise_id }} onClose={() => setNoteRow(null)} /> : null}
@@ -927,6 +933,8 @@ export function TodayWorkoutView() {
 const createStyles = (colors: Colors) =>
   StyleSheet.create({
     screen: { flex: 1 },
+    undoCompletion: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: spacing.minimumHitTarget },
+    undoCompletionText: { ...font.body(12), color: colors.textMuted },
     nav: {
       borderBottomColor: colors.borderDefault,
       borderBottomWidth: StyleSheet.hairlineWidth,
