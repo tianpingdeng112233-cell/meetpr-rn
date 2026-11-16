@@ -86,7 +86,7 @@ beforeEach(() => {
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: '2026-09-05T00:00:00Z' } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false, gcTime: Infinity } } });
   jest.mocked(authenticatedRequest).mockImplementation(async path => {
-    if (path.endsWith('/plans')) return { plans } as never;
+    if (path.endsWith('/plans') || path.endsWith('/plans?include_all=true')) return { plans } as never;
     if (path.startsWith('/plans/')) return { days: [] } as never;
     if (path.endsWith('/feedback')) return { items: feedbackItems } as never;
     if (path.endsWith('/videos')) return { videos: [] } as never;

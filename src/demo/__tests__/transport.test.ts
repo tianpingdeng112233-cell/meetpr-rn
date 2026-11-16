@@ -220,3 +220,19 @@ test('108-3 demo body weights read, overwrite today, delete and sync the profile
   expect((await onboardingRepository.get(user.id))?.weight_kg).toBeNull();
   expect(global.fetch).not.toHaveBeenCalled();
 });
+
+test('110 demo exposes an upcoming cycle, hands off after completion, and reverses on undo', async () => {
+  await useSessionStore.getState().bootstrap();
+  const studentId = useSessionStore.getState().user!.id;
+  const first = await plansRepository.handoff(studentId);
+  expect(first.plans).toHaveLength(2);
+  expect(first.plans[1].handoff_status).toBe('upcoming');
+  const current = await plansRepository.detail(first.current_plan_id!);
+  const next = await plansRepository.detail(first.plans[1].id);
+  expect(next.days[0].week_number).toBe(1);
+  for (const day of current.days.filter(day => !day.completed_at)) await plansRepository.completeDay(day.id);
+  expect((await plansRepository.handoff(studentId)).current_plan_id).toBe(next.id);
+  await plansRepository.undoDayCompletion(current.days.at(-1)!.id);
+  expect((await plansRepository.handoff(studentId)).current_plan_id).toBe(current.id);
+  expect(global.fetch).not.toHaveBeenCalled();
+});

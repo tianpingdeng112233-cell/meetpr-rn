@@ -1,3 +1,4 @@
+import { currentPlanSummary } from '@/api/domains/plans';
 import { exerciseDisplayName, getLocale, t } from '@/i18n';
 import type { Exercise, FeedbackItem, OnboardingProfile, PlanDay, PlanDetail, SetLog, SetLogRange } from '@/api/domains';
 import { cursorDay, progressSegments, recommendedDate, selectCurrentPlan } from '@/domain/plan/sequence';
@@ -64,7 +65,8 @@ export function utcDayDistance(from: string, to: string): number {
   );
 }
 
-export const selectDashboardPlan = selectCurrentPlan;
+export const selectDashboardPlan = currentPlanSummary;
+// Publication notices deliberately track publishing, never the training cursor.
 export const selectLatestPublishedPlan = selectCurrentPlan;
 
 function onboardingLiftProfile(

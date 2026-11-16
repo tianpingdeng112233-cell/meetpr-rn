@@ -33,7 +33,7 @@ export function ChatExerciseNoteCard({ message, outgoing, student = false }: { m
     try {
       const date = localDate(reference.day_date);
       const logs = (await setsRepository.range(studentId, { from: reference.day_date, to: localDay(addDays(date, 1)), scope: 'all' })).logs;
-      const plans = (await plansRepository.list(studentId)).plans;
+      const plans = (await plansRepository.list(studentId, { includeAll: true })).plans;
       let plan: PlanDetail | null = null;
       for (const summary of plans) {
         const candidate = await plansRepository.detail(summary.id);

@@ -95,6 +95,7 @@ export function recommendedDate(
 ): string {
   return day.shifted_to_date ?? scheduledDate(plan, day);
 }
+/** Legacy deployment fallback (and publication notices), never the active training selector. */
 export function selectCurrentPlan<T extends PlanSummary>(
   plans: readonly T[],
 ): T | null {

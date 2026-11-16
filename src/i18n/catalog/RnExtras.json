@@ -1,4 +1,13 @@
 {
+"training.handoff.subtitle": {"en": "{0} · {1} weeks", "zh": "{0} · 共 {1} 周"},
+"training.handoff.startsAfter": {"en": "Starts after your current cycle", "zh": "练完当前周期后开始"},
+"training.handoff.newCycle": {"en": "New cycle", "zh": "新周期"},
+"training.handoff.preview": {"en": "Preview only", "zh": "仅预览"},
+"training.handoff.remaining": {"en": "{0} sessions left in your current cycle", "zh": "当前周期还有 {0} 节没练"},
+"training.handoff.back": {"en": "Back to current training", "zh": "回到正在练"},
+"training.handoff.notice": {"en": "Previous cycle complete. Your new cycle starts here.", "zh": "上一周期已练完，新周期从这里开始"},
+"training.handoff.dismiss": {"en": "Dismiss cycle notice", "zh": "关闭新周期提示"},
+
 "training.allDay.previousWeight": {"en": "Last", "zh": "上次"},
 "student.bodyWeight.latest": {"en": "Latest", "zh": "最新"},
 "student.bodyWeight.empty": {"en": "No weight records yet", "zh": "还没有体重记录"},

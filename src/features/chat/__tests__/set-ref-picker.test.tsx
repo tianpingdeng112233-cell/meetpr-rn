@@ -70,7 +70,7 @@ test('confirmation resolves an upload that completed while selecting and ignores
 test('today source keeps logs even when their exercise has no remaining prescriptions', async () => {
   const exercise = { id, exercise_id: id, plan_day_id: id, sort_order: 0, is_main_lift: true, notes: null, sets: [] };
   const current = plan([day(id, { exercises: [exercise] })]);
-  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [current] });
+  jest.spyOn(plansRepository, 'handoff').mockResolvedValue({ current_plan_id: current.id, plans: [{ ...current, completed_training_days: 0, total_training_days: 1, handoff_status: 'current' }] });
   jest.spyOn(plansRepository, 'detail').mockResolvedValue(current);
   jest.spyOn(setsRepository, 'range').mockResolvedValue({ logs: [{ id, student_id: id, exercise_id: id, plan_exercise_id: id, set_index: 2, weight_kg: '100.00', reps: 5, rpe: null, logged_at: new Date().toISOString(), logged_date: gymDayText(new Date()), completed: true, failed: false, assumed: false, adhoc: false }] });
   jest.spyOn(exercisesRepository, 'list').mockResolvedValue({ exercises: [] });
@@ -81,7 +81,7 @@ test.each(['卧推', '臥推'])('Traditional sharing displays 臥推 but stages 
   setLocaleOverride('zh-Hant');
   const planned = { id, exercise_id: id, plan_day_id: id, sort_order: 0, is_main_lift: true, notes: null, sets: [] };
   const current = plan([day(id, { exercises: [planned] })]);
-  jest.spyOn(plansRepository, 'list').mockResolvedValue({ plans: [current] });
+  jest.spyOn(plansRepository, 'handoff').mockResolvedValue({ current_plan_id: current.id, plans: [{ ...current, completed_training_days: 0, total_training_days: 1, handoff_status: 'current' }] });
   jest.spyOn(plansRepository, 'detail').mockResolvedValue(current);
   jest.spyOn(setsRepository, 'range').mockResolvedValue({ logs: [{ id, student_id: id, exercise_id: id, plan_exercise_id: id, set_index: 0, weight_kg: '100.00', reps: 5, rpe: null, logged_at: new Date().toISOString(), logged_date: gymDayText(new Date()), completed: true, failed: false, assumed: false, adhoc: false }] });
   jest.spyOn(exercisesRepository, 'list').mockResolvedValue({ exercises: [{ id, name, name_en: 'Bench Press', exercise_type: 'main_lift', main_lift_family: 'bench', is_competition_lift: true, competition_stance: null, muscle_groups: null, equipment: null, movement_pattern: null, created_by_coach_id: null, created_at: '' }] });

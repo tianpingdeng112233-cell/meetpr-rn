@@ -1,9 +1,9 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query';
 import type { CoachStudent } from '@/api/domains/coach';
-import { plansRepository, planKeys, type PlanDetail } from '@/api/domains/plans';
+import { currentPlanSummary, plansRepository, planKeys, type PlanDetail } from '@/api/domains/plans';
 import { setsRepository, setKeys, type SetLogRange } from '@/api/domains/sets';
 import { feedbackRepository } from '@/api/domains/feedback';
-import { recommendedDate, selectCurrentPlan } from '@/domain/plan/sequence';
+import { recommendedDate } from '@/domain/plan/sequence';
 import { addDays, localDayString, parseDay, startOfDay } from '@/domain/coach/calendar';
 import { triageSignals, type CoachPlan } from '@/domain/coach/triage';
 import { pairTrainingDays, type RosterRow } from '@/domain/coach/week-overview';
@@ -23,8 +23,8 @@ export async function loadRosterRows(students: readonly CoachStudent[], now: Dat
   }
   const cachedReaders = (cached: boolean): Readers => ({
     async plan(id) {
-      const { plans } = await read(id, planKeys.list(id), () => plansRepository.list(id), cached);
-      const summary = selectCurrentPlan(plans);
+      const handoff = await read(id, planKeys.handoff(id), () => plansRepository.handoff(id), cached);
+      const summary = currentPlanSummary(handoff);
       return summary ? read(id, planKeys.detail(summary.id), () => plansRepository.detail(summary.id), cached) : null;
     },
     logs: (id, range) => read(id, setKeys.range(id, range), () => setsRepository.range(id, range), cached),

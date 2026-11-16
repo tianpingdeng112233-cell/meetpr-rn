@@ -1,5 +1,4 @@
-import { usePlans, usePlan } from '@/api/domains/plans';
-import { selectCurrentPlan } from '@/domain/plan/sequence';
+import { usePlanHandoff, currentPlanSummary, usePlan } from '@/api/domains/plans';
 import AsyncStorage from '@/demo/storage';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
@@ -33,8 +32,8 @@ export function useRestPreference(id: string) {
 export function useReminderPreference(id: string, trainingDays?: readonly string[] | null) {
   const query = useQuery({ queryKey: preferenceKeys.reminder(id), queryFn: () => readReminderPreference(id), enabled: Boolean(id) });
   const unsaved = query.isSuccess && query.data === null;
-  const plans = usePlans(unsaved ? id : '');
-  const selected = selectCurrentPlan(plans.data?.plans ?? []);
+  const plans = usePlanHandoff(unsaved ? id : '');
+  const selected = currentPlanSummary(plans.data);
   const plan = usePlan(unsaved ? selected?.id ?? '' : '');
   return {
     ...query,

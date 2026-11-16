@@ -6,10 +6,10 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { font, fontMetrics, radius, spacing, Screen, useColors } from '@/design';
 import { canonicalExerciseName, exerciseDisplayName, getLocale, t } from '@/i18n';
 import { createUUID } from '@/analytics/uuid';
-import { plansRepository } from '@/api/domains/plans';
+import { currentPlanSummary, plansRepository } from '@/api/domains/plans';
 import { setsRepository } from '@/api/domains/sets';
 import { exercisesRepository } from '@/api/domains/exercises';
-import { cursorDay, dayCode, recommendedDate, selectCurrentPlan } from '@/domain/plan/sequence';
+import { cursorDay, dayCode, recommendedDate } from '@/domain/plan/sequence';
 import { gymDayText } from '@/features/training/policy';
 import { useVideoUploadStore } from '@/features/training/video-upload/store';
 import { buildCandidates, canonicalBody, setRefBodyAllowed, SetRefPickerPresentation, type SetRefCandidate } from './set-ref';
@@ -17,7 +17,7 @@ import { useSetRefStagingStore } from './set-ref-staging';
 
 /** Both entry points load today's cursor and gym-day logs, independent of the viewed calendar day. */
 export async function loadTodaySetRefCandidates(studentId: string): Promise<SetRefCandidate[]> {
-  const summary = selectCurrentPlan((await plansRepository.list(studentId)).plans);
+  const summary = currentPlanSummary(await plansRepository.handoff(studentId));
   if (!summary) return [];
   const plan = await plansRepository.detail(summary.id);
   const planDay = cursorDay(plan.days);

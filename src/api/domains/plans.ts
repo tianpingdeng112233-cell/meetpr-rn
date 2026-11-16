@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { ApiError } from '../client';
 
-import { authenticatedRequest } from '../session';
+import { authenticatedRequest, useSessionStore } from '../session';
+import { isDemoMode } from '@/demo/mode';
+import { memoryStorage } from '@/demo/memory-storage';
+import { selectCurrentPlan as selectLegacyCurrentPlan } from '@/domain/plan/sequence';
 import {
   DateTextSchema,
   DecimalStringSchema,
@@ -106,6 +110,54 @@ export const DayCompletionSchema = z.object({
   completed_at: TimestampSchema,
 });
 
+/** Backend 067 summaries omit legacy shift metadata. */
+export const PlanHandoffSchema = z.object({
+  current_plan_id: UuidSchema.nullable(),
+  plans: z.array(PlanSummarySchema.extend({
+    total_shift_days: z.number().int().default(0),
+    latest_shift_created_at: TimestampSchema.nullable().default(null),
+    completed_training_days: z.number().int().nonnegative(),
+    total_training_days: z.number().int().nonnegative(),
+    handoff_status: z.enum(['current', 'upcoming', 'past']),
+  })),
+});
+export type PlanHandoff = z.infer<typeof PlanHandoffSchema>;
+export function currentPlanSummary(handoff: PlanHandoff | undefined | null) {
+  return handoff?.plans.find(plan => plan.id === handoff.current_plan_id) ?? null;
+}
+
+function handoffStorage(): Pick<typeof import('@react-native-async-storage/async-storage').default, 'getItem' | 'setItem'> {
+  // Load native storage only when used, so pure DTO/selector consumers stay platform-independent.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const native = isDemoMode() ? null : require('@react-native-async-storage/async-storage');
+  return isDemoMode() ? memoryStorage : native.default ?? native;
+}
+
+async function handoff(studentId: string): Promise<PlanHandoff> {
+  const id = UuidSchema.parse(studentId);
+  const owner = useSessionStore.getState().user?.id ?? id;
+  const key = `plans.handoff.v1.${owner}.${id}`;
+  try {
+    const result = PlanHandoffSchema.parse(await authenticatedRequest(`/students/${id}/plan-handoff`, { schema: PlanHandoffSchema }));
+    try { await handoffStorage().setItem(key, JSON.stringify(result)); } catch { /* Cache failure must not hide a fresh server response. */ }
+    return result;
+  } catch (error) {
+    // An explicitly revoked binding is authoritative, not an offline condition.
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) throw error;
+    try {
+      const raw = await handoffStorage().getItem(key);
+      const cached = raw ? PlanHandoffSchema.safeParse(JSON.parse(raw)) : null;
+      if (cached?.success && cached.data.plans.every(plan => plan.trainee_id === id)) return cached.data;
+    } catch { /* Old/corrupt caches must not prevent the deployment fallback. */ }
+    const { plans } = await list(id);
+    const current = selectLegacyCurrentPlan(plans);
+    return PlanHandoffSchema.parse({ current_plan_id: current?.id ?? null, plans: plans.map(plan => ({
+      ...plan, completed_training_days: 0, total_training_days: 0,
+      handoff_status: plan.id === current?.id ? 'current' : 'past',
+    })) });
+  }
+}
+
 export type PlanSummary = z.infer<typeof PlanSummarySchema>;
 export type PlanSet = z.infer<typeof PlanSetSchema>;
 export type PlanExercise = z.infer<typeof PlanExerciseSchema>;
@@ -114,9 +166,9 @@ export type PlanDetail = z.infer<typeof PlanDetailSchema>;
 export type PlansResponse = z.infer<typeof PlansResponseSchema>;
 export type DayCompletion = z.infer<typeof DayCompletionSchema>;
 
-async function list(studentId: string): Promise<PlansResponse> {
+async function list(studentId: string, options?: { includeAll?: boolean }): Promise<PlansResponse> {
   const id = UuidSchema.parse(studentId);
-  return authenticatedRequest(`/students/${id}/plans`, {
+  return authenticatedRequest(`/students/${id}/plans${options?.includeAll ? '?include_all=true' : ''}`, {
     schema: PlansResponseSchema,
   });
 }
@@ -146,20 +198,25 @@ async function undoDayCompletion(dayId: string): Promise<void> {
   }
 }
 
-export const plansRepository = { detail, list, completeDay, undoDayCompletion };
+export const plansRepository = { detail, list, handoff, completeDay, undoDayCompletion };
 
 export const planKeys = {
   all: ['plans'] as const,
   detail: (planId: string) => ['plans', 'detail', planId] as const,
-  list: (studentId: string) => ['plans', 'student', studentId] as const,
+  list: (studentId: string, includeAll = false) => ['plans', 'student', studentId, ...(includeAll ? ['all'] : [])] as const,
+  handoff: (studentId: string) => ['plans', 'handoff', studentId] as const,
 };
 
-export function usePlans(studentId: string) {
+export function usePlans(studentId: string, options?: { includeAll?: boolean }) {
   return useQuery({
-    queryKey: planKeys.list(studentId),
-    queryFn: () => plansRepository.list(studentId),
+    queryKey: planKeys.list(studentId, options?.includeAll),
+    queryFn: () => plansRepository.list(studentId, options),
     enabled: Boolean(studentId),
   });
+}
+
+export function usePlanHandoff(studentId: string) {
+  return useQuery({ queryKey: planKeys.handoff(studentId), queryFn: () => plansRepository.handoff(studentId), enabled: Boolean(studentId) });
 }
 
 export function usePlan(planId: string) {

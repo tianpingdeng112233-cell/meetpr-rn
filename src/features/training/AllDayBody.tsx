@@ -32,7 +32,8 @@ function TimelineConnector({ exerciseId, current, color }: { exerciseId: string;
   </View>;
 }
 
-export function AllDayBody({ sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, onEffortChoice, unit = 'kg' }: {
+export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, onEffortChoice, unit = 'kg' }: {
+  onVideoActivity?: (stableSetId: string, active: boolean) => void;
   onEffortChoice?: (row: WorkoutSetDraft) => void;
   unit?: 'kg' | 'lb'; onExpand: (id: string) => void;
   sheet: AllDaySheet; editable: boolean; studentId: string; title: string;
@@ -146,7 +147,7 @@ export function AllDayBody({ sheet, editable, studentId, title, exerciseName, al
                     {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
                     {percentage}
                   </View>}
-                  {editable ? <VideoAttachmentControls compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
+                  {editable ? <VideoAttachmentControls onActivityChange={onVideoActivity} compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
                     badge={{ exerciseName: name, setOrdinal: row.setIndex + 1, weightKg: row.weightText ? Number(row.weightText) : null, reps: row.repsText ? Number(row.repsText) : null, rpe: row.effortKind !== 'rir' && row.rpeText ? Number(row.rpeText) : null }} />}
                   </View>
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}

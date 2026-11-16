@@ -31,6 +31,7 @@ const cameraLabels = {
 } as const;
 
 type Props = {
+  onActivityChange?: (stableSetId: string, active: boolean) => void;
   compact?: boolean;
   badge?: VideoBadgeInfo | null;
   initialCamera?: boolean;
@@ -72,6 +73,7 @@ function promptConsent(input: {
 }
 
 export function VideoAttachmentControls({
+  onActivityChange,
   compact: cameraOnly = false,
   editable,
   ensureSetLog,
@@ -93,6 +95,7 @@ export function VideoAttachmentControls({
   const record = useVideoUploadStore(selectVideoUpload(studentId, stableSetId));
   const [detailVisible, setDetailVisible] = useState(false);
   const [choosing, setChoosing] = useState(false);
+  const [cameraPresented, setCameraPresented] = useState(false);
   const [videoToTrim, setVideoToTrim] = useState<SelectedVideo | null>(null);
   const pickedUri = useRef<string | null>(null);
   const releaseOriginal = useRef<(() => void) | null>(null);
@@ -102,6 +105,9 @@ export function VideoAttachmentControls({
     return () => { mounted.current = false; releaseOriginal.current?.(); deleteLocalVideo(pickedUri.current); };
   }, []);
   const [isPreparing, setIsPreparing] = useState(false);
+  const interactionActive = choosing || cameraPresented || Boolean(videoToTrim) || isPreparing || detailVisible;
+  useLayoutEffect(() => { onActivityChange?.(stableSetId, interactionActive); }, [onActivityChange, stableSetId, interactionActive]);
+  useEffect(() => () => onActivityChange?.(stableSetId, false), [onActivityChange, stableSetId]);
   useEffect(() => useVideoUploadStore.subscribe((next, previous) => {
     const select = selectVideoUpload(studentId, stableSetId);
     if (select(next) !== select(previous)) setIsPreparing(false);
@@ -119,10 +125,12 @@ export function VideoAttachmentControls({
   // CameraRecorder owns its native Modal; a second window can cover it with a blank screen.
   const [fallbackNode, setFallbackNode] = useState<ReactNode>(null);
   const dismiss = () => {
+    setCameraPresented(false);
     if (overlay.isFallback) setFallbackNode(null);
     else overlay.dismiss();
   };
   const present = (node: ReactNode) => {
+    setCameraPresented(true);
     if (overlay.isFallback) setFallbackNode(node);
     else overlay.present(node, dismiss);
   };
@@ -130,6 +138,7 @@ export function VideoAttachmentControls({
   const choose = async (source: VideoSource) => {
     if (!editable || choosing || isPreparing) return;
     let trimming = false;
+    onActivityChange?.(stableSetId, true);
     setChoosing(true);
     setActionErrorMessage(null);
     try {
@@ -174,6 +183,7 @@ export function VideoAttachmentControls({
     }
   };
   const attach = (video: SelectedVideo) => {
+    onActivityChange?.(stableSetId, true);
     setActionErrorMessage(null);
     setIsPreparing(true);
     void videoUploadManager

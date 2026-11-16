@@ -124,5 +124,14 @@ export function buildDemoSeed(today: string) {
   const bodyWeights: BodyWeightRecord[] = [84.2, 84.0, 84.1, 83.8, 83.9, 83.6, 83.7, 83.4, 83.6, 83.5].map((weight, index) => ({
     recorded_on: offsetDate(today, -29 + index * 3), weight_kg: weight.toFixed(2),
   }));
-  return { user, coach, profile, exercises, plan, logs, binding, feedback, conversation, messages, bodyWeights };
+  const upcoming: PlanDetail = { ...plan, id: id(), name: 'Next strength block', start_date: offsetDate(plan.end_date, 1), end_date: offsetDate(plan.end_date, 28), plan_weeks: 4, published_at: `${today}T12:00:00Z`, days: [] };
+  upcoming.days = plan.days.filter(day => day.week_number <= 4).map(day => {
+    const dayId = id();
+    return { ...day, id: dayId, plan_id: upcoming.id, completed_at: null, completion_source: null, shifted_to_date: null,
+      exercises: day.exercises.map(exercise => {
+        const exerciseId = id();
+        return { ...exercise, id: exerciseId, plan_day_id: dayId, sets: exercise.sets.map(set => ({ ...set, id: id(), plan_exercise_id: exerciseId })) };
+      }) };
+  });
+  return { user, coach, profile, exercises, plan, upcoming, logs, binding, feedback, conversation, messages, bodyWeights };
 }
