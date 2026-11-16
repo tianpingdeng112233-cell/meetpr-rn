@@ -10,7 +10,7 @@ import { totalUnreadCount } from './student-timeline';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { usePlan, usePlans } from '@/api/domains/plans';
+import { usePlan, usePlans, usePlanHandoff } from '@/api/domains/plans';
 import { currentWeekDays } from '@/domain/plan/sequence';
 import { selectDashboardPlan, selectLatestPublishedPlan } from '@/features/history/summary-model';
 import { dashboardPlanSignature, dashboardPlanSignatureKey, hasSeenDashboardPlan } from '@/features/chat/plan-seen';
@@ -23,9 +23,10 @@ export const studentChatKeys = {
 
 /** Shares Dashboard's publication selector and persistent signature, without its charts/history queries. */
 export function useStudentPlanNotice(studentId: string) {
-  const plans = usePlans(studentId);
+  const plans = usePlans(studentId, { includeAll: true });
+  const handoff = usePlanHandoff(studentId);
   const latest = selectLatestPublishedPlan(plans.data?.plans ?? []);
-  const active = selectDashboardPlan(plans.data?.plans ?? []);
+  const active = selectDashboardPlan(handoff.data);
   const detail = usePlan(active?.id ?? '');
   const signature = latest ? dashboardPlanSignature(latest) : null;
   const queryKey = studentChatKeys.planSeen(studentId, signature ? dashboardPlanSignatureKey(signature) : null);

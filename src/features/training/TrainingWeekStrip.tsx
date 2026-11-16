@@ -9,7 +9,10 @@ import type { trainingWeekStrip } from '@/domain/plan/week-strip';
 import { useTheme } from '@/design/theme';
 import { getLocale, t } from '@/i18n';
 
-export function TrainingWeekStrip({ plan, strip, onSelect }: {
+export function TrainingWeekStrip({ plan, strip, onSelect, preview = false, onPreviousPlan, onNextPlan }: {
+  preview?: boolean;
+  onPreviousPlan?: () => void;
+  onNextPlan?: () => void;
   plan: PlanDetail;
   strip: ReturnType<typeof trainingWeekStrip>;
   onSelect: (id: string) => void;
@@ -29,8 +32,9 @@ export function TrainingWeekStrip({ plan, strip, onSelect }: {
       if (Math.abs(gesture.dx) < 44 || Math.abs(gesture.dx) <= Math.abs(gesture.dy) * 1.5) return;
       const target = gesture.dx > 0 ? previousDayID : nextDayID;
       if (target) onSelect(target);
+      else if (gesture.dx > 0) onPreviousPlan?.(); else onNextPlan?.();
     },
-  }), [nextDayID, previousDayID, onSelect]);
+  }), [nextDayID, previousDayID, onSelect, onPreviousPlan, onNextPlan]);
   if (!week) return null;
   const visibleWeight = week.calendarCells.slice(0, 7).reduce((total, cell) => total + (1), 0);
   const unitWidth = rowWidth > 0 ? (rowWidth - spacing.point2 * 6) / visibleWeight : spacing.minimumHitTarget;
@@ -40,7 +44,7 @@ export function TrainingWeekStrip({ plan, strip, onSelect }: {
     const date = `${dateValue.getUTCMonth() + 1}/${dateValue.getUTCDate()}`;
     const weight = 1;
     const size = overflow ? { flex: 0, width: unitWidth * weight } : { flex: weight };
-    const weekdayText = <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.date, cell.kind === 'training' && cell.isSelected && styles.currentWeekday]}>{weekday}</Text>;
+    const weekdayText = <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.date, cell.kind === 'training' && cell.isSelected && !preview && styles.currentWeekday]}>{weekday}</Text>;
     if (cell.kind === 'rest') return <View key={`rest-${cell.date}`} accessible
       accessibilityLabel={t('student.trainingWeekStrip.restAccessibility', [weekday])}
       style={[styles.day, styles.restDay, size]}>
@@ -55,20 +59,20 @@ export function TrainingWeekStrip({ plan, strip, onSelect }: {
       accessibilityState={{ selected: isSelected }} onPress={() => onSelect(day.id)}
       style={[styles.day, size]}>
       {weekdayText}
-      <View style={{ padding: 2, borderRadius: 22, borderWidth: 2, borderColor: isSelected ? colors.gold500 : 'transparent' }}>
-        <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: scheme === 'dark' ? colors.textPrimary : colors.gold200 }}>
-          <Text style={{ ...font.mono(15, 'semibold'), color: scheme === 'dark' ? colors.bgBase : colors.gold900 }}>{dateValue.getUTCDate()}</Text>
-          {dayStatus === 'done' ? <View style={{ position: 'absolute', right: -2, bottom: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.success, borderWidth: 2, borderColor: colors.bgBase, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="check" size={11} color={colors.inkOnCTAFill} /></View> : null}
+      <View style={{ padding: 2, borderRadius: 22, borderWidth: 2, borderColor: isSelected ? (preview ? colors.textMuted : colors.gold500) : 'transparent' }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: preview ? colors.bgStack : scheme === 'dark' ? colors.textPrimary : colors.gold200 }}>
+          <Text style={{ ...font.mono(15, 'semibold'), color: preview ? colors.textSecondary : scheme === 'dark' ? colors.bgBase : colors.gold900 }}>{dateValue.getUTCDate()}</Text>
+          {!preview && dayStatus === 'done' ? <View style={{ position: 'absolute', right: -2, bottom: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: colors.success, borderWidth: 2, borderColor: colors.bgBase, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="check" size={11} color={colors.inkOnCTAFill} /></View> : null}
         </View>
       </View>
     </Pressable>;
   });
   return <View style={styles.strip} {...(!overflow ? pan.panHandlers : {})}>
     <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingWeekStrip.previous')}
-      accessibilityState={{ disabled: !previousDayID }} disabled={!previousDayID}
-      onPress={() => { if (previousDayID) onSelect(previousDayID); }} style={[styles.arrow, { left: -spacing.md }]}
+      accessibilityState={{ disabled: !(previousDayID || onPreviousPlan) }} disabled={!(previousDayID || onPreviousPlan)}
+      onPress={() => { if (previousDayID) onSelect(previousDayID); else onPreviousPlan?.(); }} style={[styles.arrow, { left: -spacing.md }]}
       {...(overflow ? pan.panHandlers : {})}>
-      <MaterialCommunityIcons name="chevron-left" size={spacing.md} color={previousDayID ? colors.textPrimary : colors.textDisabled} />
+      <MaterialCommunityIcons name="chevron-left" size={spacing.md} color={previousDayID || onPreviousPlan ? colors.textPrimary : colors.textDisabled} />
     </Pressable>
     <View style={styles.calendar} onLayout={event => setRowWidth(event.nativeEvent.layout.width)}>
       {overflow ? <ScrollView key={week.number} horizontal contentContainerStyle={styles.days}
@@ -77,10 +81,10 @@ export function TrainingWeekStrip({ plan, strip, onSelect }: {
       </ScrollView> : <View style={styles.days}>{calendar}</View>}
     </View>
     <Pressable accessibilityRole="button" accessibilityLabel={t('student.trainingWeekStrip.next')}
-      accessibilityState={{ disabled: !nextDayID }} disabled={!nextDayID}
-      onPress={() => { if (nextDayID) onSelect(nextDayID); }} style={[styles.arrow, { right: -spacing.md }]}
+      accessibilityState={{ disabled: !(nextDayID || onNextPlan) }} disabled={!(nextDayID || onNextPlan)}
+      onPress={() => { if (nextDayID) onSelect(nextDayID); else onNextPlan?.(); }} style={[styles.arrow, { right: -spacing.md }]}
       {...(overflow ? pan.panHandlers : {})}>
-      <MaterialCommunityIcons name="chevron-right" size={spacing.md} color={nextDayID ? colors.textPrimary : colors.textDisabled} />
+      <MaterialCommunityIcons name="chevron-right" size={spacing.md} color={nextDayID || onNextPlan ? colors.textPrimary : colors.textDisabled} />
     </Pressable>
   </View>;
 }

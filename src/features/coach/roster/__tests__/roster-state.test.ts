@@ -86,22 +86,22 @@ test('accept during an older roster fetch performs a new fetch after the mutatio
 test('cached plans and logs paint while their network revalidation is pending', async () => {
   const id = '11111111-1111-4111-8111-111111111111';
   const cache = new QueryClient();
-  cache.setQueryData(['plans', 'student', id], { plans: [] });
+  cache.setQueryData(['plans', 'handoff', id], { current_plan_id: null, plans: [] });
   cache.setQueryData(['set-logs', id, '2026-09-02', '2026-09-10', 'plan'], { logs: [] });
   const original = global.fetch;
   let releasePlans: ((response: Response) => void) | undefined;
   const response = (body: object) => ({ ok: true, status: 200, text: async () => JSON.stringify(body) } as Response);
-  global.fetch = jest.fn<typeof fetch>(async url => String(url).endsWith('/plans') ? new Promise(resolve => { releasePlans = resolve; }) : response(String(url).includes('/feedback') ? { items: [] } : { logs: [] }));
+  global.fetch = jest.fn<typeof fetch>(async url => String(url).endsWith('/plan-handoff') ? new Promise(resolve => { releasePlans = resolve; }) : response(String(url).includes('/feedback') ? { items: [] } : { logs: [] }));
   let painted: unknown;
   let result: Promise<unknown> | undefined;
   try {
     result = loadRosterRows([{ id, displayName: 'Cached', status: 'active', evaluationEndAt: null }], new Date(2026, 8, 9), cache, undefined, rows => { painted = rows; });
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(painted).toEqual([expect.objectContaining({ student: expect.objectContaining({ displayName: 'Cached' }) })]);
-    releasePlans?.(response({ plans: [] }));
+    releasePlans?.(response({ current_plan_id: null, plans: [] }));
     await result;
   } finally {
-    releasePlans?.(response({ plans: [] }));
+    releasePlans?.(response({ current_plan_id: null, plans: [] }));
     await result;
     global.fetch = original;
     cache.clear();

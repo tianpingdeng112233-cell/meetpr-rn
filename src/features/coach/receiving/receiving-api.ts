@@ -3,9 +3,8 @@ import { authenticatedRequest } from '@/api/session';
 import { UuidSchema } from '@/api/domains/shared';
 import { videosRepository } from '@/api/domains/videos';
 import { feedbackRepository } from '@/api/domains/feedback';
-import { plansRepository } from '@/api/domains/plans';
+import { currentPlanSummary, plansRepository } from '@/api/domains/plans';
 import { exercisesRepository } from '@/api/domains/exercises';
-import { selectCurrentPlan } from '@/domain/plan/sequence';
 import { exerciseDisplayName } from '@/i18n';
 import { pendingVideos, type PendingVideo } from '@/domain/coach/pending-videos';
 const StudentSchema = z.object({ id: UuidSchema.optional(), user_id: UuidSchema.optional(), display_name: z.string() }).refine(value => Boolean(value.id ?? value.user_id)).transform(value => ({ id: (value.id ?? value.user_id)!, name: value.display_name }));
@@ -25,8 +24,7 @@ export async function fetchPendingVideos(): Promise<PendingVideo[]> {
       const [videos, feedback, exerciseNames] = await Promise.all([
         videosRepository.list(student.id), feedbackRepository.list(student.id),
         (async () => {
-          const { plans } = await plansRepository.list(student.id);
-          const selected = selectCurrentPlan(plans);
+          const selected = currentPlanSummary(await plansRepository.handoff(student.id));
           if (!selected) return {};
           const plan = await plansRepository.detail(selected.id);
           return Object.fromEntries(plan.days.flatMap(day => day.exercises.flatMap(exercise => {

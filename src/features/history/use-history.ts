@@ -45,7 +45,7 @@ export function useHistoryViewModel(studentId: string): HistoryViewModel {
   const importedHistoryRefreshToken = useStudentTabsStore(
     (state) => state.importedHistoryRefreshToken,
   );
-  const plansQuery = usePlans(studentId);
+  const plansQuery = usePlans(studentId, { includeAll: true });
   const planIds = useMemo(
     () => (plansQuery.data?.plans ?? []).map((plan) => plan.id),
     [plansQuery.data?.plans],

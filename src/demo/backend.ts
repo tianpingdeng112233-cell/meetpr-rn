@@ -33,6 +33,9 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
   const method = options.method ?? 'GET';
   const now = new Date().toISOString();
   const student = `/students/${state.user.id}`;
+  const plans = [state.plan, state.upcoming];
+  const nextRecorded = state.upcoming.days.some(day => day.completed_at || state.logs.some(log => log.plan_day_id === day.id || day.exercises.some(exercise => exercise.id === log.plan_exercise_id)));
+  const current = nextRecorded || state.plan.days.every(day => day.completed_at) ? state.upcoming : state.plan;
   let status = 200;
   let payload: unknown;
   if (method === 'POST' && ['/auth/email/login', '/auth/email/register', '/auth/login', '/auth/register', '/auth/refresh'].includes(route)) {
@@ -47,8 +50,11 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
   } else if (method === 'DELETE' && route === `/bind-requests/${state.binding.id}`) {
     state.binding.status = 'cancelled'; payload = {};
   }
-  else if (method === 'GET' && route === `${student}/plans`) payload = { plans: [state.plan] };
-  else if (method === 'GET' && route === `/plans/${state.plan.id}`) payload = state.plan;
+  else if (method === 'GET' && route === `${student}/plan-handoff`) payload = state.binding.status !== 'accepted' ? { current_plan_id: null, plans: [] } : {
+    current_plan_id: current.id, plans: plans.map(plan => ({ ...plan, completed_training_days: plan.days.filter(day => day.completed_at).length, total_training_days: plan.days.length, handoff_status: plan.id === current.id ? 'current' : plan.id === state.upcoming.id ? 'upcoming' : 'past' })),
+  };
+  else if (method === 'GET' && route === `${student}/plans`) payload = { plans: url.searchParams.get('include_all') === 'true' || current.id === state.upcoming.id ? plans : [state.plan] };
+  else if (method === 'GET' && plans.some(plan => route === `/plans/${plan.id}`)) payload = plans.find(plan => route === `/plans/${plan.id}`);
   else if (method === 'GET' && route === `${student}/sets`) payload = { logs: state.logs.filter(log => log.logged_date >= (url.searchParams.get('from') ?? '') && log.logged_date < (url.searchParams.get('to') ?? '9999')) };
   else if (method === 'GET' && route === '/students/me/body-weights') payload = { records: state.bodyWeights };
   else if (['PUT', 'DELETE'].includes(method) && /^\/students\/me\/body-weights\/[^/]+$/.test(route)) {
@@ -76,7 +82,7 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
   else if (method === 'GET' && route === `${student}/videos`) payload = { videos: demoVideos(state.logs, state.exercises) };
   else if (method === 'POST' && route === '/sets/log') {
     const body = SetLogUpsertRequestSchema.parse(options.body);
-    const exercise = 'plan_exercise_id' in body ? state.plan.days.flatMap(day => day.exercises).find(exercise => exercise.id === body.plan_exercise_id) : undefined;
+    const exercise = 'plan_exercise_id' in body ? plans.flatMap(plan => plan.days).flatMap(day => day.exercises).find(exercise => exercise.id === body.plan_exercise_id) : undefined;
     const date = body.logged_date ?? gymDayToday();
     const exerciseId = exercise?.exercise_id ?? ('exercise_id' in body ? body.exercise_id : null);
     if (!exerciseId) { status = 404; payload = { error: 'SETS_EXERCISE_NOT_FOUND' }; }
@@ -90,7 +96,7 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
       payload = { id: row.id, logged_at: row.logged_at };
     }
   } else if (['POST', 'DELETE'].includes(method) && /^\/plans\/days\/[^/]+\/complete$/.test(route)) {
-    const day = state.plan.days.find(day => day.id === route.split('/')[3]);
+    const day = plans.flatMap(plan => plan.days).find(day => day.id === route.split('/')[3]);
     if (!day) { status = 404; payload = { error: 'PLAN_NOT_FOUND' }; }
     else {
       day.completed_at = method === 'POST' ? now : null;

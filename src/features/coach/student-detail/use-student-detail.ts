@@ -1,13 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { coachRepository } from '@/api/domains/coach';
 import { exercisesRepository, exerciseKeys } from '@/api/domains/exercises';
-import { plansRepository } from '@/api/domains/plans';
+import { currentPlanSummary, plansRepository } from '@/api/domains/plans';
 import { setsRepository } from '@/api/domains/sets';
 import { feedbackRepository } from '@/api/domains/feedback';
 import { readinessRepository } from '@/api/domains/readiness';
 import { onboardingRepository } from '@/api/domains/onboarding';
 import { videosRepository } from '@/api/domains/videos';
-import { selectCurrentPlan } from '@/domain/plan/sequence';
 import { addDays, localDay, weekStart, makeExecutionDays, makeOverview } from '@/domain/coach/detail-week';
 import { readinessRowState, type DetailLoadState } from './plan-card-state';
 
@@ -25,7 +24,7 @@ export function useStudentDetail(studentId: string, now: Date, growthSelected: b
   const main = useQuery({
     queryKey: ['coach', 'student-detail', studentId, calendarKey],
     queryFn: async () => {
-      const current = selectCurrentPlan((await plansRepository.list(studentId)).plans);
+      const current = currentPlanSummary(await plansRepository.handoff(studentId));
       const plan = current ? await plansRepository.detail(current.id) : null;
       const start = weekStart(plan, now);
       const [logs, feedback, catalog] = await Promise.all([

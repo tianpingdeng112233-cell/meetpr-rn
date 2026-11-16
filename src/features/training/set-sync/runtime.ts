@@ -18,7 +18,7 @@ const accounts = new Map<string, AccountSync>();
 const completionListeners = new Set<(studentId: string, dayId: string) => void>();
 export const onSyncedDayCompletion = (fn: (studentId: string, dayId: string) => void) => { completionListeners.add(fn); return () => { completionListeners.delete(fn); }; };
 async function publishedPlans(studentId: string): Promise<PlanDetail[]> {
-  const { plans } = await plansRepository.list(studentId);
+  const { plans } = await plansRepository.list(studentId, { includeAll: true });
   return Promise.all(plans.filter(plan => plan.status === 'published').map(plan => plansRepository.detail(plan.id)));
 }
 export function accountSetSync(studentId: string): AccountSync {
