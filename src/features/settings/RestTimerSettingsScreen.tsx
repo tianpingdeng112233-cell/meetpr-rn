@@ -1,89 +1,289 @@
-import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { font, fontMetrics, radius, spacing, useColors } from '@/design';
-import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
-import { SettingsPage, SettingsSectionTitle } from './SettingsPage';
-import { useQueryClient } from '@tanstack/react-query';
-import { t } from '@/i18n';
-import { ProfileText, MyProfileGroupCard, MyProfileDivider } from '@/features/profile/components';
-import { accessoryRestSeconds, clampRestSeconds, defaultCustomRest, durationText, type RestTimerPreference } from './rest-timer';
-import { preferenceKeys, writeRestPreference } from './storage';
-export function RestTimerSettingsScreen({ studentId, initial, onClose }: { studentId: string; initial: RestTimerPreference; onClose: () => void }) {
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useRef, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { font, useColors } from "@/design";
+import { t } from "@/i18n";
+import {
+  clampRestSeconds,
+  durationText,
+  type RestTimerPreference,
+} from "./rest-timer";
+
+const durations = Array.from({ length: 39 }, (_, index) => 30 + index * 15);
+
+function DurationWheel({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
   const colors = useColors();
-  const [preference, setPreference] = useState(initial);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const client = useQueryClient();
-  const change = async (next: RestTimerPreference) => {
-    if (busy) return;
-    setBusy(true); setError('');
-    try { await writeRestPreference(studentId, next); setPreference(next); client.setQueryData(preferenceKeys.rest(studentId), next); }
-    catch { setError(t('student.myProfileViewModel.copy002')); }
-    finally { setBusy(false); }
-  };
-  const accessory = accessoryRestSeconds(preference);
-  const bands = [['low', 'student.restTimerSettingsView.copy005'], ['mid', 'student.restTimerSettingsView.copy006'], ['high', 'student.restTimerSettingsView.copy007']] as const;
-  return <SettingsPage title={t('student.restTimerSettingsView.copy004')} onClose={onClose} busy={busy}>
-    <SettingsSectionTitle>{t('student.accessory.mainLifts')}</SettingsSectionTitle>
-    <MyProfileGroupCard><View style={{ padding: 16, gap: 12 }}>
-      <SettingsSectionTitle>{t('student.restTimerSettingsView.copy008')}</SettingsSectionTitle>
-      <View style={{ flexDirection: 'row', backgroundColor: colors.bgInset, borderRadius: 10, padding: 3 }}>
-        {(['automatic', 'custom'] as const).map(mode => <Pressable key={mode} accessibilityRole="button" accessibilityState={{ selected: preference.mode === mode, disabled: busy }} disabled={busy}
-          onPress={() => { setExpanded(null); void change({ ...(mode === 'automatic' ? { mode } : defaultCustomRest), ...(preference.accessory === undefined ? {} : { accessory: preference.accessory }) }); }}
-          style={{ flex: 1, minHeight: 44, padding: 6, justifyContent: 'center', borderRadius: 8, backgroundColor: preference.mode === mode ? colors.surfaceCard : 'transparent' }}>
-          <Text style={{ textAlign: 'center', ...font.body(12, 'semibold'), color: colors.textPrimary }}>{t(mode === 'automatic' ? 'student.studentRestTimerSettings.copy001' : 'student.studentRestTimerSettings.copy003')}</Text>
-        </Pressable>)}
+  const scroll = useRef<ScrollView>(null);
+  const [initialOffset] = useState(() => ((value - 30) / 15) * 34);
+  const selectOffset = (offset: number) =>
+    onChange(clampRestSeconds(30 + Math.round(offset / 34) * 15));
+  return (
+    <View style={{ width: 112, alignItems: "center", gap: 8 }}>
+      <Text style={{ ...font.body(13), color: colors.textSecondary }}>
+        {label}
+      </Text>
+      <View
+        style={{ height: 102, width: 112 }}
+        accessibilityRole="adjustable"
+        accessibilityLabel={label}
+        accessibilityValue={{
+          min: 30,
+          max: 600,
+          now: value,
+          text: durationText(value),
+        }}
+        accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
+        onAccessibilityAction={(event) => {
+          const next = clampRestSeconds(
+            value + (event.nativeEvent.actionName === "increment" ? 15 : -15),
+          );
+          onChange(next);
+          scroll.current?.scrollTo({
+            y: ((next - 30) / 15) * 34,
+            animated: false,
+          });
+        }}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 34,
+            height: 34,
+            width: 112,
+            borderRadius: 10,
+            backgroundColor: colors.surfaceRaised,
+          }}
+        />
+        <ScrollView
+          ref={scroll}
+          showsVerticalScrollIndicator={false}
+          snapToInterval={34}
+          decelerationRate="fast"
+          contentOffset={{ x: 0, y: initialOffset }}
+          contentContainerStyle={{ paddingVertical: 34 }}
+          onScroll={(event) => selectOffset(event.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={(event) => {
+            const offset = Math.max(
+              0,
+              Math.min(
+                38 * 34,
+                Math.round(event.nativeEvent.contentOffset.y / 34) * 34,
+              ),
+            );
+            selectOffset(offset);
+            scroll.current?.scrollTo({ y: offset, animated: false });
+          }}
+        >
+          {durations.map((seconds) => (
+            <View
+              key={seconds}
+              style={{
+                height: 34,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  ...font.mono(
+                    seconds === value ? 22 : 16,
+                    seconds === value ? "bold" : "regular",
+                  ),
+                  color:
+                    seconds === value ? colors.textPrimary : colors.textMuted,
+                }}
+              >
+                {durationText(seconds)}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
       </View>
-    </View></MyProfileGroupCard>
-    {preference.mode === 'custom' ? <View style={{ gap: 8 }}>
-      <SettingsSectionTitle>{t('student.restTimerSettingsView.copy001')}</SettingsSectionTitle>
-      <MyProfileGroupCard>{bands.map(([band, key], index) => <View key={band}>
-        {index > 0 ? <MyProfileDivider /> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel={t(key)} accessibilityState={{ expanded: expanded === band }} accessibilityHint={t(expanded === band ? 'student.restTimerSettingsView.copy009' : 'student.restTimerSettingsView.copy010')}
-          onPress={() => setExpanded(expanded === band ? null : band)} style={{ minHeight: 56, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Text style={{ flex: 1, ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t(key)}</Text>
-          <Text style={{ ...font.mono(14, 'semibold'), color: colors.goldText }}>{durationText(preference[band])}</Text>
-          <MaterialCommunityIcons name={expanded === band ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textDim} />
-        </Pressable>
-        {expanded === band ? <ScrollView nestedScrollEnabled style={{ height: 150, backgroundColor: colors.surfaceRaised }} contentOffset={{ x: 0, y: Math.max(0, (preference[band] - 30) / 15 - 1) * 44 }}>
-          {Array.from({ length: 39 }, (_, i) => i * 15 + 30).map(seconds => <Pressable key={seconds} accessibilityRole="button" accessibilityLabel={durationText(seconds)} accessibilityState={{ selected: preference[band] === seconds, disabled: busy }} disabled={busy}
-            onPress={() => void change({ ...preference, [band]: clampRestSeconds(seconds) })} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ ...font.mono(16, preference[band] === seconds ? 'semibold' : 'regular'), color: preference[band] === seconds ? colors.goldText : colors.textSecondary }}>{durationText(seconds)}</Text>
-          </Pressable>)}
-        </ScrollView> : null}
-      </View>)}</MyProfileGroupCard>
-    </View> : null}
-    <View style={{ gap: 8 }}><SettingsSectionTitle>{t('student.restTimerSettingsView.copy002')}</SettingsSectionTitle>
-      <MyProfileGroupCard>{bands.map(([, key], index) => <View key={key}>
-        {index > 0 ? <MyProfileDivider /> : null}
-        <View style={{ minHeight: 52, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Text style={{ flex: 1, ...font.body(14, 'medium'), color: colors.textSecondary }}>{t(key)}</Text>
-          <Text style={{ ...font.mono(13, 'semibold'), color: colors.textPrimary }}>{t((['student.restTimerSettingsView.copy011', 'student.restTimerSettingsView.copy012', 'student.restTimerSettingsView.copy013'] as const)[index])}</Text>
-        </View>
-      </View>)}</MyProfileGroupCard>
     </View>
-    <SettingsSectionTitle>{t('student.accessory.exercises')}</SettingsSectionTitle>
-    <MyProfileGroupCard><View style={{ padding: spacing.base, gap: spacing.md, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-      <View style={{ flex: 1, minWidth: spacing.xxxl, gap: spacing.xs }}>
-        <Text style={{ ...font.body(fontMetrics.size15, 'bold'), color: colors.textPrimary }}>{t('student.accessory.rest')}</Text>
-        <Text style={{ ...font.body(fontMetrics.size12), color: colors.textMuted }}>{t('student.accessory.range')}</Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-        {([-1, 1] as const).map(direction => <View key={direction} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          {direction === 1 ? <Text style={{ ...font.mono(fontMetrics.size16, 'bold'), color: colors.textPrimary }}>{durationText(accessory)}</Text> : null}
-          <Pressable accessibilityRole="button" accessibilityLabel={t(direction < 0 ? 'student.accessory.less' : 'student.accessory.more')}
-            disabled={busy || (direction < 0 ? accessory <= 30 : accessory >= 300)}
-            accessibilityState={{ disabled: busy || (direction < 0 ? accessory <= 30 : accessory >= 300) }}
-            onPress={() => void change({ ...preference, accessory: accessoryRestSeconds({ ...preference, accessory: accessory + direction * 15 }) })}
-            style={{ width: spacing.minimumHitTarget, height: spacing.minimumHitTarget, borderRadius: radius.pill, backgroundColor: colors.bgInset, justifyContent: 'center', alignItems: 'center', opacity: busy || (direction < 0 ? accessory <= 30 : accessory >= 300) ? 0.4 : 1 }}>
-            <MaterialCommunityIcons name={direction < 0 ? 'minus' : 'plus'} size={spacing.lg} color={colors.textPrimary} />
-          </Pressable>
-        </View>)}
-      </View>
-    </View></MyProfileGroupCard>
-    <Text style={{ ...font.body(12), color: colors.textMuted }}>{t('student.restTimerSettingsView.copy003')}</Text>
-    {error ? <ProfileText error>{error}</ProfileText> : null}
-  </SettingsPage>;
+  );
 }
+
+export function RestTimerSettingsScreen({
+  initial,
+  onSave,
+}: {
+  initial: RestTimerPreference;
+  onSave: (preference: RestTimerPreference) => Promise<void>;
+}) {
+  const colors = useColors();
+  const { width } = useWindowDimensions();
+  const [value, setValue] = useState(initial);
+  const latest = useRef(value);
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
+  const [error, setError] = useState(false);
+  const change = (next: RestTimerPreference) => {
+    latest.current = next;
+    setValue(next);
+  };
+  const save = async () => {
+    if (saving.current) return;
+    saving.current = true;
+    setBusy(true);
+    setError(false);
+    try {
+      await onSave(latest.current);
+    } catch {
+      setError(true);
+    } finally {
+      saving.current = false;
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      transparent
+      visible
+      animationType="fade"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={() => void save()}
+    >
+      <View style={styles.center}>
+        <Pressable
+          testID="rest-settings-dismiss"
+          accessibilityRole="button"
+          accessibilityLabel={t("training.restRing.save")}
+          disabled={busy}
+          onPress={() => void save()}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: colors.chatImageBackground, opacity: 0.6 },
+          ]}
+        />
+        <View
+          style={{
+            width: 340,
+            height: 340,
+            transform: [{ scale: Math.min(1, (width - 12) / 340) }],
+          }}
+        >
+          <View
+            pointerEvents={busy ? "none" : "auto"}
+            style={[
+              styles.disc,
+              {
+                backgroundColor: colors.surfaceElevated,
+                borderColor: colors.borderStrong,
+              },
+            ]}
+          >
+            <Text
+              style={{
+                ...font.body(14, "bold"),
+                color: colors.textSecondary,
+                marginTop: 30,
+              }}
+            >
+              {t("training.restRing.settings")}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 16, marginTop: 16 }}>
+              <DurationWheel
+                label={t("training.restRing.main")}
+                value={value.main}
+                onChange={(main) => change({ ...latest.current, main })}
+              />
+              <DurationWheel
+                label={t("training.restRing.accessory")}
+                value={value.accessory}
+                onChange={(accessory) =>
+                  change({ ...latest.current, accessory })
+                }
+              />
+            </View>
+            <View style={{ flexDirection: "row", gap: 16, marginTop: 20 }}>
+              {(["vibration", "sound"] as const).map((key) => (
+                <View
+                  key={key}
+                  style={{ width: 72, alignItems: "center", gap: 6 }}
+                >
+                  <Pressable
+                    accessibilityRole="switch"
+                    accessibilityLabel={t(`training.restRing.${key}`)}
+                    accessibilityState={{ checked: value[key] }}
+                    onPress={() =>
+                      change({ ...latest.current, [key]: !latest.current[key] })
+                    }
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      borderWidth: value[key] ? 0 : 1,
+                      borderColor: colors.borderStrong,
+                      backgroundColor: value[key]
+                        ? colors.accent
+                        : colors.surfaceRaised,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name={key === "vibration" ? "vibrate" : "volume-high"}
+                      size={22}
+                      color={
+                        value[key] ? colors.holdTrack : colors.textSecondary
+                      }
+                    />
+                  </Pressable>
+                  <Text
+                    style={{ ...font.body(11), color: colors.textSecondary }}
+                  >{`${t(`training.restRing.${key}`)} · ${t(value[key] ? "training.restRing.on" : "training.restRing.off")}`}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+          <Text
+            accessibilityLiveRegion="polite"
+            style={{
+              position: "absolute",
+              top: 356,
+              width: 340,
+              textAlign: "center",
+              ...font.body(12),
+              color: colors.videoReviewedText,
+            }}
+          >
+            {t(
+              error
+                ? "training.restRing.saveError"
+                : "training.restRing.saveHint",
+            )}
+          </Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  disc: {
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+});

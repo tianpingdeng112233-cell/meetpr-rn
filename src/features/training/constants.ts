@@ -5,20 +5,13 @@ export const TRAINING_LIMITS = Object.freeze({
   gymDayCutoffHour: 4,
   historyWindowDays: 84,
   restMaximumSeconds: 900,
-  restStepSeconds: 30,
+  restStepSeconds: 15,
   prReplayDelayMs: 1_500,
   transientBannerMs: 3_000,
   barWeightKg: 20,
   collarWeightPerSideKg: 2.5,
   weightStepKg: 2.5,
   repsStep: 1,
-});
-
-export const REST_DEFAULTS = Object.freeze({
-  withoutRPE: 180,
-  belowSeven: 120,
-  belowNine: 180,
-  nineOrAbove: 240,
 });
 
 export const RIR_KEYS = Object.freeze({
@@ -50,7 +43,6 @@ export const STORAGE_KEYS = Object.freeze({
   e1rm: 'training.e1rm.v1',
   readinessSkip: (studentId: string, date: string) =>
     `readiness.skipped.${studentId}.${date}`,
-  restExplanation: (studentId: string) => `restTimer.explained.${studentId}`,
   restPreference: (studentId: string) => `restTimer.preference.${studentId}`,
   review: (studentId: string, date: string) => `sessionReview.${studentId}.${date}`,
 });
