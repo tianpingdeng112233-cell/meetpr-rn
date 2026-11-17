@@ -29,7 +29,7 @@
 - [x] 添加热身组、填重量、长按完成；同步完成。相扑节奏硬拉 50 kg×4 / RPE 7；完成回顾为 8 动作 / 16 组 / 97 次 / 2,900 kg，热身未计入。见 `vivo-warmup-saved.png`、`vivo-completion.png`、`vivo-completion-review.png`。
 - [x] 成长页 e1RM 不变：热身写入后与完成、冷启动后均为 433.9 kg；写入后训练 1RM 仍为 520 kg。见 `vivo-growth-after-warmup.png`、`vivo-e1rm-after-warmup.png`、`vivo-growth-after-completion.png`。完成次数由 19→20 是本次完成训练的正常变化。
 - [ ] 独立 PR 清单前后对照（现有界面仅直接取证 e1RM 与训练 1RM，未冒充完整 PR 验收）。
-- [ ] 教练 App 不显示该热身组。
+- [x] 教练 App 不显示该热身组。2026-11-17 David 人工确认：同一学员 11/14 W2D4 相扑节奏硬拉仅两组正式组，看不到 50×4 / RPE 7 热身。此项为人工确认，未附 App 截图。
 - [x] 教练网页不显示该热身组。David 提供已登录国内网页的 11/14 W2D4 截图，开启「显示实际」，相扑节奏硬拉仅两组正式组（实际均 —×4 / RPE 6），没有 50×4 / RPE 7；主项 8 组、辅助项 8 组。见 `coach-web-warmup-hidden.png`。
 - [x] 学员可见；force-stop 后重启，11/14 W2D4 相扑节奏硬拉仍显示 50 kg×4 / RPE 7，空热身草稿已在长按完成时丢弃。见 `vivo-warmup-after-restart.png`。
 - [ ] 服务端读取保留热身标记（可由另一设备同账号新鲜读取交叉验证）。
