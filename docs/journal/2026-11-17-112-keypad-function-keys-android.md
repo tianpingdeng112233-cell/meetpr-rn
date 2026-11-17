@@ -126,3 +126,13 @@ copied defaults as saved baselines, and pluralize English fill feedback.
 Keep provenance and actual values inside the same serial save operation so
 slow storage cannot reverse rapid numeric edits.
 ```
+
+## 真账号验收接手（2026-11-17，进行中）
+
+- David 直派 Codex 接手剩余全流程；此前委派阶段的不 commit / push 约定不再适用于本次主代理接手。T2 合并仍须 David「放行」，当前未合并。
+- 开工核实 Android `eb3876c`、iOS `7482651f`，两个 PR 均草稿。Android 工作区干净；iOS 仅有 David 的 Xcode 用户界面状态变更，保留未动。后端 #428 已合；国内 `/health` 返回 `{"status":"ok"}`。未重做 0088 或部署。
+- David 提供的既有收货结果：Android 返修后模拟器 15 组 / 120 次 / 10,375 kg；iOS 17e 功能与深色通过，StudentKit 单跑 1336/1336。此处注明为本次交接结果，不冒充本会话重跑；原 JOURNAL 的历史失败记录保留。
+- 重打 CN 真后端 APK，包名保持 `com.meetpr.app.accept112`，演示开关编译为 false；修正本机资源合并缓存后核对 APK 内 bundle 一致性。完整摘要见 [android-live-build-2026-11-17.md](../evidence/112-keypad-function-keys/android-live-build-2026-11-17.md)。生成的 android/ 与 node_modules 链接继续被 git 忽略。
+- vivo V2405A（`10AECF1CX90020R`）安装返回 Success；David 已允许系统安装，测试包已启动。等待 David 自行登录并停在成长页，先存 e1RM/PR 基线，再做热身组写入、完成、教练双端隐藏和重启保留；尚未宣称真账号验收通过。
+- 只读 `git merge-tree` 预检发现目标分支已有并行改动：Android 与最新 main 的冲突在 PARITY.md；iOS 与最新 release/1.0 的冲突在 StudentKit Localizable.xcstrings。尚未实际 merge/rebase，待联验后处理并补整合验证。
+- 后续顺序不变：Android 真机 → David 的 iOS 真机 → 两端通过及整合验证后 PR 转正、候选登记、等待放行 → 清理指定模拟器测试包及 dist；卸载真机测试包先问 David。
