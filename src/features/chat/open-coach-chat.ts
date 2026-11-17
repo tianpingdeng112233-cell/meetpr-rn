@@ -1,3 +1,4 @@
+import { chatVideoOutbox } from './chat-videos';
 import { Alert, AppState } from 'react-native';
 import { ApiError } from '@/api/client';
 import { bindKeys, useMineBindRequest } from '@/api/domains/bind';
@@ -47,6 +48,7 @@ export function useOpenCoachChat(studentId: string) {
   const binding = useMineBindRequest();
   const bound = binding.data?.bind_request;
   const coachId = bound?.status === 'accepted' ? bound.coach_id : null;
+  useEffect(() => { if (binding.isSuccess) chatVideoOutbox.setContext(studentId, coachId); }, [binding.isSuccess, studentId, coachId]);
   const feedback = useFeedbackInboxViewModel(studentId);
   const plan = useStudentPlanNotice(studentId);
   const [foreground, setForeground] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');

@@ -2,6 +2,8 @@ import { useMineBindRequest } from '@/api/domains/bind';
 import { chatRepository } from '@/api/domains/chat';
 import { useSessionStore } from '@/api/session';
 import { AppButton, Screen, font, useColors } from '@/design';
+import { useEffect } from 'react';
+import { chatVideoOutbox } from '@/features/chat/chat-videos';
 import { StudentConversationScreen } from '@/features/chat/StudentConversationScreen';
 import { t } from '@/i18n';
 import { useQuery } from '@tanstack/react-query';
@@ -14,9 +16,10 @@ export default function StudentChatRoute() {
   const binding = useMineBindRequest();
   const request = binding.data?.bind_request;
   const coachId = request?.status === 'accepted' ? request.coach_id : null;
+  useEffect(() => { if (binding.isSuccess) chatVideoOutbox.setContext(user?.id ?? null, coachId); }, [binding.isSuccess, user?.id, coachId]);
   const conversation = useQuery({ queryKey: ['coach-conversation', user?.id, coachId], queryFn: () => chatRepository.open(coachId!), enabled: Boolean(coachId && user?.role === 'coached_student'), staleTime: Infinity });
   if (user?.role === 'self_train_student') return <Redirect href="/(student)/training" />;
-  if (conversation.data && coachId) return <StudentConversationScreen key={`${user?.id}:${conversation.data.conversation.id}`} conversationId={conversation.data.conversation.id} coachName={request?.coach_display_name?.trim() || conversation.data.conversation.other_party.display_name} />;
+  if (conversation.data && coachId) return <StudentConversationScreen key={`${user?.id}:${conversation.data.conversation.id}`} conversationId={conversation.data.conversation.id} coachId={coachId} coachName={request?.coach_display_name?.trim() || conversation.data.conversation.other_party.display_name} />;
   const failed = binding.isError || conversation.isError;
   return <Screen edges={['top', 'left', 'right']}><View style={{ flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center', gap: 14 }}>
     {binding.isPending || (coachId && !failed) ? <ActivityIndicator color={colors.gold500} /> : <>

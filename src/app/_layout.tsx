@@ -1,3 +1,4 @@
+import { useChatVideoSession } from '@/features/chat/chat-videos';
 import { startExerciseNoteOutbox } from '@/features/chat/exercise-note-outbox';
 import { restTimerNotifications } from '@/features/training/rest-timer-notification';
 import { VideoUploadNotificationSession } from '@/features/training/video-upload/VideoUploadNotificationSession';
@@ -93,6 +94,7 @@ function RootNavigator() {
 
 function ThemedRoot() {
   useChatRealtimeLifecycle();
+  useChatVideoSession();
   const { colors, scheme } = useTheme();
   const baseTheme = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const navigationTheme = {

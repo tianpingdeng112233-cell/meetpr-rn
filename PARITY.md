@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-11-17 spec 113 独立聊天视频（待收货）**：学员「＋ → 视频」相册单选/可播预览、session outbox 真进度与重试、教练收取及严格消息续签、三语已实装。保持旧训练组分享与 text fallback。真实后端持久化与端到端收发尚未验收，未合并/部署/进包；测试、原生证据与缺口见 [本卡 JOURNAL](docs/journal/2026-11-17-113-android.md)。
 > **2026-11-16 spec 110 旧周期练完再接新计划（工作区待收货）**：Android 已接服务端 current 契约、只读预览下一周期、接续提示与调用点统一；demo 加 upcoming。独立 Standards / Spec 审查已闭合，自动化证据与验收缺口见 [JOURNAL](docs/journal/2026-11-16-110-android.md)。未 commit / push，未进包；原生滚动、深浅色 / 大字、CN / Global 真实 API 与升级亲验待收货方。
 > **2026-11-15 · CN15 已发布**。版本 APK 与固定下载链接均已核验，CN14 实包可收到本次更新提示。[发布与覆盖升级记录](docs/journal/2026-11-15-release-cn15.md)
 > **2026-11-15 动作留言卡片**：学员发出靠右，教练收到靠左。同侧卡片等宽，长文换行增高。[验收记录](docs/journal/2026-11-15-107-exercise-note-width.md)

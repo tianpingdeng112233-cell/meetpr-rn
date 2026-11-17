@@ -178,7 +178,7 @@ test.each(['coach', 'student'])('%s screen receives only matching messages, appl
   if (role === 'student') useSessionStore.setState({ user: { ...user, role: 'coached_student' } });
   jest.mocked(chatRepository.messages).mockResolvedValue({ messages: [{ id: 'm', seq: 2, sender_id: 'me', body: 'hello peer', conversation_id: 'c', kind: 'text', client_id: 'm', created_at: '2026-09-05T09:00:00Z' }], meta: { has_more: false } });
   jest.mocked(chatRepository.read).mockResolvedValue({ unread_count: 0, my_last_read: { message_id: 'm', seq: 2 } });
-  await act(async () => { renderer = create(<QueryClientProvider client={client}><Probe />{role === 'coach' ? <ConversationScreen conversationId="c" studentName="Peer" /> : <StudentConversationScreen conversationId="c" coachName="Peer" />}</QueryClientProvider>); });
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><Probe />{role === 'coach' ? <ConversationScreen conversationId="c" studentName="Peer" /> : <StudentConversationScreen coachId="coach" conversationId="c" coachName="Peer" />}</QueryClientProvider>); });
   await act(async () => { await jest.advanceTimersByTimeAsync(1); });
   expect(chatRepository.messages).toHaveBeenCalledTimes(1);
   await act(async () => { await jest.advanceTimersByTimeAsync(3000); });
@@ -246,7 +246,7 @@ test('switching accounts drops a queued inbox refresh before React cleans up the
 test.each(['coach', 'student'])('%s screen clears an initial load failure after a successful realtime refresh', async role => {
   if (role === 'student') useSessionStore.setState({ user: { ...user, role: 'coached_student' } });
   jest.mocked(chatRepository.messages).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ messages: [], meta: { has_more: false } });
-  await act(async () => { renderer = create(<QueryClientProvider client={client}><Probe />{role === 'coach' ? <ConversationScreen conversationId="c" studentName="Peer" /> : <StudentConversationScreen conversationId="c" coachName="Peer" />}</QueryClientProvider>); });
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><Probe />{role === 'coach' ? <ConversationScreen conversationId="c" studentName="Peer" /> : <StudentConversationScreen coachId="coach" conversationId="c" coachName="Peer" />}</QueryClientProvider>); });
   const failure = t(role === 'coach' ? 'chat.loadMessagesFailed' : 'student.studentBlackGoldChatView.copy011');
   const hasFailure = () => renderer.root.findAllByType(Text).some(node => node.props.children === failure);
   expect(hasFailure()).toBe(true);
