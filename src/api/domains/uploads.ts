@@ -12,6 +12,7 @@ const DOCUMENT_MAX_BYTES = 20 * MEBIBYTE;
 export const UploadKindSchema = z.enum([
   'set_video',
   'chat_image',
+  'chat_video',
   'onboarding_video',
   'onboarding_doc',
 ]);

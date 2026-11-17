@@ -1,3 +1,4 @@
+import { ChatStandaloneVideo, isStandaloneChatVideo } from './ChatStandaloneVideo';
 import { ChatExerciseNoteCard } from './ChatExerciseNoteCard';
 import { ChatTimeSeparator, chatTimeLocale } from './ChatTimeSeparator';
 import { chatTimeSeparators } from './student-timeline';
@@ -243,6 +244,7 @@ export function ConversationScreen({ conversationId, studentName, status, initia
 
 function ChatMessageRow({ message, outgoing, read, openImage, openVideo }: { message: ChatMessage; outgoing: boolean; read: boolean; openImage: () => void; openVideo: () => Promise<void> }) {
   const colors = useColors();
+  if (isStandaloneChatVideo(message)) return <ChatStandaloneVideo message={message} outgoing={outgoing} read={read} onPress={() => void openVideo()} />;
   if (message.exercise_ref) return <ChatExerciseNoteCard message={message} outgoing={outgoing} />;
   const presentation = message.kind === 'text' ? ChatSetCardPresentation(message) : null;
   if (presentation) return <ChatSetCard reference={presentation.setRef} note={presentation.note} message={message} outgoing={outgoing} read={read} openVideo={openVideo} />;

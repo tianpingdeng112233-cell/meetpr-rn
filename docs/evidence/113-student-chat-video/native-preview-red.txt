@@ -1,0 +1,17 @@
+Captured from emulator-5572 crash buffer; pre-patch QA process only.
+E/AndroidRuntime( 7569): FATAL EXCEPTION: main
+E/AndroidRuntime( 7569): Process: com.meetpr.global.chatvideoqa, PID: 7569
+E/AndroidRuntime( 7569): java.lang.NoSuchMethodError: No direct method <init>(Landroidx/media3/exoplayer/upstream/DefaultAllocator;IIIIIZIZ)V in class Landroidx/media3/exoplayer/DefaultLoadControl; or its super classes (declaration of 'androidx.media3.exoplayer.DefaultLoadControl' appears in /data/app/~~bVLuDyNd8w0oo3Ie5f39Og==/com.meetpr.global.chatvideoqa-StMZurZ3DSuMIr2D7TsCkQ==/base.apk!classes21.dex)
+E/AndroidRuntime( 7569): 	at com.brentvatne.exoplayer.ReactExoplayerView$RNVLoadControl.<init>(ReactExoplayerView.java:568)
+E/AndroidRuntime( 7569): 	at com.brentvatne.exoplayer.ReactExoplayerView.initializePlayerCore(ReactExoplayerView.java:724)
+E/AndroidRuntime( 7569): 	at com.brentvatne.exoplayer.ReactExoplayerView.lambda$initializePlayer$7(ReactExoplayerView.java:646)
+E/AndroidRuntime( 7569): 	at com.brentvatne.exoplayer.ReactExoplayerView.$r8$lambda$DP9m-GVHZ1UV7-CzFpYsYGtcF3c(Unknown Source:0)
+E/AndroidRuntime( 7569): 	at com.brentvatne.exoplayer.ReactExoplayerView$$ExternalSyntheticLambda4.run(D8$$SyntheticClass:0)
+E/AndroidRuntime( 7569): 	at android.os.Handler.handleCallback(Handler.java:959)
+E/AndroidRuntime( 7569): 	at android.os.Handler.dispatchMessage(Handler.java:100)
+E/AndroidRuntime( 7569): 	at android.os.Looper.loopOnce(Looper.java:232)
+E/AndroidRuntime( 7569): 	at android.os.Looper.loop(Looper.java:317)
+E/AndroidRuntime( 7569): 	at android.app.ActivityThread.main(ActivityThread.java:8705)
+E/AndroidRuntime( 7569): 	at java.lang.reflect.Method.invoke(Native Method)
+E/AndroidRuntime( 7569): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:580)
+E/AndroidRuntime( 7569): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:886)

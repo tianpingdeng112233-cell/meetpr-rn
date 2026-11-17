@@ -1,0 +1,363 @@
+=== history-ack-red ===
+FAIL src/features/chat/__tests__/chat-video-outbox.test.ts
+  ● history confirms a lost POST response and releases its retained source
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 18
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "draft": Object {
+    +       "clientId": "stable",
+    +       "coachId": "coach",
+    +       "contentType": "video/mp4",
+    +       "conversationId": "conversation",
+    +       "durationSeconds": 24,
+    +       "height": 200,
+    +       "ownerId": "student",
+    +       "sizeBytes": 100,
+    +       "uri": "file:///video.mp4",
+    +       "width": 100,
+    +     },
+    +     "progress": 0,
+    +     "state": "failed",
+    +   },
+    + ]
+
+      61 |   outbox.setContext('student', 'coach'); await outbox.enqueue(draft);
+      62 |   outbox.acknowledge([{ ...message, conversation_id: 'conversation' }]);
+    > 63 |   expect(outbox.getSnapshot()).toEqual([]);
+         |                                ^
+      64 |   expect(removeFile).toHaveBeenCalledWith(draft.uri);
+      65 | });
+      66 |
+
+      at Object.toEqual (src/features/chat/__tests__/chat-video-outbox.test.ts:63:32)
+      at asyncGeneratorStep (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        4.409 s
+
+
+=== history-ack-green ===
+PASS src/features/chat/__tests__/chat-video-outbox.test.ts
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        6.705 s
+
+
+=== outbox-duplicate-red ===
+FAIL src/features/chat/__tests__/chat-video-outbox.test.ts
+  ● a confirmed video cannot be sent a second time by duplicate taps
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 2
+
+      53 |   outbox.setContext('student', 'coach');
+      54 |   await outbox.enqueue(draft); await outbox.enqueue(draft);
+    > 55 |   expect(send).toHaveBeenCalledTimes(1);
+         |                ^
+      56 | });
+      57 |
+
+      at Object.toHaveBeenCalledTimes (src/features/chat/__tests__/chat-video-outbox.test.ts:55:16)
+      at asyncGeneratorStep (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Snapshots:   0 total
+Time:        1.21 s, estimated 4 s
+
+
+=== copy-red ===
+FAIL src/features/chat/__tests__/chat-video-copy.test.ts
+  ● standalone video copy does not change the existing set picker contract in en
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "42%"
+    Received string:    "chat.standaloneVideoUploading"
+
+       5 |   setLocaleOverride(locale);
+       6 |   expect(t('chat.videoUploading')).not.toContain('{0}');
+    >  7 |   expect(t('chat.standaloneVideoUploading', [42])).toContain('42%');
+         |                                                    ^
+       8 |   expect(t('chat.standaloneVideoUnavailable')).not.toBe(t('chat.videoUnavailable'));
+       9 | });
+      10 |
+
+      at toContain (src/features/chat/__tests__/chat-video-copy.test.ts:7:52)
+
+  ● standalone video copy does not change the existing set picker contract in zh
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected substring: "42%"
+    Received string:    "chat.standaloneVideoUploading"
+
+       5 |   setLocaleOverride(locale);
+       6 |   expect(t('chat.videoUploading')).not.toContain('{0}');
+    >  7 |   expect(t('chat.standaloneVideoUploading', [42])).toContain('42%');
+         |                                                    ^
+       8 |   expect(t('chat.standaloneVideoUnavailable')).not.toBe(t('chat.videoUnavailable'));
+       9 | });
+      10 |
+
+      at toContain (src/features/chat/__tests__/chat-video-copy.test.ts:7:52)
+
+  ● standalone video copy does not change the existing set picker contract in zh-Hant
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "{0}"
+    Received string:        "正在上傳 {0}%"
+
+      4 | test.each(['en', 'zh', 'zh-Hant'] as const)('standalone video copy does not change the existing set picker contract in %s', locale => {
+      5 |   setLocaleOverride(locale);
+    > 6 |   expect(t('chat.videoUploading')).not.toContain('{0}');
+        |                                        ^
+      7 |   expect(t('chat.standaloneVideoUploading', [42])).toContain('42%');
+      8 |   expect(t('chat.standaloneVideoUnavailable')).not.toBe(t('chat.videoUnavailable'));
+      9 | });
+
+      at toContain (src/features/chat/__tests__/chat-video-copy.test.ts:6:40)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 3 total
+Snapshots:   0 total
+Time:        3.973 s
+
+
+=== copy-green ===
+PASS src/features/chat/__tests__/chat-video-copy.test.ts
+PASS src/demo/__tests__/chat-video.test.ts
+PASS src/features/chat/__tests__/chat-videos.test.tsx
+PASS src/demo/__tests__/transport.test.ts
+
+Test Suites: 4 passed, 4 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        7.502 s, estimated 49 s
+
+
+=== coach-context-red ===
+FAIL src/features/chat/__tests__/student-conversation-screen.test.tsx (19.016 s)
+  ● video picker remains available when the auxiliary conversation list fails
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: ObjectContaining {"allowsMultipleSelection": false, "mediaTypes": ["videos"]}
+
+    Number of calls: 0
+
+      663 |   await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.coachTab.add'))[0].props.onPress());
+      664 |   await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.chooseVideo'))[0].props.onPress());
+    > 665 |   expect(pick).toHaveBeenCalledWith(expect.objectContaining({ mediaTypes: ['videos'], allowsMultipleSelection: false }));
+          |                ^
+      666 | });
+      667 |
+
+      at Object.toHaveBeenCalledWith (src/features/chat/__tests__/student-conversation-screen.test.tsx:665:16)
+      at asyncGeneratorStep (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 45 skipped, 46 total
+Snapshots:   0 total
+Time:        19.77 s
+
+
+=== coach-context-green ===
+PASS src/features/training/__tests__/set-ref-entry.test.tsx (10.947 s)
+PASS src/features/chat/__tests__/student-conversation-screen.test.tsx (5.246 s)
+PASS src/features/chat/__tests__/realtime-wiring.test.tsx
+
+Test Suites: 3 passed, 3 total
+Tests:       86 passed, 86 total
+Snapshots:   0 total
+Time:        20.544 s
+
+
+=== wire-literal-red ===
+FAIL src/i18n/__tests__/no-literal-zh.test.ts (15.679 s)
+  ● application source contains no Chinese literals without any screen exemptions
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "src/api/domains/chat.ts:71 '[视频]'",
+    +   "src/features/chat/chat-videos.ts:36 '[视频]'",
+    + ]
+
+      40 |     visit(ast);
+      41 |   }
+    > 42 |   expect(literals).toEqual([]);
+         |                    ^
+      43 | });
+      44 |
+
+      at Object.toEqual (src/i18n/__tests__/no-literal-zh.test.ts:42:20)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        21.776 s
+
+
+=== wire-literal-green ===
+PASS src/i18n/__tests__/no-literal-zh.test.ts (9.839 s)
+PASS src/api/domains/__tests__/chat-images.test.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        16.208 s
+
+
+=== copy-race-red ===
+FAIL src/features/chat/__tests__/chat-videos.test.tsx
+  ● native metadata waits until the asynchronous file copy finishes
+
+    expect(jest.fn()).not.toHaveBeenCalled()
+
+    Expected number of calls: 0
+    Received number of calls: 1
+
+    1: called with 0 arguments
+
+      59 |   await mount(); let picking!: Promise<void>;
+      60 |   await act(async () => { picking = vm.pick(); await Promise.resolve(); });
+    > 61 |   expect(mockMetadata).not.toHaveBeenCalled();
+         |                            ^
+      62 |   expect(vm.preview).toBeNull();
+      63 |   await act(async () => { finish(); await picking; });
+      64 |   expect(mockMetadata).toHaveBeenCalledTimes(1);
+
+      at Object.toHaveBeenCalled (src/features/chat/__tests__/chat-videos.test.tsx:61:28)
+      at asyncGeneratorStep (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 skipped, 4 total
+Snapshots:   0 total
+Time:        0.748 s, estimated 3 s
+
+
+=== demo-race-red ===
+FAIL src/demo/__tests__/chat-video.test.ts
+  ● demo upload cannot complete before its separate file copy is ready
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      26 |   const uploading = uploadDemoParts('file:///source.mp4', [{ part_number: 1, url: 'demo://upload/attachment/1' }], { signal: new AbortController().signal, onProgress: () => {} }).then(() => { completed = true; });
+      27 |   await Promise.resolve(); await Promise.resolve();
+    > 28 |   expect(completed).toBe(false);
+         |                     ^
+      29 |   finish(); await uploading;
+      30 |   uploadRoute('/uploads/attachment/complete', 'POST', {}, 'student', 'coach', () => 'unused');
+      31 |   expect(mockFiles.has(demoVideoUrl('attachment')!)).toBe(true);
+
+      at Object.toBe (src/demo/__tests__/chat-video.test.ts:28:21)
+      at asyncGeneratorStep (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 skipped, 2 total
+Snapshots:   0 total
+Time:        0.464 s, estimated 1 s
+
+
+=== copy-race-green ===
+PASS src/features/chat/__tests__/chat-videos.test.tsx
+PASS src/demo/__tests__/chat-video.test.ts
+PASS src/features/chat/__tests__/chat-video-outbox.test.ts
+PASS src/demo/__tests__/transport.test.ts
+PASS src/features/chat/__tests__/chat-video-upload.test.ts
+
+Test Suites: 5 passed, 5 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        1.053 s, estimated 10 s
+
+
+=== demo-cleanup-red ===
+FAIL src/demo/__tests__/chat-video.test.ts
+  ● a partially written demo copy is removed when copying fails
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "file:///cache/demo-chat-videos/attachment.mp4",
+    + ]
+
+      36 |   uploadRoute('/uploads/initiate', 'POST', { kind: 'chat_video', content_type: 'video/mp4', size_bytes: 100, part_count: 1 }, 'student', 'coach', () => 'attachment');
+      37 |   await expect(uploadDemoParts('file:///source.mp4', [{ part_number: 1, url: 'demo://upload/attachment/1' }], { signal: new AbortController().signal, onProgress: () => {} })).rejects.toThrow('Partial copy');
+    > 38 |   expect([...mockFiles].filter(uri => uri.includes('demo-chat-videos'))).toEqual([]);
+         |                                                                          ^
+      39 | });
+      40 | test('reset during copying removes the late target and cancels the old upload', async () => {
+      41 |   let finish!: () => void;
+
+      at Object.toEqual (src/demo/__tests__/chat-video.test.ts:38:74)
+      at asyncGeneratorStep (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+  ● reset during copying removes the late target and cancels the old upload
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: [{"etag": "\"demo-1\"", "part_number": 1}]
+
+      44 |   const uploading = uploadDemoParts('file:///source.mp4', [{ part_number: 1, url: 'demo://upload/attachment/1' }], { signal: new AbortController().signal, onProgress: () => {} });
+      45 |   await Promise.resolve(); resetDemoUploads(); finish();
+    > 46 |   await expect(uploading).rejects.toThrow();
+         |               ^
+      47 |   expect([...mockFiles].filter(uri => uri.includes('demo-chat-videos'))).toEqual([]);
+      48 | });
+      49 |
+
+      at expect (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/expect/build/index.js:113:15)
+      at Object.<anonymous> (src/demo/__tests__/chat-video.test.ts:46:15)
+      at asyncGeneratorStep (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../../../../Projects/apps/meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 passed, 4 total
+Snapshots:   0 total
+Time:        2.475 s
+
+
+=== demo-cleanup-green ===
+PASS src/demo/__tests__/chat-video.test.ts
+PASS src/features/chat/__tests__/chat-videos.test.tsx
+PASS src/demo/__tests__/transport.test.ts
+PASS src/features/chat/__tests__/chat-video-upload.test.ts
+PASS src/features/chat/__tests__/chat-video-outbox.test.ts
+
+Test Suites: 5 passed, 5 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        4.192 s

@@ -150,7 +150,7 @@ test('arriving in chat sends a picker intent once and retries with the same ques
     id, conversation_id: id, seq: 1, sender_id: '', kind: 'text', body, client_id: 'same-key', created_at: '2026-10-02T09:00:00Z', set_ref: setRef,
   } });
   try {
-    await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen conversationId={id} coachName="Coach" /></QueryClientProvider>); });
+    await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen coachId="coach" conversationId={id} coachName="Coach" /></QueryClientProvider>); });
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenLastCalledWith(id, { body, clientID: 'same-key', setRef });
     const retry = renderer.root.findAll(node => node.props.onPress && node.props.disabled === false && node.findAllByType(Text).some(text => text.props.children === t('student.studentBlackGoldChatView.copy026')))[0];

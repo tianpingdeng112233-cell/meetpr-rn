@@ -49,8 +49,8 @@ export function useChatSetPlayback(conversationId: string, updateMessage: (messa
   }, []));
   async function refreshShareURL(message: ChatMessage) {
     const requestGeneration = generation.current;
-    const page = await chatRepository.messages(conversationId, { since_seq: message.seq - 1, limit: 1 });
-    const fresh = page.messages.find(item => item.id === message.id);
+    const page = await chatRepository.messages(conversationId, { before_seq: message.seq + 1, limit: 1 });
+    const fresh = page.messages.find(item => item.id === message.id && item.seq === message.seq);
     if (fresh && focused.current && requestGeneration === generation.current) updateMessage(fresh);
     if (!fresh?.video_url) throw new Error('Playback unavailable');
     return fresh.video_url;

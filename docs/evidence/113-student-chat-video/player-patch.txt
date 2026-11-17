@@ -1,0 +1,7 @@
+Borrowed original has RNVLoadControl class: True
+Owned patched copy has RNVLoadControl class: False
+Owned copy uses DefaultLoadControl.Builder: True
+Shared source left unchanged: True
+patch-package 8.0.1
+Applying patches...
+react-native-video@6.19.2 ✔

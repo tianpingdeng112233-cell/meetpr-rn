@@ -419,5 +419,53 @@
 "chat.weightRepsMetric": {
 "en": "WEIGHT × REPS",
 "zh": "WEIGHT × REPS"
-}
+},
+"chat.chooseVideo": {
+    "en": "Video",
+    "zh": "视频"
+  },
+  "chat.videoPreview": {
+    "en": "Video preview",
+    "zh": "视频预览"
+  },
+  "chat.videoReselect": {
+    "en": "Choose again",
+    "zh": "重新选择"
+  },
+  "chat.videoSendTo": {
+    "en": "Send to {0}",
+    "zh": "发送给 {0}"
+  },
+  "chat.videoConfirming": {
+    "en": "Sending…",
+    "zh": "正在发送…"
+  },
+  "chat.videoRetry": {
+    "en": "Send failed · Tap to retry",
+    "zh": "发送失败 · 点击重试"
+  },
+  "chat.videoTooLarge": {
+    "en": "Choose a video smaller than 200 MB.",
+    "zh": "请选择不超过 200 MB 的视频。"
+  },
+  "chat.videoUnsupported": {
+    "en": "Choose an MP4 or MOV video.",
+    "zh": "请选择 MP4 或 MOV 视频。"
+  },
+  "chat.videoPreparationFailed": {
+    "en": "Could not open this video. Please choose again.",
+    "zh": "无法打开这个视频，请重新选择。"
+  },
+  "chat.videoPreparing": {
+    "en": "Preparing video",
+    "zh": "正在准备视频"
+  },
+  "chat.standaloneVideoUploading": {
+    "en": "Uploading {0}%",
+    "zh": "正在上传 {0}%"
+  },
+  "chat.standaloneVideoUnavailable": {
+    "en": "This video cannot be played.",
+    "zh": "暂时无法播放这段视频"
+  }
 }
