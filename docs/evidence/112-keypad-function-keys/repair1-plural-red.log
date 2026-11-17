@@ -1,0 +1,69 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --forceExit src/i18n/__tests__/t.test.ts -t 112 repair 1
+
+FAIL src/i18n/__tests__/t.test.ts
+  ✕ 112 repair 1: training.pad.filledUp uses English set/sets and retains Chinese copy (3 ms)
+  ✕ 112 repair 1: training.pad.filledDown uses English set/sets and retains Chinese copy
+  ○ skipped uses the device language, with English for non-Chinese locales
+  ○ skipped supports debug overrides and returning to the device language
+  ○ skipped formats positional placeholders using the canonical pending-bind copy
+  ○ skipped Today header joins the localized date and weekday without duplicating the Chinese prefix
+  ○ skipped substitutes object and positional placeholders without reprocessing parameter text
+  ○ skipped selects English one/other and the Chinese plural copy
+  ○ skipped pluralizes prescription summaries by the third parameter
+  ○ skipped defaults standalone plural keys to the first parameter
+  ○ skipped pluralizes coach workspace summaries by weeks after the descriptive parameters
+  ○ skipped returns an unknown runtime key without throwing, while rejecting it at compile time
+  ○ skipped plural sibling keys (<key>.one) are used for a count of exactly one in English
+  ○ skipped selects Taiwan Traditional copy for zh-Hant-TW
+  ○ skipped selects Taiwan Traditional copy for zh-HK
+  ○ skipped selects Taiwan Traditional copy for zh-MO
+  ○ skipped selects Taiwan Traditional copy for zh-TW
+  ○ skipped selects Taiwan Traditional copy for zh-Hant
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","languageScriptCode":"Hant"}
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","regionCode":"TW"}
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","regionCode":"HK"}
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","regionCode":"MO"}
+  ○ skipped missing Traditional falls back to Simplified, then unknown key; interpolated user text is untouched
+
+  ● 112 repair 1: training.pad.filledUp uses English set/sets and retains Chinese copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Filled weight in 1 set above"
+    Received: "Filled weight in 1 sets above"
+
+      123 | test.each([['training.pad.filledUp', 'above', '上方'], ['training.pad.filledDown', 'below', '下方']] as const)(
+      124 |   '112 repair 1: %s uses English set/sets and retains Chinese copy', (key, direction, chineseDirection) => {
+    > 125 |     expect(t(key, [1, 'weight'], 'en')).toBe(`Filled weight in 1 set ${direction}`);
+          |                                         ^
+      126 |     expect(t(key, [2, 'weight'], 'en')).toBe(`Filled weight in 2 sets ${direction}`);
+      127 |     expect(t(key, [1, '重量'], 'zh')).toBe(`已改${chineseDirection} 1 组的重量`);
+      128 |     expect(t(key, [2, '重量'], 'zh')).toBe(`已改${chineseDirection} 2 组的重量`);
+
+      at toBe (src/i18n/__tests__/t.test.ts:125:41)
+
+  ● 112 repair 1: training.pad.filledDown uses English set/sets and retains Chinese copy
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Filled weight in 1 set below"
+    Received: "Filled weight in 1 sets below"
+
+      123 | test.each([['training.pad.filledUp', 'above', '上方'], ['training.pad.filledDown', 'below', '下方']] as const)(
+      124 |   '112 repair 1: %s uses English set/sets and retains Chinese copy', (key, direction, chineseDirection) => {
+    > 125 |     expect(t(key, [1, 'weight'], 'en')).toBe(`Filled weight in 1 set ${direction}`);
+          |                                         ^
+      126 |     expect(t(key, [2, 'weight'], 'en')).toBe(`Filled weight in 2 sets ${direction}`);
+      127 |     expect(t(key, [1, '重量'], 'zh')).toBe(`已改${chineseDirection} 1 组的重量`);
+      128 |     expect(t(key, [2, '重量'], 'zh')).toBe(`已改${chineseDirection} 2 组的重量`);
+
+      at toBe (src/i18n/__tests__/t.test.ts:125:41)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 21 skipped, 23 total
+Snapshots:   0 total
+Time:        1.019 s
+Ran all test suites matching /src\/i18n\/__tests__\/t.test.ts/i with tests matching "112 repair 1".
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

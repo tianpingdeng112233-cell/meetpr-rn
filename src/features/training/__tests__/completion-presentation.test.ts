@@ -87,3 +87,10 @@ test('extra work contributes actual volume without inflating prescription comple
   const extra = { ...drafts[0], kind: 'extra' as const, stableSetId: 'extra', setIndex: 2 };
   expect(workoutCompletionPresentation({ ...input, drafts: [...drafts, extra] })).toMatchObject({ totalPlannedSets: 3, completedSuccessfulSets: 2, completedSetCount: 4, totalReps: 20 });
 });
+
+test('112 repair 1: warm-ups never contribute to completion counts, volume, best set, PR or effort', () => {
+  const warmup = { ...drafts[0], kind: 'warmup' as const, stableSetId: 'warmup',
+    setIndex: 3, weightText: '999', repsText: '99', rpeText: '10' };
+  expect(workoutCompletionPresentation({ ...input, drafts: [warmup, ...drafts] }))
+    .toEqual(workoutCompletionPresentation(input));
+});

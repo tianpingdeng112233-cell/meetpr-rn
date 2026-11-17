@@ -268,7 +268,8 @@ export function TodayWorkoutView() {
   const rememberEffort = (row: WorkoutSetDraft) => effortChoices.remember(row.exercise.exercise_id, row.effortKind ?? 'rpe');
   const baseDrafts = synthesizedDrafts.map(draft => {
     const local = draftOverrides[draft.stableSetId];
-    if (local?.originalWeightText != null) draft = { ...draft, originalWeightText: local.originalWeightText };
+    const original = syncSnapshot.originalWeights?.[draft.stableSetId];
+    if (original?.loggedDate === (draft.sourceLog?.logged_date ?? today)) draft = { ...draft, originalWeightText: original.weightText };
     if (local && !local.sourceLog && !draft.sourceLog) return local;
     // Empty effort has no RPE/RIR discriminator on the wire; retain this session's choice.
     return local && !local.rpeText && !draft.rpeText
@@ -567,6 +568,7 @@ export function TodayWorkoutView() {
     attachmentOnly?: boolean;
     accessory?: { request: SetLogUpsertRequest; mode: 'single' | 'all' };
     quickLogDate?: string;
+    originalWeightText?: string;
   }): Promise<string | undefined> => {
     const operation = async () => {
       const currentDrafts = input.accessory ? accessoryDraftsRef.current : liveDrafts;
@@ -631,6 +633,9 @@ export function TodayWorkoutView() {
           completed: completed && !input.failed,
           failed: input.failed,
         };
+        if (!input.quickLogDate && input.originalWeightText != null) {
+          await setSyncQueue.rememberOriginalWeight(draft.stableSetId, logDate, input.originalWeightText);
+        }
         const response = input.quickLogDate ? await upsert.mutateAsync(request) : await setSyncQueue.enqueue({
           stableSetId: draft.stableSetId, dayId: draft.exercise.plan_day_id, exerciseId: draft.exercise.exercise_id, loggedDate: logDate,
           request: { ...request, logged_date: logDate },
@@ -742,10 +747,6 @@ export function TodayWorkoutView() {
   };
 
   const saveRow = async (row: WorkoutSetDraft, request = allDayLogRequest(row)) => {
-    if (row.originalWeightText != null) {
-      accessoryDraftsRef.current = accessoryDraftsRef.current.map(item => item.stableSetId === row.stableSetId ? { ...item, originalWeightText: row.originalWeightText } : item);
-      setDraftOverrides(current => ({ ...current, [row.stableSetId]: row }));
-    }
     if (row.kind === 'warmup' && !row.weightText.trim()) {
       accessoryDraftsRef.current = accessoryDraftsRef.current.map(item => item.stableSetId === row.stableSetId ? row : item);
       setDraftOverrides(current => ({ ...current, [row.stableSetId]: row }));
@@ -754,7 +755,7 @@ export function TodayWorkoutView() {
     }
     const id = await commit({ stableSetId: row.stableSetId, weightText: row.weightText, repsText: row.repsText,
       rpeText: row.rpeText, effortKind: row.effortKind, failed: false, completed: true,
-      accessory: { request, mode: 'all' } });
+      originalWeightText: row.originalWeightText, accessory: { request, mode: 'all' } });
     if (!id) throw new Error('Set unavailable');
     return id;
   };

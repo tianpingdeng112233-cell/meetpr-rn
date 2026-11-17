@@ -60,6 +60,6 @@ export function allDayLogRequest(row: WorkoutSetDraft): SetLogUpsertRequest {
 export function completionWrites(sheet: AllDaySheet, exerciseId?: string) {
   return sheet.exercises.filter(block => !exerciseId || block.exercise.id === exerciseId).flatMap(block =>
     block.rows.filter(row => row.kind !== 'warmup' || Boolean(row.weightText.trim())).filter(row => !(row.kind && !row.sourceLog && !row.weightText.trim() && !row.repsText.trim() && !row.rpeText.trim()))
-      .filter(row => exerciseId || !row.sourceLog || row.sourceLog.assumed)
+      .filter(row => exerciseId || !row.sourceLog || row.sourceLog.assumed || (!row.sourceLog.completed && !row.sourceLog.failed))
       .map(row => ({ row, request: allDayLogRequest(row) })));
 }

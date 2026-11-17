@@ -1,5 +1,7 @@
 import { writeEffortChoice } from '../effort-preferences';
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { resetDemoBackend, demoResponse } from '@/demo/backend';
+import { buildDemoSeed } from '@/demo/seed';
 import { writeDailyWeight } from '@/features/settings/daily-weight';
 import { bodyWeightsRepository } from '@/api/domains/body-weights';
 import { gymDayToday } from '@/domain/plan/workout-date-policy';
@@ -1178,4 +1180,163 @@ test('112 switching the effort mode settles a cleared required cell before savin
   expect(sheetRows()[0].weightText).toBe('2');
   expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').every(([, options]) => (options?.body as {weight_kg:string}).weight_kg === '2')).toBe(true);
+});
+
+test('112 repair 1: finish today completes edited working sets and excludes warm-ups', async () => {
+  const seed = buildDemoSeed(gymDayToday());
+  resetDemoBackend();
+  useSessionStore.setState({ user: seed.user });
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    const response = await demoResponse(path, options);
+    const body = JSON.parse(await response.text());
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return (options?.schema ? options.schema.parse(body) : body) as never;
+  });
+  await mount();
+  const exercise = renderer.root.findByType(AllDayBody).props.sheet.exercises[0].exercise;
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exercise.id}` && node.props.onPress)[0].props.onPress());
+  await press('Add warm-up set'); await press('6'); await press('0');
+  await press('Add set'); await press('1'); await press('0'); await press('0'); await press('Hide keyboard');
+  await press('Edit set 2'); await press('1'); await press('4'); await press('0');
+  await press('Fill down'); await pressPad('RPE'); await press('RPE 8.5');
+  await press('Edit set 1');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  await act(async () => renderer.unmount());
+  client.clear();
+  useSessionStore.setState({ user: null });
+  resetDemoBackend();
+  useSessionStore.setState({ user: seed.user });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
+  await mount();
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exercise.id}` && node.props.onPress)[0].props.onPress());
+  expect(sheetRows().map(row => row.weightText)).toEqual(['60', '100', '145', '140', '140']);
+  await press('Add warm-up set'); await press('Hide keyboard');
+  // Returning from settings remounts the screen, retaining the account's queue.
+  await act(async () => renderer.unmount()); await mount();
+  const pullup = renderer.root.findByType(AllDayBody).props.sheet.exercises.at(-1).exercise;
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${pullup.id}` && node.props.onPress)[0].props.onPress());
+  await press('Edit set 1'); await pressPad('RIR'); await press('Hide keyboard');
+  await press('Add warm-up set'); await press('Hide keyboard');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  const hold = renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0];
+  await act(async () => hold.props.onResponderGrant());
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)); });
+  expect(renderer.root.findByType(WorkoutCompletionFlowView).props.presentation).toMatchObject({
+    completedSetCount: 15, totalReps: 120, totalVolumeText: '10,375',
+    exercises: expect.arrayContaining([expect.objectContaining({ id: exercise.id, completedSetCount: 3 })]),
+  });
+  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')
+    .map(([, options]) => options?.body as { plan_exercise_id: string; set_index: number });
+  for (const [index, weight] of ['145', '140', '140'].entries()) {
+    expect(writes.filter(body => body.plan_exercise_id === exercise.id && body.set_index === index).at(-1))
+      .toMatchObject({ weight_kg: weight, reps: 5, completed: true });
+  }
+}, 30_000);
+
+test('112 repair 1: finish today completes saved pending actuals without losing edited weight or effort', async () => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise,
+    sets: [0, 1, 2].map(index => ({ ...exercise.sets[0], id: `set-${index}`, set_number: index + 1, target_value: '145' })),
+  }] }] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  const logs: import('@/api/domains/sets').SetLog[] = [1, 2].map(index => ({ id: `90000000-0000-4000-8000-00000000000${index}`,
+    student_id: studentId, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id,
+    set_index: index, weight_kg: '140', reps: 5, rpe: index === 1 ? '8.5' : null,
+    completed: false, failed: false, assumed: false, adhoc: false, logged_date: gymDayToday(), logged_at: new Date().toISOString() }));
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.includes('/sets?')) return { logs } as never;
+    if (path === '/sets/log') {
+      const body = options?.body as import('@/api/domains/sets').SetLogUpsertRequest;
+      const id = `90000000-0000-4000-8000-00000000000${body.set_index}`;
+      const logged_at = new Date().toISOString();
+      const existing = logs.find(log => log.set_index === body.set_index);
+      if (existing) Object.assign(existing, body, { logged_at });
+      else logs.push({ ...logs[0], ...body, id, logged_at, rpe: body.rpe ?? null });
+      return { id, logged_at } as never;
+    }
+    if (path.endsWith('/complete')) {
+      const completed_at = new Date().toISOString();
+      servedPlan = { ...servedPlan, days: [{ ...servedPlan.days[0], completed_at }] };
+      return { id: 'completion', plan_day_id: plan.days[0].id, student_id: studentId, source: 'manual', completed_at } as never;
+    }
+    return original(path, options);
+  });
+  await mount();
+  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
+  expect(renderer.root.findByType(WorkoutCompletionFlowView).props.presentation).toMatchObject({
+    completedSetCount: 3, totalVolumeText: '2,125',
+  });
+  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').map(([, options]) => options?.body);
+  expect(writes).toEqual(expect.arrayContaining([
+    expect.objectContaining({ set_index: 1, weight_kg: '140', reps: 5, rpe: '8.5', completed: true }),
+    expect.objectContaining({ set_index: 2, weight_kg: '140', reps: 5, completed: true }),
+  ]));
+});
+
+test.each(['warmup', 'extra'])('112 repair 1: copied %s defaults are not original saved weights', async kind => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/sets/log'
+    ? { id: `90000000-0000-4000-8000-${String((options?.body as { set_index: number }).set_index).padStart(12, '0')}`, logged_at: new Date().toISOString() } as never
+    : original(path, options));
+  await mount(); await expandFirst();
+  if (kind === 'warmup') {
+    await press('Add warm-up set'); await press('6'); await press('0'); await press('Add set');
+  } else {
+    await press('Edit set 1'); await press('Add set');
+  }
+  await press('1'); await press('0'); await press('0'); await press('Hide keyboard');
+  expect(copy()).not.toContain(kind === 'warmup' ? 'was 60' : 'was 80');
+});
+
+test.each(['manual', 'fill'])('112 repair 1: %s original weight survives queue restoration and server reconciliation', async method => {
+  const seed = buildDemoSeed(gymDayToday());
+  resetDemoBackend();
+  useSessionStore.setState({ user: seed.user });
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    const response = await demoResponse(path, options);
+    const body = JSON.parse(await response.text());
+    if (!response.ok) throw new Error(JSON.stringify(body));
+    return (options?.schema ? options.schema.parse(body) : body) as never;
+  });
+  await mount();
+  const exerciseId = sheetRows()[0].exercise.id;
+  const expand = async () => { await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exerciseId}` && node.props.onPress)[0].props.onPress()); };
+  await expand(); await press('Add warm-up set'); await press('6'); await press('0');
+  await press('Add set'); await press('1'); await press('0'); await press('0'); await press('Hide keyboard');
+  await press('Warm-up set 1');
+  if (method === 'manual') { await press('7'); await press('0'); }
+  else await press('Fill down');
+  await press('Hide keyboard');
+  const label = method === 'manual' ? 'was 60' : 'was 100';
+  expect(copy()).toContain(label);
+  // Refresh retires server-confirmed outbox receipts; provenance must outlive them.
+  await act(async () => { await client.invalidateQueries(); await new Promise(resolve => setTimeout(resolve, 100)); });
+  await act(async () => renderer.unmount()); client.clear();
+  useSessionStore.setState({ user: null }); useSessionStore.setState({ user: seed.user });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
+  await mount(); await expand();
+  expect(copy()).toContain(label);
+}, 30_000);
+
+test('112 repair 1: slow original-weight storage cannot reverse rapid numeric edits', async () => {
+  await mount(); await expandFirst();
+  await press('Add warm-up set'); await press('6'); await press('0'); await press('Hide keyboard');
+  await press('Warm-up set 1');
+  const write = jest.mocked(AsyncStorage.setItem).getMockImplementation()!;
+  let release!: () => void;
+  let blocked = false;
+  jest.spyOn(AsyncStorage, 'setItem').mockImplementation(async (key, value) => {
+    if (!blocked && key.startsWith('training.set-sync.') && JSON.parse(value).originalWeights) {
+      blocked = true;
+      await new Promise<void>(resolve => { release = resolve; });
+    }
+    return write(key, value);
+  });
+  await press('7'); await press('0');
+  expect(blocked).toBe(true);
+  await act(async () => { release(); });
+  await press('Hide keyboard');
+  expect(sheetRows().find(row => row.kind === 'warmup')?.weightText).toBe('70');
+  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log');
+  expect(writes.at(-1)?.[1]?.body).toMatchObject({ weight_kg: '70', completed: true, is_warmup: true });
 });

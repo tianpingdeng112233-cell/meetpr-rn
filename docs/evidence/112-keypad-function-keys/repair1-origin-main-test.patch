@@ -1,0 +1,68 @@
+--- a/src/features/training/__tests__/all-day-view.test.tsx
++++ b/src/features/training/__tests__/all-day-view.test.tsx
+@@ -1,5 +1,7 @@
+ import { writeEffortChoice } from '../effort-preferences';
+ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
++import { resetDemoBackend, demoResponse } from '@/demo/backend';
++import { buildDemoSeed } from '@/demo/seed';
+ import { writeDailyWeight } from '@/features/settings/daily-weight';
+ import { bodyWeightsRepository } from '@/api/domains/body-weights';
+ import { gymDayToday } from '@/domain/plan/workout-date-policy';
+@@ -28,7 +30,7 @@
+ import { AllDayBody } from '../AllDayBody';
+ import { StudentExercisePicker } from '../StudentExercisePicker';
+ import { HoldToCompleteButton } from '../HoldToCompleteButton';
+-import { DayCompletionBanner } from '../CompletionControls';
++import { DayCompletionBanner, WorkoutCompletionFlowView } from '../CompletionControls';
+ import { VideoAttachmentControls } from '../video-upload/VideoAttachmentControls';
+ import { resetVideoUploadStoreForTests } from '../video-upload/store';
+ 
+@@ -998,3 +1000,48 @@
+   expect(weightField.findAllByType(Text)[0].props.children).toBe('20');
+   expect(StyleSheet.flatten(weightField.findAllByType(Text)[0].props.style).color).toBe('#111827');
+ });
++
++const sheetRows = () => renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows;
++test('112 repair 1: finish today completes edited working sets and excludes warm-ups', async () => {
++  const seed = buildDemoSeed(gymDayToday());
++  resetDemoBackend();
++  useSessionStore.setState({ user: seed.user });
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
++    const response = await demoResponse(path, options);
++    const body = JSON.parse(await response.text());
++    if (!response.ok) throw new Error(JSON.stringify(body));
++    return (options?.schema ? options.schema.parse(body) : body) as never;
++  });
++  await mount();
++  const exercise = renderer.root.findByType(AllDayBody).props.sheet.exercises[0].exercise;
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exercise.id}` && node.props.onPress)[0].props.onPress());
++  await press('Edit set 2'); await press('1'); await press('4'); await press('0');
++  await press('Edit set 3'); await press('1'); await press('4'); await press('0');
++  await press('Edit set 2'); await press('rpe');
++  await act(async () => renderer.root.findByType(NumberPad).props.onChangeText('8.5'));
++  await press('Edit set 1');
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
++  await act(async () => renderer.unmount());
++  client.clear();
++  useSessionStore.setState({ user: null });
++  resetDemoBackend();
++  useSessionStore.setState({ user: seed.user });
++  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
++  await mount();
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exercise.id}` && node.props.onPress)[0].props.onPress());
++  expect(sheetRows().map(row => row.weightText)).toEqual(['145', '140', '140']);
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
++  const hold = renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0];
++  await act(async () => hold.props.onResponderGrant());
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)); });
++  expect(renderer.root.findByType(WorkoutCompletionFlowView).props.presentation).toMatchObject({
++    completedSetCount: 15, totalVolumeText: '10,375',
++  });
++  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')
++    .map(([, options]) => options?.body as { plan_exercise_id: string; set_index: number });
++  for (const [index, weight] of ['145', '140', '140'].entries()) {
++    expect(writes.filter(body => body.plan_exercise_id === exercise.id && body.set_index === index).at(-1))
++      .toMatchObject({ weight_kg: weight, reps: 5, completed: true });
++  }
++}, 30_000);
++

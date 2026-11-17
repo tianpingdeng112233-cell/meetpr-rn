@@ -1,0 +1,26 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --forceExit src/features/training/__tests__/completion-presentation.test.ts
+
+PASS src/features/training/__tests__/completion-presentation.test.ts
+  ✓ completed session counts failed sets in work, but not in successful sets (324 ms)
+  ✓ exercise performance chooses weight then reps and compares with historical best (77 ms)
+  ✓ receipt, weekday, volume comparison and metadata use canonical localized copy (8 ms)
+  ✓ main RPE 8 compares raw average and formats as 8 (1 ms)
+  ✓ main RPE 8.5 compares raw average and formats as 8.5 (1 ms)
+  ✓ main RPE 7.5 compares raw average and formats as 7.5
+  ✓ main RPE 9 compares raw average and formats as 9 (2 ms)
+  ✓ main RPE 7 compares raw average and formats as 7 (2 ms)
+  ✓ main RPE 8.96 compares raw average and formats as 9.0 (1 ms)
+  ✓ legacy missing weight and reps use prescription but absent RPE stays absent (11 ms)
+  ✓ rehydrated review uses precise recorded decimals before UI-rounded draft text (8 ms)
+  ✓ a recorded set without actual RPE remains empty (3 ms)
+  ✓ extra work contributes actual volume without inflating prescription completion totals (2 ms)
+  ✓ 112 repair 1: warm-ups never contribute to completion counts, volume, best set, PR or effort (4 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        4.943 s
+Ran all test suites matching /src\/features\/training\/__tests__\/completion-presentation.test.ts/i.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

@@ -119,3 +119,12 @@ test('missing Traditional falls back to Simplified, then unknown key; interpolat
   expect(t('missing.key')).toBe('missing.key');
   expect(t('student.filter.accessibilityLabel %@', ['我的卧推'])).toContain('我的卧推');
 });
+
+test.each<['training.pad.filledUp' | 'training.pad.filledDown', string, string]>([['training.pad.filledUp', 'above', '上方'], ['training.pad.filledDown', 'below', '下方']])(
+  '112 repair 1: %s uses English set/sets and retains Chinese copy', (key, direction, chineseDirection) => {
+    expect(t(key, [1, 'weight'], 'en')).toBe(`Filled weight in 1 set ${direction}`);
+    expect(t(key, [2, 'weight'], 'en')).toBe(`Filled weight in 2 sets ${direction}`);
+    expect(t(key, [1, '重量'], 'zh')).toBe(`已改${chineseDirection} 1 组的重量`);
+    expect(t(key, [2, '重量'], 'zh')).toBe(`已改${chineseDirection} 2 组的重量`);
+  },
+);

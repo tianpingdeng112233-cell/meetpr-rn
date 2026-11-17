@@ -217,7 +217,7 @@ export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exercise
     const previous = settle();
     if (previous?.stableSetId === row.stableSetId && previous.effortKind === row.effortKind) row = previous;
     legalRow.current = row;
-    originalWeight.current = row.originalWeightText ?? row.weightText;
+    originalWeight.current = row.originalWeightText ?? (row.sourceLog ? row.weightText : '');
     input.current = { row, field };
     setEditing(input.current);
   };

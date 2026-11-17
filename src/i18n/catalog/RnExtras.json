@@ -1,6 +1,6 @@
 {
-"training.pad.filledUp": {"en": "Filled {1} in {0} sets above", "zh": "已改上方 {0} 组的{1}"},
-"training.pad.filledDown": {"en": "Filled {1} in {0} sets below", "zh": "已改下方 {0} 组的{1}"},
+"training.pad.filledUp": {"en": {"one": "Filled {1} in {0} set above", "other": "Filled {1} in {0} sets above"}, "zh": "已改上方 {0} 组的{1}"},
+"training.pad.filledDown": {"en": {"one": "Filled {1} in {0} set below", "other": "Filled {1} in {0} sets below"}, "zh": "已改下方 {0} 组的{1}"},
 "training.pad.emptyUp": {"en": "No sets above", "zh": "上方没有组了"},
 "training.pad.emptyDown": {"en": "No sets below", "zh": "下方没有组了"},
 

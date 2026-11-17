@@ -12,7 +12,7 @@ export type PendingSet = Omit<SetWrite, 'request'> & {
   id: number; request?: SetLogUpsertRequest; log: SetLog; remove: boolean;
   status: 'pending' | 'failed'; attempts: number; retryAt: number;
 };
-export type SetSyncSnapshot = { drafts?: Readonly<Record<string, WorkoutSetDraft>>; pending: readonly PendingSet[]; confirmed: Readonly<Record<string, PendingSet>> };
+export type SetSyncSnapshot = { originalWeights?: Readonly<Record<string, { weightText: string; loggedDate: string }>>; drafts?: Readonly<Record<string, WorkoutSetDraft>>; pending: readonly PendingSet[]; confirmed: Readonly<Record<string, PendingSet>> };
 export type SetSender = (entry: PendingSet, replaceRequest: (request: SetLogUpsertRequest) => Promise<void>) => Promise<SetLogUpsertResponse | void>;
 export type QueueDependencies = {
   storage: SyncStorage; send: SetSender; clock?: SyncClock;
@@ -139,6 +139,13 @@ export class SetSyncQueue {
     await this.persist(); this.kick();
     return { id: log.id, logged_at: log.logged_at };
   }
+  /** Display provenance outlives acknowledged receipts and never enters an API request. */
+  async rememberOriginalWeight(stableSetId: string, loggedDate: string, weightText: string) {
+    await this.ready;
+    if (this.disposed || this.state.originalWeights?.[stableSetId]?.loggedDate === loggedDate) return;
+    this.state = { ...this.state, originalWeights: { ...this.state.originalWeights, [stableSetId]: { weightText, loggedDate } } };
+    this.emit(); await this.persist();
+  }
   async saveDraft(draft: WorkoutSetDraft) {
     await this.ready;
     if (this.disposed) throw new Error('Set sync stopped');
@@ -149,14 +156,16 @@ export class SetSyncQueue {
     await this.ready;
     if (this.disposed) throw new Error('Set sync stopped');
     const drafts = { ...this.state.drafts }; delete drafts[stableSetId];
-    this.state = { ...this.state, drafts }; this.emit(); await this.persist();
+    const originalWeights = { ...this.state.originalWeights }; delete originalWeights[stableSetId];
+    this.state = { ...this.state, drafts, originalWeights }; this.emit(); await this.persist();
   }
   async remove(input: { stableSetId: string; dayId: string; log: SetLog }) {
     await this.ready;
     if (this.disposed) throw new Error('Set sync stopped');
     const entry: PendingSet = { ...input, exerciseId: input.log.exercise_id, loggedDate: input.log.logged_date,
       id: ++this.sequence, remove: true, status: 'pending', attempts: 0, retryAt: 0 };
-    this.state = { ...this.state, pending: [...this.state.pending, entry] }; this.emit();
+    const originalWeights = { ...this.state.originalWeights }; delete originalWeights[input.stableSetId];
+    this.state = { ...this.state, pending: [...this.state.pending, entry], originalWeights }; this.emit();
     await this.persist(); this.kick();
   }
   async sendNow(dayId?: string, retryFailed = false) {

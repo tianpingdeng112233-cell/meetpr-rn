@@ -1,3 +1,4 @@
+import { createUUID } from '@/analytics/uuid';
 import { demoVideoUrl, demoVideos, resetDemoUploads, uploadRoute } from './uploads';
 import { BodyWeightRecordSchema } from '@/api/domains/body-weights';
 import { z } from 'zod';
@@ -89,7 +90,7 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
     else {
       const existing = state.logs.find(log => log.logged_date === date && log.set_index === body.set_index &&
         (exercise ? log.plan_exercise_id === exercise.id : log.adhoc && log.exercise_id === exerciseId));
-      const row = { ...body, id: existing?.id ?? demoId(serial++), student_id: state.user.id,
+      const row = { ...body, id: existing?.id ?? createUUID(), student_id: state.user.id,
         exercise_id: exerciseId, plan_exercise_id: exercise?.id ?? null, logged_date: date, logged_at: now,
         assumed: false, adhoc: !exercise, rpe: body.rpe ?? null, coach_rpe: null };
       if (existing) Object.assign(existing, row); else state.logs.push(row);

@@ -1,0 +1,35 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --forceExit src/i18n/__tests__/t.test.ts -t 112 repair 1
+
+PASS src/i18n/__tests__/t.test.ts
+  ✓ 112 repair 1: training.pad.filledUp uses English set/sets and retains Chinese copy (2 ms)
+  ✓ 112 repair 1: training.pad.filledDown uses English set/sets and retains Chinese copy
+  ○ skipped uses the device language, with English for non-Chinese locales
+  ○ skipped supports debug overrides and returning to the device language
+  ○ skipped formats positional placeholders using the canonical pending-bind copy
+  ○ skipped Today header joins the localized date and weekday without duplicating the Chinese prefix
+  ○ skipped substitutes object and positional placeholders without reprocessing parameter text
+  ○ skipped selects English one/other and the Chinese plural copy
+  ○ skipped pluralizes prescription summaries by the third parameter
+  ○ skipped defaults standalone plural keys to the first parameter
+  ○ skipped pluralizes coach workspace summaries by weeks after the descriptive parameters
+  ○ skipped returns an unknown runtime key without throwing, while rejecting it at compile time
+  ○ skipped plural sibling keys (<key>.one) are used for a count of exactly one in English
+  ○ skipped selects Taiwan Traditional copy for zh-Hant-TW
+  ○ skipped selects Taiwan Traditional copy for zh-HK
+  ○ skipped selects Taiwan Traditional copy for zh-MO
+  ○ skipped selects Taiwan Traditional copy for zh-TW
+  ○ skipped selects Taiwan Traditional copy for zh-Hant
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","languageScriptCode":"Hant"}
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","regionCode":"TW"}
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","regionCode":"HK"}
+  ○ skipped recognizes native script/region metadata: {"languageTag":"zh","regionCode":"MO"}
+  ○ skipped missing Traditional falls back to Simplified, then unknown key; interpolated user text is untouched
+
+Test Suites: 1 passed, 1 total
+Tests:       21 skipped, 2 passed, 23 total
+Snapshots:   0 total
+Time:        0.429 s, estimated 1 s
+Ran all test suites matching /src\/i18n\/__tests__\/t.test.ts/i with tests matching "112 repair 1".
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

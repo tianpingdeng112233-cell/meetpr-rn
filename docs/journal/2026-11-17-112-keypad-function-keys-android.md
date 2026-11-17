@@ -68,3 +68,61 @@ Jest 使用 `--runInBand --forceExit`，原有异步句柄需强制退出；输�
 ## 原生环境阻塞
 
 `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices -l` 返回：`could not install *smartsocket* listener: Operation not permitted`，无法连接 `meetpr-cn-accept` / `meetpr16@5570`。当前审批策略禁止提权，未绕过沙箱、未伪造截图。待可连接环境补 Android 深浅色交互截图、真实后端与覆盖升级验收，不能据本地 Jest 宣称整卡收货。
+
+## 返修 1
+
+### 范围与现场
+
+- David 2026-11-17 指派三项返修；当前基线 `1084f43`，开工工作区干净。本轮不 commit、不 push、不打包发布。
+- 已重读 CONTEXT、AGENTS/CLAUDE、112 SPEC、原 JOURNAL、PLAN、工程闭环与记忆索引，执行 diagnose → diagnosing-bugs 六阶段及 tdd。Expo SDK 57 版本文档已核对。
+- 补充的真实步骤包括：两组热身 60/100、正式第 2 组 140 向下填充、RPE 8.5、切回第 1 组、force-stop/restart、再加热身、切深色/回训练、引体 RIR 与空热身、长按完成。按用户确认，验收包来自本工作树 `1084f43`、12:22 的 CN release/demo 构建，无 Metro；不是旧 bundle。
+- 自动化使用仓内真实 demo backend/seed，UI 调用 TodayWorkoutView、真实 SetSyncQueue/AsyncStorage。重启通过卸载组件、清 QueryClient、销毁账号 sync runtime，再重建账号/队列和 demo backend 实现；读取落盘状态，不以同一个内存 queue 冒充重启。设置往返用页面重新挂载覆盖；主题颜色本身未在自动化中重演。
+
+### 问题 1：红测、最小化与根因
+
+1. 最初未含重启的原步骤在当前代码下为绿（[记录](../evidence/112-keypad-function-keys/repair1-original-scenario-before.log)），不以夹具错误或超时作为行为红测。补完整重启后运行：
+
+   `npm test -- --runInBand --forceExit src/features/training/__tests__/all-day-view.test.tsx -t 'finish today completes edited working'`
+
+   得到 **13 sets / 8,975 kg**，期望 **15 sets / 10,375 kg**，精确少两组 140×5（[红测](../evidence/112-keypad-function-keys/repair1-restart-red.log)）。
+2. 最小化：去掉第三热身、设置往返、引体操作，仍红；再去掉全部热身，仍红（[最小化](../evidence/112-keypad-function-keys/repair1-minimized.log)、[无热身](../evidence/112-keypad-function-keys/repair1-no-warmups.log)）。载荷是「已有记组回执 → demo 重启 → 写新组」。重启前后与完成后边界探针使用 `[DEBUG-112-*]`，现已从代码删除，合成数据证据保留于 [probe](../evidence/112-keypad-function-keys/repair1-probe.log)。
+3. 红测后提出并逐项验证四个假设：恢复丢完成状态；completionWrites 跳过 pending actuals；demo 重启复用 ID；仅 presentation 漏计。探针证据：第 2/3 组落盘与恢复时均为 `status=complete`、`sourceLog.completed=true`；完成之后变成 `pending/log=null`。新第 1 组的 ID 与重启前第 2 组相同（`...0186a0`）。
+4. **被证实的根因**：demo backend 每次启动把自增 serial 重置为 100000，但 SetSyncQueue 的 confirmed receipts 存在 AsyncStorage。新记录复用旧 set-log ID，overlay/reconcile 的 `sameSet` 按相同 ID 将它们视为同组，旧回执被覆盖/清理；demo 内存 backend 又没有旧记录，两个正式组因此退回 pending。恢复本身没有把 completed 改成 false，亦非统计层单独算错。
+5. 单变量修复：仅把 demo **新 set-log** ID 改成现有 `createUUID()`；同组 upsert 仍保留已有 ID，不改 seed ID、真实后端或包配置。未先改 completionWrites，完整场景即转绿（[单变量绿测](../evidence/112-keypad-function-keys/repair1-restart-green.log)）。最终测试增加 **120 reps**、深蹲 **3 sets** 与正式记组请求 `completed=true` 断言。
+6. **不是 112 引入**：在 `/private/tmp` 用 `git archive origin/main` 隔离还原 `8995895b498658c0ba22a7b6a134f87436472b81`，用同一 demo/UI/重启链，把向下填充替换为手动逐格修改第 2、3 组 140，同样红为 **13 / 8,975**（[对照日志](../evidence/112-keypad-function-keys/repair1-origin-main.log)、[可复跑测试 patch](../evidence/112-keypad-function-keys/repair1-origin-main-test.patch)）。origin/main 无 112 热身入口，故对照移除热身；最小化已确认它不是必要条件。网络代理不可连接，无法刷新远端引用，以上结论明确针对现场本地 origin/main SHA。
+7. 另一个独立、真实的完成链缺口：已有 `completed=false, failed=false` actuals 会被 `!row.sourceLog || row.sourceLog.assumed` 排除。以保存的 140/140、RPE 8.5 回归先红 **1 set / 725 kg**，再仅放行已有非 terminal actuals，转绿 **3 sets / 2,125 kg**；已完成或失败 actuals 保持原行为，不抹掉失败标记（[红](../evidence/112-keypad-function-keys/repair1-pending-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-pending-green.log)）。此项是额外证实的缺口，不混称本次 demo 症状根因。
+8. `completion-presentation.ts` 在入口显式排除 `kind=warmup` 或 `sourceLog.is_warmup`，所有组数/次数/容量/最佳组/PR/RPE 从过滤后的集合计算。高重量、高次数、高 RPE 热身夹具先红后绿，确保最佳组、均值与计划比较也不受污染（[红](../evidence/112-keypad-function-keys/repair1-presentation-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-presentation-green.log)）。
+
+### 问题 2、3
+
+- 复制默认值不是处方/已存实际值：手动编辑入口只从已有 sourceLog 或已有原值获取 baseline。热身与额外组首次输入的错误「was 60/80」均先红后绿（[红](../evidence/112-keypad-function-keys/repair1-original-default-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-original-default-green.log)）。正式处方比较沿用原行为；一键改仍记录目标原重量。
+- 原值独立保存在账号 SetSyncQueue 的可选 `originalWeights` 中，以 stableSetId + loggedDate 归属；同日保留首个基准，删除组/丢弃草稿时清理，跨日期重置。它不随 confirmed receipt 清理，不进入 API 请求；旧存储缺该字段直接兼容，不伪造旧原值、不回填服务器或重写历史记录。手改与批量改均验证：刷新服务端/清掉回执 → 销毁 runtime → 从磁盘重建后，标记不消失（[红](../evidence/112-keypad-function-keys/repair1-original-restore-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-original-restore-green.log)）。
+- 英文 filledUp/filledDown 改用已有 one/other 机制，1 set / N sets；简中、繁中不改（[红](../evidence/112-keypad-function-keys/repair1-plural-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-plural-green.log)）。
+
+### 验证与独立审查
+
+- 本地 review-loop 双轴只读审查：**Standards** 初审 1 个 P1，原值持久化在进入串行任务之前 await，首次写等待磁盘、后续写提前入队，快速输入可能反向覆盖。暂停 AsyncStorage 写入的真实 UI 回归先红（输入 7→70、最终落 7），将原值作为 commit 输入并在同一个 saveQueue operation 内持久化后转绿（最终显示/请求均 70）；相关 5 项通过（[红](../evidence/112-keypad-function-keys/repair1-order-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-order-green.log)）。独立定向复审确认 P1 关闭，新增 0 finding。**Spec** 初审与定向复审均 0 finding。未私建 Matt tracker，使用 review-loop 本地批准 spec 路径。
+- 最终 `npm test -- --maxWorkers=50% --forceExit --testTimeout=30000`：**222 suites / 2442 tests passed**，0 failed，37.448s，exit 0（[全量日志](../evidence/112-keypad-function-keys/repair1-jest-full.log)）。初轮同样 maxWorkers=50%，4 个既有用例触发默认 5 秒超时，非行为断言失败；保留 [初轮日志](../evidence/112-keypad-function-keys/repair1-jest-first-timeouts.log)，最终使用 30 秒上限，不修改既有用例的业务断言。
+- Jest 仍有 React act、Expo notifications 与未清理异步 worker 的警告，沿用 --forceExit；未把这些警告抹去或宣称原生运行通过。
+- 最终 `tsc --noEmit`、`npm run lint` 均 exit 0，无诊断（[tsc](../evidence/112-keypad-function-keys/repair1-tsc.log)、[lint](../evidence/112-keypad-function-keys/repair1-lint.log)）；`npm run i18n:zh-Hant` 成功且生成文件无变化（[日志](../evidence/112-keypad-function-keys/repair1-i18n.log)）。`git diff --check` 通过。
+- 交付 [返修 diff](../evidence/112-keypad-function-keys/repair1-changes.patch)，HEAD 保持 `1084f43`，未 commit、未 push。
+- 当前环境 ADB 仍返回 `could not install *smartsocket* listener: Operation not permitted`，未获取修后 APK/模拟器截图；不把 React 测试声明为原生验收。需 Opus 用修后 bundle 复走原始 CN/demo 深色流程；真实后端 068 发布门禁不变。
+
+### Commit 说明草稿（仅草稿，未提交）
+
+```text
+Fix restored training completion and durable original-weight hints
+
+The demo backend reused set-log IDs after a cold start while SetSyncQueue
+retained confirmed receipts on disk. New writes matched old receipts by ID,
+retired two completed squat rows, and produced 13 sets / 8,975 kg instead of
+15 sets / 10,375 kg. The same restart failure reproduces on origin/main
+8995895 with manual edits, so it predates spec 112. Allocate unique IDs for
+new demo set logs; recovered records already had completed=true.
+
+Also complete existing nonterminal actuals, exclude warm-ups inside the
+completion presenter, persist original-weight provenance without treating
+copied defaults as saved baselines, and pluralize English fill feedback.
+Keep provenance and actual values inside the same serial save operation so
+slow storage cannot reverse rapid numeric edits.
+```
