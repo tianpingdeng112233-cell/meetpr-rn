@@ -29,9 +29,10 @@ class RestTimerNotificationModule : Module() {
       requested
     }
     Function("isPermissionGranted") { RestTimerNotifications.isPermissionGranted(context) }
-    Function("show") { endAtEpochMs: Double, body: String, labels: Map<String, String> ->
-      RestTimerNotifications.show(context, endAtEpochMs.toLong(), body, labels)
+    Function("show") { endAtEpochMs: Double, body: String, labels: Map<String, String>, alerts: Map<String, Boolean> ->
+      RestTimerNotifications.show(context, endAtEpochMs.toLong(), body, labels, alerts)
     }
+    Function("playCompletionSound") { RestTimerNotifications.playCompletionSound(context) }
     Function("hide") { RestTimerNotifications.hide(context) }
     Function("consumeState") { RestTimerNotifications.consumeState(context) }
   }

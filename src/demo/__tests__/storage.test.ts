@@ -8,9 +8,9 @@ const originalFlag = process.env.EXPO_PUBLIC_DEMO_MODE;
 beforeEach(async () => { process.env.EXPO_PUBLIC_DEMO_MODE = '1'; await AsyncStorage.clear(); jest.clearAllMocks(); });
 afterEach(() => { if (originalFlag === undefined) delete process.env.EXPO_PUBLIC_DEMO_MODE; else process.env.EXPO_PUBLIC_DEMO_MODE = originalFlag; });
 test('S1/S3: training preferences and workout/upload state read back without persisting demo edits', async () => {
-  expect(await readRestPreference('demo')).toEqual({ mode: 'automatic' });
-  await writeRestPreference('demo', { mode: 'custom', low: 60, mid: 120, high: 180 });
-  expect(await readRestPreference('demo')).toMatchObject({ mode: 'custom', mid: 120 });
+  expect(await readRestPreference('demo')).toEqual({ main: 180, accessory: 60, vibration: true, sound: true });
+  await writeRestPreference('demo', { main: 120, accessory: 60, vibration: true, sound: true });
+  expect(await readRestPreference('demo')).toMatchObject({ main: 120 });
   const reminder = { enabled: true, weekdays: [2, 4], hour: 18, minute: 0 };
   await writeReminderPreference('demo', reminder);
   expect(await readReminderPreference('demo')).toEqual(reminder);

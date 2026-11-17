@@ -1,31 +1,24 @@
-import { REST_DEFAULTS } from '@/features/training/constants';
-import { t } from '@/i18n';
-export type RestTimerPreference = { mode: 'automatic'; accessory?: number } | { mode: 'custom'; low: number; mid: number; high: number; accessory?: number };
-export const defaultCustomRest = { mode: 'custom', low: 120, mid: 180, high: 240 } as const;
+export type RestTimerPreference = {
+  main: number;
+  accessory: number;
+  vibration: boolean;
+  sound: boolean;
+};
+export const defaultRestPreference: RestTimerPreference = {
+  main: 180,
+  accessory: 60,
+  vibration: true,
+  sound: true,
+};
 export function clampRestSeconds(seconds: number): number {
-  return Math.max(30, Math.min(600, Math.round((Number.isFinite(seconds) ? seconds : 180) / 15) * 15));
-}
-export function restSecondsForRPE(preference: RestTimerPreference, rpe: number | null): number {
-  if (preference.mode === 'automatic') return restDefaultSeconds(rpe);
-  return clampRestSeconds(rpe === null || !Number.isFinite(rpe) ? preference.mid : rpe < 7 ? preference.low : rpe < 9 ? preference.mid : preference.high);
+  return Math.max(
+    30,
+    Math.min(
+      600,
+      Math.round((Number.isFinite(seconds) ? seconds : 180) / 15) * 15,
+    ),
+  );
 }
 export function durationText(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
-export function restSummary(preference: RestTimerPreference): string {
-  return preference.mode === 'automatic' ? t('student.studentRestTimerSettings.copy002') : `${t('student.studentRestTimerSettings.copy003')} ${[preference.low, preference.mid, preference.high].map(durationText).join('/')}`;
-}
-
-export const ACCESSORY_REST_DEFAULT = 60;
-export function accessoryRestSeconds(preference: RestTimerPreference): number {
-  const seconds = preference.accessory;
-  return seconds === undefined || !Number.isFinite(seconds)
-    ? ACCESSORY_REST_DEFAULT : Math.min(300, clampRestSeconds(seconds));
-}
-
-export function restDefaultSeconds(rpe: number | null): number {
-  if (rpe === null) return REST_DEFAULTS.withoutRPE;
-  if (rpe < 7) return REST_DEFAULTS.belowSeven;
-  if (rpe < 9) return REST_DEFAULTS.belowNine;
-  return REST_DEFAULTS.nineOrAbove;
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }

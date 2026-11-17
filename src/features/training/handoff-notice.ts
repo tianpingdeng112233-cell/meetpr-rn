@@ -16,6 +16,7 @@ async function read(studentId: string) {
 /** Observes only the displayed training cycle; previewing never consumes a notice. */
 export function useHandoffNotice(studentId: string, planId: string | null, handoff?: PlanHandoff, previousCachedId?: string) {
   const [visibleKey, setVisibleKey] = useState<string | null>(null);
+  const [checkedKey, setCheckedKey] = useState<string | null>(null);
   const identity = `${studentId}:${planId}`;
   useEffect(() => {
     if (!studentId || !planId || !handoff) return;
@@ -26,8 +27,11 @@ export function useHandoffNotice(studentId: string, planId: string | null, hando
       if (previous && previous.id !== planId && previous.total_training_days > 0 && previous.completed_training_days === previous.total_training_days && !state.dismissed.includes(planId)) state.pending = planId;
       state.last = planId;
       await AsyncStorage.setItem(keyFor(studentId), JSON.stringify(state));
-      if (active) setVisibleKey(state.pending === planId && !state.dismissed.includes(planId) ? identity : null);
-    }).catch(() => {});
+      if (active) {
+        setVisibleKey(state.pending === planId && !state.dismissed.includes(planId) ? identity : null);
+        setCheckedKey(identity);
+      }
+    }).catch(() => { if (active) setCheckedKey(identity); });
     return () => { active = false; };
   }, [studentId, planId, handoff, identity, previousCachedId]);
   const dismiss = useCallback(() => {
@@ -40,5 +44,6 @@ export function useHandoffNotice(studentId: string, planId: string | null, hando
       await AsyncStorage.setItem(keyFor(studentId), JSON.stringify(state));
     });
   }, [studentId, planId]);
-  return { visible: visibleKey === identity, dismiss };
+  // Cached offline workouts can be editable before handoff data is available.
+  return { visible: visibleKey === identity, ready: !handoff || !planId || checkedKey === identity, dismiss };
 }

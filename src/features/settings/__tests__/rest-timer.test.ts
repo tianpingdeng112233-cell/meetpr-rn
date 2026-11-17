@@ -1,50 +1,67 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { readRestPreference, writeRestPreference } from '../storage';
-import { expect, test, jest } from '@jest/globals';
-import { accessoryRestSeconds, ACCESSORY_REST_DEFAULT, clampRestSeconds, restSecondsForRPE } from '../rest-timer';
-const custom = { mode: 'custom', low: 90, mid: 195, high: 300 } as const;
-test.each([[6.5,90], [7,195], [8.5,195], [9,300], [10,300], [null,195]])('custom RPE %s yields %s seconds', (rpe, seconds) => {
-  expect(restSecondsForRPE(custom, rpe)).toBe(seconds);
-});
-test.each([[null,180], [6,120], [7,180], [9,240]])('automatic RPE %s uses the v1 default table', (rpe, seconds) => {
-  expect(restSecondsForRPE({ mode: 'automatic' }, rpe)).toBe(seconds);
-});
-test.each([[0,30], [601,600], [127,120], [128,135], [NaN,180]])('duration %s clamps and snaps to %s', (input, expected) => {
-  expect(clampRestSeconds(input)).toBe(expected);
-});
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { readRestPreference, writeRestPreference } from "../storage";
+import { afterEach, expect, test, jest } from "@jest/globals";
+import { clampRestSeconds } from "../rest-timer";
 
-
-test.each<[number | undefined, number]>([
-  [undefined, 60], [NaN, 60], [Infinity, 60], [-Infinity, 60],
-  [-1, 30], [30, 30], [300, 300], [600, 300], [67, 60], [68, 75],
-])('accessory preference %s defaults, clamps and snaps to %s independently of mode', (accessory, expected) => {
-  expect(ACCESSORY_REST_DEFAULT).toBe(60);
-  expect(accessoryRestSeconds({ mode: 'automatic', accessory })).toBe(expected);
-  expect(accessoryRestSeconds({ ...custom, accessory })).toBe(expected);
-  expect(restSecondsForRPE({ ...custom, accessory }, 9)).toBe(300);
-  expect(restSecondsForRPE({ mode: 'automatic', accessory }, 9)).toBe(240);
-});
-
-
-jest.mock('@react-native-async-storage/async-storage', () =>
+jest.mock("@react-native-async-storage/async-storage", () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
+);
+afterEach(() => AsyncStorage.clear());
 
-test('rest storage round-trips accessory for both modes and preserves legacy fields without migration', async () => {
-  for (const preference of [{ mode: 'automatic' as const }, custom]) {
-    await writeRestPreference('fixture', { ...preference, accessory: 90 });
-    expect(await readRestPreference('fixture')).toEqual({ ...preference, accessory: 90 });
-    await writeRestPreference('fixture', preference);
-    const saved = await readRestPreference('fixture');
-    expect(saved).toEqual(preference);
-    expect(accessoryRestSeconds(saved)).toBe(60);
-  }
-  await AsyncStorage.setItem('meetpr.rest-timer.v2.fixture', JSON.stringify({ ...custom, accessory: null }));
-  const malformed = await readRestPreference('fixture');
-  expect(malformed).toMatchObject(custom);
-  expect(accessoryRestSeconds(malformed)).toBe(60);
-  await AsyncStorage.removeItem('meetpr.rest-timer.v2.fixture');
-  await AsyncStorage.setItem('restTimer.preference.fixture', '150');
-  expect(await readRestPreference('fixture')).toEqual({ mode: 'custom', low: 150, mid: 150, high: 150 });
-  await AsyncStorage.clear();
+test.each([
+  [null, 180, 60],
+  [{ mode: "automatic", accessory: 90 }, 180, 90],
+  [{ mode: "custom", low: 120, mid: 210, high: 240, accessory: 90 }, 210, 90],
+  [{ mode: "custom", low: 120, mid: 210, high: 240, accessory: 800 }, 210, 600],
+  [{ mode: "automatic" }, 180, 60],
+])(
+  "migrates old settings %j to two fixed durations once per student",
+  async (old, main, accessory) => {
+    if (old)
+      await AsyncStorage.setItem(
+        "meetpr.rest-timer.v2.student",
+        JSON.stringify(old),
+      );
+    const expected = { main, accessory, vibration: true, sound: true };
+    expect(await readRestPreference("student")).toEqual(expected);
+    await AsyncStorage.setItem(
+      "meetpr.rest-timer.v2.student",
+      JSON.stringify({ mode: "custom", low: 30, mid: 30, high: 30 }),
+    );
+    expect(await readRestPreference("student")).toEqual(expected);
+    expect(await readRestPreference("another")).toEqual({
+      main: 180,
+      accessory: 60,
+      vibration: true,
+      sound: true,
+    });
+  },
+);
+
+test("legacy single duration migrates and new settings persist independently of old keys", async () => {
+  await AsyncStorage.setItem("restTimer.preference.student", "150");
+  expect(await readRestPreference("student")).toEqual({
+    main: 150,
+    accessory: 60,
+    vibration: true,
+    sound: true,
+  });
+  const next = { main: 210, accessory: 600, vibration: false, sound: false };
+  await writeRestPreference("student", next);
+  expect(await readRestPreference("student")).toEqual(next);
+  expect(await AsyncStorage.getItem("restTimer.preference.student")).toBe(
+    "150",
+  );
+  expect(await AsyncStorage.getItem("meetpr.rest-timer.v2.student")).toBeNull();
+});
+
+test.each([
+  [0, 30],
+  [601, 600],
+  [127, 120],
+  [128, 135],
+  [NaN, 180],
+])("duration %s clamps and snaps to %s for both wheels", (input, expected) => {
+  expect(clampRestSeconds(input)).toBe(expected);
 });

@@ -26,6 +26,7 @@ import { BUILD_TRACK } from '@/config/build-track';
 import { Toast } from '@/design/Toast';
 
 import { AnalyticsEvent, configure, flushNow, isPrivacyNoticeConfirmed, PrivacyNoticeSheet, track } from '@/analytics';
+import { StartupOverlayContext } from '@/navigation/startup-overlay';
 import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
 import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
 import { AndroidUpdateSession } from '@/features/updates/AndroidUpdateSession';
@@ -112,6 +113,7 @@ function ThemedRoot() {
   const user = useSessionStore((state) => state.user);
   const [privacyNoticeVisible, setPrivacyNoticeVisible] = useState(false);
   const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [updateBlocked, setUpdateBlocked] = useState(true);
   const bootstrapped = useSessionStore((state) => state.bootstrapped);
 
   useEffect(() => {
@@ -167,8 +169,10 @@ function ThemedRoot() {
     <QueryProvider>
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
-        <RootNavigator />
-        <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} />
+        <StartupOverlayContext.Provider value={!privacyChecked || privacyNoticeVisible || updateBlocked}>
+          <RootNavigator />
+        </StartupOverlayContext.Provider>
+        <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} onBlockingChange={setUpdateBlocked} />
         <TrainingReminderSession />
         <PlanNotificationSession />
         <VideoUploadNotificationSession />

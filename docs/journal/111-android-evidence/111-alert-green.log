@@ -1,0 +1,12 @@
+PASS src/features/training/__tests__/rest-timer-session.test.ts
+  ✓ manual start runs to done, then returns to idle after three seconds or a tap (1 ms)
+  ✓ ±15 clamps to 0/900, stop and finishing today cancel silently
+  ✓ last ten seconds vibrate once per second, then completion respects each switch (4 ms)
+  ✓ background owns expiry; foreground reconciles +15 without replaying alerts (25 ms)
+  ✓ skip from notification clears the timer and denied permission never publishes (4 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        1.133 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer-session.test.ts/i.

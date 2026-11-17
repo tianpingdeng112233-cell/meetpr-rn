@@ -1,0 +1,32 @@
+FAIL src/features/training/__tests__/rest-timer.test.tsx
+  ✓ first settings wait for other startup overlays to close and the student to return to training (160 ms)
+  ✓ app-shell notice blocks first settings until all shell and training overlays close (19 ms)
+  ✕ offline cached training without handoff data still allows first rest settings (2 ms)
+  ✓ tap idle ring starts the displayed duration and dismisses the hint permanently (5 ms)
+  ✓ tap running ring expands controls; background +15 and tab changes retain the same rest (10 ms)
+  ✓ long press opens settings with haptic feedback without starting or pausing the timer (58 ms)
+
+  ● offline cached training without handoff data still allows first rest settings
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "Rest settings"
+    Received array: []
+
+      114 |   }
+      115 |   await act(async () => { renderer = create(<CachedTraining />); });
+    > 116 |   expect(copy()).toContain(t("training.restRing.settings"));
+          |                  ^
+      117 | });
+      118 |
+      119 | test("tap idle ring starts the displayed duration and dismisses the hint permanently", async () => {
+
+      at Object.toContain (src/features/training/__tests__/rest-timer.test.tsx:116:18)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 5 passed, 6 total
+Snapshots:   0 total
+Time:        1.042 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer.test.tsx/i.
