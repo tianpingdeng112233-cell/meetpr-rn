@@ -1,0 +1,143 @@
+FAIL src/features/training/__tests__/rest-timer-notification.test.ts
+  ✕ passes a static localized title without a countdown template (en) (4 ms)
+  ✕ passes a static localized title without a countdown template (zh)
+  ✕ passes a static localized title without a countdown template (zh-Hant) (1 ms)
+  ✕ passes independent vibration=false and sound=false to native completion (1 ms)
+  ✕ passes independent vibration=false and sound=true to native completion
+  ✕ passes independent vibration=true and sound=false to native completion (1 ms)
+  ✕ passes independent vibration=true and sound=true to native completion
+
+  ● passes a static localized title without a countdown template (en)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 121000, "Competition Deadlift", ObjectContaining {"add": "+15s", "title": "Rest between sets"}, {"sound": true, "vibration": true}
+    Received: 121000, "Competition Deadlift", {"add": "+30s", "completeBody": "Time for your next set", "completeChannel": "Rest complete", "completeTitle": "Rest complete", "skip": "Skip", "timerChannel": "Rest timer", "title": "Rest between sets"}
+
+    Number of calls: 1
+
+      19 |   restTimerNotifications.show(121000, 'Competition Deadlift', { vibration: true, sound: true });
+      20 |
+    > 21 |   expect(native.show).toHaveBeenCalledWith(121000, 'Competition Deadlift', expect.objectContaining({ title, add: '+15s' }), { vibration: true, sound: true });
+         |                       ^
+      22 |   expect(native.show.mock.calls[0][2]).not.toHaveProperty('titleTemplate');
+      23 | });
+      24 |
+
+      at toHaveBeenCalledWith (src/features/training/__tests__/rest-timer-notification.test.ts:21:23)
+
+  ● passes a static localized title without a countdown template (zh)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 121000, "Competition Deadlift", ObjectContaining {"add": "+15s", "title": "组间休息"}, {"sound": true, "vibration": true}
+    Received: 121000, "Competition Deadlift", {"add": "+30s", "completeBody": "该做下一组了", "completeChannel": "休息结束", "completeTitle": "休息结束", "skip": "跳过", "timerChannel": "休息倒计时", "title": "组间休息"}
+
+    Number of calls: 1
+
+      19 |   restTimerNotifications.show(121000, 'Competition Deadlift', { vibration: true, sound: true });
+      20 |
+    > 21 |   expect(native.show).toHaveBeenCalledWith(121000, 'Competition Deadlift', expect.objectContaining({ title, add: '+15s' }), { vibration: true, sound: true });
+         |                       ^
+      22 |   expect(native.show.mock.calls[0][2]).not.toHaveProperty('titleTemplate');
+      23 | });
+      24 |
+
+      at toHaveBeenCalledWith (src/features/training/__tests__/rest-timer-notification.test.ts:21:23)
+
+  ● passes a static localized title without a countdown template (zh-Hant)
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 121000, "Competition Deadlift", ObjectContaining {"add": "+15s", "title": "組間休息"}, {"sound": true, "vibration": true}
+    Received: 121000, "Competition Deadlift", {"add": "+30s", "completeBody": "該做下一組了", "completeChannel": "休息結束", "completeTitle": "休息結束", "skip": "跳過", "timerChannel": "休息倒計時", "title": "組間休息"}
+
+    Number of calls: 1
+
+      19 |   restTimerNotifications.show(121000, 'Competition Deadlift', { vibration: true, sound: true });
+      20 |
+    > 21 |   expect(native.show).toHaveBeenCalledWith(121000, 'Competition Deadlift', expect.objectContaining({ title, add: '+15s' }), { vibration: true, sound: true });
+         |                       ^
+      22 |   expect(native.show.mock.calls[0][2]).not.toHaveProperty('titleTemplate');
+      23 | });
+      24 |
+
+      at toHaveBeenCalledWith (src/features/training/__tests__/rest-timer-notification.test.ts:21:23)
+
+  ● passes independent vibration=false and sound=false to native completion
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 121000, "Bench", Any<Object>, {"sound": false, "vibration": false}
+    Received: 121000, "Bench", {"add": "+30s", "completeBody": "Time for your next set", "completeChannel": "Rest complete", "completeTitle": "Rest complete", "skip": "Skip", "timerChannel": "Rest timer", "title": "Rest between sets"}
+
+    Number of calls: 1
+
+      27 |   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(native);
+      28 |   restTimerNotifications.show(121000, 'Bench', { vibration, sound });
+    > 29 |   expect(native.show).toHaveBeenCalledWith(121000, 'Bench', expect.any(Object), { vibration, sound });
+         |                       ^
+      30 | });
+      31 |
+
+      at toHaveBeenCalledWith (src/features/training/__tests__/rest-timer-notification.test.ts:29:23)
+
+  ● passes independent vibration=false and sound=true to native completion
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 121000, "Bench", Any<Object>, {"sound": true, "vibration": false}
+    Received: 121000, "Bench", {"add": "+30s", "completeBody": "Time for your next set", "completeChannel": "Rest complete", "completeTitle": "Rest complete", "skip": "Skip", "timerChannel": "Rest timer", "title": "Rest between sets"}
+
+    Number of calls: 1
+
+      27 |   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(native);
+      28 |   restTimerNotifications.show(121000, 'Bench', { vibration, sound });
+    > 29 |   expect(native.show).toHaveBeenCalledWith(121000, 'Bench', expect.any(Object), { vibration, sound });
+         |                       ^
+      30 | });
+      31 |
+
+      at toHaveBeenCalledWith (src/features/training/__tests__/rest-timer-notification.test.ts:29:23)
+
+  ● passes independent vibration=true and sound=false to native completion
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 121000, "Bench", Any<Object>, {"sound": false, "vibration": true}
+    Received: 121000, "Bench", {"add": "+30s", "completeBody": "Time for your next set", "completeChannel": "Rest complete", "completeTitle": "Rest complete", "skip": "Skip", "timerChannel": "Rest timer", "title": "Rest between sets"}
+
+    Number of calls: 1
+
+      27 |   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(native);
+      28 |   restTimerNotifications.show(121000, 'Bench', { vibration, sound });
+    > 29 |   expect(native.show).toHaveBeenCalledWith(121000, 'Bench', expect.any(Object), { vibration, sound });
+         |                       ^
+      30 | });
+      31 |
+
+      at toHaveBeenCalledWith (src/features/training/__tests__/rest-timer-notification.test.ts:29:23)
+
+  ● passes independent vibration=true and sound=true to native completion
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: 121000, "Bench", Any<Object>, {"sound": true, "vibration": true}
+    Received: 121000, "Bench", {"add": "+30s", "completeBody": "Time for your next set", "completeChannel": "Rest complete", "completeTitle": "Rest complete", "skip": "Skip", "timerChannel": "Rest timer", "title": "Rest between sets"}
+
+    Number of calls: 1
+
+      27 |   jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(native);
+      28 |   restTimerNotifications.show(121000, 'Bench', { vibration, sound });
+    > 29 |   expect(native.show).toHaveBeenCalledWith(121000, 'Bench', expect.any(Object), { vibration, sound });
+         |                       ^
+      30 | });
+      31 |
+
+      at toHaveBeenCalledWith (src/features/training/__tests__/rest-timer-notification.test.ts:29:23)
+
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 7 total
+Snapshots:   0 total
+Time:        1.691 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer-notification.test.ts/i.

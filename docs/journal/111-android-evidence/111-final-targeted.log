@@ -1,0 +1,11 @@
+PASS src/features/training/__tests__/rest-timer.test.tsx
+PASS src/demo/__tests__/storage.test.ts
+PASS src/features/settings/__tests__/rest-timer.test.ts
+PASS src/features/training/__tests__/rest-timer-notification.test.ts
+PASS src/features/training/__tests__/rest-timer-session.test.ts
+
+Test Suites: 5 passed, 5 total
+Tests:       28 passed, 28 total
+Snapshots:   0 total
+Time:        3.139 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer.test.tsx|src\/features\/training\/__tests__\/rest-timer-session.test.ts|src\/features\/training\/__tests__\/rest-timer-notification.test.ts|src\/features\/settings\/__tests__\/rest-timer.test.ts|src\/demo\/__tests__\/storage.test.ts/i.

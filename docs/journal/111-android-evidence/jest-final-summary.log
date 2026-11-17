@@ -1,0 +1,8 @@
+PASS src/features/video-player/__tests__/time.test.ts
+PASS src/features/video-player/__tests__/rate.test.ts
+
+Test Suites: 221 passed, 221 total
+Tests:       2388 passed, 2388 total
+Snapshots:   0 total
+Time:        64.663 s, estimated 159 s
+Ran all test suites.

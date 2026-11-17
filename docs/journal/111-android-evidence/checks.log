@@ -1,0 +1,7 @@
+npx tsc --noEmit: PASS
+npm run lint: PASS (0 errors, 0 warnings)
+node scripts/generate-zh-hant.cjs --check: PASS
+Prettier --check (9 rewritten TS/TSX files): PASS
+git diff --check: PASS
+ADB devices: BLOCKED — could not install *smartsocket* listener: Operation not permitted
+Native Android build: NOT RUN

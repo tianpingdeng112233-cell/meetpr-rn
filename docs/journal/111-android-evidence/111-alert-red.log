@@ -1,0 +1,57 @@
+FAIL src/features/training/__tests__/rest-timer-session.test.ts
+  ✓ manual start runs to done, then returns to idle after three seconds or a tap (1 ms)
+  ✕ ±15 clamps to 0/900, stop and finishing today cancel silently
+  ✕ last ten seconds vibrate once per second, then completion respects each switch
+  ✕ background owns expiry; foreground reconciles +15 without replaying alerts (1 ms)
+  ✓ skip from notification clears the timer and denied permission never publishes
+
+  ● ±15 clamps to 0/900, stop and finishing today cancel silently
+
+    TypeError: session.completeToday is not a function
+
+      32 |   session.start(10); session.adjust(-15); expect(session.remainingSeconds()).toBe(0);
+      33 |   session.close(); expect(session.snapshot().phase).toBe('idle');
+    > 34 |   session.start(180); session.completeToday();
+         |                               ^
+      35 |   at(200_000); expect(session.tick()).toEqual({ vibration: false, sound: false });
+      36 |   expect(session.snapshot().phase).toBe('idle');
+      37 |   expect(native.hide).toHaveBeenCalled();
+
+      at Object.completeToday (src/features/training/__tests__/rest-timer-session.test.ts:34:31)
+
+  ● last ten seconds vibrate once per second, then completion respects each switch
+
+    TypeError: session.setAlerts is not a function
+
+      41 |   for (const vibration of [false, true]) for (const sound of [false, true]) {
+      42 |     const { session, at } = setup();
+    > 43 |     session.setAlerts({ vibration, sound }); session.start(12);
+         |             ^
+      44 |     at(2_000); expect(session.tick()).toEqual({ vibration: false, sound: false });
+      45 |     for (let second = 10; second >= 1; second--) {
+      46 |       at((13 - second) * 1_000);
+
+      at Object.setAlerts (src/features/training/__tests__/rest-timer-session.test.ts:43:13)
+
+  ● background owns expiry; foreground reconciles +15 without replaying alerts
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: {"sound": false, "vibration": false}
+    Received: undefined
+
+      59 |   expect(native.show).toHaveBeenCalledWith(31_000, 'Bench', { vibration: true, sound: true });
+      60 |   session.setActive(false, true); expect(native.show).toHaveBeenCalledTimes(1);
+    > 61 |   at(22_000); expect(session.tick()).toEqual({ vibration: false, sound: false });
+         |                                      ^
+      62 |   native.consumeState.mockReturnValue({ endAtEpochMs: 46_000, skipped: false });
+      63 |   session.setActive(true, true); expect(session.remainingSeconds()).toBe(24);
+      64 |   session.setActive(false, true); at(47_000);
+
+      at Object.toEqual (src/features/training/__tests__/rest-timer-session.test.ts:61:38)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 2 passed, 5 total
+Snapshots:   0 total
+Time:        0.39 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer-session.test.ts/i.

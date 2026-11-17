@@ -1,0 +1,11 @@
+PASS src/features/training/__tests__/rest-timer.test.tsx
+  ✓ first settings wait for other startup overlays to close and the student to return to training (234 ms)
+  ✓ tap idle ring starts the displayed duration and dismisses the hint permanently (9 ms)
+  ✓ tap running ring expands controls; background +15 and tab changes retain the same rest (18 ms)
+  ✓ long press opens settings with haptic feedback without starting or pausing the timer (74 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.348 s, estimated 2 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer.test.tsx/i.
