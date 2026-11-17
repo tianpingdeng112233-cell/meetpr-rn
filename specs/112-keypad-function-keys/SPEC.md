@@ -28,6 +28,7 @@
 - 新加的热身组默认值：有上一个热身组就抄它的重量和次数；第一个热身组重量为空、次数抄第 1 组。RPE 为空。加完后光标自动落在这一行的重量格、面板打开。
 - 动作行的「组×次」摘要、进度、按计划判断、长按完成今天的计数**都不算热身组**。
 - 热身组的删除方式与额外组相同。
+- 2026-11-17 真机验收补充（David 确认）：Android 热身组与额外组取消行内删除图标，直接左滑露出「删除」按钮；滑动本身不删除，点击后沿用已有删除路径（已保存组先确认，未保存草稿直接移除）。处方组、只读日及正在编辑的行不提供左滑删除；读屏通过组的编辑入口提供「删除组」操作。动作下方入口显示「＋ 加一组」。iOS 保留已有长按菜单删除及 plus 入口。
 
 ### 数字面板（`allDay` 形态）
 
@@ -71,6 +72,7 @@
 - RN：`src/features/training/__tests__/all-day-view.test.tsx`（面板形态、换格结算、一键改、加热身组、长按完成丢弃空热身组）与 `number-pad-visibility.test.tsx`；取值规则沿用 `src/design/number-pad.ts` 单测。记组请求带 `is_warmup` 在现有 API 层测试里断言。
 - iOS：`StudentKitTests/Features/TodayWorkout/AllDayDirectEditingTests.swift`（换格、一键改、加热身组、完成丢弃）与 `DesignSystemTests/NumberPadShortcutTests.swift`（功能键与快选）；`NetworkingTests/AllDayContractTests.swift` 断言 `is_warmup` 编解码。
 - 面板视觉以模拟器截图为证，不写快照测试。
+- Android 左滑删除沿用 `all-day-view.test.tsx` 的真实训练页 seam，验证热身/额外组的删除确认、取消保留与处方/只读限制；原生横滑、纵向滚动及点格编辑的手势兼容在 vivo 真机取证。
 
 ## Out of Scope
 

@@ -234,7 +234,7 @@ test('acceptance 16: W2 can be edited, checked and completed while W1 remains un
   const pressText = async (label: string) => {
     await act(async () => renderer.root.findAll(node => node.props.onPress && node.findAllByType(Text).some(text => text.props.children === label))[0].props.onPress());
   };
-  await pressText(t('student.added.addSet'));
+  await pressText(`＋ ${t('student.added.addSet')}`);
   expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(2);
   await pressText(t('student.added.addExercise'));
   expect(renderer.root.findAllByType(StudentExercisePicker)).toHaveLength(1);
@@ -275,6 +275,7 @@ test.each<[number, number, boolean]>([[1, 0, true], [2, 0, true], [2, 8, false]]
     expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(0);
     expect(renderer.root.findAll(node => node.props.onPress && node.props.accessibilityRole === 'checkbox')).toHaveLength(0);
     expect(renderer.root.findAll(node => node.props.onPress && node.props.accessibilityLabel === 'Edit set 1').every(node => node.props.disabled)).toBe(true);
+    expect(renderer.root.findAll(node => node.props.onAccessibilityAction && node.props.accessibilityActions?.length)).toHaveLength(0);
     expect(copy()).not.toContain(t('student.added.addSet'));
     expect(copy()).not.toContain(t('student.added.addExercise'));
     expect(copy().includes(t('student.todayWorkoutScreen.copy023'))).toBe(undo);
@@ -1036,6 +1037,40 @@ test('112 switching cells settles invalid input to the last valid value without 
 });
 
 const sheetRows = () => renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows as import('../model').WorkoutSetDraft[];
+test.each([true, false])('112 removable row action preserves cancellation and deletes only its saved set (warm-up: %s)', async warmup => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  const first = plan.days[0].exercises[0];
+  const log = { id: '90000000-0000-4000-8000-000000000010', student_id: studentId, plan_exercise_id: first.id, exercise_id: first.exercise_id, set_index: 0,
+    weight_kg: '80', reps: 5, rpe: '7', completed: true, failed: false, assumed: false, adhoc: false, is_warmup: false, logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z' };
+  const extra = { ...log, id: '90000000-0000-4000-8000-000000000011', set_index: 1, weight_kg: '20', is_warmup: warmup };
+  let logs = [log, extra];
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (options?.method === 'DELETE' && path === `/sets/${extra.id}`) { logs = [log]; return undefined as never; }
+    return path.includes('/sets?') ? { logs } as never : original(path, options);
+  });
+  await mount(); await expandFirst();
+  const label = t(warmup ? 'training.warmup.set' : 'training.allDay.editSet', [warmup ? 1 : 2]);
+  expect(renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.onPress)[0].props.accessibilityActions).toEqual([]);
+  const removeAction = () => renderer.root.findAll(node => node.props.accessibilityLabel === label && node.props.onPress)[0];
+  expect(removeAction().props.accessibilityActions).toContainEqual({ name: 'remove', label: t('student.added.removeSet') });
+  const request = async () => act(async () => removeAction().props.onAccessibilityAction({ nativeEvent: { actionName: 'remove' } }));
+  await request();
+  expect(Alert.alert).toHaveBeenLastCalledWith(t('student.added.confirmSet'), undefined, expect.any(Array));
+  expect(sheetRows()).toHaveLength(2);
+  expect(jest.mocked(authenticatedRequest).mock.calls.some(([, options]) => options?.method === 'DELETE')).toBe(false);
+  await act(async () => { jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'cancel')?.onPress?.(); });
+  expect(sheetRows()).toHaveLength(2);
+  // The revealed swipe button shares the same confirmation path as TalkBack.
+  await press(t('student.added.removeSet'));
+  expect(Alert.alert).toHaveBeenLastCalledWith(t('student.added.confirmSet'), undefined, expect.any(Array));
+  await act(async () => {
+    jest.mocked(Alert.alert).mock.calls.at(-1)?.[2]?.find(button => button.style === 'destructive')?.onPress?.();
+    await new Promise(resolve => setTimeout(resolve, 80));
+  });
+  expect(sheetRows().map(row => row.sourceLog?.id)).toEqual([log.id]);
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method === 'DELETE').map(([path]) => path)).toEqual([`/sets/${extra.id}`]);
+});
+
 test('112 warm-ups precede working sets, copy weight/reps, cap at five and never get cameras', async () => {
   await mount(); await expandFirst();
   await press('Add warm-up set');

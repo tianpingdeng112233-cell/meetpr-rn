@@ -3,6 +3,8 @@ import { EffortHelpButton } from './EffortHelpButton';
 import { prescriptionDifferences } from '@/domain/plan/prescription-result';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BackHandler, Text, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { font, GradientFill, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
@@ -107,11 +109,12 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
               accessibilityState={{ disabled: warmups.length >= 5 }} onPress={() => onAddWarmup?.(block.exercise)} style={{ minHeight: 44, justifyContent: 'center' }}>
               <Text style={{ ...font.body(13, 'semibold'), color: warmups.length >= 5 ? colors.textMuted : colors.goldText }}>{warmups.length >= 5 ? t('training.warmup.limit') : `＋ ${t('training.warmup.add')}`}</Text>
             </Pressable> : null}
-            <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
+            <GestureHandlerRootView style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
               {block.rows.map(row => {
                 const warmup = row.kind === 'warmup';
                 const ordinal = (warmup ? warmups : workingRows).findIndex(item => item.stableSetId === row.stableSetId) + 1;
                 const active = editing?.row.stableSetId === row.stableSetId;
+                const removable = editable && !active && (row.kind === 'extra' || warmup);
                 const display = active ? editing.row : row;
                 const historyPrefill = Boolean(display.weightPrefilledFromHistory && !row.sourceLog);
                 const prescription = decodePrescription(row.planSet);
@@ -121,7 +124,7 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                 const weightChanged = differences?.weight != null;
                 const historicalWeight = display.previousWeightKg != null && allowsHistoricalWeight(prescription);
                 const textColor = (historyPrefill || (weightChanged && !historicalWeight)) ? colors.goldText : colors.textPrimary;
-                return <View onTouchEnd={event => event.stopPropagation()} testID={`all-day-row-${row.stableSetId}`} key={row.stableSetId} ref={view => { if (view) rowViews.current.set(row.stableSetId, view); else rowViews.current.delete(row.stableSetId); }} style={{ borderBottomWidth: 1, borderBottomColor: colors.borderDefault, backgroundColor: active ? colors.goldSoft : short ? colors.dangerSoft : undefined }}>
+                const rowContent = <View onTouchEnd={event => event.stopPropagation()} testID={`all-day-row-${row.stableSetId}`} key={row.stableSetId} ref={view => { if (view) rowViews.current.set(row.stableSetId, view); else rowViews.current.delete(row.stableSetId); }} style={{ borderBottomWidth: 1, borderBottomColor: colors.borderDefault, backgroundColor: active ? colors.goldSoft : short ? colors.dangerSoft : colors.surfaceCard }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {active ? <View style={{ flex: 1, flexDirection: 'row', padding: 8, gap: 8 }}>
                     {(['weight', 'reps', display.effortKind === 'rir' ? 'rir' : 'rpe'] as const).map(field => <View key={field} style={{ flex: field === 'weight' ? 1.5 : 1, gap: 4 }}>
@@ -141,7 +144,10 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                     </View>)}
                     {percentage}
                   </View> : <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
-                    <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t(warmup ? 'training.warmup.set' : 'training.allDay.editSet', [ordinal])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
+                    <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t(warmup ? 'training.warmup.set' : 'training.allDay.editSet', [ordinal])}
+                      accessibilityActions={removable ? [{ name: 'remove', label: t('student.added.removeSet') }] : []}
+                      onAccessibilityAction={event => { if (removable && event.nativeEvent.actionName === 'remove') onRemoveSet(row); }}
+                      onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
                       <Text style={{ ...font.mono(12), color: warmup ? colors.goldText : colors.textMuted, fontWeight: warmup ? 'bold' : undefined, width: 18 }}>{warmup ? t('training.warmup.marker') : ordinal}</Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 3 }}>
                         <Text testID={`all-day-weight-${row.stableSetId}`} style={{ ...font.mono(15, 'semibold'), color: textColor }}>{displayWeight(display.weightText, unit) || '—'}</Text><Text style={{ ...font.body(12), color: colors.textMuted }}>{unit}</Text>
@@ -155,7 +161,6 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                     <Pressable testID={`all-day-edit-effort-${row.stableSetId}`} disabled={!editable} accessibilityRole="button" accessibilityLabel={(display.effortKind ?? 'rpe').toUpperCase()} onPress={() => edit(row, display.effortKind ?? 'rpe')} style={{ minHeight: 38, justifyContent: 'center', paddingHorizontal: 4 }}>
                       <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{`${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText || '—'}`}</Text>{differences?.effort && differences.effort !== '—' ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
                     </Pressable>
-                    {editable && (row.kind === 'extra' || warmup) ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
                     {percentage}
                   </View>}
                   {warmup ? <View style={{ width: 44 }} /> : editable ? <VideoAttachmentControls onActivityChange={onVideoActivity} compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
@@ -163,10 +168,16 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                   </View>
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
                 </View>;
+                return removable ? <ReanimatedSwipeable key={row.stableSetId} testID={`all-day-swipe-${row.stableSetId}`} overshootLeft={false} overshootRight={false}
+                  renderRightActions={(_progress, _translation, swipeable) => <Pressable accessibilityRole="button" accessibilityLabel={t('student.added.removeSet')}
+                    onPress={() => { swipeable.close(); onRemoveSet(row); }}
+                    style={{ minWidth: 72, minHeight: 44, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.dangerFill }}>
+                    <Text style={{ ...font.body(13, 'semibold'), color: colors.inkOnCTAFill }}>{t('student.added.remove')}</Text>
+                  </Pressable>}>{rowContent}</ReanimatedSwipeable> : rowContent;
               })}
-            </View>
+            </GestureHandlerRootView>
             {editable ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Pressable onPress={() => onAddSet(block.exercise)}><Text style={{ ...font.body(13), color: colors.goldText }}>{t('student.added.addSet')}</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={`＋ ${t('student.added.addSet')}`} onPress={() => onAddSet(block.exercise)}><Text style={{ ...font.body(13), color: colors.goldText }}>{`＋ ${t('student.added.addSet')}`}</Text></Pressable>
               {onNote && block.rows[0] ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /></Pressable> : null}
             </View> : null}
           </> : null}

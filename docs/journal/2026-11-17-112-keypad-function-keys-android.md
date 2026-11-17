@@ -136,3 +136,13 @@ slow storage cannot reverse rapid numeric edits.
 - vivo V2405A（`10AECF1CX90020R`）安装返回 Success；David 已允许系统安装，测试包已启动。等待 David 自行登录并停在成长页，先存 e1RM/PR 基线，再做热身组写入、完成、教练双端隐藏和重启保留；尚未宣称真账号验收通过。
 - 只读 `git merge-tree` 预检发现目标分支已有并行改动：Android 与最新 main 的冲突在 PARITY.md；iOS 与最新 release/1.0 的冲突在 StudentKit Localizable.xcstrings。尚未实际 merge/rebase，待联验后处理并补整合验证。
 - 后续顺序不变：Android 真机 → David 的 iOS 真机 → 两端通过及整合验证后 PR 转正、候选登记、等待放行 → 清理指定模拟器测试包及 dist；卸载真机测试包先问 David。
+
+## 返修 2：真机删除入口（2026-11-17）
+
+- David 在已登录的 vivo 上发现热身组和额外组行内 × 与乘号混淆，否决相机旁的垃圾桶方案，最终明确选择「直接左滑，露出删除按钮」，并要求动作下方「加一组」前加 ＋。已补本卡 SPEC；iOS 原有长按菜单及 plus 入口保留。
+- `AllDayBody` 使用已安装的 ReanimatedSwipeable；滑动本身不删除，点击删除仍调用既有 requestRemoval（已保存组确认、草稿直接移除、视频与可写状态保护）。处方/只读/编辑行不提供滑删；读屏编辑入口提供删除操作。未引入依赖。
+- 测试 seam：真实 TodayWorkoutView + API mock，热身/额外组各一条，验证取消保留、按钮确认后只 DELETE 目标保存组，处方及只读不暴露删除动作。新增测试先因缺少公开 accessibilityActions 变红，再转绿；不模拟业务删除函数。
+- Jest 通过已安装 Worklets resolver、RNGH 官方 jestSetup 与 Reanimated setUpTests 补齐原生边界。全量 222 suites / 2444 tests 通过；最终增强的两条删除按钮回归另跑 2/2；tsc、目标 eslint、diff check 通过，Impeccable detector 为 `[]`。原生手势不由 Jest 宣称覆盖。
+- review-loop 本地双轴独立审查：Standards CLEAN；Spec CLEAN，最终测试 hunk 定向复审 CLEAN。无未决代码 finding。缺少 Matt tracker，继续沿用本地批准 spec 路径，未私建配置。审查记录：`/Users/david/CodexConfig/reviews/2026-11-17-112-swipe-delete.md`。
+- 真账号成长基线已留图：e1RM 合计 433.9 kg（深蹲 148.8 / 卧推 110.7 / 硬拉 174.4），19 次训练；David 自行添加 50×4 / RPE 7 热身与 5×4 / RPE 9 额外组，未完成本轮远端验收。
+- 新 CN 测试 APK 构建成功并通过 bundle 一致性、国内地址、isDemoMode=false 与独立包名核验；SHA 与日志摘要见证据文档。vivo 从 adb 断开，已请 David 重新连接；尚未覆盖安装或取得返修后原生截图。手势、纵向滚动、点格编辑及真后端全链路均保持待验，PR 不转正、不合并，未清理任何设备测试包。

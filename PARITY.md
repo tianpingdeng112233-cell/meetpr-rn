@@ -1,7 +1,7 @@
 # PARITY — 1:1 复刻台账
-> **2026-11-17 spec 112 返修 1（未提交，待原生复验）**：已复现 demo 重启后 ID 碰撞丢组，origin/main 同样存在；修复完成写入、热身统计排除、原值持久标记与英文单复数。红绿、最终检查与独立审查见 [同卡 JOURNAL「返修 1」](docs/journal/2026-11-17-112-keypad-function-keys-android.md#返修-1)；本轮不 commit/push，ADB 沙箱阻塞截图。
+> **2026-11-17 spec 112 真机验收返修（进行中）**：返修 1 已提交 `eb3876c`，David 交接确认 meetpr16 演示验收 15 组 / 120 次 / 10,375 kg。国内真后端独立测试包已在 vivo 登录并保存成长基线；David 追加要求热身/额外组改为左滑删除及「＋ 加一组」，实现与自动化验证中，手势真机复验及后端全链路仍待完成。[同卡 JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)。
 
-> **2026-11-17 spec 112（工作区待收货）**：Android allDay 四功能键、跨格结算、RPE/RIR 快选与自加热身组已实装；自动化与独立审查结果、原生/后端联调缺口见 [JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)。不 commit/push，未进包；发布依赖后端 068 线上部署。
+> **2026-11-17 spec 112（草稿 PR #205）**：Android allDay 四功能键、跨格结算、RPE/RIR 快选与自加热身组已实装并推送备份；后端 068 已部署国内 staging。发布仍待真账号热身组持久化/统计排除/教练双端隐藏验证，PR 保持草稿，T2 合并等 David 放行。[JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)。
 > **2026-11-16 spec 110 旧周期练完再接新计划（工作区待收货）**：Android 已接服务端 current 契约、只读预览下一周期、接续提示与调用点统一；demo 加 upcoming。独立 Standards / Spec 审查已闭合，自动化证据与验收缺口见 [JOURNAL](docs/journal/2026-11-16-110-android.md)。未 commit / push，未进包；原生滚动、深浅色 / 大字、CN / Global 真实 API 与升级亲验待收货方。
 > **2026-11-15 · CN15 已发布**。版本 APK 与固定下载链接均已核验，CN14 实包可收到本次更新提示。[发布与覆盖升级记录](docs/journal/2026-11-15-release-cn15.md)
 > **2026-11-15 动作留言卡片**：学员发出靠右，教练收到靠左。同侧卡片等宽，长文换行增高。[验收记录](docs/journal/2026-11-15-107-exercise-note-width.md)
