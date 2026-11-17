@@ -1037,6 +1037,19 @@ test('112 switching cells settles invalid input to the last valid value without 
 });
 
 const sheetRows = () => renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows as import('../model').WorkoutSetDraft[];
+test('112 one header add-warmup press adds exactly one row while the keyboard is open', async () => {
+  await mount(); await expandFirst();
+  await press('Add warm-up set');
+  expect(sheetRows().filter(row => row.kind === 'warmup')).toHaveLength(1);
+  await press('5'); await press('0');
+  await press('Add warm-up set');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  expect(sheetRows().filter(row => row.kind === 'warmup')).toHaveLength(2);
+  await press('Hide keyboard');
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  expect(sheetRows().filter(row => row.kind === 'warmup')).toHaveLength(2);
+});
+
 test.each([true, false])('112 removable row action preserves cancellation and deletes only its saved set (warm-up: %s)', async warmup => {
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   const first = plan.days[0].exercises[0];

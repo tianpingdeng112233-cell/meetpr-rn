@@ -2306,6 +2306,7 @@
   "student.added.addExercise": "加動作",
   "student.added.added": "自加",
   "student.added.remove": "移除",
+  "student.added.deleteAction": "刪除",
   "student.added.addedHint": "自己加的動作只記在今天，不會改教練的課表。",
   "student.added.search": "搜動作名 / 英文 / 別名",
   "student.added.alreadyAdded": "今天已經加過",

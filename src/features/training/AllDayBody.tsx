@@ -109,7 +109,8 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
               accessibilityState={{ disabled: warmups.length >= 5 }} onPress={() => onAddWarmup?.(block.exercise)} style={{ minHeight: 44, justifyContent: 'center' }}>
               <Text style={{ ...font.body(13, 'semibold'), color: warmups.length >= 5 ? colors.textMuted : colors.goldText }}>{warmups.length >= 5 ? t('training.warmup.limit') : `＋ ${t('training.warmup.add')}`}</Text>
             </Pressable> : null}
-            <GestureHandlerRootView style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
+            <GestureHandlerRootView style={{}}>
+            <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
               {block.rows.map(row => {
                 const warmup = row.kind === 'warmup';
                 const ordinal = (warmup ? warmups : workingRows).findIndex(item => item.stableSetId === row.stableSetId) + 1;
@@ -172,9 +173,10 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                   renderRightActions={(_progress, _translation, swipeable) => <Pressable accessibilityRole="button" accessibilityLabel={t('student.added.removeSet')}
                     onPress={() => { swipeable.close(); onRemoveSet(row); }}
                     style={{ minWidth: 72, minHeight: 44, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.dangerFill }}>
-                    <Text style={{ ...font.body(13, 'semibold'), color: colors.inkOnCTAFill }}>{t('student.added.remove')}</Text>
+                    <Text style={{ ...font.body(13, 'semibold'), color: colors.inkOnCTAFill }}>{t('student.added.deleteAction')}</Text>
                   </Pressable>}>{rowContent}</ReanimatedSwipeable> : rowContent;
               })}
+            </View>
             </GestureHandlerRootView>
             {editable ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Pressable accessibilityRole="button" accessibilityLabel={`＋ ${t('student.added.addSet')}`} onPress={() => onAddSet(block.exercise)}><Text style={{ ...font.body(13), color: colors.goldText }}>{`＋ ${t('student.added.addSet')}`}</Text></Pressable>

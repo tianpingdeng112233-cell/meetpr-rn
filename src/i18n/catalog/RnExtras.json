@@ -410,6 +410,7 @@
 "student.added.addExercise": {"en": "Add exercise", "zh": "加动作"},
 "student.added.added": {"en": "Added by you", "zh": "自加"},
 "student.added.remove": {"en": "Remove", "zh": "移除"},
+"student.added.deleteAction": {"en": "Delete", "zh": "删除"},
 "student.added.addedHint": {"en": "Exercises you add are logged for today only and don't change your coach's plan.", "zh": "自己加的动作只记在今天，不会改教练的计划。"},
 "student.added.search": {"en": "Search name or alias", "zh": "搜动作名 / 英文 / 别名"},
 "student.added.alreadyAdded": {"en": "Already added today", "zh": "今天已经加过"},
