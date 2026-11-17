@@ -1,4 +1,5 @@
 import { type ReactNode, forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
@@ -10,6 +11,11 @@ import { font, radius, spacing } from './tokens';
 
 type NumberPadProps = {
   layout?: 'allDay' | 'bodyWeight';
+  onAddSet?: () => void;
+  addSetDisabled?: boolean;
+  onFill?: (direction: 'up' | 'down') => void;
+  onEffort?: () => void;
+  effortKind?: 'rpe' | 'rir';
   header?: (text: string) => ReactNode;
   disabled?: boolean;
   field: NumberPadField;
@@ -62,7 +68,54 @@ export const NumberPad = forwardRef<NumberPadHandle, NumberPadProps>(function Nu
     if (!text || !Number.isFinite(Number(text))) onCancel();
     else onCommit(snapped(Number(text), field, minimumWeight));
   };
-  if (props.layout === 'allDay' || props.layout === 'bodyWeight') {
+  if (props.layout === 'allDay') {
+    const effort = field === 'rpe' || field === 'rir';
+    const enter = (next: string) => { setText(next); setPristine(false); props.onChangeText?.(next); };
+    const functionKey = (label: string, onPress: (() => void) | undefined, subtitle?: string, selected = false, disabled = false) =>
+      <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected, disabled }} disabled={disabled} onPress={onPress}
+        style={{ height: 52, borderRadius: radius.control, backgroundColor: selected ? colors.goldSoft : colors.surfaceRaised, borderWidth: selected ? 1 : 0, borderColor: colors.gold500, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.4 : 1 }}>
+        <Text style={{ ...font.body(12, 'semibold'), color: selected ? colors.goldText : colors.textPrimary }}>{subtitle ? t('training.pad.fill') : label}</Text>
+        {subtitle ? <Text style={{ ...font.body(10), color: colors.textSecondary }}>{subtitle}</Text> : null}
+      </Pressable>;
+    return <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', zIndex: 100 }]}>
+      <View pointerEvents="box-none" style={{ paddingTop: 44 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('training.pad.hide')} onPress={dismiss}
+          style={{ position: 'absolute', right: 16, top: 0, width: 48, height: 44, borderRadius: 12, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialCommunityIcons name="keyboard-close" size={24} color={colors.textSecondary} />
+        </Pressable>
+      <View ref={panel} onLayout={onPanelLayout ? () => panel.current?.measureInWindow((_x, top, _width, height) => onPanelLayout(top, height)) : undefined}
+        style={{ padding: 16, paddingBottom: 22, gap: 12, backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal }}>
+        <Text style={{ ...font.body(12), color: colors.textSecondary }}>{contextText}</Text>
+        {effort ? <View style={{ flexDirection: 'row', gap: 3 }}>
+          {(field === 'rir' ? [0, 1, 2, 3, 4, 5] : [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]).map(value => <Pressable key={value} testID={`effort-preset-${value}`} accessibilityRole="button" accessibilityLabel={`${field.toUpperCase()} ${value}`}
+            accessibilityState={{ selected: text !== '' && Number(text) === value }} onPress={() => enter(String(value))}
+            style={{ flex: 1, height: 44, borderRadius: radius.control, backgroundColor: text !== '' && Number(text) === value ? colors.gold500 : colors.surfaceKey, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ ...font.mono(12), color: text !== '' && Number(text) === value ? colors.inkOnGold : colors.textPrimary }}>{value}</Text>
+          </Pressable>)}
+        </View> : null}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 3, gap: 8 }}>{[['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['.', '0', '⌫']].map((row, index) =>
+            <View key={index} style={{ flexDirection: 'row', gap: 8 }}>{row.map(ch => {
+              const disabled = ch === '.' && (field === 'reps' || field === 'rir');
+              return <Pressable key={ch} accessibilityRole="button" accessibilityLabel={ch === '⌫' ? t('designSystem.numberPad.backspace') : ch === '.' ? t('designSystem.numberPad.decimalPoint') : ch}
+                disabled={disabled} accessibilityState={{ disabled }} onPress={() => enter(ch === '⌫' ? text.slice(0, -1) : appendAccessory(pristine ? '' : text, ch, field))}
+                style={{ flex: 1, height: 52, borderRadius: radius.control, backgroundColor: colors.surfaceKey, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.25 : 1 }}>
+                <Text style={{ ...font.mono(21, 'bold'), color: colors.textPrimary }}>{ch}</Text>
+              </Pressable>;
+            })}</View>)}
+          </View>
+          <View style={{ flex: 1, gap: 8 }}>
+            {functionKey(t('training.pad.addSet'), props.onAddSet, undefined, false, props.addSetDisabled)}
+            {functionKey(t('training.pad.fillUp'), () => props.onFill?.('up'), t('training.pad.up'))}
+            {functionKey(t('training.pad.fillDown'), () => props.onFill?.('down'), t('training.pad.down'))}
+            {functionKey((props.effortKind ?? 'rpe').toUpperCase(), props.onEffort, undefined, effort)}
+          </View>
+        </View>
+      </View>
+      </View>
+    </View>;
+  }
+  if (props.layout === 'bodyWeight') {
     const bodyWeight = props.layout === 'bodyWeight';
     const key = (ch: string, flex = 1) => <Pressable key={ch} accessibilityRole="button" accessibilityLabel={ch === '⌫' ? t('designSystem.numberPad.backspace') : ch === '.' ? t('designSystem.numberPad.decimalPoint') : ch}
       disabled={props.disabled || (ch === '.' && (field === 'reps' || field === 'rir'))} onPress={() => {

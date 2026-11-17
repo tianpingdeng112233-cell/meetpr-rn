@@ -48,7 +48,7 @@ import { hydrateRemoteVideoAttachments, hydrateVideoUploads, useVideoUploadStore
 import { VideoCompletionControl } from './video-upload/VideoCompletionControl';
 
 import { AnalyticsEvent, track } from '@/analytics';
-import { planKeys, useDayCompletion, usePlan, usePlanHandoff, currentPlanSummary, type PlanHandoff, type PlanSummary, type PlanDetail } from '@/api/domains/plans';
+import { planKeys, useDayCompletion, usePlan, usePlanHandoff, currentPlanSummary, type PlanHandoff, type PlanSummary, type PlanDetail, type PlanExercise } from '@/api/domains/plans';
 import { setKeys, useSetLogs, useUpsertSetLog, useWeightSuggestions } from '@/api/domains/sets';
 import { useSessionStore } from '@/api/session';
 import { Card, Screen, font, radius, spacing, typography, useColors, type Colors } from '@/design';
@@ -61,7 +61,7 @@ import { localNoon } from './quick-log';
 import { workoutCompletionPresentation, type CompletionReference } from './completion-presentation';
 import { DayCompletionBanner, WorkoutCompletionFlowView, type WorkoutCompletionFlowPhase } from './CompletionControls';
 import { HISTORY_WEIGHT_PREFILL_ENABLED, TRAINING_LIMITS } from './constants';
-import { addExtraDraft, addStudentExercise, addStudentSet, studentAddedDrafts, synthesizeDrafts } from './drafts';
+import { addExtraDraft, addWarmupDraft, addStudentExercise, addStudentSet, studentAddedDrafts, synthesizeDrafts } from './drafts';
 import { recordTrainingSetE1RM } from './e1rm-live';
 import { createExerciseMetadataResolver, exerciseTitle } from './exercise-metadata';
 import { LoadGeneration } from './load-generation';
@@ -268,6 +268,7 @@ export function TodayWorkoutView() {
   const rememberEffort = (row: WorkoutSetDraft) => effortChoices.remember(row.exercise.exercise_id, row.effortKind ?? 'rpe');
   const baseDrafts = synthesizedDrafts.map(draft => {
     const local = draftOverrides[draft.stableSetId];
+    if (local?.originalWeightText != null) draft = { ...draft, originalWeightText: local.originalWeightText };
     if (local && !local.sourceLog && !draft.sourceLog) return local;
     // Empty effort has no RPE/RIR discriminator on the wire; retain this session's choice.
     return local && !local.rpeText && !draft.rpeText
@@ -535,6 +536,13 @@ export function TodayWorkoutView() {
     setRequestedDayID(planDay.id);
     if (!undo) {
       try {
+        editor.close();
+        for (const row of liveDrafts.filter(item => item.kind === 'warmup' && !item.weightText.trim())) {
+          if (row.sourceLog) await setSyncQueue.remove({ stableSetId: row.stableSetId, dayId: planDay.id, log: row.sourceLog });
+          await setSyncQueue.discardDraft(row.stableSetId);
+          accessoryDraftsRef.current = accessoryDraftsRef.current.filter(item => item.stableSetId !== row.stableSetId);
+          setDraftOverrides(current => { const next = { ...current }; delete next[row.stableSetId]; return next; });
+        }
         for (const { row, request } of completionWrites(sheet)) await saveRow(row, request);
         await completionCoordinator.begin(planDay.id, syncCompletionState === 'failed', videoContext);
       } catch (error) { Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error)); }
@@ -649,6 +657,7 @@ export function TodayWorkoutView() {
                   plan_exercise_id: draft.kind === 'added' ? null : draft.exercise.id,
                   plan_day_id: draft.kind === 'added' ? draft.exercise.plan_day_id : null,
                   exercise_id: draft.exercise.exercise_id,
+                  is_warmup: draft.kind === 'warmup',
                   set_index: draft.setIndex,
                   weight_kg: weight === null ? null : String(weight),
                   reps,
@@ -687,7 +696,7 @@ export function TodayWorkoutView() {
           date: logDate,
         });
 
-        if (!input.failed && completed && weight !== null) {
+        if (draft.kind !== 'warmup' && !input.failed && completed && weight !== null) {
           const e1rm = await recordTrainingSetE1RM({
             recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!), resolveFamily: resolveE1RMFamily }) : recorder,
             repository: trainingE1RMRepository,
@@ -733,13 +742,37 @@ export function TodayWorkoutView() {
   };
 
   const saveRow = async (row: WorkoutSetDraft, request = allDayLogRequest(row)) => {
+    if (row.originalWeightText != null) {
+      accessoryDraftsRef.current = accessoryDraftsRef.current.map(item => item.stableSetId === row.stableSetId ? { ...item, originalWeightText: row.originalWeightText } : item);
+      setDraftOverrides(current => ({ ...current, [row.stableSetId]: row }));
+    }
+    if (row.kind === 'warmup' && !row.weightText.trim()) {
+      accessoryDraftsRef.current = accessoryDraftsRef.current.map(item => item.stableSetId === row.stableSetId ? row : item);
+      setDraftOverrides(current => ({ ...current, [row.stableSetId]: row }));
+      await setSyncQueue.saveDraft(row);
+      return `local:${row.stableSetId}`;
+    }
     const id = await commit({ stableSetId: row.stableSetId, weightText: row.weightText, repsText: row.repsText,
       rpeText: row.rpeText, effortKind: row.effortKind, failed: false, completed: true,
       accessory: { request, mode: 'all' } });
     if (!id) throw new Error('Set unavailable');
     return id;
   };
-  const editor = useAllDayEditor(row => { void saveRow(row).catch(() => undefined); }, id => exerciseTitle(resolveExerciseMetadata(id)), onAccessoryPadLayout, `${reviewKey}:${trainingVisible}:${editable}:${workoutProfile?.unit_preference}`, workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg', rememberEffort);
+  const addSet = (exercise: PlanExercise, warmup = false) => {
+    if (!editable) return null;
+    const rows = accessoryDraftsRef.current;
+    let next = warmup ? addWarmupDraft(exercise, rows) : exercise.id.startsWith('added:') ? addStudentSet(exercise, rows) : addExtraDraft(exercise, rows);
+    if (!next) return null;
+    if (!warmup) {
+      const previous = rows.filter(row => row.exercise.id === exercise.id && row.kind !== 'warmup').at(-1);
+      next = { ...next, weightText: previous?.weightText ?? '', repsText: previous?.repsText ?? '' };
+    }
+    accessoryDraftsRef.current = [...rows, next];
+    setDraftOverrides(current => ({ ...current, [next.stableSetId]: next! }));
+    void setSyncQueue.saveDraft(next);
+    return next;
+  };
+  const editor = useAllDayEditor(row => { void saveRow(row).catch(() => undefined); }, id => exerciseTitle(resolveExerciseMetadata(id)), onAccessoryPadLayout, `${reviewKey}:${trainingVisible}:${editable}:${workoutProfile?.unit_preference}`, workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg', rememberEffort, liveDrafts, addSet);
   const toggleExercise = async (id: string) => {
     const version = (exerciseCheckVersions.current[reviewKey] ?? 0) + 1;
     exerciseCheckVersions.current[reviewKey] = version;
@@ -805,7 +838,7 @@ export function TodayWorkoutView() {
   // Keep an explicitly selected completed day and its undo visible after finishing.
   const showEmpty = !preview && !browsing && (state.kind === 'noPlan' || (state.kind === 'loaded' && emptyState !== null && !completedToday(orderedDays, clockNow) && requestedDayID === null));
   const realDrafts = liveDrafts.filter(
-    (draft) => draft.sourceLog && !draft.sourceLog.assumed,
+    (draft) => draft.kind !== 'warmup' && draft.sourceLog && !draft.sourceLog.assumed,
   );
   const stickyCompletion = !preview && (editable || waitingForVideos || (!showEmpty && dayState?.kind === 'completed')) && (state.kind === 'loaded');
   const contentBottomPadding = stickyCompletion || preview
@@ -882,10 +915,11 @@ export function TodayWorkoutView() {
               editor={editor}
               onEffortChoice={rememberEffort}
               onSave={row => { void saveRow(row).catch(() => undefined); }}
-              onExpand={id => { editor.close(); setExpandedExercises(current => ({ ...current, [reviewKey]: sheet.exercises.find(block => block.exercise.id === id)?.collapsed ? id : null })); }}
+              onExpand={id => { setExpandedExercises(current => ({ ...current, [reviewKey]: sheet.exercises.find(block => block.exercise.id === id)?.collapsed ? id : null })); }}
               onToggle={id => void toggleExercise(id)}
               onNote={binding.data?.bind_request?.status === 'accepted' ? row => setNoteRow(row) : undefined}
-              onAddSet={exercise => { if (!editable) return; const next = exercise.id.startsWith('added:') ? addStudentSet(exercise, liveDrafts) : addExtraDraft(exercise, liveDrafts); if (next) { setDraftOverrides(current => ({ ...current, [next.stableSetId]: next })); void setSyncQueue.saveDraft(next); } }}
+              onAddSet={exercise => { editor.close(); const next = addSet(exercise); if (next) editor.edit(next); }}
+              onAddWarmup={exercise => { editor.close(); const next = addSet(exercise, true); if (next) editor.edit(next); }}
               onRemoveSet={row => requestRemoval([row], false)}
               onRemoveExercise={exercise => requestRemoval(liveDrafts.filter(row => row.exercise.id === exercise.id), true)}
               onAddExercise={() => setPickerVisible(true)}
@@ -937,13 +971,13 @@ export function TodayWorkoutView() {
           sending={completion.isPending}
           presentation={workoutCompletionPresentation({
             planDay,
-            drafts: liveDrafts,
+            drafts: liveDrafts.filter(row => row.kind !== 'warmup'),
             weekCode: dayCode(planDay, orderedDays),
             date: recommendedDate(plan, planDay),
             coachName: binding.data?.bind_request?.coach_display_name ?? null,
             exerciseNames: new Map(planDay.exercises.map(exercise => [exercise.exercise_id, exerciseTitle(resolveExerciseMetadata(exercise.exercise_id))])),
             references: (historyQuery.data?.logs ?? []).filter(log => log.logged_date < localDateText(clockNow)).reduce((best, log) => {
-              if (!log.completed || log.failed || log.assumed ||
+              if (!log.completed || log.failed || log.assumed || log.is_warmup ||
                 planDay.exercises.some(exercise => exercise.id === log.plan_exercise_id)) return best;
               const weightKg = Number(log.weight_kg);
               const previous = best.get(log.exercise_id);

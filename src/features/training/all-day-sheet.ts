@@ -20,7 +20,7 @@ export function buildAllDaySheet(planDay: PlanDay, logs: readonly SetLog[], sugg
   const currentExerciseIds = new Set(planDay.exercises.map(exercise => exercise.id));
   const rows = (options.drafts ?? [...synthesizeDrafts(planDay, logs), ...studentAddedDrafts(planDay.id, logs)]).map(row => {
     row = withAccessoryWeightHistory(row, options.accessoryHistory, currentExerciseIds);
-    const kind = row.rpeText ? row.effortKind : emptyEffortKind(row.planSet, options.effortPreferences?.[row.exercise.exercise_id]);
+    const kind = row.rpeText ? row.effortKind : row.kind === 'warmup' ? row.effortKind : emptyEffortKind(row.planSet, options.effortPreferences?.[row.exercise.exercise_id]);
     row = { ...row, effortKind: kind };
     if (row.sourceLog || row.kind) return row;
     const prescription = decodePrescription(row.planSet);
@@ -38,18 +38,18 @@ export function buildAllDaySheet(planDay: PlanDay, logs: readonly SetLog[], sugg
   rows.forEach(row => { if (!exercises.some(exercise => exercise.id === row.exercise.id)) exercises.push(row.exercise); });
   const expandedId = options.expandedExerciseId;
   return { exercises: exercises.map((exercise, index) => {
-    const exerciseRows = rows.filter(row => row.exercise.id === exercise.id).sort((a, b) => a.setIndex - b.setIndex);
+    const exerciseRows = rows.filter(row => row.exercise.id === exercise.id).sort((a, b) => Number(b.kind === 'warmup') - Number(a.kind === 'warmup') || a.setIndex - b.setIndex);
     const complete = Boolean(planDay.completed_at) || (options.completedExercises?.has(exercise.id) ?? false);
     const node = complete ? 'complete' : hasCurrent ? 'pending' : 'current';
     if (!complete) hasCurrent = true;
     return { exercise, rows: exerciseRows, collapsed: exercise.id !== expandedId,
-      repeatName: index > 0 && exercises[index - 1].exercise_id === exercise.exercise_id, node, lastSet: exerciseRows.at(-1) ?? null };
+      repeatName: index > 0 && exercises[index - 1].exercise_id === exercise.exercise_id, node, lastSet: exerciseRows.filter(row => row.kind !== 'warmup').at(-1) ?? null };
   }) };
 }
 
 
 export function allDayLogRequest(row: WorkoutSetDraft): SetLogUpsertRequest {
-  const fields = { set_index: row.setIndex, weight_kg: row.weightText.trim() ? String(Number(row.weightText)) : null,
+  const fields = { ...(row.kind === 'warmup' ? { is_warmup: true } : {}), set_index: row.setIndex, weight_kg: row.weightText.trim() ? String(Number(row.weightText)) : null,
     reps: Number(row.repsText), ...effortFields(row.effortKind ?? 'rpe', row.rpeText), completed: true, failed: false };
   return row.kind === 'added'
     ? { ...fields, exercise_id: row.exercise.exercise_id, plan_day_id: row.exercise.plan_day_id, logged_date: row.loggedDate ?? row.sourceLog?.logged_date ?? '' }
@@ -59,7 +59,7 @@ export function allDayLogRequest(row: WorkoutSetDraft): SetLogUpsertRequest {
 /** Whole-day completion leaves existing actuals intact; checking an exercise saves its displayed values. */
 export function completionWrites(sheet: AllDaySheet, exerciseId?: string) {
   return sheet.exercises.filter(block => !exerciseId || block.exercise.id === exerciseId).flatMap(block =>
-    block.rows.filter(row => !(row.kind && !row.sourceLog && !row.weightText.trim() && !row.repsText.trim() && !row.rpeText.trim()))
+    block.rows.filter(row => row.kind !== 'warmup' || Boolean(row.weightText.trim())).filter(row => !(row.kind && !row.sourceLog && !row.weightText.trim() && !row.repsText.trim() && !row.rpeText.trim()))
       .filter(row => exerciseId || !row.sourceLog || row.sourceLog.assumed)
       .map(row => ({ row, request: allDayLogRequest(row) })));
 }

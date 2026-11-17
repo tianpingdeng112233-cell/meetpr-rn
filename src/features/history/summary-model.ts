@@ -197,7 +197,7 @@ export function replayE1RMHistoryPoints(
         familyByExerciseId.get(log.exercise_id) === family &&
         log.completed &&
         !log.failed &&
-        !log.assumed,
+        !log.assumed && !log.is_warmup,
     )
     .sort((left, right) => new Date(left.logged_at).getTime() - new Date(right.logged_at).getTime() || left.id.localeCompare(right.id));
 

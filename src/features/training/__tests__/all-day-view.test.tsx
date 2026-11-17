@@ -13,6 +13,7 @@ import type { PlanDetail } from '@/api/domains/plans';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Svg, { LinearGradient, Rect } from 'react-native-svg';
+import { FeedbackPressable } from '@/design/FeedbackPressable';
 import { NumberPad } from '@/design/NumberPad';
 import { ExerciseNoteSheet } from '@/features/chat/ExerciseNoteSheet';
 import { ChatExerciseNoteCard } from '@/features/chat/ChatExerciseNoteCard';
@@ -28,7 +29,7 @@ import * as trainingConstants from '../constants';
 import { AllDayBody } from '../AllDayBody';
 import { StudentExercisePicker } from '../StudentExercisePicker';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
-import { DayCompletionBanner } from '../CompletionControls';
+import { DayCompletionBanner, WorkoutCompletionFlowView } from '../CompletionControls';
 import { VideoAttachmentControls } from '../video-upload/VideoAttachmentControls';
 import { resetVideoUploadStoreForTests } from '../video-upload/store';
 
@@ -395,7 +396,7 @@ test('single expanded exercise, repeated name indentation, manual collapse and c
   expect(isExpanded(first.id)).toBe(false); expect(isExpanded(second.id)).toBe(true);
   await press('Edit set 1');
   await act(async () => row(first.id).props.onPress());
-  expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+  expect(renderer.root.findAllByType(NumberPad)).toHaveLength(1);
   await act(async () => row(first.id).props.onPress());
   expect(isExpanded(first.id)).toBe(false); expect(isExpanded(second.id)).toBe(false);
   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toHaveLength(0);
@@ -938,7 +939,7 @@ test('109 pound history uses the displayed unit and includes earlier sessions to
   expect(new URL(historyPath, 'https://fixture.test').searchParams.get('to')! > gymDayToday()).toBe(true);
 });
 
-test('109 late history cannot overwrite a manually cleared weight', async () => {
+test('112 clearing weight restores the last legal history weight on dismissal', async () => {
   serveAccessoryWeights();
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   let deliver!: () => void;
@@ -954,9 +955,8 @@ test('109 late history cannot overwrite a manually cleared weight', async () => 
   await act(async () => renderer.root.findByType(NumberPad).props.onCancel());
   await act(async () => { deliver(); await new Promise(resolve => setTimeout(resolve, 30)); });
   expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows.map((row: { weightText: string }) => row.weightText))
-    .toEqual(['', '20', '17.5']);
-  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').at(-1)?.[1]?.body)
-    .toMatchObject({ weight_kg: null });
+    .toEqual(['20', '20', '17.5']);
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toHaveLength(0);
 });
 
 test('109 retains the existing gold comparison when an accessory coach weight is changed', async () => {
@@ -997,4 +997,185 @@ test.each<[string, string]>([['reps', '13'], ['rpe', '9']])('109 saving only %s 
   const weightField = renderer.root.findAll(node => node.props.accessibilityLabel === 'weight' && node.props.onPress)[0];
   expect(weightField.findAllByType(Text)[0].props.children).toBe('20');
   expect(StyleSheet.flatten(weightField.findAllByType(Text)[0].props.style).color).toBe('#111827');
+});
+
+const pressPad = async (label: string) => {
+  await act(async () => renderer.root.findByType(NumberPad).findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === label)!.props.onPress());
+};
+test('112 all-day keypad has four function keys, effort presets and floating dismissal', async () => {
+  await mount(); await expandFirst(); await press('Edit set 1');
+  const buttons = () => renderer.root.findAll(node => node.props.onPress && node.props.accessibilityRole === 'button');
+  for (const label of ['Add set', 'Fill up', 'Fill down', 'RPE', 'Hide keyboard']) {
+    expect(buttons().some(node => node.props.accessibilityLabel === label)).toBe(true);
+  }
+  expect(copy().some(text => text.startsWith('Next ·'))).toBe(false);
+  expect(copy()).not.toContain('Done');
+  await pressPad('RPE');
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rpe');
+  expect(renderer.root.findAllByType(FeedbackPressable).filter(node => node.props.testID?.startsWith('effort-preset-'))).toHaveLength(9);
+  await act(async () => renderer.root.findAll(node => node.props.testID === 'effort-preset-8.5' && node.props.onPress)[0].props.onPress());
+  expect(renderer.root.findByType(AllDayBody).props.editor.editing.row.rpeText).toBe('8.5');
+  await press('Hide keyboard');
+  expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
+});
+
+test('112 switching cells settles invalid input to the last valid value without an extra write', async () => {
+  await mount(); await expandFirst(); await press('Edit set 1');
+  await press('1'); await press('3'); await press('0');
+  await press('reps');
+  await press('1'); await press('0'); await press('0');
+  await pressPad('RPE');
+  const row = renderer.root.findByType(AllDayBody).props.editor.editing.row;
+  expect(row).toMatchObject({ weightText: '130', repsText: '10' });
+  await press('8'); await press('Decimal point'); await press('5');
+  await press('Backspace'); await press('Backspace'); await press('Backspace');
+  await press('Hide keyboard');
+  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows[0]).toMatchObject({ weightText: '130', repsText: '10', rpeText: '' });
+});
+
+const sheetRows = () => renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows as import('../model').WorkoutSetDraft[];
+test('112 warm-ups precede working sets, copy weight/reps, cap at five and never get cameras', async () => {
+  await mount(); await expandFirst();
+  await press('Add warm-up set');
+  expect(sheetRows().map(row => row.kind)).toEqual(['warmup', undefined]);
+  expect(sheetRows()[0]).toMatchObject({ weightText: '', repsText: '5', rpeText: '', setIndex: 1 });
+  expect(renderer.root.findByType(NumberPad).props.contextText).toContain('Warm-up set 1');
+  await press('2'); await press('0');
+  await press('Add set'); await press('Add set');
+  expect(sheetRows().slice(0, 3).map(row => [row.weightText, row.repsText, row.rpeText])).toEqual([['20', '5', ''], ['20', '5', ''], ['20', '5', '']]);
+  await press('Add set'); await press('Add set');
+  expect(sheetRows()).toHaveLength(6);
+  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(1);
+  expect(renderer.root.findAllByType(FeedbackPressable).find(node => node.props.accessibilityLabel === 'Maximum 5 warm-up sets')?.props.disabled).toBe(true);
+  expect(renderer.root.findByType(NumberPad).props.addSetDisabled).toBe(true);
+  await press('Hide keyboard');
+  expect(copy()).toContain('1×5');
+  expect(copy()).not.toContain('was 2');
+  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
+  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').map(([, options]) => options?.body as {is_warmup?: boolean;set_index:number});
+  expect(new Set(writes.filter(body => body.is_warmup).map(body => body.set_index)).size).toBe(5);
+});
+
+test('112 fill down/up updates only the selected field of working peers including extra sets', async () => {
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise, sets: [0, 1, 2].map(index => ({ ...exercise.sets[0], id: `70000000-0000-4000-8000-00000000000${index}`, set_number: index + 1, target_value: '135' })) }] }] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/sets/log'
+    ? { id: `90000000-0000-4000-8000-00000000000${(options?.body as {set_index:number}).set_index}`, logged_at: new Date().toISOString() } as never : original(path, options));
+  await mount(); await expandFirst();
+  await press('Add warm-up set'); await press('2'); await press('0'); await press('Hide keyboard');
+  await press('Edit set 3'); await press('Add set'); await press('Hide keyboard');
+  await press('Edit set 2'); await press('1'); await press('3'); await press('0');
+  await press('Fill down');
+  expect(sheetRows().map(row => row.weightText)).toEqual(['20', '135', '130', '130', '130']);
+  expect(sheetRows().every(row => row.repsText === '5' && row.rpeText === '')).toBe(true);
+  expect(copy().filter(text => text === 'was 135').length).toBeGreaterThanOrEqual(2);
+  expect(renderer.root.findByType(NumberPad).props.contextText).toContain('Filled weight in 2 sets below');
+  await press('Fill up');
+  expect(sheetRows().map(row => row.weightText)).toEqual(['20', '130', '130', '130', '130']);
+  await pressPad('RPE');
+  expect(renderer.root.findByType(NumberPad).props.contextText).not.toContain('Filled');
+});
+
+test('112 completing today drops blank-weight warm-ups even after editing their reps', async () => {
+  await mount(); await expandFirst(); await press('Add warm-up set');
+  await press('reps'); await press('6'); await press('Hide keyboard');
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toHaveLength(0);
+  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
+  expect(sheetRows().some(row => row.kind === 'warmup')).toBe(false);
+  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log');
+  expect(writes).toHaveLength(1);
+  expect(writes[0][1]?.body).toMatchObject({ set_index: 0, weight_kg: '80' });
+  expect(writes[0][1]?.body).not.toHaveProperty('is_warmup', true);
+  expect(copy()).toContain(t('student.workoutCompletionFlowView.copy001'));
+});
+
+test('112 another exercise cell is selectable with the panel open and settles the previous cell', async () => {
+  const first = plan.days[0].exercises[0];
+  const second = { ...first, id: '50000000-0000-4000-8000-000000000002', sort_order: 1, sets: [{ ...first.sets[0], id: '70000000-0000-4000-8000-000000000002' }] };
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [first, second] }] };
+  await mount(); await expandFirst(); await press('Edit set 1');
+  await press('9'); await press('5');
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${second.id}` && node.props.onPress)[0].props.onPress());
+  expect(renderer.root.findAllByType(NumberPad)).toHaveLength(1);
+  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-edit-reps-${second.sets[0].id}` && node.props.onPress)[0].props.onPress());
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('reps');
+  expect(renderer.root.findByType(AllDayBody).props.editor.editing.row.exercise.id).toBe(second.id);
+  expect(renderer.root.findByType(AllDayBody).props.sheet.exercises[0].rows[0].weightText).toBe('95');
+});
+
+test('112 RIR offers six presets and clearing effort fills only warm-up peers', async () => {
+  const first = plan.days[0].exercises[0];
+  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...first, sets: [{ ...first.sets[0], load_mode: 'rir', intensity_mode: 'rpe', rir_target: 2, target_value: '2' }] }] }] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/sets/log'
+    ? { id: `90000000-0000-4000-8000-00000000000${(options?.body as {set_index:number}).set_index}`, logged_at: new Date().toISOString() } as never : original(path, options));
+  await mount(); await expandFirst(); await press('Add warm-up set');
+  await press('2'); await press('0'); await press('Add set');
+  await pressPad('RIR');
+  const presets = renderer.root.findAllByType(FeedbackPressable).filter(node => node.props.testID?.startsWith('effort-preset-'));
+  expect(presets.map(node => node.props.accessibilityLabel)).toEqual(['RIR 0', 'RIR 1', 'RIR 2', 'RIR 3', 'RIR 4', 'RIR 5']);
+  await press('RIR 3');
+  expect(sheetRows().map(row => row.rpeText)).toEqual(['', '3', '2']);
+  await press('Fill up');
+  expect(sheetRows().map(row => row.rpeText)).toEqual(['3', '3', '2']);
+  await press('Backspace'); await press('Fill up');
+  expect(sheetRows().map(row => row.rpeText)).toEqual(['', '', '2']);
+  await press('Fill down');
+  expect(renderer.root.findByType(NumberPad).props.contextText).toContain('No sets below');
+  await press('RIR 0');
+  expect(renderer.root.findByType(NumberPad).props.contextText).not.toContain('No sets below');
+});
+
+test.each([false, true])('112 old records retain actuals and extras while warm-ups sort first (warm-ups: %s)', async includeWarmups => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  const first = plan.days[0].exercises[0];
+  const log = { id: '90000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: first.id, exercise_id: first.exercise_id, set_index: 0,
+    weight_kg: '92.5', reps: 4, rpe: '8', completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z' };
+  const logs = [log, { ...log, id: 'extra', set_index: 1, weight_kg: '95' }, ...(includeWarmups ? [{ ...log, id: 'warmup4', set_index: 4, is_warmup: true, weight_kg: '40' }, { ...log, id: 'warmup2', set_index: 2, is_warmup: true, weight_kg: '20' }] : [])];
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path.includes('/sets?') ? { logs } as never : original(path, options));
+  await mount(); await expandFirst();
+  expect(sheetRows().map(row => row.weightText)).toEqual(includeWarmups ? ['20', '40', '92.5', '95'] : ['92.5', '95']);
+  expect(sheetRows().filter(row => row.kind === 'warmup')).toHaveLength(includeWarmups ? 2 : 0);
+  expect(renderer.root.findAllByType(VideoAttachmentControls)).toHaveLength(2);
+  expect(copy()).toContain('1×4/5');
+  expect(copy()).toContain('1×4');
+});
+
+test('112 warm-up history cannot become a suggested working weight', async () => {
+  serveAccessoryWeights();
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    const response = await original(path, options);
+    if (path.includes('/sets?') && path.includes('from=1970-01-01')) return { logs: (response as unknown as {logs: object[]}).logs.map(log => ({ ...log, is_warmup: true })) } as never;
+    return response;
+  });
+  await mount();
+  expect(sheetRows().map(row => row.weightText)).toEqual(['', '', '']);
+});
+
+test('112 historical warm-ups do not suppress working-set PRs in the completion reward', async () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  const first = plan.days[0].exercises[0];
+  const log = { id: '90000000-0000-4000-8000-000000000001', student_id: studentId, plan_exercise_id: '50000000-0000-4000-8000-000000000001', exercise_id: first.exercise_id, set_index: 0,
+    weight_kg: '100', reps: 5, rpe: '8', completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-08-01', logged_at: '2026-08-01T12:00:00Z' };
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path.includes('/sets?') && path.includes('from=1970-01-01')
+    ? { logs: [log, { ...log, id: '90000000-0000-4000-8000-000000000002', set_index: 1, weight_kg: '120', is_warmup: true }] } as never : original(path, options));
+  await mount(); await expandFirst(); await press('Edit set 1');
+  await press('1'); await press('1'); await press('0'); await press('Hide keyboard');
+  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
+  expect(renderer.root.findByType(WorkoutCompletionFlowView).props.presentation).toMatchObject({
+    hasPersonalRecord: true, completedSetCount: 1, totalVolumeText: '550',
+  });
+});
+
+test('112 switching the effort mode settles a cleared required cell before saving', async () => {
+  serveAccessoryWeights();
+  await mount(); await expandFirst(); await press('Edit set 1');
+  await press('Backspace'); await press('Backspace');
+  const header = renderer.root.findAllByType(FeedbackPressable).find(node => !node.props.accessibilityRole && node.findAllByType(Text).some(text => text.props.children === 'RPE'))!;
+  await act(async () => header.props.onPress());
+  expect(sheetRows()[0].weightText).toBe('2');
+  expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').every(([, options]) => (options?.body as {weight_kg:string}).weight_kg === '2')).toBe(true);
 });

@@ -58,13 +58,13 @@ export function synthesizeDrafts(
     return indices.map(index => {
       const source = logs.filter(log => log.plan_exercise_id === exercise.id && log.set_index === index)
         .sort((a, b) => Number(a.assumed) - Number(b.assumed) || Date.parse(b.logged_at) - Date.parse(a.logged_at))[0];
-      return unprescribedDraft(exercise, index, 'extra', exerciseOrdinal, source);
+      return unprescribedDraft(exercise, index, source.is_warmup ? 'warmup' : 'extra', exerciseOrdinal, source);
     });
   }));
 }
 
 /** Synthetic set metadata only adapts the existing editor; it is never sent as a prescription. */
-function unprescribedDraft(exercise: PlanExercise, setIndex: number, kind: 'extra' | 'added', exerciseOrdinal: number, sourceLog: SetLog | null = null): WorkoutSetDraft {
+function unprescribedDraft(exercise: PlanExercise, setIndex: number, kind: 'extra' | 'added' | 'warmup', exerciseOrdinal: number, sourceLog: SetLog | null = null): WorkoutSetDraft {
   const stableSetId = `${kind}:${exercise.id}:${setIndex}`;
   const planSet: PlanSet = { id: stableSetId, plan_exercise_id: exercise.id, set_number: setIndex + 1,
     target_reps: 0, target_reps_max: null, intensity_mode: 'weight', target_value: '0',
@@ -79,12 +79,24 @@ export function addExtraDraft(exercise: PlanExercise, drafts: readonly WorkoutSe
   const rows = drafts.filter(row => row.exercise.id === exercise.id);
   if (rows.filter(row => row.kind === 'extra').length >= 10) return null;
   const index = Math.max(exercise.sets.length - 1, ...rows.map(row => row.setIndex)) + 1;
-  const lastLog = rows.filter(row => row.sourceLog && !row.sourceLog.assumed && isDraftTerminal(row))
+  const lastLog = rows.filter(row => row.kind !== 'warmup' && row.sourceLog && !row.sourceLog.assumed && isDraftTerminal(row))
     .sort((a, b) => Date.parse(b.sourceLog!.logged_at) - Date.parse(a.sourceLog!.logged_at) || b.setIndex - a.setIndex)[0];
   const lastPrescription = rows.filter(row => !row.kind).sort((a, b) => b.setIndex - a.setIndex)[0];
   const previous = lastLog ?? lastPrescription;
   return { ...unprescribedDraft(exercise, index, 'extra', rows[0]?.exerciseOrdinal ?? exercise.sort_order),
     weightText: previous?.weightText ?? '', repsText: previous?.repsText ?? '' };
+}
+
+/** Shares the post-prescription index space with extra sets (backend 068). */
+export function addWarmupDraft(exercise: PlanExercise, drafts: readonly WorkoutSetDraft[]): WorkoutSetDraft | null {
+  if (exercise.id.startsWith('added:')) return null;
+  const rows = drafts.filter(row => row.exercise.id === exercise.id);
+  const warmups = rows.filter(row => row.kind === 'warmup').sort((a, b) => a.setIndex - b.setIndex);
+  if (warmups.length >= 5) return null;
+  const previous = warmups.at(-1);
+  const first = rows.find(row => !row.kind);
+  return { ...unprescribedDraft(exercise, Math.max(exercise.sets.length - 1, ...rows.map(row => row.setIndex)) + 1, 'warmup', rows[0]?.exerciseOrdinal ?? exercise.sort_order),
+    weightText: previous?.weightText ?? '', repsText: previous?.repsText ?? first?.repsText ?? '', effortKind: previous?.effortKind ?? first?.effortKind ?? 'rpe' };
 }
 
 export function mergeLiveDrafts(

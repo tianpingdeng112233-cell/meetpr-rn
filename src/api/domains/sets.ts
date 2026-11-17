@@ -15,6 +15,7 @@ function decimalRequestInRange(minimum: number, maximum: number) {
 }
 
 const SetLogFieldsSchema = z.object({
+  is_warmup: z.boolean().optional(),
   set_index: z.number().int().min(0),
   /** Decimal request value; sent as a precision-preserving string. */
   weight_kg: decimalRequestInRange(0, 9999.99).nullable(),
@@ -50,6 +51,7 @@ export const SetLogUpsertResponseSchema = z.object({
 });
 
 export const SetLogSchema = z.object({
+  is_warmup: z.boolean().optional().default(false),
   id: UuidSchema,
   student_id: UuidSchema,
   plan_exercise_id: UuidSchema.nullable(),
@@ -87,7 +89,7 @@ export const SetLogRangeSchema = z
 
 export type SetLogUpsertRequest = z.input<typeof SetLogUpsertRequestSchema>;
 export type SetLogUpsertResponse = z.infer<typeof SetLogUpsertResponseSchema>;
-export type SetLog = Omit<z.infer<typeof SetLogSchema>, 'plan_day_id'> & { plan_day_id?: string | null };
+export type SetLog = Omit<z.infer<typeof SetLogSchema>, 'plan_day_id' | 'is_warmup'> & { plan_day_id?: string | null; is_warmup?: boolean };
 export type SetLogsResponse = { logs: SetLog[] };
 export type SetLogRange = z.input<typeof SetLogRangeSchema>;
 

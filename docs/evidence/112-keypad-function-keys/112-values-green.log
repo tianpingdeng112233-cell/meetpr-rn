@@ -1,0 +1,16 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/design/__tests__/number-pad.test.ts
+
+PASS src/design/__tests__/number-pad.test.ts
+  ✓ accessory entry preserves light weights and validates each field without barbell snapping (2 ms)
+  ✓ limits decimal entry and digit counts while replacing a leading zero (1 ms)
+  ✓ confirmation snaps weights to quarters and clamps each field
+  ✓ RPE input snaps half steps and stays inside the approved scale
+  ✓ 112 settlement restores invalid/empty required cells and permits clearing effort (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.657 s
+Ran all test suites matching /src\/design\/__tests__\/number-pad.test.ts/i.

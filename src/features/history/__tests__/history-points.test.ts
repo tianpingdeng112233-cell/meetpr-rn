@@ -2,7 +2,7 @@ import { beforeEach, expect, jest, test } from '@jest/globals';
 import { InMemoryE1RMRepository, type E1RMHistoryPoint } from '@/domain/e1rm';
 import { replayE1RMHistoryPoints } from '@/features/history/summary-model';
 import { loadGrowthHistory } from '../history-points';
-import { buildGrowthCurves, growthSnapshot } from '../model';
+import { buildGrowthCurves, growthSnapshot, historyStats, chartBuckets } from '../model';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AsyncStorageE1RMRepository } from '@/features/training/storage';
 import { STORAGE_KEYS } from '@/features/training/constants';
@@ -91,4 +91,16 @@ test('107 a server-confirmed null weight retires only that set estimate, retaini
   const points = await loadGrowthHistory(repository, 'student', [{ ...log, weight_kg: null }], families);
   expect(points.map(point => point.setLogId)).toEqual(['orphan']);
   expect((await repository.historySnapshot('student')).points.map(point => point.setLogId)).toEqual(['orphan']);
+});
+
+test('112 warm-ups do not change growth e1RM, records, volume or session counts', async () => {
+  const log: SetLog = { id: 'work', student_id: 'student', plan_exercise_id: 'exercise', exercise_id: 'squat', set_index: 0,
+    weight_kg: '100', reps: 1, rpe: '10', completed: true, failed: false, assumed: false, adhoc: false, logged_date: '2026-09-14', logged_at: '2026-09-14T12:00:00Z' };
+  const warmup = { ...log, id: 'warmup', set_index: 1, is_warmup: true, weight_kg: '200', logged_date: '2026-09-15', logged_at: '2026-09-15T12:00:00Z' };
+  const families = new Map([['squat', 'squat' as const]]);
+  const baseline = await loadGrowthHistory(new InMemoryE1RMRepository(), 'student', [log], families);
+  const actual = await loadGrowthHistory(new InMemoryE1RMRepository(), 'student', [log, warmup], families);
+  expect(actual).toEqual(baseline);
+  expect(historyStats([log, warmup])).toEqual(historyStats([log]));
+  expect(chartBuckets([log, warmup])).toEqual(chartBuckets([log]));
 });

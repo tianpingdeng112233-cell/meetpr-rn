@@ -1,4 +1,23 @@
 {
+"training.pad.filledUp": {"en": "Filled {1} in {0} sets above", "zh": "已改上方 {0} 组的{1}"},
+"training.pad.filledDown": {"en": "Filled {1} in {0} sets below", "zh": "已改下方 {0} 组的{1}"},
+"training.pad.emptyUp": {"en": "No sets above", "zh": "上方没有组了"},
+"training.pad.emptyDown": {"en": "No sets below", "zh": "下方没有组了"},
+
+"training.warmup.add": {"en": "Add warm-up set", "zh": "加热身组"},
+"training.warmup.limit": {"en": "Maximum 5 warm-up sets", "zh": "热身组最多 5 组"},
+"training.warmup.set": {"en": "Warm-up set {0}", "zh": "热身第 {0} 组"},
+"training.warmup.context": {"en": "{0} · Warm-up set {1} · {2}", "zh": "{0} · 热身第 {1} 组 · {2}"},
+"training.warmup.marker": {"en": "W", "zh": "热"},
+
+"training.pad.addSet": {"en": "Add set", "zh": "加一组"},
+"training.pad.fill": {"en": "Fill", "zh": "一键改"},
+"training.pad.fillUp": {"en": "Fill up", "zh": "一键改向上"},
+"training.pad.fillDown": {"en": "Fill down", "zh": "一键改向下"},
+"training.pad.up": {"en": "Up", "zh": "向上"},
+"training.pad.down": {"en": "Down", "zh": "向下"},
+"training.pad.hide": {"en": "Hide keyboard", "zh": "收起键盘"},
+
 "training.handoff.subtitle": {"en": "{0} · {1} weeks", "zh": "{0} · 共 {1} 周"},
 "training.handoff.startsAfter": {"en": "Starts after your current cycle", "zh": "练完当前周期后开始"},
 "training.handoff.newCycle": {"en": "New cycle", "zh": "新周期"},

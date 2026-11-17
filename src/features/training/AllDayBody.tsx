@@ -7,7 +7,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { font, GradientFill, useColors } from '@/design';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { NumberPad, type NumberPadHandle } from '@/design/NumberPad';
-import { accessoryValue, type NumberPadField } from '@/design/number-pad';
+import { accessoryValue, settledAccessoryText, type NumberPadField } from '@/design/number-pad';
 import { t } from '@/i18n';
 import type { PlanExercise } from '@/api/domains/plans';
 import { decodePrescription } from '@/domain/plan/prescription';
@@ -32,13 +32,14 @@ function TimelineConnector({ exerciseId, current, color }: { exerciseId: string;
   </View>;
 }
 
-export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, onEffortChoice, unit = 'kg' }: {
+export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title, exerciseName, allowsRIR, onSave, onToggle, onExpand, onNote, onAddWarmup, onAddSet, onRemoveSet, onAddExercise, onRemoveExercise, ensureSetLog, editor, onEffortChoice, unit = 'kg' }: {
   onVideoActivity?: (stableSetId: string, active: boolean) => void;
   onEffortChoice?: (row: WorkoutSetDraft) => void;
   unit?: 'kg' | 'lb'; onExpand: (id: string) => void;
   sheet: AllDaySheet; editable: boolean; studentId: string; title: string;
   exerciseName: (id: string) => string; allowsRIR: (id: string) => boolean;
   onSave: (row: WorkoutSetDraft) => void; onToggle: (id: string) => void; onNote?: (row: WorkoutSetDraft) => void;
+  onAddWarmup?: (exercise: PlanExercise) => void;
   onAddSet: (exercise: PlanExercise) => void; onRemoveSet: (row: WorkoutSetDraft) => void;
   onAddExercise: () => void; onRemoveExercise: (exercise: PlanExercise) => void;
   ensureSetLog: (row: WorkoutSetDraft) => Promise<string>;
@@ -46,7 +47,7 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
 }) {
   const colors = useColors();
   const { editing, edit, pad, rowViews } = editor;
-  const count = sheet.exercises.reduce((n, block) => n + block.rows.length, 0);
+  const count = sheet.exercises.reduce((n, block) => n + block.rows.filter(row => row.kind !== 'warmup').length, 0);
   const body = <>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
       <Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t('training.allDay.summary', [title, sheet.exercises.length])}</Text>
@@ -59,11 +60,13 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
       const expanded = !block.collapsed;
       const current = block.node === 'current';
       const nodeColor = done ? colors.success : current ? colors.gold500 : colors.textGhost;
+      const workingRows = block.rows.filter(row => row.kind !== 'warmup');
+      const warmups = block.rows.filter(row => row.kind === 'warmup');
       const summary = summarizeExercise(block.exercise.sets,
-        block.rows.flatMap<ExerciseSummaryActual>(row => row.sourceLog ? [row.sourceLog] : row.kind && (row.weightText || row.repsText || row.rpeText) ? [allDayLogRequest(row)] : []),
-        block.rows.filter(row => !row.sourceLog && row.weightText).map(row => ({ plan_set_id: row.planSet.id, weight_kg: row.weightText })),
-        { unit, effortKinds: Object.fromEntries(block.rows.map(row => [row.setIndex, row.effortKind ?? 'rpe'])), labels: { bodyweight: t('loadTypes.bodyweight'), freeWeight: t('training.allDay.freeWeight'), topSet: t('training.allDay.topSet'), unrecorded: t('training.allDay.unrecorded') } });
-      const toggleExpanded = () => { pad.current?.dismiss(); onExpand(block.exercise.id); };
+        workingRows.flatMap<ExerciseSummaryActual>(row => row.sourceLog ? [row.sourceLog] : row.kind && (row.weightText || row.repsText || row.rpeText) ? [allDayLogRequest(row)] : []),
+        workingRows.filter(row => !row.sourceLog && row.weightText).map(row => ({ plan_set_id: row.planSet.id, weight_kg: row.weightText })),
+        { unit, effortKinds: Object.fromEntries(workingRows.map(row => [row.setIndex, row.effortKind ?? 'rpe'])), labels: { bodyweight: t('loadTypes.bodyweight'), freeWeight: t('training.allDay.freeWeight'), topSet: t('training.allDay.topSet'), unrecorded: t('training.allDay.unrecorded') } });
+      const toggleExpanded = () => { if (expanded) pad.current?.dismiss(); onExpand(block.exercise.id); };
       const content = <View key={block.exercise.id} style={{ flexDirection: 'row', gap: 12 }}>
         <View style={{ width: 22, alignItems: 'center' }}>
           {index < sheet.exercises.length - 1 ? <TimelineConnector exerciseId={block.exercise.id} current={current} color={nodeColor} /> : null}
@@ -74,7 +77,7 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
         </View>
         <View style={{ flex: 1, gap: 8, paddingBottom: 16 }}>
           <View style={{ minHeight: 48, paddingHorizontal: 6, borderRadius: 12, borderWidth: 1, borderColor: expanded || current ? colors.gold500 : 'transparent', backgroundColor: current ? colors.goldSoft : undefined }}>
-            <Pressable testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, justifyContent: 'center', gap: 4, paddingVertical: 8 }}>
+            <Pressable onTouchEnd={event => event.stopPropagation()} testID={`all-day-exercise-${block.exercise.id}`} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ flex: 1, minHeight: 48, justifyContent: 'center', gap: 4, paddingVertical: 8 }}>
               <View style={{ paddingRight: 64, minHeight: 30, justifyContent: 'center' }}>
                 {!block.repeatName ? <Text numberOfLines={2} testID={`all-day-name-${block.exercise.id}`} style={{ ...font.body(15, 'bold'), color: done ? colors.textSecondary : colors.textPrimary }}>{name}{block.rows[0]?.kind === 'added' ? ` · ${t('student.added.added')}` : ''}</Text> : null}
               </View>
@@ -93,22 +96,28 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
               </View>
             </Pressable>
             <View style={{ position: 'absolute', right: 6, top: 8, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-            <Pressable accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ minHeight: 30, width: 16, justifyContent: 'center' }}><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} /></Pressable>
+            <Pressable onTouchEnd={event => event.stopPropagation()} accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ expanded }} onPress={toggleExpanded} style={{ minHeight: 30, width: 16, justifyContent: 'center' }}><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} /></Pressable>
             {editable ? <Pressable testID={`all-day-check-${block.exercise.id}`} accessibilityRole="checkbox" accessibilityLabel={t(done ? 'training.allDay.expand' : 'training.allDay.completeExercise')} accessibilityState={{ checked: done }} onPress={() => { pad.current?.dismiss(); onToggle(block.exercise.id); }} style={{ width: 30, height: 30, borderRadius: 15, borderWidth: 1.5, borderColor: done ? colors.success : colors.textSecondary, backgroundColor: done ? colors.success : undefined, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="check" size={17} color={done ? colors.inkOnCTAFill : colors.textSecondary} /></Pressable> : null}
             </View>
           </View>
           {expanded ? <>
             {editable && block.rows[0]?.kind === 'added' ? <Pressable onPress={() => onRemoveExercise(block.exercise)}><Text style={{ color: colors.danger }}>{t('student.added.remove')}</Text></Pressable> : null}
             {block.exercise.notes ? <Text style={{ ...font.body(12), color: colors.goldText }}>{t('training.allDay.coachNote', [block.exercise.notes])}</Text> : null}
+            {editable && !block.exercise.id.startsWith('added:') ? <Pressable accessibilityRole="button" accessibilityLabel={t(warmups.length >= 5 ? 'training.warmup.limit' : 'training.warmup.add')} disabled={warmups.length >= 5}
+              accessibilityState={{ disabled: warmups.length >= 5 }} onPress={() => onAddWarmup?.(block.exercise)} style={{ minHeight: 44, justifyContent: 'center' }}>
+              <Text style={{ ...font.body(13, 'semibold'), color: warmups.length >= 5 ? colors.textMuted : colors.goldText }}>{warmups.length >= 5 ? t('training.warmup.limit') : `＋ ${t('training.warmup.add')}`}</Text>
+            </Pressable> : null}
             <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
               {block.rows.map(row => {
+                const warmup = row.kind === 'warmup';
+                const ordinal = (warmup ? warmups : workingRows).findIndex(item => item.stableSetId === row.stableSetId) + 1;
                 const active = editing?.row.stableSetId === row.stableSetId;
                 const display = active ? editing.row : row;
                 const historyPrefill = Boolean(display.weightPrefilledFromHistory && !row.sourceLog);
                 const prescription = decodePrescription(row.planSet);
                 const percentage = prescription.intensity?.kind === 'pct' ? <Text style={{ ...font.body(11), color: colors.textSecondary, marginRight: 8 }}>{`${prescription.intensity.value}%`}</Text> : null;
                 const short = !row.kind && Number(display.repsText) < prescription.reps;
-                const differences = row.kind ? null : prescriptionDifferences(allDayLogRequest(display), row.planSet);
+                const differences = row.kind ? (display.originalWeightText != null && display.originalWeightText !== display.weightText ? { weight: display.originalWeightText, reps: null, effort: null } : null) : prescriptionDifferences(allDayLogRequest(display), row.planSet);
                 const weightChanged = differences?.weight != null;
                 const historicalWeight = display.previousWeightKg != null && allowsHistoricalWeight(prescription);
                 const textColor = (historyPrefill || (weightChanged && !historicalWeight)) ? colors.goldText : colors.textPrimary;
@@ -118,7 +127,7 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                     {(['weight', 'reps', display.effortKind === 'rir' ? 'rir' : 'rpe'] as const).map(field => <View key={field} style={{ flex: field === 'weight' ? 1.5 : 1, gap: 4 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4, marginVertical: -4 }}>
                       <Pressable disabled={field === 'weight' || field === 'reps' || !allowsRIR(row.exercise.exercise_id)} onPress={() => {
-                        const switched = { ...display, effortKind: display.effortKind === 'rir' ? 'rpe' as const : 'rir' as const, rpeText: '' };
+                        const switched = { ...(editor.settle() ?? display), effortKind: display.effortKind === 'rir' ? 'rpe' as const : 'rir' as const, rpeText: '' };
                         onEffortChoice?.(switched); onSave(switched); edit(switched, switched.effortKind);
                       }}><Text style={{ ...font.body(11), color: colors.textSecondary }}>{field === 'weight' ? t('training.allDay.weightUnit', [unit]) : field === 'reps' ? t('student.accessory.pad.reps') : field.toUpperCase()}</Text></Pressable>
                       {field === 'rpe' || field === 'rir' ? <EffortHelpButton kind={field} inline /> : null}
@@ -132,22 +141,24 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                     </View>)}
                     {percentage}
                   </View> : <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38 }}>
-                    <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t('training.allDay.editSet', [row.setIndex + 1])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
-                      <Text style={{ ...font.mono(12), color: colors.textMuted, width: 18 }}>{row.setIndex + 1}</Text>
+                    <Pressable disabled={!editable} accessibilityRole="button" accessibilityLabel={t(warmup ? 'training.warmup.set' : 'training.allDay.editSet', [ordinal])} onPress={() => edit(row)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 38, paddingHorizontal: 8, gap: 8 }}>
+                      <Text style={{ ...font.mono(12), color: warmup ? colors.goldText : colors.textMuted, fontWeight: warmup ? 'bold' : undefined, width: 18 }}>{warmup ? t('training.warmup.marker') : ordinal}</Text>
                       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 3 }}>
                         <Text testID={`all-day-weight-${row.stableSetId}`} style={{ ...font.mono(15, 'semibold'), color: textColor }}>{displayWeight(display.weightText, unit) || '—'}</Text><Text style={{ ...font.body(12), color: colors.textMuted }}>{unit}</Text>
                         {weightChanged && differences?.weight !== '—' ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [unit === 'lb' ? differences!.weight!.replace(/\d+(?:\.\d+)?/g, value => displayWeight(value, unit)) : differences!.weight!])}</Text> : null}
+                      </View>
+                    </Pressable>
+                    <Pressable testID={`all-day-edit-reps-${row.stableSetId}`} disabled={!editable} accessibilityRole="button" accessibilityLabel={t('student.accessory.pad.reps')} onPress={() => edit(row, 'reps')} style={{ minHeight: 38, justifyContent: 'center', paddingHorizontal: 4 }}>
                         <Text style={{ ...font.mono(15, 'semibold'), color: short ? colors.danger : differences?.reps ? colors.goldText : colors.textPrimary }}>× {short ? `${display.repsText}/${prescription.reps}` : display.repsText || '—'}</Text>
                         {differences?.reps && !short ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [differences.reps])}</Text> : null}
-                      </View>
                     </Pressable>
                     <Pressable testID={`all-day-edit-effort-${row.stableSetId}`} disabled={!editable} accessibilityRole="button" accessibilityLabel={(display.effortKind ?? 'rpe').toUpperCase()} onPress={() => edit(row, display.effortKind ?? 'rpe')} style={{ minHeight: 38, justifyContent: 'center', paddingHorizontal: 4 }}>
                       <View><Text style={{ ...font.mono(13), color: differences?.effort ? colors.goldText : colors.textSecondary }}>{`${display.effortKind === 'rir' ? 'RIR' : 'RPE'} ${display.rpeText || '—'}`}</Text>{differences?.effort && differences.effort !== '—' ? <Text style={{ ...font.body(10), color: colors.textMuted }}>{t('training.allDay.original', [differences.effort])}</Text> : null}</View>
                     </Pressable>
-                    {editable && row.kind === 'extra' ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
+                    {editable && (row.kind === 'extra' || warmup) ? <Pressable accessibilityLabel={t('student.added.removeSet')} onPress={() => onRemoveSet(row)}><MaterialCommunityIcons name="close" size={18} color={colors.textMuted} /></Pressable> : null}
                     {percentage}
                   </View>}
-                  {editable ? <VideoAttachmentControls onActivityChange={onVideoActivity} compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
+                  {warmup ? <View style={{ width: 44 }} /> : editable ? <VideoAttachmentControls onActivityChange={onVideoActivity} compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
                     badge={{ exerciseName: name, setOrdinal: row.setIndex + 1, weightKg: row.weightText ? Number(row.weightText) : null, reps: row.repsText ? Number(row.repsText) : null, rpe: row.effortKind !== 'rir' && row.rpeText ? Number(row.rpeText) : null }} />}
                   </View>
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
@@ -162,7 +173,7 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
         </View>
       </View>;
       return editable ? content : <CompletedVideoGroup key={block.exercise.id} compact
-        sets={block.rows.map(row => ({ setLogId: row.sourceLog?.id ?? null, stableSetId: row.stableSetId }))}>
+        sets={workingRows.map(row => ({ setLogId: row.sourceLog?.id ?? null, stableSetId: row.stableSetId }))}>
         {() => content}
       </CompletedVideoGroup>;
     })}
@@ -175,8 +186,9 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
 
 
 export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exerciseName: (id: string) => string,
-  onPadLayout: (row: View | null, panel: { top: number; height: number } | null) => void, scopeKey: string, unit: 'kg' | 'lb' = 'kg', onEffortChoice?: (row: WorkoutSetDraft) => void) {
+  onPadLayout: (row: View | null, panel: { top: number; height: number } | null) => void, scopeKey: string, unit: 'kg' | 'lb' = 'kg', onEffortChoice?: (row: WorkoutSetDraft) => void, rows: readonly WorkoutSetDraft[] = [], onAddSet?: (exercise: PlanExercise, warmup: boolean) => WorkoutSetDraft | null) {
   const [editing, setEditing] = useState<{ row: WorkoutSetDraft; field: NumberPadField; weightInput?: string } | null>(null);
+  const [feedback, setFeedback] = useState('');
   const [previousScope, setPreviousScope] = useState(scopeKey);
   if (previousScope !== scopeKey) {
     setPreviousScope(scopeKey);
@@ -190,19 +202,36 @@ export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exercise
   }, [scopeKey, onPadLayout]);
   const rowViews = useRef(new Map<string, View>());
   const pad = useRef<NumberPadHandle>(null);
-  const close = () => { setEditing(null); onPadLayout(null, null); };
+  const legalRow = useRef<WorkoutSetDraft | null>(null);
+  const originalWeight = useRef('');
+  const settle = () => {
+    const current = input.current;
+    if (!current) return null;
+    const row = legalRow.current ?? current.row;
+    input.current = { ...current, row };
+    return row;
+  };
+  const close = () => { settle(); input.current = null; setEditing(null); onPadLayout(null, null); };
   const edit = (row: WorkoutSetDraft, field: NumberPadField = 'weight') => {
-    setEditing({ row, field });
+    setFeedback('');
+    const previous = settle();
+    if (previous?.stableSetId === row.stableSetId && previous.effortKind === row.effortKind) row = previous;
+    legalRow.current = row;
+    originalWeight.current = row.originalWeightText ?? row.weightText;
+    input.current = { row, field };
+    setEditing(input.current);
   };
   const change = (text: string) => {
+    setFeedback('');
     const current = input.current;
     if (!current) return;
     const key = current.field === 'weight' ? 'weightText' : current.field === 'reps' ? 'repsText' : 'rpeText';
     const value = current.field === 'weight' && unit === 'lb' && text.trim() && Number(text) !== 0 ? metricStored(text, POUNDS_PER_KG) : text;
     const row = { ...current.row, [key]: value,
-      ...(current.field === 'weight' ? { weightEdited: true, weightPrefilledFromHistory: false } : {}) };
+      ...(current.field === 'weight' ? { weightEdited: true, weightPrefilledFromHistory: false, ...(current.row.kind && originalWeight.current ? { originalWeightText: originalWeight.current } : {}) } : {}) };
     input.current = { ...current, row, ...(current.field === 'weight' ? { weightInput: text } : {}) }; setEditing(input.current);
-    if (accessoryValue(text, current.field) !== undefined) {
+    if (accessoryValue(text, current.field) !== undefined && settledAccessoryText(text, current.field, '\0') === text) {
+      legalRow.current = row;
       if (current.field === 'rpe' || current.field === 'rir') onEffortChoice?.(row);
       onSave(row);
     }
@@ -212,12 +241,38 @@ export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exercise
     const back = BackHandler.addEventListener('hardwareBackPress', () => { pad.current?.dismiss(); return true; });
     return () => back.remove();
   }, [editing]);
+  const peers = editing ? rows.filter(row => row.exercise.id === editing.row.exercise.id && (row.kind === 'warmup') === (editing.row.kind === 'warmup')) : [];
+  const ordinal = editing ? peers.findIndex(row => row.stableSetId === editing.row.stableSetId) + 1 : 0;
+  const add = () => {
+    const current = settle();
+    if (!current) return;
+    const next = onAddSet?.(current.exercise, current.kind === 'warmup');
+    if (next) edit(next);
+  };
+  const fill = (direction: 'up' | 'down') => {
+    setFeedback('');
+    const current = input.current;
+    if (!current) return;
+    const key = current.field === 'weight' ? 'weightText' : current.field === 'reps' ? 'repsText' : 'rpeText';
+    if ((current.field === 'weight' || current.field === 'reps') && !current.row[key].trim()) return;
+    const source = settle()!;
+    const targets = peers.filter(row => direction === 'up' ? row.setIndex < source.setIndex : row.setIndex > source.setIndex);
+    for (const target of targets) {
+      const row = { ...target, [key]: source[key],
+        ...(key === 'rpeText' ? { effortKind: source.effortKind } : {}),
+        ...(key === 'weightText' ? { weightEdited: true, weightPrefilledFromHistory: false,
+          ...(target.kind && target.weightText ? { originalWeightText: target.originalWeightText ?? target.weightText } : {}) } : {}) };
+      onSave(row);
+    }
+    const fieldName = current.field === 'weight' ? t('student.accessory.pad.weight').toLowerCase() : current.field === 'reps' ? t('student.accessory.pad.reps').toLowerCase() : current.field.toUpperCase();
+    setFeedback(t(targets.length ? direction === 'up' ? 'training.pad.filledUp' : 'training.pad.filledDown' : direction === 'up' ? 'training.pad.emptyUp' : 'training.pad.emptyDown', [targets.length, fieldName]));
+  };
   const panel = editing ? <NumberPad ref={pad} key={`${editing.row.stableSetId}:${editing.field}`} layout="allDay" unit={unit} mode="accessory" field={editing.field} minimumWeight={0}
       initialValue={editing.field === 'weight' ? editing.weightInput ?? displayWeight(editing.row.weightText, unit) : editing.field === 'reps' ? editing.row.repsText : editing.row.rpeText}
-      contextText={t('student.accessory.pad.context', [exerciseName(editing.row.exercise.exercise_id), editing.row.setIndex + 1, editing.field === 'weight' ? t('training.allDay.weightUnit', [unit]) : editing.field === 'reps' ? t('student.accessory.pad.reps') : editing.field.toUpperCase()])}
-      nextTitle={t('student.accessory.pad.next', [editing.field === 'weight' ? t('student.accessory.pad.reps') : editing.row.effortKind === 'rir' ? 'RIR' : 'RPE']) + ' →'}
-      onNext={editing.field === 'weight' || editing.field === 'reps' ? () => edit(input.current!.row, editing.field === 'weight' ? 'reps' : editing.row.effortKind === 'rir' ? 'rir' : 'rpe') : undefined}
+      contextText={t(editing.row.kind === 'warmup' ? 'training.warmup.context' : 'student.accessory.pad.context', [exerciseName(editing.row.exercise.exercise_id), ordinal || editing.row.setIndex + 1, editing.field === 'weight' ? t('training.allDay.weightUnit', [unit]) : editing.field === 'reps' ? t('student.accessory.pad.reps') : editing.field.toUpperCase()]) + (feedback ? ` · ${feedback}` : '')}
+      onFill={fill} onAddSet={add} addSetDisabled={editing.row.kind === 'warmup' ? peers.length >= 5 : peers.filter(row => row.kind).length >= 10}
+      effortKind={editing.row.effortKind} onEffort={() => edit(input.current!.row, input.current!.row.effortKind ?? 'rpe')}
       onPanelLayout={(top, height) => onPadLayout(rowViews.current.get(editing.row.stableSetId) ?? null, { top, height })}
       onChangeText={change} onCancel={close} onDismiss={close} onCommit={close} commitTitle={t('training.allDay.done')} /> : null;
-  return { editing, edit, pad, rowViews, panel, close };
+  return { editing, edit, pad, rowViews, panel, close, settle };
 }
