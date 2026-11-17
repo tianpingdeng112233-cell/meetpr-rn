@@ -10,3 +10,8 @@
 - 新验收工作树依赖：`npm ci --offline --no-audit --no-fund` 成功，既有 `react-native-video@6.19.2` patch 应用成功；没有源码修改。
 - 依据 `/android-cn-release` 的人工作业边界，准备了一次性本人签名向导，并以 `bash -n` 验证。仅本机验收，保留 versionCode 15；没有改发版号、生成 latest.json 或上传。签名结果尚未收到。
 - 未使用任何 Android 模拟器，没有重启 ADB server；未调整电池策略、高耗电设置或用强制杀进程冒充 vivo 自然冻结。
+
+## 后续现场更新
+
+- David 已明确授权本卡独占 vivo，原前台验收包不再是权限阻塞；之后复查 ADB 仅列出 emulator-5570/5572，物理序列号 10AECF1CX90020R 不在列表。本卡没有操作这两台模拟器。
+- David 已表示在自己的 Terminal 签名；截至本轮更新，约定的非敏感签名完成路径文件尚未生成，未推断签名完成，也没有读取签名口令。等待重新连接和本人签名结果。
