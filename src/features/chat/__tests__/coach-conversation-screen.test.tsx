@@ -181,7 +181,7 @@ test('set video renews its URL and passes the set badge without coach attributio
   const player = renderer.root.findByType(FeedbackVideoPlayer);
   expect(player.props.url).toBe('https://example.com/fresh.mp4');
   expect(player.props.badge).toEqual({ exerciseName: 'Squat', weightKg: 100.5, reps: 5, rpe: 8.5, setOrdinal: 2, coachName: null });
-  expect(chatRepository.messages).toHaveBeenCalledWith(conversationId, { since_seq: 0, limit: 1 });
+  expect(chatRepository.messages).toHaveBeenCalledWith(conversationId, { before_seq: 2, limit: 1 });
 });
 
 test('initial native scroll keeps the default bottom anchor until the user scrolls', async () => {
@@ -295,4 +295,26 @@ test.each([
     expect(times()).toHaveLength(separate ? 2 : 1);
     if (separate) expect(times()).toEqual(['19:00', '19:04']);
   } finally { jest.useRealTimers(); }
+});
+
+test('standalone video with missing metadata stays a card and renews the exact message before playback', async () => {
+  const share = { ...message('standalone', 9, 'student', '[视频]'), video_id: 'video-id', video_url: null, poster_url: null, duration_seconds: null };
+  jest.mocked(chatRepository.messages).mockResolvedValueOnce({ messages: [share], meta: { has_more: false } })
+    .mockResolvedValue({ messages: [{ ...share, video_url: 'https://example.com/fresh.mp4' }], meta: { has_more: false } });
+  await renderScreen();
+  expect(renderer.root.findByProps({ testID: 'chat.video.standalone' })).toBeDefined();
+  expect(copy()).not.toContain('[视频]');
+  await act(async () => { await button('chat.playVideo').props.onPress(); });
+  expect(chatRepository.messages).toHaveBeenCalledWith(conversationId, { before_seq: 10, limit: 1 });
+  expect(renderer.root.findByType(FeedbackVideoPlayer).props.url).toBe('https://example.com/fresh.mp4');
+  expect(renderer.root.findByType(FeedbackVideoPlayer).props.badge).toBeNull();
+});
+
+test('renewal cannot play a different message returned by the history endpoint', async () => {
+  const share = { ...message('standalone', 9, 'student', '[视频]'), video_id: 'video-id', video_url: 'https://example.com/stale.mp4' };
+  jest.mocked(chatRepository.messages).mockResolvedValueOnce({ messages: [share], meta: { has_more: false } })
+    .mockResolvedValue({ messages: [{ ...share, seq: 8, video_url: 'https://example.com/wrong.mp4' }], meta: { has_more: false } });
+  await renderScreen();
+  await act(async () => { await button('chat.playVideo').props.onPress(); });
+  expect(renderer.root.findAllByType(FeedbackVideoPlayer)).toHaveLength(0);
 });

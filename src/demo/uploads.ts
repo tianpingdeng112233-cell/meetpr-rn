@@ -3,6 +3,8 @@ import { CreateVideoMarkerSchema, type VideoMarker } from '@/api/domains/video-m
 import type { SetLog } from '@/api/domains/sets';
 import type { Exercise } from '@/api/domains/exercises';
 import { UploadCancelledError, type MultipartOptions } from '@/features/training/video-upload/multipart';
+import { Directory, File, Paths } from 'expo-file-system';
+import { createUUID } from '@/analytics/uuid';
 
 type DemoUpload = { attachment: Attachment; localUri?: string; ready: boolean };
 const uploads = new Map<string, DemoUpload>();
@@ -11,7 +13,11 @@ export function demoVideoUrl(id: string): string | null {
   const upload = uploads.get(id);
   return upload?.ready ? upload.localUri ?? null : null;
 }
-export function resetDemoUploads() { uploads.clear(); markers = []; }
+function removeDemoCopy(upload: DemoUpload) {
+  if (upload.attachment.kind !== 'chat_video' || !upload.localUri) return;
+  try { const file = new File(upload.localUri); if (file.exists) file.delete(); } catch { /* demo cache cleanup */ }
+}
+export function resetDemoUploads() { uploads.forEach(removeDemoCopy); uploads.clear(); markers = []; }
 
 export async function uploadDemoParts(fileUri: string, partUrls: readonly { part_number: number; url: string }[], options: MultipartOptions) {
   const results = [...(options.completedParts ?? [])];
@@ -20,7 +26,22 @@ export async function uploadDemoParts(fileUri: string, partUrls: readonly { part
     const attachmentId = new URL(part.url).pathname.split('/')[1];
     const upload = uploads.get(attachmentId);
     if (!upload) throw new Error('Unknown demo upload');
-    upload.localUri = fileUri;
+    if (upload.attachment.kind === 'chat_video') {
+      // Model a remote copy: the real outbox deletes its own source on success.
+      if (!upload.localUri) {
+        const folder = new Directory(Paths.cache, 'demo-chat-videos');
+        folder.create({ intermediates: true, idempotent: true });
+        const target = new File(folder, `${attachmentId}-${createUUID()}.${upload.attachment.content_type === 'video/quicktime' ? 'mov' : 'mp4'}`);
+        try {
+          await new File(fileUri).copy(target);
+          if (options.signal.aborted || uploads.get(attachmentId) !== upload) throw new UploadCancelledError();
+        } catch (error) {
+          try { if (target.exists) target.delete(); } catch { /* best-effort partial-copy cleanup */ }
+          throw error;
+        }
+        upload.localUri = target.uri;
+      }
+    } else upload.localUri = fileUri;
     if (!results.some(done => done.part_number === part.part_number)) {
       const completed = { part_number: part.part_number, etag: `"demo-${part.part_number}"` };
       await options.onPart?.(completed);
@@ -60,6 +81,7 @@ export function uploadRoute(route: string, method: string, body: unknown, studen
     const upload = uploads.get(id);
     if (!upload) return { status: 404, payload: { error: 'ATTACHMENT_NOT_FOUND' } };
     if ((!action && method === 'DELETE') || (action === 'abort' && method === 'POST')) {
+      removeDemoCopy(upload);
       uploads.delete(id); markers = markers.filter(marker => marker.video_id !== id);
       return { status: 200, payload: {} };
     }

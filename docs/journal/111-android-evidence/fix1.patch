@@ -1,0 +1,291 @@
+--- before/src/features/training/RestTimer.tsx
++++ src/features/training/RestTimer.tsx
+@@ -1,5 +1,5 @@
+ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+-import { useEffect, useRef, useState } from "react";
++import { useContext, useEffect, useRef, useState } from "react";
+ import {
+   Animated,
+   AppState,
+@@ -27,6 +27,7 @@
+ } from "@/features/settings/rest-timer";
+ import { resolveRestSeconds } from "./policy";
+ import { RestRingIntroduction, RestTimerSession } from "./rest-timer-session";
++import { StartupOverlayContext } from "@/navigation/startup-overlay";
+ import {
+   playRestCompletionSound,
+   restNotificationPermission,
+@@ -41,6 +42,7 @@
+   prescribed?: number | null;
+   accessory: boolean;
+   visible: boolean;
++  startupBlocked?: boolean;
+   top?: number;
+   bottom?: number;
+   completionSignal?: number;
+@@ -95,10 +97,12 @@
+   prescribed,
+   accessory,
+   visible,
++  startupBlocked = false,
+   top = 0,
+   bottom = 94,
+   completionSignal = 0,
+ }: Props) {
++  const shellBlocked = useContext(StartupOverlayContext);
+   const colors = useColors();
+   const window = useWindowDimensions();
+   const [area, setArea] = useState({
+@@ -322,7 +326,7 @@
+         0,
+         Math.min(1, snapshot.remaining / Math.max(1, snapshot.total)),
+       );
+-  if (!visible) return null;
++  if (!visible || startupBlocked || shellBlocked) return null;
+   return (
+     <View
+       pointerEvents="box-none"
+--- before/src/features/training/TodayWorkoutView.tsx
++++ src/features/training/TodayWorkoutView.tsx
+@@ -170,9 +170,14 @@
+   const savingSets = useRef(0);
+   const videoInteractions = useRef(new Set<string>());
+   const weightEditing = useRef(false);
+-  const onWeightEditing = useCallback((active: boolean) => { weightEditing.current = active; }, []);
++  const [trainingModalVisible, setTrainingModalVisible] = useState(false);
++  const onWeightEditing = useCallback((active: boolean) => {
++    weightEditing.current = active;
++    setTrainingModalVisible(active || videoInteractions.current.size > 0);
++  }, []);
+   const onVideoActivity = useCallback((id: string, active: boolean) => {
+     if (active) videoInteractions.current.add(id); else videoInteractions.current.delete(id);
++    setTrainingModalVisible(weightEditing.current || videoInteractions.current.size > 0);
+   }, []);
+   const jumpToken = useStudentTabsStore((state) => state.trainingJumpToken);
+   const planRevision = useStudentTabsStore((state) => state.planRevision);
+@@ -905,6 +910,7 @@
+       <RestTimer key={studentId} studentId={studentId} exerciseName={restExercise ? exerciseTitle(resolveExerciseMetadata(restExercise.exercise_id)) : ''}
+         prescribed={restExercise?.sets.slice().sort((a, b) => a.set_number - b.set_number).find(set => set.rest_seconds !== null)?.rest_seconds}
+         accessory={isAccessoryExercise(restExercise ? resolveExerciseMetadata(restExercise.exercise_id)?.exerciseType : undefined)}
++        startupBlocked={trainingModalVisible || !notice.ready || (!preview && !browsing && notice.visible)}
+         visible={trainingVisible && editable && state.kind === 'loaded' && !showEmpty && Boolean(restExercise) && !editor.editing && accessoryPadHeight === 0 && !completionPhase && !pickerVisible && !noteRow}
+         top={restTop} bottom={completionDockHeight - spacing.md} completionSignal={restCompletionSignal} />
+       </View>
+--- before/src/features/training/handoff-notice.ts
++++ src/features/training/handoff-notice.ts
+@@ -16,6 +16,7 @@
+ /** Observes only the displayed training cycle; previewing never consumes a notice. */
+ export function useHandoffNotice(studentId: string, planId: string | null, handoff?: PlanHandoff, previousCachedId?: string) {
+   const [visibleKey, setVisibleKey] = useState<string | null>(null);
++  const [checkedKey, setCheckedKey] = useState<string | null>(null);
+   const identity = `${studentId}:${planId}`;
+   useEffect(() => {
+     if (!studentId || !planId || !handoff) return;
+@@ -26,8 +27,11 @@
+       if (previous && previous.id !== planId && previous.total_training_days > 0 && previous.completed_training_days === previous.total_training_days && !state.dismissed.includes(planId)) state.pending = planId;
+       state.last = planId;
+       await AsyncStorage.setItem(keyFor(studentId), JSON.stringify(state));
+-      if (active) setVisibleKey(state.pending === planId && !state.dismissed.includes(planId) ? identity : null);
+-    }).catch(() => {});
++      if (active) {
++        setVisibleKey(state.pending === planId && !state.dismissed.includes(planId) ? identity : null);
++        setCheckedKey(identity);
++      }
++    }).catch(() => { if (active) setCheckedKey(identity); });
+     return () => { active = false; };
+   }, [studentId, planId, handoff, identity, previousCachedId]);
+   const dismiss = useCallback(() => {
+@@ -40,5 +44,6 @@
+       await AsyncStorage.setItem(keyFor(studentId), JSON.stringify(state));
+     });
+   }, [studentId, planId]);
+-  return { visible: visibleKey === identity, dismiss };
++  // Cached offline workouts can be editable before handoff data is available.
++  return { visible: visibleKey === identity, ready: !handoff || !planId || checkedKey === identity, dismiss };
+ }
+--- before/src/features/training/__tests__/rest-timer.test.tsx
++++ src/features/training/__tests__/rest-timer.test.tsx
+@@ -5,6 +5,8 @@
+ import { setLocaleOverride, t } from "@/i18n";
+ import { RestTimer } from "../RestTimer";
+ import { RestRingIntroduction } from "../rest-timer-session";
++import { StartupOverlayContext } from "@/navigation/startup-overlay";
++import { useHandoffNotice } from "../handoff-notice";
+ 
+ jest.mock("@react-native-async-storage/async-storage", () =>
+   // eslint-disable-next-line @typescript-eslint/no-require-imports
+@@ -66,6 +68,53 @@
+   )[0];
+ const copy = () =>
+   renderer.root.findAllByType(Text).map((node) => node.props.children);
++
++test("first settings wait for other startup overlays to close and the student to return to training", async () => {
++  const firstVisit = { ...props, studentId: "new-student", startupBlocked: true };
++  await act(async () => {
++    renderer = create(<RestTimer {...firstVisit} />);
++  });
++  expect(copy()).not.toContain(t("training.restRing.settings"));
++  await act(async () => {
++    renderer.update(<RestTimer {...firstVisit} startupBlocked={false} visible={false} />);
++  });
++  expect(copy()).not.toContain(t("training.restRing.settings"));
++  await act(async () => {
++    renderer.update(<RestTimer {...firstVisit} startupBlocked={false} />);
++  });
++  expect(copy()).toContain(t("training.restRing.settings"));
++});
++
++test("app-shell notice blocks first settings until all shell and training overlays close", async () => {
++  const screen = (shellBlocked: boolean, startupBlocked: boolean) => (
++    <StartupOverlayContext.Provider value={shellBlocked}>
++      <RestTimer {...props} studentId="new-student" startupBlocked={startupBlocked} />
++    </StartupOverlayContext.Provider>
++  );
++  await act(async () => { renderer = create(screen(true, false)); });
++  expect(copy()).not.toContain(t("training.restRing.settings"));
++  await act(async () => { renderer.update(screen(true, true)); });
++  await act(async () => { renderer.update(screen(false, true)); });
++  expect(copy()).not.toContain(t("training.restRing.settings"));
++  expect((await RestRingIntroduction.load("new-student")).snapshot().settings).toBe(true);
++  await act(async () => { renderer.update(screen(false, false)); });
++  expect(copy()).toContain(t("training.restRing.settings"));
++  const backdrop = renderer.root.findAll(node => node.props.testID === "rest-settings-dismiss" && node.props.onPress)[0];
++  await act(async () => backdrop.props.onPress());
++  await act(async () => { renderer.update(screen(true, false)); });
++  await act(async () => { renderer.update(screen(false, false)); });
++  expect(copy()).not.toContain(t("training.restRing.settings"));
++  expect(copy()).toContain(t("training.restRing.hint"));
++});
++
++test("offline cached training without handoff data still allows first rest settings", async () => {
++  function CachedTraining() {
++    const notice = useHandoffNotice("new-student", "cached-plan");
++    return <RestTimer {...props} studentId="new-student" startupBlocked={!notice.ready || notice.visible} />;
++  }
++  await act(async () => { renderer = create(<CachedTraining />); });
++  expect(copy()).toContain(t("training.restRing.settings"));
++});
+ 
+ test("tap idle ring starts the displayed duration and dismisses the hint permanently", async () => {
+   await act(async () => {
+--- before/src/app/_layout.tsx
++++ src/app/_layout.tsx
+@@ -25,6 +25,7 @@
+ import { Toast } from '@/design/Toast';
+ 
+ import { AnalyticsEvent, configure, flushNow, isPrivacyNoticeConfirmed, PrivacyNoticeSheet, track } from '@/analytics';
++import { StartupOverlayContext } from '@/navigation/startup-overlay';
+ import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
+ import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
+ import { AndroidUpdateSession } from '@/features/updates/AndroidUpdateSession';
+@@ -110,6 +111,7 @@
+   const user = useSessionStore((state) => state.user);
+   const [privacyNoticeVisible, setPrivacyNoticeVisible] = useState(false);
+   const [privacyChecked, setPrivacyChecked] = useState(false);
++  const [updateBlocked, setUpdateBlocked] = useState(true);
+   const bootstrapped = useSessionStore((state) => state.bootstrapped);
+ 
+   useEffect(() => {
+@@ -165,8 +167,10 @@
+     <QueryProvider>
+       <NavigationThemeProvider value={navigationTheme}>
+         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
+-        <RootNavigator />
+-        <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} />
++        <StartupOverlayContext.Provider value={!privacyChecked || privacyNoticeVisible || updateBlocked}>
++          <RootNavigator />
++        </StartupOverlayContext.Provider>
++        <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} onBlockingChange={setUpdateBlocked} />
+         <TrainingReminderSession />
+         <PlanNotificationSession />
+         <VideoUploadNotificationSession />
+--- before/src/features/updates/AndroidUpdateSession.tsx
++++ src/features/updates/AndroidUpdateSession.tsx
+@@ -5,45 +5,54 @@
+ import { BUILD_TRACK } from '@/config/build-track';
+ import { androidReleaseNotes, checkForAndroidUpdate, type AndroidRelease } from './android-update';
+ 
+-function offerUpdate(release: AndroidRelease) {
++function offerUpdate(release: AndroidRelease, onClose?: () => void) {
+   const download = () => {
+-    void Linking.openURL(release.downloadUrl).catch(() => {
++    void Linking.openURL(release.downloadUrl).then(onClose).catch(() => {
+       Alert.alert(t('androidUpdate.openFailed'), t('androidUpdate.retryHint'), [
+-        { text: t('androidUpdate.cancel'), style: 'cancel' },
++        { text: t('androidUpdate.cancel'), style: 'cancel', ...(onClose ? { onPress: onClose } : {}) },
+         { text: t('androidUpdate.retry'), onPress: download },
+-      ]);
++      ], { cancelable: true, ...(onClose ? { onDismiss: onClose } : {}) });
+     });
+   };
+   Alert.alert(t('androidUpdate.title', [release.versionName]),
+     [androidReleaseNotes(release), t('androidUpdate.installHint')].filter(Boolean).join('\n\n'), [
+-      { text: t('androidUpdate.later'), style: 'cancel' },
++      { text: t('androidUpdate.later'), style: 'cancel', ...(onClose ? { onPress: onClose } : {}) },
+       { text: t('androidUpdate.download'), onPress: download },
+-    ], { cancelable: true });
++    ], { cancelable: true, ...(onClose ? { onDismiss: onClose } : {}) });
+ }
+ 
+ /** Mounted once in the app shell, after privacy confirmation and bootstrap. */
+-export function AndroidUpdateSession({ enabled }: { enabled: boolean }) {
++export function AndroidUpdateSession({ enabled, onBlockingChange }: { enabled: boolean; onBlockingChange?: (blocked: boolean) => void }) {
+   const lastCheckedAt = useRef<number | null>(null);
+   const highestOfferedBuild = useRef(0);
+   useEffect(() => {
+-    if (!enabled || Platform.OS !== 'android') return;
++    if (!enabled) return;
++    if (Platform.OS !== 'android') { onBlockingChange?.(false); return; }
+     const controller = new AbortController();
+     let currentState = AppState.currentState;
+     let pending: AndroidRelease | null = null;
+     let checking = false;
++    let offering = false;
++    const close = () => { offering = false; onBlockingChange?.(false); };
+     const offerWhenActive = () => {
+       if (controller.signal.aborted || !pending || currentState !== 'active') return;
+       const release = pending;
+       pending = null;
+-      if (release.versionCode <= highestOfferedBuild.current) return;
++      if (release.versionCode <= highestOfferedBuild.current) {
++        if (!offering) close();
++        return;
++      }
+       highestOfferedBuild.current = release.versionCode;
+-      offerUpdate(release);
++      offering = true;
++      onBlockingChange?.(true);
++      offerUpdate(release, onBlockingChange ? close : undefined);
+     };
+     const check = async () => {
+       const startedAt = Date.now();
+       if (checking || controller.signal.aborted ||
+           (lastCheckedAt.current !== null && startedAt - lastCheckedAt.current <= 6 * 60 * 60 * 1000)) return;
+       checking = true;
++      onBlockingChange?.(true);
+       try {
+         const release = await checkForAndroidUpdate({
+           platform: Platform.OS,
+@@ -59,6 +68,7 @@
+         // A failed check stays eligible for retry on the next foreground.
+       } finally {
+         checking = false;
++        if (!controller.signal.aborted && !offering && !pending) onBlockingChange?.(false);
+       }
+     };
+     const subscription = AppState.addEventListener('change', state => {
+@@ -72,6 +82,6 @@
+       controller.abort();
+       subscription.remove();
+     };
+-  }, [enabled]);
++  }, [enabled, onBlockingChange]);
+   return null;
+ }
+--- /dev/null
++++ src/navigation/startup-overlay.ts
+@@ -0,0 +1,4 @@
++import { createContext } from 'react';
++
++/** App-shell overlays (including their unresolved startup checks) block introductions. */
++export const StartupOverlayContext = createContext(false);

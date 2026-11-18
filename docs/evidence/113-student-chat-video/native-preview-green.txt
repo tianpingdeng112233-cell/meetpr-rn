@@ -1,0 +1,6 @@
+Final code: native MP4 preview rendered and Send enabled after onLoad.
+Choose again → same 4-second MP4 → preview rendered and Send enabled.
+Final native dark preview renders same MP4. Cancel removes the current owned copy; the library original remains.
+Demo Send confirms a standalone card, null poster/duration placeholder stays playable.
+After scrolling to newest messages, tapping card re-queries the exact demo message and plays the independent demo copy.
+Demo source cleanup does not remove that playback copy. This is not real backend persistence evidence.

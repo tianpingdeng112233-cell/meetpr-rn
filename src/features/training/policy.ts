@@ -1,4 +1,4 @@
-import { accessoryRestSeconds, restDefaultSeconds, type RestTimerPreference } from '@/features/settings/rest-timer';
+import { defaultRestPreference, type RestTimerPreference } from '@/features/settings/rest-timer';
 import { plateBreakdown, breakdownText } from '@/design/plate-visual';
 import { decodePrescription } from '@/domain/plan/prescription';
 import { gymDayToday, localDateText } from '@/domain/plan/workout-date-policy';
@@ -11,7 +11,6 @@ import { RIR_KEYS, TRAINING_LIMITS } from './constants';
 import type { WeightSuggestion, WorkoutSetDraft } from './model';
 
 export { localDateText };
-export { restDefaultSeconds } from '@/features/settings/rest-timer';
 
 const DAY_MS = 86_400_000;
 
@@ -38,22 +37,18 @@ export function daysBetween(start: string, end: string): number {
   return Math.round((endDate.getTime() - startDate.getTime()) / DAY_MS);
 }
 
-export function resolveRestSeconds({
-  prescribed,
-  preference,
-  rpe,
-}: {
-  prescribed: number | null;
-  preference: number | null;
-  rpe: number | null;
+/** The exercise library classification is supplied by the caller; never use is_main_lift. */
+export function resolveRestSeconds({ prescribed, preference = defaultRestPreference, accessory }: {
+  prescribed?: number | null; preference?: RestTimerPreference; accessory: boolean;
 }): number {
-  return Math.max(
-    0,
-    Math.min(
-      TRAINING_LIMITS.restMaximumSeconds,
-      prescribed ?? preference ?? restDefaultSeconds(rpe),
-    ),
-  );
+  const seconds = prescribed ?? (accessory ? preference.accessory : preference.main);
+  return Math.max(0, Math.min(TRAINING_LIMITS.restMaximumSeconds, Number.isFinite(seconds) ? seconds : 180));
+}
+
+export function currentRestExercise(blocks: readonly {
+  exercise: PlanExercise; collapsed: boolean; node: 'complete' | 'current' | 'pending';
+}[]): PlanExercise | null {
+  return (blocks.find(block => !block.collapsed) ?? blocks.find(block => block.node === 'current') ?? blocks.at(-1))?.exercise ?? null;
 }
 
 export function rirCopy(rpe: number): string {
@@ -176,11 +171,4 @@ export function selectWeightSuggestion({
   return prior
     ? { weightKg: Number(prior.weight_kg), label: t('student.progression.suggestionLast') }
     : null;
-}
-
-export function resolveAccessoryRestSeconds({ prescribed, preference }: {
-  prescribed: number | null | undefined;
-  preference: RestTimerPreference;
-}): number {
-  return Math.max(0, Math.min(TRAINING_LIMITS.restMaximumSeconds, prescribed ?? accessoryRestSeconds(preference)));
 }

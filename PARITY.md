@@ -1,7 +1,9 @@
 # PARITY — 1:1 复刻台账
-> **2026-11-17 spec 112 真机验收返修（进行中）**：返修 1 已提交 `eb3876c`，David 交接确认 meetpr16 演示验收 15 组 / 120 次 / 10,375 kg。国内真后端独立测试包已在 vivo 登录并保存成长基线；David 追加要求热身/额外组改为左滑删除及「＋ 加一组」，实现与自动化验证中，手势真机复验及后端全链路仍待完成。[同卡 JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)。
+> **2026-11-17 spec 112 键盘功能键 + 学员自加热身组（PR #205，David 2026-11-18 真机验收通过并放行进下一班车）**：Android allDay 四功能键、跨格结算、RPE/RIR 快选、自加热身组、热身/额外组左滑删除；依赖后端 068（国内 staging 已部署）。vivo 真机与真后端全链路由 David 人工验收：统计排除、教练 App/网页隐藏、重启保留、iPhone 同账号跨端读取。[JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)
 
-> **2026-11-17 spec 112（草稿 PR #205）**：Android allDay 四功能键、跨格结算、RPE/RIR 快选与自加热身组已实装并推送备份；后端 068 已部署国内 staging。发布仍待真账号热身组持久化/统计排除/教练双端隐藏验证，PR 保持草稿，T2 合并等 David 放行。[JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)。
+> **2026-11-17 spec 113 独立聊天视频（待收货）**：学员「＋ → 视频」相册单选/可播预览、session outbox 真进度与重试、教练收取及严格消息续签、三语已实装。保持旧训练组分享与 text fallback。真实后端持久化与端到端收发尚未验收，未合并/部署/进包；测试、原生证据与缺口见 [本卡 JOURNAL](docs/journal/2026-11-17-113-android.md)。
+> **2026-11-17 spec 111 Android 实装（PR #208，David 2026-11-17 放行）**：训练页组间休息改为手动悬浮圆环、居中计时/设置圆盘、两档滚轮与声音/震动开关；旧设置按账号迁移，Android 通知 +15s。替代旧 RPE 分档与底部计时条口径；我的设置入口保持下线。静态/单测验证与未验项见 [本卡 JOURNAL](docs/journal/2026-11-17-111-android.md)。ADB 被沙箱拒绝，原生构建、深浅视觉、锁屏/声音震动仍待设备验收，不计为完整视觉收货。
+> **同日返修 1**：R0 等待使用数据告知、更新提示、周期接续提示及训练页现有模态全部关闭；spec 095 沿用 BindGate 排他。tsc / lint 与全量 221 suites / 2391 tests 通过，双轴复审无剩余问题；ADB 仍不可用，改后设备复验待补，详见同一 JOURNAL「返修 1」。
 > **2026-11-16 spec 110 旧周期练完再接新计划（工作区待收货）**：Android 已接服务端 current 契约、只读预览下一周期、接续提示与调用点统一；demo 加 upcoming。独立 Standards / Spec 审查已闭合，自动化证据与验收缺口见 [JOURNAL](docs/journal/2026-11-16-110-android.md)。未 commit / push，未进包；原生滚动、深浅色 / 大字、CN / Global 真实 API 与升级亲验待收货方。
 > **2026-11-15 · CN15 已发布**。版本 APK 与固定下载链接均已核验，CN14 实包可收到本次更新提示。[发布与覆盖升级记录](docs/journal/2026-11-15-release-cn15.md)
 > **2026-11-15 动作留言卡片**：学员发出靠右，教练收到靠左。同侧卡片等宽，长文换行增高。[验收记录](docs/journal/2026-11-15-107-exercise-note-width.md)

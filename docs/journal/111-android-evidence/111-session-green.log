@@ -1,0 +1,8 @@
+PASS src/features/training/__tests__/rest-timer-session.test.ts
+  ✓ manual start runs to done, then returns to idle after three seconds or a tap (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.387 s, estimated 1 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer-session.test.ts/i.

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import type { PlanDetail } from '@/api/domains/plans';
 import type { SetLog } from '@/api/domains/sets';
 import { authenticatedRequest, useSessionStore } from '@/api/session';
+import { RestRingIntroduction } from '../rest-timer-session';
 import { TodayWorkoutView } from '@/features/training/TodayWorkoutView';
 import { setLocaleOverride, t } from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -50,7 +51,11 @@ let servedPlan: PlanDetail;
 let failCompletion = false;
 let storedLogs: SetLog[] = [];
 
-beforeEach(() => {
+beforeEach(async () => {
+  // This spec 107 regression observes returning users; spec 111 owns first-run settings.
+  const restIntroduction = await RestRingIntroduction.load(studentId);
+  await restIntroduction.dismissSettings();
+  await restIntroduction.interact();
   setLocaleOverride('en');
   mockNavigate.mockClear();
   mockPush.mockClear();

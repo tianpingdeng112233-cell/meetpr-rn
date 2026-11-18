@@ -14,6 +14,10 @@ import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 import android.graphics.Color
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.RingtoneManager
+import android.media.ToneGenerator
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import java.util.UUID
@@ -22,7 +26,7 @@ import java.util.UUID
 internal object RestTimerNotifications {
   const val OPEN_TRAINING = "com.meetpr.resttimer.OPEN_TRAINING"
   private const val SKIP = "com.meetpr.resttimer.SKIP"
-  private const val ADD_30 = "com.meetpr.resttimer.ADD_30"
+  private const val ADD_15 = "com.meetpr.resttimer.ADD_15"
   private const val END = "com.meetpr.resttimer.END"
   private const val TIMER_CHANNEL = "rest-timer-v2"
   private const val PROMOTION_CHECK_DELAY_MS = 200L
@@ -49,11 +53,12 @@ internal object RestTimerNotifications {
   }
   @Synchronized fun leaveForeground() { foreground = false }
 
-  @Synchronized fun show(context: Context, endAt: Long, body: String, labels: Map<String, String>) {
+  @Synchronized fun show(context: Context, endAt: Long, body: String, labels: Map<String, String>, alerts: Map<String, Boolean>) {
     hide(context)
     if (foreground || !isPermissionGranted(context) || endAt <= System.currentTimeMillis()) return
     val editor = prefs(context).edit().clear()
       .putLong("endAt", endAt).putString("body", body)
+      .putBoolean("sound", alerts["sound"] != false).putBoolean("vibration", alerts["vibration"] != false)
       .putString("token", UUID.randomUUID().toString())
     labels.forEach { (key, value) -> editor.putString(key, value) }
     editor.commit()
@@ -89,10 +94,10 @@ internal object RestTimerNotifications {
         hide(context)
         state.edit().remove("changedEndAt").putBoolean("skipped", true).commit()
       }
-      ADD_30 -> {
+      ADD_15 -> {
         val now = System.currentTimeMillis()
         if (endAt <= now) return
-        val next = minOf(endAt + 30_000L, now + MAX_REMAINING_MS)
+        val next = minOf(endAt + 15_000L, now + MAX_REMAINING_MS)
         state.edit().putLong("endAt", next).putLong("changedEndAt", next).putBoolean("skipped", false).commit()
         schedule(context, next)
         // A cold receiver must finish publication before onReceive returns.
@@ -125,7 +130,7 @@ internal object RestTimerNotifications {
     if (state.getString("token", null) == null) return
     clearTimer(context)
     if (!foreground && isPermissionGranted(context)) {
-      val notification = NotificationCompat.Builder(context, COMPLETE_CHANNEL)
+      val notification = NotificationCompat.Builder(context, completionChannel(context))
         .setSmallIcon(R.drawable.ic_stat_meetpr)
         .setContentTitle(state.getString("completeTitle", ""))
         .setContentText(state.getString("completeBody", ""))
@@ -133,8 +138,8 @@ internal object RestTimerNotifications {
         .setAutoCancel(true)
         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         .setPriority(NotificationCompat.PRIORITY_HIGH)
-        .setSound(null)
-        .setVibrate(longArrayOf(0, 80))
+        .setSound(if (state.getBoolean("sound", true)) RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) else null)
+        .setVibrate(if (state.getBoolean("vibration", true)) longArrayOf(0, 80) else longArrayOf(0))
         .build()
       notify(context, COMPLETE_ID, notification)
     }
@@ -202,7 +207,7 @@ internal object RestTimerNotifications {
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setPriority(NotificationCompat.PRIORITY_DEFAULT)
       .addAction(0, state.getString("skip", ""), receiverIntent(context, SKIP, 1))
-      .addAction(0, state.getString("add", ""), receiverIntent(context, ADD_30, 2))
+      .addAction(0, state.getString("add", ""), receiverIntent(context, ADD_15, 2))
     if (custom) {
       val base = SystemClock.elapsedRealtime() + remaining
       builder.setStyle(NotificationCompat.DecoratedCustomViewStyle())
@@ -234,13 +239,30 @@ internal object RestTimerNotifications {
         enableVibration(false)
         lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
       },
-      NotificationChannel(COMPLETE_CHANNEL, state.getString("completeChannel", ""), NotificationManager.IMPORTANCE_HIGH).apply {
-        setSound(null, null)
-        enableVibration(true)
+      NotificationChannel(completionChannel(context), state.getString("completeChannel", ""), NotificationManager.IMPORTANCE_HIGH).apply {
+        setSound(if (state.getBoolean("sound", true)) RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION) else null,
+          AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build())
         vibrationPattern = longArrayOf(0, 80)
+        enableVibration(state.getBoolean("vibration", true))
         lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
       }
     ))
+  }
+
+  // Channel alert properties are immutable after creation; each switch combination has its own channel.
+  private fun completionChannel(context: Context): String {
+    val state = prefs(context)
+    return "$COMPLETE_CHANNEL-v2-${state.getBoolean("sound", true)}-${state.getBoolean("vibration", true)}"
+  }
+
+  fun playCompletionSound(context: Context) {
+    val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
+    try {
+      val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 70)
+      tone.startTone(ToneGenerator.TONE_PROP_BEEP, 160)
+      handler.postDelayed({ tone.release() }, 250)
+    } catch (_: RuntimeException) { /* Audio device unavailable; timer still completes. */ }
   }
 
   private fun receiverIntent(context: Context, action: String, request: Int): PendingIntent {

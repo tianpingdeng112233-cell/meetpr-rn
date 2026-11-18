@@ -10,7 +10,7 @@ import {
   gymDayText,
   historyRangeStart,
   resolveRestSeconds,
-  resolveAccessoryRestSeconds,
+  currentRestExercise,
   rirCopy,
   selectWeightSuggestion,
 } from '../policy';
@@ -159,13 +159,14 @@ describe('suggested-weight selector', () => {
 });
 
 describe('rest, gym-day, and RIR policies', () => {
-  test('rest priority is prescription, preference, then RestDefaults', () => {
-    expect(resolveRestSeconds({ prescribed: 75, preference: 90, rpe: 9.5 })).toBe(75);
-    expect(resolveRestSeconds({ prescribed: null, preference: 90, rpe: 9.5 })).toBe(90);
-    expect(resolveRestSeconds({ prescribed: null, preference: null, rpe: null })).toBe(180);
-    expect(resolveRestSeconds({ prescribed: null, preference: null, rpe: 6.5 })).toBe(120);
-    expect(resolveRestSeconds({ prescribed: null, preference: null, rpe: 8.5 })).toBe(180);
-    expect(resolveRestSeconds({ prescribed: null, preference: null, rpe: 9 })).toBe(240);
+  test('coach duration wins over fixed main/accessory settings without RPE tiers', () => {
+    const preference = { main: 210, accessory: 90, sound: true, vibration: true };
+    expect(resolveRestSeconds({ prescribed: 75, preference, accessory: false })).toBe(75);
+    expect(resolveRestSeconds({ prescribed: 75, preference, accessory: true })).toBe(75);
+    expect(resolveRestSeconds({ prescribed: null, preference, accessory: false })).toBe(210);
+    expect(resolveRestSeconds({ prescribed: null, preference, accessory: true })).toBe(90);
+    expect(resolveRestSeconds({ prescribed: 1200, preference, accessory: false })).toBe(900);
+    expect(resolveRestSeconds({ prescribed: 0, preference, accessory: true })).toBe(0);
   });
 
   test('04:00 is the local gym-day boundary', () => {
@@ -231,12 +232,11 @@ test('plate loadout uses aggregated copy and canonical empty branches', () => {
 });
 
 
-test('accessory rest uses prescribed seconds before its independent preference and legacy default', () => {
-  expect(resolveAccessoryRestSeconds({ prescribed: 75, preference: { mode: 'automatic', accessory: 90 } })).toBe(75);
-  expect(resolveAccessoryRestSeconds({ prescribed: 0, preference: { mode: 'automatic', accessory: 90 } })).toBe(0);
-  expect(resolveAccessoryRestSeconds({ prescribed: 1200, preference: { mode: 'automatic' } })).toBe(900);
-  expect(resolveAccessoryRestSeconds({ prescribed: -1, preference: { mode: 'automatic' } })).toBe(0);
-  expect(resolveAccessoryRestSeconds({ prescribed: null, preference: { mode: 'automatic', accessory: 90 } })).toBe(90);
-  expect(resolveAccessoryRestSeconds({ prescribed: null, preference: { mode: 'custom', low: 120, mid: 180, high: 240 } })).toBe(60);
-  expect(resolveAccessoryRestSeconds({ prescribed: undefined, preference: { mode: 'automatic' } })).toBe(60);
+test('current rest exercise is expanded, then highlighted, then last when all complete', () => {
+  const first = { exercise: { ...exercise, id: 'first' }, collapsed: true, node: 'complete' as const };
+  const second = { exercise: { ...exercise, id: 'second' }, collapsed: true, node: 'current' as const };
+  expect(currentRestExercise([first, second])).toEqual(second.exercise);
+  expect(currentRestExercise([{ ...first, collapsed: false }, second])).toEqual(first.exercise);
+  expect(currentRestExercise([first, { ...second, node: 'complete' }])).toEqual(second.exercise);
+  expect(currentRestExercise([])).toBeNull();
 });

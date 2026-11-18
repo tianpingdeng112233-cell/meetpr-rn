@@ -1,0 +1,22 @@
+FAIL src/features/training/__tests__/rest-timer-session.test.ts
+  ✕ manual start runs to done, then returns to idle after three seconds or a tap (1 ms)
+
+  ● manual start runs to done, then returns to idle after three seconds or a tap
+
+    TypeError: session.snapshot is not a function
+
+      11 | test('manual start runs to done, then returns to idle after three seconds or a tap', () => {
+      12 |   const { session, at } = setup();
+    > 13 |   expect(session.snapshot().phase).toBe('idle');
+         |                  ^
+      14 |   session.start(30, 'Bench');
+      15 |   expect(session.snapshot()).toMatchObject({ phase: 'running', remaining: 30, total: 30, body: 'Bench' });
+      16 |   at(31_000);
+
+      at Object.snapshot (src/features/training/__tests__/rest-timer-session.test.ts:13:18)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.445 s
+Ran all test suites matching /src\/features\/training\/__tests__\/rest-timer-session.test.ts/i.

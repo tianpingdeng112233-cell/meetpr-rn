@@ -1,3 +1,5 @@
+import { ChatStandaloneVideo, ChatPendingVideo, ChatVideoPreview, isStandaloneChatVideo } from './ChatStandaloneVideo';
+import { chatVideoOutbox, useChatVideos } from './chat-videos';
 import { createUUID } from '@/analytics/uuid';
 import { chatRepository, type ChatMessage, type Conversation } from '@/api/domains/chat';
 import { feedbackKeys, feedbackRepository, type FeedbackItem, type FeedbackResponse } from '@/api/domains/feedback';
@@ -43,15 +45,14 @@ import {
   type VerticalFrame,
 } from './student-timeline';
 
-export function StudentConversationScreen({ conversationId, coachName }: { conversationId: string; coachName: string }) {
+export function StudentConversationScreen({ conversationId, coachId, coachName }: { conversationId: string; coachId: string; coachName: string }) {
   const { subscribe } = useChatRealtime();
   const colors = useColors();
   const router = useRouter();
   const studentId = useSessionStore(state => state.user?.id ?? '');
   const client = useQueryClient();
   const exerciseNotes = useExerciseNoteOutbox(state => state.notes);
-  const [coachId, setCoachId] = useState('');
-  useEffect(() => { let live = true; void chatRepository.list().then(result => { if (live) setCoachId(result.conversations.find(item => item.id === conversationId)?.other_party.id ?? ''); }).catch(() => {}); return () => { live = false; }; }, [conversationId]);
+  const chatVideos = useChatVideos(studentId, coachId, conversationId);
   const plan = useStudentPlanNotice(studentId);
   const inbox = useFeedbackInboxViewModel(studentId);
   const videos = useStudentVideos(studentId);
@@ -150,6 +151,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
         messagesRef.current = mergeMessages(messagesRef.current, incoming);
         fetchedCursor.current = incoming.at(-1)?.seq ?? latest;
         incoming.forEach(message => acknowledgeSetRef(message.client_id));
+        chatVideoOutbox.acknowledge(incoming);
         setPending(previous => previous.filter(item => !messagesRef.current.some(message => message.client_id === item.clientId)));
         setMessages(messagesRef.current);
         return messagesRef.current;
@@ -366,11 +368,14 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
           <Text style={{ ...font.mono(10, item.failed ? 'bold' : 'regular'), color: item.failed ? colors.danger : colors.textDim }}>{t(item.failed ? 'student.studentBlackGoldChatView.copy026' : 'student.studentBlackGoldChatView.copy025')}</Text>
         </Pressable>
       </View></Fragment>)}
+      {chatVideos.items.filter(item => !messages.some(message => message.client_id === item.draft.clientId)).map(item => item.message
+        ? <ChatStandaloneVideo key={item.draft.clientId} message={item.message} outgoing read={item.message.seq <= otherReadSeq} onPress={() => void openShareVideo(item.message!)} />
+        : <ChatPendingVideo key={item.draft.clientId} item={item} retry={() => void chatVideoOutbox.retry(item.draft.clientId)} />)}
       {photos.photos.filter(photo => !messages.some(message => message.client_id === photo.clientId)).map(photo => <View key={photo.clientId} style={{ alignSelf: 'flex-end', gap: 4 }}><PhotoBubble uri={photo.uri} width={photo.width} height={photo.height} onPress={() => setSelectedImage(photo.uri)} /><Pressable accessibilityRole="button" disabled={photos.sending !== null} onPress={() => void photos.send(photo)}><Text style={{ ...font.body(12), color: colors.textSecondary }}>{t(photos.sending === photo.clientId ? 'student.studentBlackGoldChatView.copy025' : 'student.studentBlackGoldChatView.copy026')}</Text></Pressable></View>)}
     </ScrollView>
     {showActions ? <Pressable feedback="none" accessibilityLabel={t('chat.close')} onPress={() => setShowActions(false)} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 80, justifyContent: 'flex-end', padding: 16 }}>
       <View style={{ borderRadius: 16, backgroundColor: colors.surfaceCard, borderColor: colors.borderStrong, borderWidth: 1, padding: 8 }}>
-        {(['camera', 'video'] as const).map(kind => <Pressable key={kind} accessibilityRole="button" accessibilityLabel={t(kind === 'camera' ? 'student.coachTab.takePhoto' : 'student.coachTab.shareVideo')} onPress={() => { setShowActions(false); if (kind === 'camera') void photos.takePhoto(); else setShowSetPicker(true); }} style={{ minHeight: 48, flexDirection: 'row', gap: 12, alignItems: 'center', paddingHorizontal: 12 }}><MaterialCommunityIcons name={kind === 'camera' ? 'camera-outline' : 'video-outline'} size={20} color={colors.textPrimary} /><Text style={{ ...font.body(15), color: colors.textPrimary }}>{t(kind === 'camera' ? 'student.coachTab.takePhoto' : 'student.coachTab.shareVideo')}</Text></Pressable>)}
+        {(['camera', 'uploadVideo', 'video'] as const).map(kind => <Pressable key={kind} accessibilityRole="button" accessibilityLabel={t(kind === 'camera' ? 'student.coachTab.takePhoto' : kind === 'uploadVideo' ? 'chat.chooseVideo' : 'student.coachTab.shareVideo')} onPress={() => { setShowActions(false); if (kind === 'camera') void photos.takePhoto(); else if (kind === 'uploadVideo') void chatVideos.pick(); else setShowSetPicker(true); }} style={{ minHeight: 48, flexDirection: 'row', gap: 12, alignItems: 'center', paddingHorizontal: 12 }}><MaterialCommunityIcons name={kind === 'camera' ? 'camera-outline' : kind === 'uploadVideo' ? 'filmstrip' : 'video-outline'} size={20} color={colors.textPrimary} /><Text style={{ ...font.body(15), color: colors.textPrimary }}>{t(kind === 'camera' ? 'student.coachTab.takePhoto' : kind === 'uploadVideo' ? 'chat.chooseVideo' : 'student.coachTab.shareVideo')}</Text></Pressable>)}
       </View>
     </Pressable> : null}
     <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14, borderTopWidth: 1, borderColor: colors.borderHairline }}>
@@ -390,6 +395,9 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
       </View>
     </View>
     </View>
+    {chatVideos.preparing ? <ActivityIndicator accessibilityLabel={t('chat.videoPreparing')} color={colors.gold500} /> : null}
+    {chatVideos.error ? <Text accessibilityRole="alert" style={{ paddingHorizontal: 16, ...font.body(12), color: colors.danger }}>{chatVideos.error}</Text> : null}
+    {chatVideos.preview ? <ChatVideoPreview key={chatVideos.preview.clientId} video={chatVideos.preview} coachName={resolvedName} cancel={chatVideos.discardPreview} reselect={() => { chatVideos.discardPreview(); void chatVideos.pick(); }} send={chatVideos.sendPreview} /> : null}
     {photos.failed ? <Text accessibilityRole="alert" style={{ paddingHorizontal: 16, ...font.body(12), color: colors.danger }}>{t('chat.sendFailed')}</Text> : null}
     {showSetPicker ? <SetRefSharePicker conversationId={conversationId} loadCandidates={loadCandidates} onClose={() => setShowSetPicker(false)} /> : null}
     {photos.preview ? <Modal visible animationType="slide" onRequestClose={photos.discardPreview}><Screen><View style={{ flex: 1, padding: 16, gap: 16 }}><Image source={{ uri: photos.preview.uri }} resizeMode="contain" style={{ flex: 1 }} /><View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>{[{ label: t('designSystem.action.cancel'), action: photos.discardPreview }, { label: t('student.coachTab.retake'), action: () => void photos.takePhoto() }, { label: t('student.studentBlackGoldChatView.copy007'), action: () => void photos.send(photos.preview!) }].map(item => <Pressable key={item.label} accessibilityRole="button" disabled={photos.sending !== null} onPress={item.action} style={{ minHeight: 48, justifyContent: 'center', padding: 12 }}><Text style={{ ...font.body(16, 'bold'), color: colors.goldText }}>{item.label}</Text></Pressable>)}</View></View></Screen></Modal> : null}
@@ -401,6 +409,7 @@ export function StudentConversationScreen({ conversationId, coachName }: { conve
 
 function StudentChatMessageRow({ message, outgoing, read, openVideo, openImage }: { message: ChatMessage; outgoing: boolean; read: boolean; openImage: () => void; openVideo?: () => void }) {
   const colors = useColors();
+  if (isStandaloneChatVideo(message)) return <ChatStandaloneVideo message={message} outgoing={outgoing} read={read} onPress={openVideo} />;
   if (message.kind === 'image') return <View style={{ alignSelf: outgoing ? 'flex-end' : 'flex-start' }}><PhotoBubble uri={message.image_url} onPress={openImage} /></View>;
   if (message.exercise_ref) return <ChatExerciseNoteCard message={message} outgoing={outgoing} student />;
   const presentation = ChatSetCardPresentation(message);

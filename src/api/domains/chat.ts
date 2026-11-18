@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { authenticatedRequest } from '../session';
 import { encodeQuery, TimestampSchema, UuidSchema } from './shared';
+/** Frozen legacy-client fallback; wire data, never localized UI copy. */
+export const CHAT_VIDEO_FALLBACK_BODY = '[视频]';
 const CursorSchema = z.object({ message_id: UuidSchema, seq: z.number().int() });
 export const ConversationSchema = z.object({
   id: UuidSchema,
@@ -54,6 +56,7 @@ export const ChatMessageSchema = z.object({
   id: UuidSchema, conversation_id: UuidSchema, seq: z.number().int().positive(), sender_id: UuidSchema,
   kind: z.enum(['text', 'image', 'set_ref']), body: z.string().nullish(), client_id: z.string(), created_at: TimestampSchema,
   attachment_id: UuidSchema.nullish(), image_url: z.string().url().nullish(), image_expires_in: z.number().nullish(),
+  video_id: UuidSchema.nullish(),
   poster_url: z.string().nullish(), duration_seconds: z.number().nonnegative().nullish(),
   exercise_ref: ExerciseRefSchema.nullish().catch(null),
   set_ref: ChatSetRefFromWireSchema.nullish().catch(null), video_url: z.string().url().nullish(), video_expires_in: z.number().nullish(),
@@ -67,6 +70,7 @@ export const chatRepository = {
   open: (otherUserId: string) => authenticatedRequest('/conversations', { method: 'POST', body: { other_user_id: UuidSchema.parse(otherUserId) }, schema: z.object({ conversation: ConversationSchema }) }),
   messages: (id: string, query: { since_seq?: number; before_seq?: number; limit?: number } = {}) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages${encodeQuery({ limit: 50, ...query })}`, { schema: ChatMessagesSchema }),
   send: (id: string, body: string, clientID: string) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages`, { method: 'POST', body: SendTextSchema.parse({ kind: 'text', body, client_id: clientID }), schema: z.object({ message: ChatMessageSchema }) }),
+  sendVideo: (id: string, attachmentId: string, clientID: string) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages`, { method: 'POST', body: { kind: 'text', body: CHAT_VIDEO_FALLBACK_BODY, video_id: UuidSchema.parse(attachmentId), client_id: z.string().min(1).parse(clientID) }, schema: z.object({ message: ChatMessageSchema }) }),
   sendImage: (id: string, attachmentId: string, clientID: string) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages`, { method: 'POST', body: { kind: 'image', attachment_id: UuidSchema.parse(attachmentId), client_id: z.string().min(1).parse(clientID) }, schema: z.object({ message: ChatMessageSchema }) }),
   sendExerciseNote: (id: string, input: { body: string; clientID: string; exerciseRef: ExerciseRef }) => authenticatedRequest(`/conversations/${UuidSchema.parse(id)}/messages`, {
     method: 'POST', body: { kind: 'text', body: z.string().min(1).max(4000).parse(input.body), client_id: z.string().min(1).parse(input.clientID), exercise_ref: ExerciseRefSchema.parse(input.exerciseRef) }, schema: z.object({ message: ChatMessageSchema }),

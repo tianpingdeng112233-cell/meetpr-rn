@@ -66,7 +66,8 @@ import { recordTrainingSetE1RM } from './e1rm-live';
 import { createExerciseMetadataResolver, exerciseTitle } from './exercise-metadata';
 import { LoadGeneration } from './load-generation';
 import type { SessionReview, TrainingLoadState, WorkoutSetDraft } from './model';
-import { gymDayText, parseFiniteDecimal } from './policy';
+import { RestTimer } from './RestTimer';
+import { currentRestExercise, gymDayText, parseFiniteDecimal } from './policy';
 import { saveErrorCopy } from './save-errors';
 import { SerialTaskQueue } from './serial-task-queue';
 import { readReview, trainingE1RMRepository, writeReview } from './storage';
@@ -78,6 +79,8 @@ export function TodayWorkoutView() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const workoutScroll = useRef<ScrollView>(null);
+  const [restTop, setRestTop] = useState(160);
+  const [restCompletionSignal, setRestCompletionSignal] = useState(0);
   const accessoryPad = useRef<{ row: View; top: number; height: number } | null>(null);
   const workoutContent = useRef<View>(null!);
   const [accessoryPadHeight, setAccessoryPadHeight] = useState(0);
@@ -167,9 +170,14 @@ export function TodayWorkoutView() {
   const savingSets = useRef(0);
   const videoInteractions = useRef(new Set<string>());
   const weightEditing = useRef(false);
-  const onWeightEditing = useCallback((active: boolean) => { weightEditing.current = active; }, []);
+  const [trainingModalVisible, setTrainingModalVisible] = useState(false);
+  const onWeightEditing = useCallback((active: boolean) => {
+    weightEditing.current = active;
+    setTrainingModalVisible(active || videoInteractions.current.size > 0);
+  }, []);
   const onVideoActivity = useCallback((id: string, active: boolean) => {
     if (active) videoInteractions.current.add(id); else videoInteractions.current.delete(id);
+    setTrainingModalVisible(weightEditing.current || videoInteractions.current.size > 0);
   }, []);
   const jumpToken = useStudentTabsStore((state) => state.trainingJumpToken);
   const planRevision = useStudentTabsStore((state) => state.planRevision);
@@ -294,6 +302,7 @@ export function TodayWorkoutView() {
     drafts: prefilledDrafts, completedExercises: checkedExercises[reviewKey], expandedExerciseId: expandedExercises[reviewKey],
   }) : { exercises: [] };
   const liveDrafts = sheet.exercises.flatMap(block => block.rows);
+  const restExercise = currentRestExercise(sheet.exercises);
   const accessoryDraftsRef = useRef(liveDrafts);
   useEffect(() => { accessoryDraftsRef.current = liveDrafts; }, [liveDrafts]);
   // Drafts are rebuilt each render; only changes to log identities need a fetch.
@@ -536,6 +545,7 @@ export function TodayWorkoutView() {
     if (preview || !planDay || completion.isPending || undoCompletion.isPending) return;
     setRequestedDayID(planDay.id);
     if (!undo) {
+      setRestCompletionSignal(value => value + 1);
       try {
         editor.close();
         for (const row of liveDrafts.filter(item => item.kind === 'warmup' && !item.weightText.trim())) {
@@ -877,9 +887,9 @@ export function TodayWorkoutView() {
         </View> : null}
         <MeetWeightStrip readOnly={preview} onEditingChange={onWeightEditing} studentId={studentId} profile={profileQuery.data} today={localDateText(clockNow)} />
         {state.kind !== 'loading' && !showEmpty && plan ? (
-          <TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} preview={preview}
+          <View onLayout={event => setRestTop(event.nativeEvent.layout.y + event.nativeEvent.layout.height + 12)}><TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} preview={preview}
             onPreviousPlan={previousPlan ? () => browsePlan(previousPlan, 'last') : undefined}
-            onNextPlan={nextPlan ? () => browsePlan(nextPlan, 'first') : undefined} />
+            onNextPlan={nextPlan ? () => browsePlan(nextPlan, 'first') : undefined} /></View>
         ) : null}
         {state.kind === 'loading' ? (
           <ActivityIndicator
@@ -931,7 +941,14 @@ export function TodayWorkoutView() {
               }} />
           </>
         ) : null}
-      </ScrollView></View>
+      </ScrollView>
+      <RestTimer key={studentId} studentId={studentId} exerciseName={restExercise ? exerciseTitle(resolveExerciseMetadata(restExercise.exercise_id)) : ''}
+        prescribed={restExercise?.sets.slice().sort((a, b) => a.set_number - b.set_number).find(set => set.rest_seconds !== null)?.rest_seconds}
+        accessory={isAccessoryExercise(restExercise ? resolveExerciseMetadata(restExercise.exercise_id)?.exerciseType : undefined)}
+        startupBlocked={trainingModalVisible || !notice.ready || (!preview && !browsing && notice.visible)}
+        visible={trainingVisible && editable && state.kind === 'loaded' && !showEmpty && Boolean(restExercise) && !editor.editing && accessoryPadHeight === 0 && !completionPhase && !pickerVisible && !noteRow}
+        top={restTop} bottom={completionDockHeight - spacing.md} completionSignal={restCompletionSignal} />
+      </View>
       {preview ? <View testID="handoff-preview-dock" onLayout={event => setCompletionDockHeight(event.nativeEvent.layout.height)} style={{ padding: spacing.base, gap: spacing.sm, backgroundColor: colors.bgBase }}>
         <Text style={{ ...font.body(13), color: colors.textSecondary, textAlign: 'center' }}>{t('training.handoff.remaining', [Math.max(0, (activeProgress?.total_training_days ?? 0) - (activeProgress?.completed_training_days ?? 0))])}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t('training.handoff.back')} onPress={backToCurrent} style={{ minHeight: spacing.minimumHitTarget, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', padding: spacing.sm }}><Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t('training.handoff.back')}</Text></Pressable>

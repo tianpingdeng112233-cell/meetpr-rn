@@ -1,0 +1,64 @@
+FAIL src/features/training/__tests__/training-policy.test.ts
+  ✓ cycle-wide draft synthesis chooses the newest real log for a stable set
+  ✓ plate loadout uses aggregated copy and canonical empty branches (1 ms)
+  ✕ current rest exercise is expanded, then highlighted, then last when all complete
+  plan × log draft synthesis
+    ✓ joins by plan exercise and zero-based set index while preserving stable plan set id (2 ms)
+  suggested-weight selector
+    ✓ main lift prefers a completed same-prescription prior set
+    ✓ main lift otherwise reverses e1RM and rounds down to 2.5 kg
+    ✓ accessory prefers same-day recent log, then the 84-day history input (1 ms)
+    ✓ does not suggest when the prescription is not RPE-based
+  rest, gym-day, and RIR policies
+    ✕ coach duration wins over fixed main/accessory settings without RPE tiers
+    ✓ 04:00 is the local gym-day boundary
+    ✓ maps RPE 5 to the exact RIR copy
+    ✓ maps RPE 5.5 to the exact RIR copy
+    ✓ maps RPE 6 to the exact RIR copy
+    ✓ maps RPE 6.5 to the exact RIR copy
+    ✓ maps RPE 7 to the exact RIR copy (1 ms)
+    ✓ maps RPE 7.5 to the exact RIR copy
+    ✓ maps RPE 8 to the exact RIR copy
+    ✓ maps RPE 8.5 to the exact RIR copy
+    ✓ maps RPE 9 to the exact RIR copy
+    ✓ maps RPE 9.5 to the exact RIR copy
+    ✓ maps RPE 10 to the exact RIR copy
+    ✓ snaps RIR copy to the nearest half step
+    ✓ includes the exact 84-day history boundary
+
+  ● rest, gym-day, and RIR policies › coach duration wins over fixed main/accessory settings without RPE tiers
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 210
+    Received: NaN
+
+      164 |     expect(resolveRestSeconds({ prescribed: 75, preference, accessory: false })).toBe(75);
+      165 |     expect(resolveRestSeconds({ prescribed: 75, preference, accessory: true })).toBe(75);
+    > 166 |     expect(resolveRestSeconds({ prescribed: null, preference, accessory: false })).toBe(210);
+          |                                                                                    ^
+      167 |     expect(resolveRestSeconds({ prescribed: null, preference, accessory: true })).toBe(90);
+      168 |     expect(resolveRestSeconds({ prescribed: 1200, preference, accessory: false })).toBe(900);
+      169 |     expect(resolveRestSeconds({ prescribed: 0, preference, accessory: true })).toBe(0);
+
+      at Object.toBe (src/features/training/__tests__/training-policy.test.ts:166:84)
+
+  ● current rest exercise is expanded, then highlighted, then last when all complete
+
+    TypeError: (0 , _policy.currentRestExercise) is not a function
+
+      236 |   const first = { exercise: { ...exercise, id: 'first' }, collapsed: true, node: 'complete' as const };
+      237 |   const second = { exercise: { ...exercise, id: 'second' }, collapsed: true, node: 'current' as const };
+    > 238 |   expect(currentRestExercise([first, second])).toEqual(second.exercise);
+          |                             ^
+      239 |   expect(currentRestExercise([{ ...first, collapsed: false }, second])).toEqual(first.exercise);
+      240 |   expect(currentRestExercise([first, { ...second, node: 'complete' }])).toEqual(second.exercise);
+      241 |   expect(currentRestExercise([])).toBeNull();
+
+      at Object.<anonymous> (src/features/training/__tests__/training-policy.test.ts:238:29)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 21 passed, 23 total
+Snapshots:   0 total
+Time:        0.747 s
+Ran all test suites matching /src\/features\/training\/__tests__\/training-policy.test.ts/i.

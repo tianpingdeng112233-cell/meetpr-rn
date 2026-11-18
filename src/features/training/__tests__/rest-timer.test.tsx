@@ -1,135 +1,184 @@
-import { afterEach, beforeEach, expect, test, jest } from '@jest/globals';
-import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { AppState, Text, Vibration } from 'react-native';
-import { setLocaleOverride, t } from '@/i18n';
-import { RestTimer } from '../RestTimer';
-import { writeBoolean } from '../storage';
-import { STORAGE_KEYS } from '../constants';
+import { afterEach, beforeEach, expect, test, jest } from "@jest/globals";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { AppState, Text, Vibration } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { setLocaleOverride, t } from "@/i18n";
+import { RestTimer } from "../RestTimer";
+import { RestRingIntroduction } from "../rest-timer-session";
+import { StartupOverlayContext } from "@/navigation/startup-overlay";
+import { useHandoffNotice } from "../handoff-notice";
 
-jest.mock('@react-native-async-storage/async-storage', () =>
+jest.mock("@react-native-async-storage/async-storage", () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
+);
 const mockNative = {
-  show: jest.fn(), hide: jest.fn(),
+  show: jest.fn(),
+  hide: jest.fn(),
+  playCompletionSound: jest.fn(),
   isPermissionGranted: jest.fn(() => true),
-  consumeState: jest.fn((): { endAtEpochMs: number | null; skipped: boolean } => ({ endAtEpochMs: null, skipped: false })),
+  consumeState: jest.fn(
+    (): { endAtEpochMs: number | null; skipped: boolean } => ({
+      endAtEpochMs: null,
+      skipped: false,
+    }),
+  ),
 };
-let appStateChanged: (state: 'active' | 'background') => void;
+let appStateChanged: (state: "active" | "background") => void;
 let renderer: ReactTestRenderer;
-beforeEach(async () => { jest.useFakeTimers(); AppState.currentState = 'active'; jest.clearAllMocks(); jest.spyOn(jest.requireMock<typeof import('expo-modules-core')>('expo-modules-core'), 'requireOptionalNativeModule').mockReturnValue(mockNative); mockNative.consumeState.mockReturnValue({ endAtEpochMs: null, skipped: false }); jest.spyOn(AppState, 'addEventListener').mockImplementation((_, listener) => { appStateChanged = listener; return { remove: jest.fn() }; }); setLocaleOverride('en'); await writeBoolean(STORAGE_KEYS.restExplanation('student'), true); });
-afterEach(() => { act(() => renderer?.unmount()); jest.useRealTimers(); jest.restoreAllMocks(); setLocaleOverride(null); });
+beforeEach(async () => {
+  jest.useFakeTimers();
+  AppState.currentState = "active";
+  jest.clearAllMocks();
+  jest
+    .spyOn(
+      jest.requireMock<typeof import("expo-modules-core")>("expo-modules-core"),
+      "requireOptionalNativeModule",
+    )
+    .mockReturnValue(mockNative);
+  mockNative.consumeState.mockReturnValue({
+    endAtEpochMs: null,
+    skipped: false,
+  });
+  jest.spyOn(AppState, "addEventListener").mockImplementation((_, listener) => {
+    appStateChanged = listener;
+    return { remove: jest.fn() };
+  });
+  setLocaleOverride("en");
+  await (await RestRingIntroduction.load("student")).dismissSettings();
+});
+afterEach(async () => {
+  act(() => renderer?.unmount());
+  await AsyncStorage.clear();
+  jest.useRealTimers();
+  jest.restoreAllMocks();
+  setLocaleOverride(null);
+});
+const props = {
+  studentId: "student",
+  exerciseName: "Bench",
+  accessory: false,
+  visible: true,
+};
+const ring = () =>
+  renderer.root.findAll(
+    (node) =>
+      node.props.testID === "rest-ring" &&
+      typeof node.props.onPress === "function",
+  )[0];
+const copy = () =>
+  renderer.root.findAllByType(Text).map((node) => node.props.children);
 
-test('countdown uses the rest overlay Skip label and accessible remaining time', async () => {
-  await act(async () => { renderer = create(<RestTimer durationSeconds={120} studentId="student" onClose={jest.fn()} />); });
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(t('student.restTimerOverlay.copy001'));
-  expect(renderer.root.findAllByProps({ accessibilityLabel: t('student.restTimerOverlay.copy002', ['2:00']) }).length).toBeGreaterThan(0);
+test("first settings wait for other startup overlays to close and the student to return to training", async () => {
+  const firstVisit = { ...props, studentId: "new-student", startupBlocked: true };
+  await act(async () => {
+    renderer = create(<RestTimer {...firstVisit} />);
+  });
+  expect(copy()).not.toContain(t("training.restRing.settings"));
+  await act(async () => {
+    renderer.update(<RestTimer {...firstVisit} startupBlocked={false} visible={false} />);
+  });
+  expect(copy()).not.toContain(t("training.restRing.settings"));
+  await act(async () => {
+    renderer.update(<RestTimer {...firstVisit} startupBlocked={false} />);
+  });
+  expect(copy()).toContain(t("training.restRing.settings"));
 });
 
-test('countdown progress adjusts without transitions and Skip dismisses immediately', async () => {
-  const onClose = jest.fn();
-  await act(async () => { renderer = create(<RestTimer durationSeconds={120} studentId="student" onClose={onClose} />); });
-  act(() => { jest.advanceTimersByTime(30_000); });
-  expect(renderer.root.findAllByProps({ accessibilityRole: 'progressbar' })[0].props.accessibilityValue.now).toBe(0.75);
-  act(() => { renderer.root.findAllByProps({ accessibilityLabel: '-30s' })[0].props.onPress(); });
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('1:00');
-  act(() => { renderer.root.findAllByProps({ accessibilityLabel: '+30s' })[0].props.onPress(); });
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('1:30');
-  act(() => { renderer.root.findAllByProps({ accessibilityLabel: t('student.restTimerOverlay.copy001') })[0].props.onPress(); });
-  expect(onClose).toHaveBeenCalledTimes(1);
+test("app-shell notice blocks first settings until all shell and training overlays close", async () => {
+  const screen = (shellBlocked: boolean, startupBlocked: boolean) => (
+    <StartupOverlayContext.Provider value={shellBlocked}>
+      <RestTimer {...props} studentId="new-student" startupBlocked={startupBlocked} />
+    </StartupOverlayContext.Provider>
+  );
+  await act(async () => { renderer = create(screen(true, false)); });
+  expect(copy()).not.toContain(t("training.restRing.settings"));
+  await act(async () => { renderer.update(screen(true, true)); });
+  await act(async () => { renderer.update(screen(false, true)); });
+  expect(copy()).not.toContain(t("training.restRing.settings"));
+  expect((await RestRingIntroduction.load("new-student")).snapshot().settings).toBe(true);
+  await act(async () => { renderer.update(screen(false, false)); });
+  expect(copy()).toContain(t("training.restRing.settings"));
+  const backdrop = renderer.root.findAll(node => node.props.testID === "rest-settings-dismiss" && node.props.onPress)[0];
+  await act(async () => backdrop.props.onPress());
+  await act(async () => { renderer.update(screen(true, false)); });
+  await act(async () => { renderer.update(screen(false, false)); });
+  expect(copy()).not.toContain(t("training.restRing.settings"));
+  expect(copy()).toContain(t("training.restRing.hint"));
 });
 
-test('expiry vibrates once, shows finished copy and dismisses after three seconds', async () => {
-  const vibrate = jest.spyOn(Vibration, 'vibrate').mockImplementation(() => {});
-  const onClose = jest.fn();
-  await act(async () => { renderer = create(<RestTimer durationSeconds={1} studentId="student" onClose={onClose} />); });
-  act(() => { jest.advanceTimersByTime(1_000); });
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(t('student.restTimerOverlay.copy003'));
-  expect(vibrate).toHaveBeenCalledTimes(1);
-  act(() => { jest.advanceTimersByTime(2_999); });
-  expect(onClose).not.toHaveBeenCalled();
-  act(() => { jest.advanceTimersByTime(1); });
-  expect(onClose).toHaveBeenCalledTimes(1);
-  expect(vibrate).toHaveBeenCalledTimes(1);
+test("offline cached training without handoff data still allows first rest settings", async () => {
+  function CachedTraining() {
+    const notice = useHandoffNotice("new-student", "cached-plan");
+    return <RestTimer {...props} studentId="new-student" startupBlocked={!notice.ready || notice.visible} />;
+  }
+  await act(async () => { renderer = create(<CachedTraining />); });
+  expect(copy()).toContain(t("training.restRing.settings"));
 });
 
-test('unmount cancels an expired timer’s pending dismissal', async () => {
-  jest.spyOn(Vibration, 'vibrate').mockImplementation(() => {});
-  const onClose = jest.fn();
-  await act(async () => { renderer = create(<RestTimer durationSeconds={1} studentId="student" onClose={onClose} />); });
-  act(() => { jest.advanceTimersByTime(1_000); renderer.unmount(); });
-  act(() => { jest.advanceTimersByTime(3_000); });
-  expect(onClose).not.toHaveBeenCalled();
+test("tap idle ring starts the displayed duration and dismisses the hint permanently", async () => {
+  await act(async () => {
+    renderer = create(<RestTimer {...props} />);
+  });
+  expect(copy()).toContain("3:00");
+  expect(copy()).toContain(t("training.restRing.hint"));
+  await act(async () => ring().props.onPress());
+  act(() => jest.advanceTimersByTime(1_000));
+  expect(copy()).toContain("2:59");
+  expect(copy()).not.toContain(t("training.restRing.hint"));
+  expect((await RestRingIntroduction.load("student")).snapshot().hint).toBe(
+    false,
+  );
 });
 
-
-test('foreground remaining time follows the notification extension', async () => {
-  await act(async () => { renderer = create(<RestTimer durationSeconds={120} studentId="student" onClose={jest.fn()} />); });
-  act(() => appStateChanged?.('background'));
-  mockNative.consumeState.mockReturnValue({ endAtEpochMs: Date.now() + 150_000, skipped: false });
-  act(() => appStateChanged?.('active'));
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('2:30');
-  expect(mockNative.hide).toHaveBeenCalled();
-});
-
-test('notification Skip closes the overlay and calls onClose exactly once on foreground', async () => {
-  const onClose = jest.fn();
-  await act(async () => { renderer = create(<RestTimer durationSeconds={120} studentId="student" onClose={onClose} />); });
-  act(() => appStateChanged('background'));
-  mockNative.consumeState.mockReturnValue({ endAtEpochMs: null, skipped: true });
-  act(() => { appStateChanged('active'); appStateChanged('active'); jest.advanceTimersByTime(5_000); });
-  expect(onClose).toHaveBeenCalledTimes(1);
-  expect(renderer.toJSON()).toBeNull();
-});
-
-test('background expiry preserves the native alarm and does not vibrate or dismiss from JS', async () => {
-  const vibrate = jest.spyOn(Vibration, 'vibrate').mockImplementation(() => {});
-  const onClose = jest.fn();
-  await act(async () => { renderer = create(<RestTimer durationSeconds={1} studentId="student" onClose={onClose} />); });
-  act(() => appStateChanged('background'));
-  mockNative.hide.mockClear();
-  act(() => jest.advanceTimersByTime(5_000));
-  expect(mockNative.hide).not.toHaveBeenCalled();
-  expect(onClose).not.toHaveBeenCalled();
-  expect(vibrate).not.toHaveBeenCalled();
-});
-
-test('explanation and rest settings suppress background notifications until dismissed', async () => {
-  await writeBoolean(STORAGE_KEYS.restExplanation('student'), false);
-  await act(async () => { renderer = create(<RestTimer durationSeconds={120} studentId="student" onClose={jest.fn()} />); });
-  act(() => appStateChanged('background'));
-  expect(mockNative.show).not.toHaveBeenCalled();
-  act(() => appStateChanged('active'));
-  act(() => renderer.root.findAllByProps({ label: t('student.restTimerExplanationView.copy005') })[0].props.onPress());
-  act(() => appStateChanged('background'));
-  expect(mockNative.show).toHaveBeenCalledTimes(1);
-});
-
-test('changing duration replaces the end and unmount cancels native notifications', async () => {
-  await act(async () => { renderer = create(<RestTimer durationSeconds={120} studentId="student" onClose={jest.fn()} />); });
+test("tap running ring expands controls; background +15 and tab changes retain the same rest", async () => {
+  await act(async () => {
+    renderer = create(<RestTimer {...props} />);
+  });
+  await act(async () => ring().props.onPress());
+  await act(async () =>
+    renderer.update(<RestTimer {...props} visible={false} />),
+  );
   act(() => jest.advanceTimersByTime(30_000));
-  await act(async () => renderer.update(<RestTimer durationSeconds={180} studentId="student" onClose={jest.fn()} />));
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('3:00');
-  act(() => appStateChanged('background'));
-  expect(mockNative.show).toHaveBeenLastCalledWith(Date.now() + 180_000, '', expect.objectContaining({ title: 'Rest between sets', skip: 'Skip', add: '+30s' }));
-  mockNative.hide.mockClear();
-  act(() => renderer.unmount());
-  expect(mockNative.hide).toHaveBeenCalledTimes(1);
+  await act(async () => renderer.update(<RestTimer {...props} />));
+  await act(async () => ring().props.onPress());
+  expect(copy()).toContain("2:30");
+  expect(copy()).toContain("+15s");
+  const add = renderer.root.findAll(
+    (node) => node.props.accessibilityLabel === "+15s" && node.props.onPress,
+  )[0];
+  act(() => add.props.onPress());
+  expect(copy()).toContain("2:45");
+  act(() => appStateChanged("background"));
+  expect(mockNative.show).toHaveBeenLastCalledWith(
+    Date.now() + 165_000,
+    "Bench",
+    expect.objectContaining({ add: "+15s" }),
+    { vibration: true, sound: true },
+  );
 });
 
-test('returning after background expiry clears notifications without a second vibration', async () => {
-  const vibrate = jest.spyOn(Vibration, 'vibrate').mockImplementation(() => {});
-  const onClose = jest.fn();
-  await act(async () => { renderer = create(<RestTimer durationSeconds={1} studentId="student" onClose={onClose} />); });
-  act(() => { appStateChanged('background'); jest.advanceTimersByTime(2_000); appStateChanged('active'); });
-  expect(vibrate).not.toHaveBeenCalled();
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(t('student.restTimerOverlay.copy003'));
-  act(() => jest.advanceTimersByTime(3_000));
-  expect(onClose).toHaveBeenCalledTimes(1);
-});
-
-test.each(['Competition Deadlift', undefined])('background notification receives the endpoint and exercise body (%s)', async exerciseName => {
-  const endAt = Date.now() + 120_000;
-  await act(async () => { renderer = create(<RestTimer durationSeconds={120} exerciseName={exerciseName} studentId="student" onClose={jest.fn()} />); });
-  act(() => { jest.advanceTimersByTime(30_000); appStateChanged('background'); });
-  expect(mockNative.show).toHaveBeenLastCalledWith(endAt, exerciseName ?? '', expect.objectContaining({ title: 'Rest between sets' }));
+test("long press opens settings with haptic feedback without starting or pausing the timer", async () => {
+  const vibrate = jest.spyOn(Vibration, "vibrate").mockImplementation(() => {});
+  await act(async () => {
+    renderer = create(<RestTimer {...props} />);
+  });
+  await act(async () => ring().props.onLongPress());
+  expect(copy()).toContain(t("training.restRing.settings"));
+  expect(vibrate).toHaveBeenCalledWith(30);
+  const backdrop = () =>
+    renderer.root.findAll(
+      (node) =>
+        node.props.testID === "rest-settings-dismiss" && node.props.onPress,
+    )[0];
+  await act(async () => backdrop().props.onPress());
+  await act(async () => {
+    ring().props.onPressIn();
+    ring().props.onPress();
+  });
+  act(() => jest.advanceTimersByTime(1_000));
+  await act(async () => ring().props.onLongPress());
+  act(() => jest.advanceTimersByTime(30_000));
+  await act(async () => backdrop().props.onPress());
+  expect(copy()).toContain("2:29");
 });

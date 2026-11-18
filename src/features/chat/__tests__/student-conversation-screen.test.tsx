@@ -12,6 +12,7 @@ import { setLocaleOverride, t } from '@/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { isValidElement, type ReactNode } from 'react';
 import { Alert, AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, type AppStateStatus } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
@@ -72,7 +73,7 @@ function expectFeedbackBodyIsStatic(text: string) {
   }
 }
 async function renderScreen() {
-  await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen conversationId={conversationId} coachName="Alex" /></QueryClientProvider>); });
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen coachId={coachId} conversationId={conversationId} coachName="Alex" /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
 }
 const initialAppState = AppState.currentState;
@@ -189,7 +190,7 @@ test.each(['loaded', 'failed'] as const)('reading the published plan keeps it ta
   plans = [{ id: 'plan-tab', status: 'published', published_at: publishedAt, created_at: publishedAt }];
   const tree = (coach: boolean) => <QueryClientProvider client={client}>
     <HeaderProbe />
-    {coach && <StudentConversationScreen conversationId={conversationId} coachName="Alex" />}
+    {coach && <StudentConversationScreen coachId={coachId} conversationId={conversationId} coachName="Alex" />}
   </QueryClientProvider>;
   await act(async () => { renderer = create(tree(false)); });
   await waitForScreen(() => copy().includes('1'));
@@ -487,7 +488,7 @@ test.each(['', '   '])('a coach without a display name renders a localized fallb
   jest.mocked(chatRepository.list).mockResolvedValue({ conversations: [
     { id: conversationId, other_party: { id: coachId, display_name: '   ' }, unread_count: 0 },
   ] });
-  await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen conversationId={conversationId} coachName={coachName} /></QueryClientProvider>); });
+  await act(async () => { renderer = create(<QueryClientProvider client={client}><StudentConversationScreen coachId={coachId} conversationId={conversationId} coachName={coachName} /></QueryClientProvider>); });
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
   expect(copy()).toContain(t('student.studentBlackGoldChatView.copy014', [t('student.dashboardView.copy003')]));
   expect(renderer.root.findAllByType(Text).some(node => node.props.children === t('student.dashboardView.copy003'))).toBe(true);
@@ -644,11 +645,22 @@ test.each([
   } finally { jest.useRealTimers(); }
 });
 
-test('108 Coach composer shows only camera and today set-video actions and keeps its draft', async () => {
+test('113 Coach composer adds standalone video alongside camera and set sharing and keeps its draft', async () => {
   await renderScreen();
   await act(async () => renderer.root.findByType(TextInput).props.onChangeText('Keep this draft'));
   await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.coachTab.add'))[0].props.onPress());
   expect(copy()).toContain(t('student.coachTab.takePhoto'));
+  expect(copy()).toContain(t('chat.chooseVideo'));
   expect(copy()).toContain(t('student.coachTab.shareVideo'));
   expect(renderer.root.findByType(TextInput).props.value).toBe('Keep this draft');
+});
+
+
+test('video picker remains available when the auxiliary conversation list fails', async () => {
+  jest.mocked(chatRepository.list).mockRejectedValue(new Error('List offline'));
+  const pick = jest.spyOn(ImagePicker, 'launchImageLibraryAsync').mockResolvedValue({ canceled: true, assets: null });
+  await renderScreen();
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('student.coachTab.add'))[0].props.onPress());
+  await act(async () => renderer.root.findAll(node => node.props.accessibilityRole === 'button' && node.props.accessibilityLabel === t('chat.chooseVideo'))[0].props.onPress());
+  expect(pick).toHaveBeenCalledWith(expect.objectContaining({ mediaTypes: ['videos'], allowsMultipleSelection: false }));
 });

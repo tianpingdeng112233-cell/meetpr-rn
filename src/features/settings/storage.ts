@@ -3,12 +3,13 @@ import AsyncStorage from '@/demo/storage';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { STORAGE_KEYS } from '@/features/training/constants';
-import { clampRestSeconds, type RestTimerPreference } from './rest-timer';
+import { clampRestSeconds, defaultRestPreference, type RestTimerPreference } from './rest-timer';
 import { defaultReminderSettings, type ReminderSettings } from './training-reminder';
 const AccessoryRestSchema = z.number().optional().catch(undefined);
-const RestSchema = z.discriminatedUnion('mode', [z.object({ mode: z.literal('automatic'), accessory: AccessoryRestSchema }), z.object({ mode: z.literal('custom'), low: z.number(), mid: z.number(), high: z.number(), accessory: AccessoryRestSchema })]);
+const LegacyRestSchema = z.discriminatedUnion('mode', [z.object({ mode: z.literal('automatic'), accessory: AccessoryRestSchema }), z.object({ mode: z.literal('custom'), low: z.number(), mid: z.number(), high: z.number(), accessory: AccessoryRestSchema })]);
 const ReminderSchema = z.object({ enabled: z.boolean(), weekdays: z.array(z.number().int().min(1).max(7)), hour: z.number().int().min(0).max(23), minute: z.number().int().min(0).max(59) });
-const restKey = (id: string) => `meetpr.rest-timer.v2.${id}`;
+const restKey = (id: string) => `meetpr.rest-timer.v3.${id}`;
+const RestSchema = z.object({ main: z.number().transform(clampRestSeconds), accessory: z.number().transform(clampRestSeconds), vibration: z.boolean(), sound: z.boolean() });
 const reminderKey = (id: string) => `meetpr.training-reminder.v1.${id}`;
 async function read<T>(key: string, schema: z.ZodType<T>): Promise<T | null> {
   const raw = await AsyncStorage.getItem(key);
@@ -17,10 +18,16 @@ async function read<T>(key: string, schema: z.ZodType<T>): Promise<T | null> {
 }
 export async function readRestPreference(id: string): Promise<RestTimerPreference> {
   const saved = await read(restKey(id), RestSchema);
-  if (saved?.mode === 'custom') return { ...saved, mode: 'custom', low: clampRestSeconds(saved.low), mid: clampRestSeconds(saved.mid), high: clampRestSeconds(saved.high) };
   if (saved) return saved;
-  const legacy = await read(STORAGE_KEYS.restPreference(id), z.number().min(30).max(600));
-  return legacy === null ? { mode: 'automatic' } : { mode: 'custom', low: clampRestSeconds(legacy), mid: clampRestSeconds(legacy), high: clampRestSeconds(legacy) };
+  const old = await read(`meetpr.rest-timer.v2.${id}`, LegacyRestSchema);
+  const legacy = old ? null : await read(STORAGE_KEYS.restPreference(id), z.number().min(30).max(600));
+  const migrated = {
+    ...defaultRestPreference,
+    main: old?.mode === 'custom' ? clampRestSeconds(old.mid) : legacy === null ? 180 : clampRestSeconds(legacy),
+    accessory: old?.accessory === undefined ? 60 : clampRestSeconds(old.accessory),
+  };
+  await writeRestPreference(id, migrated);
+  return migrated;
 }
 export const writeRestPreference = (id: string, value: RestTimerPreference) => AsyncStorage.setItem(restKey(id), JSON.stringify(RestSchema.parse(value)));
 export const readReminderPreference = (id: string) => read(reminderKey(id), ReminderSchema);
