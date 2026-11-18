@@ -13,7 +13,7 @@ export function createSetSender(deps: SenderDependencies): SetSender {
     const request = entry.request!;
     try { return await deps.upsert(request); }
     catch (error) {
-      if (!(typeof error === 'object' && error !== null && 'code' in error && error.code === 'SETS_PLAN_EXERCISE_NOT_PUBLISHED') ||
+      if (request.is_warmup || !(typeof error === 'object' && error !== null && 'code' in error && error.code === 'SETS_PLAN_EXERCISE_NOT_PUBLISHED') ||
         !('plan_exercise_id' in request) || !await deps.missingExercise(entry)) throw error;
       const { plan_exercise_id: _removed, ...fields } = request;
       const added: SetLogUpsertRequest = { ...fields, exercise_id: entry.exerciseId, plan_day_id: entry.dayId,

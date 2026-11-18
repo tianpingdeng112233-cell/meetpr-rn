@@ -1,4 +1,23 @@
 {
+"training.pad.filledUp": {"en": {"one": "Filled {1} in {0} set above", "other": "Filled {1} in {0} sets above"}, "zh": "已改上方 {0} 组的{1}"},
+"training.pad.filledDown": {"en": {"one": "Filled {1} in {0} set below", "other": "Filled {1} in {0} sets below"}, "zh": "已改下方 {0} 组的{1}"},
+"training.pad.emptyUp": {"en": "No sets above", "zh": "上方没有组了"},
+"training.pad.emptyDown": {"en": "No sets below", "zh": "下方没有组了"},
+
+"training.warmup.add": {"en": "Add warm-up set", "zh": "加热身组"},
+"training.warmup.limit": {"en": "Maximum 5 warm-up sets", "zh": "热身组最多 5 组"},
+"training.warmup.set": {"en": "Warm-up set {0}", "zh": "热身第 {0} 组"},
+"training.warmup.context": {"en": "{0} · Warm-up set {1} · {2}", "zh": "{0} · 热身第 {1} 组 · {2}"},
+"training.warmup.marker": {"en": "W", "zh": "热"},
+
+"training.pad.addSet": {"en": "Add set", "zh": "加一组"},
+"training.pad.fill": {"en": "Fill", "zh": "一键改"},
+"training.pad.fillUp": {"en": "Fill up", "zh": "一键改向上"},
+"training.pad.fillDown": {"en": "Fill down", "zh": "一键改向下"},
+"training.pad.up": {"en": "Up", "zh": "向上"},
+"training.pad.down": {"en": "Down", "zh": "向下"},
+"training.pad.hide": {"en": "Hide keyboard", "zh": "收起键盘"},
+
 "training.restRing.settings": {"en": "Rest settings", "zh": "休息设置"},
 "training.restRing.main": {"en": "Main lifts", "zh": "主项"},
 "training.restRing.accessory": {"en": "Accessories", "zh": "辅助项"},
@@ -409,6 +428,7 @@
 "student.added.addExercise": {"en": "Add exercise", "zh": "加动作"},
 "student.added.added": {"en": "Added by you", "zh": "自加"},
 "student.added.remove": {"en": "Remove", "zh": "移除"},
+"student.added.deleteAction": {"en": "Delete", "zh": "删除"},
 "student.added.addedHint": {"en": "Exercises you add are logged for today only and don't change your coach's plan.", "zh": "自己加的动作只记在今天，不会改教练的计划。"},
 "student.added.search": {"en": "Search name or alias", "zh": "搜动作名 / 英文 / 别名"},
 "student.added.alreadyAdded": {"en": "Already added today", "zh": "今天已经加过"},

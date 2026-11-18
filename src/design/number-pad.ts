@@ -36,3 +36,9 @@ export function snapped(raw: number, field: NumberPadField, minimumWeight = 20):
     ? Math.round(Math.min(500, Math.max(minimumWeight, raw)) * 4) / 4
     : Math.min(100, Math.max(1, Math.round(raw)));
 }
+
+/** All-day required cells retain the last valid value; effort can explicitly clear. */
+export function settledAccessoryText(text: string, field: NumberPadField, previous: string): string {
+  const value = accessoryValue(text, field);
+  return value === undefined || (value === null && (field === 'weight' || field === 'reps')) ? previous : text;
+}

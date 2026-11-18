@@ -14,7 +14,7 @@ export function previousAccessoryWeight(row: WorkoutSetDraft, history: Accessory
   const eligible = history.logs.filter(log => log.student_id === history.studentId &&
     log.exercise_id === row.exercise.exercise_id && !currentExerciseIds.has(log.plan_exercise_id ?? '') &&
     log.plan_day_id !== row.exercise.plan_day_id && log.logged_date <= history.throughDate &&
-    log.completed && !log.failed && !log.assumed);
+    log.completed && !log.failed && !log.assumed && !log.is_warmup);
   const latest = [...eligible].sort((a, b) => b.logged_date.localeCompare(a.logged_date) || b.logged_at.localeCompare(a.logged_at))[0];
   if (!latest) return null;
   const previous = eligible.filter(log => log.logged_date === latest.logged_date &&

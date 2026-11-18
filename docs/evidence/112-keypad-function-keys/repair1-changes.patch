@@ -1,0 +1,476 @@
+diff --git a/PARITY.md b/PARITY.md
+index 20f1742..7cd6584 100644
+--- a/PARITY.md
++++ b/PARITY.md
+@@ -1,4 +1,6 @@
+ # PARITY — 1:1 复刻台账
++> **2026-11-17 spec 112 返修 1（未提交，待原生复验）**：已复现 demo 重启后 ID 碰撞丢组，origin/main 同样存在；修复完成写入、热身统计排除、原值持久标记与英文单复数。红绿、最终检查与独立审查见 [同卡 JOURNAL「返修 1」](docs/journal/2026-11-17-112-keypad-function-keys-android.md#返修-1)；本轮不 commit/push，ADB 沙箱阻塞截图。
++
+ > **2026-11-17 spec 112（工作区待收货）**：Android allDay 四功能键、跨格结算、RPE/RIR 快选与自加热身组已实装；自动化与独立审查结果、原生/后端联调缺口见 [JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)。不 commit/push，未进包；发布依赖后端 068 线上部署。
+ > **2026-11-16 spec 110 旧周期练完再接新计划（工作区待收货）**：Android 已接服务端 current 契约、只读预览下一周期、接续提示与调用点统一；demo 加 upcoming。独立 Standards / Spec 审查已闭合，自动化证据与验收缺口见 [JOURNAL](docs/journal/2026-11-16-110-android.md)。未 commit / push，未进包；原生滚动、深浅色 / 大字、CN / Global 真实 API 与升级亲验待收货方。
+ > **2026-11-15 · CN15 已发布**。版本 APK 与固定下载链接均已核验，CN14 实包可收到本次更新提示。[发布与覆盖升级记录](docs/journal/2026-11-15-release-cn15.md)
+diff --git a/docs/journal/2026-11-17-112-keypad-function-keys-android.md b/docs/journal/2026-11-17-112-keypad-function-keys-android.md
+index 579b6c0..77a90dd 100644
+--- a/docs/journal/2026-11-17-112-keypad-function-keys-android.md
++++ b/docs/journal/2026-11-17-112-keypad-function-keys-android.md
+@@ -68,3 +68,61 @@ Jest 使用 `--runInBand --forceExit`，原有异步句柄需强制退出；输
+ ## 原生环境阻塞
+ 
+ `/opt/homebrew/share/android-commandlinetools/platform-tools/adb devices -l` 返回：`could not install *smartsocket* listener: Operation not permitted`，无法连接 `meetpr-cn-accept` / `meetpr16@5570`。当前审批策略禁止提权，未绕过沙箱、未伪造截图。待可连接环境补 Android 深浅色交互截图、真实后端与覆盖升级验收，不能据本地 Jest 宣称整卡收货。
++
++## 返修 1
++
++### 范围与现场
++
++- David 2026-11-17 指派三项返修；当前基线 `1084f43`，开工工作区干净。本轮不 commit、不 push、不打包发布。
++- 已重读 CONTEXT、AGENTS/CLAUDE、112 SPEC、原 JOURNAL、PLAN、工程闭环与记忆索引，执行 diagnose → diagnosing-bugs 六阶段及 tdd。Expo SDK 57 版本文档已核对。
++- 补充的真实步骤包括：两组热身 60/100、正式第 2 组 140 向下填充、RPE 8.5、切回第 1 组、force-stop/restart、再加热身、切深色/回训练、引体 RIR 与空热身、长按完成。按用户确认，验收包来自本工作树 `1084f43`、12:22 的 CN release/demo 构建，无 Metro；不是旧 bundle。
++- 自动化使用仓内真实 demo backend/seed，UI 调用 TodayWorkoutView、真实 SetSyncQueue/AsyncStorage。重启通过卸载组件、清 QueryClient、销毁账号 sync runtime，再重建账号/队列和 demo backend 实现；读取落盘状态，不以同一个内存 queue 冒充重启。设置往返用页面重新挂载覆盖；主题颜色本身未在自动化中重演。
++
++### 问题 1：红测、最小化与根因
++
++1. 最初未含重启的原步骤在当前代码下为绿（[记录](../evidence/112-keypad-function-keys/repair1-original-scenario-before.log)），不以夹具错误或超时作为行为红测。补完整重启后运行：
++
++   `npm test -- --runInBand --forceExit src/features/training/__tests__/all-day-view.test.tsx -t 'finish today completes edited working'`
++
++   得到 **13 sets / 8,975 kg**，期望 **15 sets / 10,375 kg**，精确少两组 140×5（[红测](../evidence/112-keypad-function-keys/repair1-restart-red.log)）。
++2. 最小化：去掉第三热身、设置往返、引体操作，仍红；再去掉全部热身，仍红（[最小化](../evidence/112-keypad-function-keys/repair1-minimized.log)、[无热身](../evidence/112-keypad-function-keys/repair1-no-warmups.log)）。载荷是「已有记组回执 → demo 重启 → 写新组」。重启前后与完成后边界探针使用 `[DEBUG-112-*]`，现已从代码删除，合成数据证据保留于 [probe](../evidence/112-keypad-function-keys/repair1-probe.log)。
++3. 红测后提出并逐项验证四个假设：恢复丢完成状态；completionWrites 跳过 pending actuals；demo 重启复用 ID；仅 presentation 漏计。探针证据：第 2/3 组落盘与恢复时均为 `status=complete`、`sourceLog.completed=true`；完成之后变成 `pending/log=null`。新第 1 组的 ID 与重启前第 2 组相同（`...0186a0`）。
++4. **被证实的根因**：demo backend 每次启动把自增 serial 重置为 100000，但 SetSyncQueue 的 confirmed receipts 存在 AsyncStorage。新记录复用旧 set-log ID，overlay/reconcile 的 `sameSet` 按相同 ID 将它们视为同组，旧回执被覆盖/清理；demo 内存 backend 又没有旧记录，两个正式组因此退回 pending。恢复本身没有把 completed 改成 false，亦非统计层单独算错。
++5. 单变量修复：仅把 demo **新 set-log** ID 改成现有 `createUUID()`；同组 upsert 仍保留已有 ID，不改 seed ID、真实后端或包配置。未先改 completionWrites，完整场景即转绿（[单变量绿测](../evidence/112-keypad-function-keys/repair1-restart-green.log)）。最终测试增加 **120 reps**、深蹲 **3 sets** 与正式记组请求 `completed=true` 断言。
++6. **不是 112 引入**：在 `/private/tmp` 用 `git archive origin/main` 隔离还原 `8995895b498658c0ba22a7b6a134f87436472b81`，用同一 demo/UI/重启链，把向下填充替换为手动逐格修改第 2、3 组 140，同样红为 **13 / 8,975**（[对照日志](../evidence/112-keypad-function-keys/repair1-origin-main.log)、[可复跑测试 patch](../evidence/112-keypad-function-keys/repair1-origin-main-test.patch)）。origin/main 无 112 热身入口，故对照移除热身；最小化已确认它不是必要条件。网络代理不可连接，无法刷新远端引用，以上结论明确针对现场本地 origin/main SHA。
++7. 另一个独立、真实的完成链缺口：已有 `completed=false, failed=false` actuals 会被 `!row.sourceLog || row.sourceLog.assumed` 排除。以保存的 140/140、RPE 8.5 回归先红 **1 set / 725 kg**，再仅放行已有非 terminal actuals，转绿 **3 sets / 2,125 kg**；已完成或失败 actuals 保持原行为，不抹掉失败标记（[红](../evidence/112-keypad-function-keys/repair1-pending-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-pending-green.log)）。此项是额外证实的缺口，不混称本次 demo 症状根因。
++8. `completion-presentation.ts` 在入口显式排除 `kind=warmup` 或 `sourceLog.is_warmup`，所有组数/次数/容量/最佳组/PR/RPE 从过滤后的集合计算。高重量、高次数、高 RPE 热身夹具先红后绿，确保最佳组、均值与计划比较也不受污染（[红](../evidence/112-keypad-function-keys/repair1-presentation-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-presentation-green.log)）。
++
++### 问题 2、3
++
++- 复制默认值不是处方/已存实际值：手动编辑入口只从已有 sourceLog 或已有原值获取 baseline。热身与额外组首次输入的错误「was 60/80」均先红后绿（[红](../evidence/112-keypad-function-keys/repair1-original-default-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-original-default-green.log)）。正式处方比较沿用原行为；一键改仍记录目标原重量。
++- 原值独立保存在账号 SetSyncQueue 的可选 `originalWeights` 中，以 stableSetId + loggedDate 归属；同日保留首个基准，删除组/丢弃草稿时清理，跨日期重置。它不随 confirmed receipt 清理，不进入 API 请求；旧存储缺该字段直接兼容，不伪造旧原值、不回填服务器或重写历史记录。手改与批量改均验证：刷新服务端/清掉回执 → 销毁 runtime → 从磁盘重建后，标记不消失（[红](../evidence/112-keypad-function-keys/repair1-original-restore-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-original-restore-green.log)）。
++- 英文 filledUp/filledDown 改用已有 one/other 机制，1 set / N sets；简中、繁中不改（[红](../evidence/112-keypad-function-keys/repair1-plural-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-plural-green.log)）。
++
++### 验证与独立审查
++
++- 本地 review-loop 双轴只读审查：**Standards** 初审 1 个 P1，原值持久化在进入串行任务之前 await，首次写等待磁盘、后续写提前入队，快速输入可能反向覆盖。暂停 AsyncStorage 写入的真实 UI 回归先红（输入 7→70、最终落 7），将原值作为 commit 输入并在同一个 saveQueue operation 内持久化后转绿（最终显示/请求均 70）；相关 5 项通过（[红](../evidence/112-keypad-function-keys/repair1-order-red.log)、[绿](../evidence/112-keypad-function-keys/repair1-order-green.log)）。独立定向复审确认 P1 关闭，新增 0 finding。**Spec** 初审与定向复审均 0 finding。未私建 Matt tracker，使用 review-loop 本地批准 spec 路径。
++- 最终 `npm test -- --maxWorkers=50% --forceExit --testTimeout=30000`：**222 suites / 2442 tests passed**，0 failed，37.448s，exit 0（[全量日志](../evidence/112-keypad-function-keys/repair1-jest-full.log)）。初轮同样 maxWorkers=50%，4 个既有用例触发默认 5 秒超时，非行为断言失败；保留 [初轮日志](../evidence/112-keypad-function-keys/repair1-jest-first-timeouts.log)，最终使用 30 秒上限，不修改既有用例的业务断言。
++- Jest 仍有 React act、Expo notifications 与未清理异步 worker 的警告，沿用 --forceExit；未把这些警告抹去或宣称原生运行通过。
++- 最终 `tsc --noEmit`、`npm run lint` 均 exit 0，无诊断（[tsc](../evidence/112-keypad-function-keys/repair1-tsc.log)、[lint](../evidence/112-keypad-function-keys/repair1-lint.log)）；`npm run i18n:zh-Hant` 成功且生成文件无变化（[日志](../evidence/112-keypad-function-keys/repair1-i18n.log)）。`git diff --check` 通过。
++- 交付 [返修 diff](../evidence/112-keypad-function-keys/repair1-changes.patch)，HEAD 保持 `1084f43`，未 commit、未 push。
++- 当前环境 ADB 仍返回 `could not install *smartsocket* listener: Operation not permitted`，未获取修后 APK/模拟器截图；不把 React 测试声明为原生验收。需 Opus 用修后 bundle 复走原始 CN/demo 深色流程；真实后端 068 发布门禁不变。
++
++### Commit 说明草稿（仅草稿，未提交）
++
++```text
++Fix restored training completion and durable original-weight hints
++
++The demo backend reused set-log IDs after a cold start while SetSyncQueue
++retained confirmed receipts on disk. New writes matched old receipts by ID,
++retired two completed squat rows, and produced 13 sets / 8,975 kg instead of
++15 sets / 10,375 kg. The same restart failure reproduces on origin/main
++8995895 with manual edits, so it predates spec 112. Allocate unique IDs for
++new demo set logs; recovered records already had completed=true.
++
++Also complete existing nonterminal actuals, exclude warm-ups inside the
++completion presenter, persist original-weight provenance without treating
++copied defaults as saved baselines, and pluralize English fill feedback.
++Keep provenance and actual values inside the same serial save operation so
++slow storage cannot reverse rapid numeric edits.
++```
+diff --git a/src/demo/backend.ts b/src/demo/backend.ts
+index 7f9d017..ff442d7 100644
+--- a/src/demo/backend.ts
++++ b/src/demo/backend.ts
+@@ -1,3 +1,4 @@
++import { createUUID } from '@/analytics/uuid';
+ import { demoVideoUrl, demoVideos, resetDemoUploads, uploadRoute } from './uploads';
+ import { BodyWeightRecordSchema } from '@/api/domains/body-weights';
+ import { z } from 'zod';
+@@ -89,7 +90,7 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
+     else {
+       const existing = state.logs.find(log => log.logged_date === date && log.set_index === body.set_index &&
+         (exercise ? log.plan_exercise_id === exercise.id : log.adhoc && log.exercise_id === exerciseId));
+-      const row = { ...body, id: existing?.id ?? demoId(serial++), student_id: state.user.id,
++      const row = { ...body, id: existing?.id ?? createUUID(), student_id: state.user.id,
+         exercise_id: exerciseId, plan_exercise_id: exercise?.id ?? null, logged_date: date, logged_at: now,
+         assumed: false, adhoc: !exercise, rpe: body.rpe ?? null, coach_rpe: null };
+       if (existing) Object.assign(existing, row); else state.logs.push(row);
+diff --git a/src/features/training/AllDayBody.tsx b/src/features/training/AllDayBody.tsx
+index 202b84a..38de554 100644
+--- a/src/features/training/AllDayBody.tsx
++++ b/src/features/training/AllDayBody.tsx
+@@ -217,7 +217,7 @@ export function useAllDayEditor(onSave: (row: WorkoutSetDraft) => void, exercise
+     const previous = settle();
+     if (previous?.stableSetId === row.stableSetId && previous.effortKind === row.effortKind) row = previous;
+     legalRow.current = row;
+-    originalWeight.current = row.originalWeightText ?? row.weightText;
++    originalWeight.current = row.originalWeightText ?? (row.sourceLog ? row.weightText : '');
+     input.current = { row, field };
+     setEditing(input.current);
+   };
+diff --git a/src/features/training/TodayWorkoutView.tsx b/src/features/training/TodayWorkoutView.tsx
+index 4f28fcc..2d3d33d 100644
+--- a/src/features/training/TodayWorkoutView.tsx
++++ b/src/features/training/TodayWorkoutView.tsx
+@@ -268,7 +268,8 @@ export function TodayWorkoutView() {
+   const rememberEffort = (row: WorkoutSetDraft) => effortChoices.remember(row.exercise.exercise_id, row.effortKind ?? 'rpe');
+   const baseDrafts = synthesizedDrafts.map(draft => {
+     const local = draftOverrides[draft.stableSetId];
+-    if (local?.originalWeightText != null) draft = { ...draft, originalWeightText: local.originalWeightText };
++    const original = syncSnapshot.originalWeights?.[draft.stableSetId];
++    if (original?.loggedDate === (draft.sourceLog?.logged_date ?? today)) draft = { ...draft, originalWeightText: original.weightText };
+     if (local && !local.sourceLog && !draft.sourceLog) return local;
+     // Empty effort has no RPE/RIR discriminator on the wire; retain this session's choice.
+     return local && !local.rpeText && !draft.rpeText
+@@ -567,6 +568,7 @@ export function TodayWorkoutView() {
+     attachmentOnly?: boolean;
+     accessory?: { request: SetLogUpsertRequest; mode: 'single' | 'all' };
+     quickLogDate?: string;
++    originalWeightText?: string;
+   }): Promise<string | undefined> => {
+     const operation = async () => {
+       const currentDrafts = input.accessory ? accessoryDraftsRef.current : liveDrafts;
+@@ -631,6 +633,9 @@ export function TodayWorkoutView() {
+           completed: completed && !input.failed,
+           failed: input.failed,
+         };
++        if (!input.quickLogDate && input.originalWeightText != null) {
++          await setSyncQueue.rememberOriginalWeight(draft.stableSetId, logDate, input.originalWeightText);
++        }
+         const response = input.quickLogDate ? await upsert.mutateAsync(request) : await setSyncQueue.enqueue({
+           stableSetId: draft.stableSetId, dayId: draft.exercise.plan_day_id, exerciseId: draft.exercise.exercise_id, loggedDate: logDate,
+           request: { ...request, logged_date: logDate },
+@@ -742,10 +747,6 @@ export function TodayWorkoutView() {
+   };
+ 
+   const saveRow = async (row: WorkoutSetDraft, request = allDayLogRequest(row)) => {
+-    if (row.originalWeightText != null) {
+-      accessoryDraftsRef.current = accessoryDraftsRef.current.map(item => item.stableSetId === row.stableSetId ? { ...item, originalWeightText: row.originalWeightText } : item);
+-      setDraftOverrides(current => ({ ...current, [row.stableSetId]: row }));
+-    }
+     if (row.kind === 'warmup' && !row.weightText.trim()) {
+       accessoryDraftsRef.current = accessoryDraftsRef.current.map(item => item.stableSetId === row.stableSetId ? row : item);
+       setDraftOverrides(current => ({ ...current, [row.stableSetId]: row }));
+@@ -754,7 +755,7 @@ export function TodayWorkoutView() {
+     }
+     const id = await commit({ stableSetId: row.stableSetId, weightText: row.weightText, repsText: row.repsText,
+       rpeText: row.rpeText, effortKind: row.effortKind, failed: false, completed: true,
+-      accessory: { request, mode: 'all' } });
++      originalWeightText: row.originalWeightText, accessory: { request, mode: 'all' } });
+     if (!id) throw new Error('Set unavailable');
+     return id;
+   };
+diff --git a/src/features/training/__tests__/all-day-view.test.tsx b/src/features/training/__tests__/all-day-view.test.tsx
+index 972924b..9eab65a 100644
+--- a/src/features/training/__tests__/all-day-view.test.tsx
++++ b/src/features/training/__tests__/all-day-view.test.tsx
+@@ -1,5 +1,7 @@
+ import { writeEffortChoice } from '../effort-preferences';
+ import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
++import { resetDemoBackend, demoResponse } from '@/demo/backend';
++import { buildDemoSeed } from '@/demo/seed';
+ import { writeDailyWeight } from '@/features/settings/daily-weight';
+ import { bodyWeightsRepository } from '@/api/domains/body-weights';
+ import { gymDayToday } from '@/domain/plan/workout-date-policy';
+@@ -1179,3 +1181,162 @@ test('112 switching the effort mode settles a cleared required cell before savin
+   expect(renderer.root.findByType(NumberPad).props.field).toBe('rir');
+   expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').every(([, options]) => (options?.body as {weight_kg:string}).weight_kg === '2')).toBe(true);
+ });
++
++test('112 repair 1: finish today completes edited working sets and excludes warm-ups', async () => {
++  const seed = buildDemoSeed(gymDayToday());
++  resetDemoBackend();
++  useSessionStore.setState({ user: seed.user });
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
++    const response = await demoResponse(path, options);
++    const body = JSON.parse(await response.text());
++    if (!response.ok) throw new Error(JSON.stringify(body));
++    return (options?.schema ? options.schema.parse(body) : body) as never;
++  });
++  await mount();
++  const exercise = renderer.root.findByType(AllDayBody).props.sheet.exercises[0].exercise;
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exercise.id}` && node.props.onPress)[0].props.onPress());
++  await press('Add warm-up set'); await press('6'); await press('0');
++  await press('Add set'); await press('1'); await press('0'); await press('0'); await press('Hide keyboard');
++  await press('Edit set 2'); await press('1'); await press('4'); await press('0');
++  await press('Fill down'); await pressPad('RPE'); await press('RPE 8.5');
++  await press('Edit set 1');
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
++  await act(async () => renderer.unmount());
++  client.clear();
++  useSessionStore.setState({ user: null });
++  resetDemoBackend();
++  useSessionStore.setState({ user: seed.user });
++  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
++  await mount();
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exercise.id}` && node.props.onPress)[0].props.onPress());
++  expect(sheetRows().map(row => row.weightText)).toEqual(['60', '100', '145', '140', '140']);
++  await press('Add warm-up set'); await press('Hide keyboard');
++  // Returning from settings remounts the screen, retaining the account's queue.
++  await act(async () => renderer.unmount()); await mount();
++  const pullup = renderer.root.findByType(AllDayBody).props.sheet.exercises.at(-1).exercise;
++  await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${pullup.id}` && node.props.onPress)[0].props.onPress());
++  await press('Edit set 1'); await pressPad('RIR'); await press('Hide keyboard');
++  await press('Add warm-up set'); await press('Hide keyboard');
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
++  const hold = renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0];
++  await act(async () => hold.props.onResponderGrant());
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)); });
++  expect(renderer.root.findByType(WorkoutCompletionFlowView).props.presentation).toMatchObject({
++    completedSetCount: 15, totalReps: 120, totalVolumeText: '10,375',
++    exercises: expect.arrayContaining([expect.objectContaining({ id: exercise.id, completedSetCount: 3 })]),
++  });
++  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')
++    .map(([, options]) => options?.body as { plan_exercise_id: string; set_index: number });
++  for (const [index, weight] of ['145', '140', '140'].entries()) {
++    expect(writes.filter(body => body.plan_exercise_id === exercise.id && body.set_index === index).at(-1))
++      .toMatchObject({ weight_kg: weight, reps: 5, completed: true });
++  }
++}, 30_000);
++
++test('112 repair 1: finish today completes saved pending actuals without losing edited weight or effort', async () => {
++  const exercise = plan.days[0].exercises[0];
++  servedPlan = { ...plan, days: [{ ...plan.days[0], exercises: [{ ...exercise,
++    sets: [0, 1, 2].map(index => ({ ...exercise.sets[0], id: `set-${index}`, set_number: index + 1, target_value: '145' })),
++  }] }] };
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  const logs: import('@/api/domains/sets').SetLog[] = [1, 2].map(index => ({ id: `90000000-0000-4000-8000-00000000000${index}`,
++    student_id: studentId, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id,
++    set_index: index, weight_kg: '140', reps: 5, rpe: index === 1 ? '8.5' : null,
++    completed: false, failed: false, assumed: false, adhoc: false, logged_date: gymDayToday(), logged_at: new Date().toISOString() }));
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
++    if (path.includes('/sets?')) return { logs } as never;
++    if (path === '/sets/log') {
++      const body = options?.body as import('@/api/domains/sets').SetLogUpsertRequest;
++      const id = `90000000-0000-4000-8000-00000000000${body.set_index}`;
++      const logged_at = new Date().toISOString();
++      const existing = logs.find(log => log.set_index === body.set_index);
++      if (existing) Object.assign(existing, body, { logged_at });
++      else logs.push({ ...logs[0], ...body, id, logged_at, rpe: body.rpe ?? null });
++      return { id, logged_at } as never;
++    }
++    if (path.endsWith('/complete')) {
++      const completed_at = new Date().toISOString();
++      servedPlan = { ...servedPlan, days: [{ ...servedPlan.days[0], completed_at }] };
++      return { id: 'completion', plan_day_id: plan.days[0].id, student_id: studentId, source: 'manual', completed_at } as never;
++    }
++    return original(path, options);
++  });
++  await mount();
++  await act(async () => renderer.root.findAllByProps({ accessibilityLabel: t('student.todayWorkoutScreen.copy022') })[0].props.onAccessibilityAction());
++  expect(renderer.root.findByType(WorkoutCompletionFlowView).props.presentation).toMatchObject({
++    completedSetCount: 3, totalVolumeText: '2,125',
++  });
++  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').map(([, options]) => options?.body);
++  expect(writes).toEqual(expect.arrayContaining([
++    expect.objectContaining({ set_index: 1, weight_kg: '140', reps: 5, rpe: '8.5', completed: true }),
++    expect.objectContaining({ set_index: 2, weight_kg: '140', reps: 5, completed: true }),
++  ]));
++});
++
++test.each(['warmup', 'extra'])('112 repair 1: copied %s defaults are not original saved weights', async kind => {
++  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/sets/log'
++    ? { id: `90000000-0000-4000-8000-${String((options?.body as { set_index: number }).set_index).padStart(12, '0')}`, logged_at: new Date().toISOString() } as never
++    : original(path, options));
++  await mount(); await expandFirst();
++  if (kind === 'warmup') {
++    await press('Add warm-up set'); await press('6'); await press('0'); await press('Add set');
++  } else {
++    await press('Edit set 1'); await press('Add set');
++  }
++  await press('1'); await press('0'); await press('0'); await press('Hide keyboard');
++  expect(copy()).not.toContain(kind === 'warmup' ? 'was 60' : 'was 80');
++});
++
++test.each(['manual', 'fill'])('112 repair 1: %s original weight survives queue restoration and server reconciliation', async method => {
++  const seed = buildDemoSeed(gymDayToday());
++  resetDemoBackend();
++  useSessionStore.setState({ user: seed.user });
++  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
++    const response = await demoResponse(path, options);
++    const body = JSON.parse(await response.text());
++    if (!response.ok) throw new Error(JSON.stringify(body));
++    return (options?.schema ? options.schema.parse(body) : body) as never;
++  });
++  await mount();
++  const exerciseId = sheetRows()[0].exercise.id;
++  const expand = async () => { await act(async () => renderer.root.findAll(node => node.props.testID === `all-day-exercise-${exerciseId}` && node.props.onPress)[0].props.onPress()); };
++  await expand(); await press('Add warm-up set'); await press('6'); await press('0');
++  await press('Add set'); await press('1'); await press('0'); await press('0'); await press('Hide keyboard');
++  await press('Warm-up set 1');
++  if (method === 'manual') { await press('7'); await press('0'); }
++  else await press('Fill down');
++  await press('Hide keyboard');
++  const label = method === 'manual' ? 'was 60' : 'was 100';
++  expect(copy()).toContain(label);
++  // Refresh retires server-confirmed outbox receipts; provenance must outlive them.
++  await act(async () => { await client.invalidateQueries(); await new Promise(resolve => setTimeout(resolve, 100)); });
++  await act(async () => renderer.unmount()); client.clear();
++  useSessionStore.setState({ user: null }); useSessionStore.setState({ user: seed.user });
++  client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
++  await mount(); await expand();
++  expect(copy()).toContain(label);
++}, 30_000);
++
++test('112 repair 1: slow original-weight storage cannot reverse rapid numeric edits', async () => {
++  await mount(); await expandFirst();
++  await press('Add warm-up set'); await press('6'); await press('0'); await press('Hide keyboard');
++  await press('Warm-up set 1');
++  const write = jest.mocked(AsyncStorage.setItem).getMockImplementation()!;
++  let release!: () => void;
++  let blocked = false;
++  jest.spyOn(AsyncStorage, 'setItem').mockImplementation(async (key, value) => {
++    if (!blocked && key.startsWith('training.set-sync.') && JSON.parse(value).originalWeights) {
++      blocked = true;
++      await new Promise<void>(resolve => { release = resolve; });
++    }
++    return write(key, value);
++  });
++  await press('7'); await press('0');
++  expect(blocked).toBe(true);
++  await act(async () => { release(); });
++  await press('Hide keyboard');
++  expect(sheetRows().find(row => row.kind === 'warmup')?.weightText).toBe('70');
++  const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log');
++  expect(writes.at(-1)?.[1]?.body).toMatchObject({ weight_kg: '70', completed: true, is_warmup: true });
++});
+diff --git a/src/features/training/__tests__/completion-presentation.test.ts b/src/features/training/__tests__/completion-presentation.test.ts
+index 9f1a60c..f840078 100644
+--- a/src/features/training/__tests__/completion-presentation.test.ts
++++ b/src/features/training/__tests__/completion-presentation.test.ts
+@@ -87,3 +87,10 @@ test('extra work contributes actual volume without inflating prescription comple
+   const extra = { ...drafts[0], kind: 'extra' as const, stableSetId: 'extra', setIndex: 2 };
+   expect(workoutCompletionPresentation({ ...input, drafts: [...drafts, extra] })).toMatchObject({ totalPlannedSets: 3, completedSuccessfulSets: 2, completedSetCount: 4, totalReps: 20 });
+ });
++
++test('112 repair 1: warm-ups never contribute to completion counts, volume, best set, PR or effort', () => {
++  const warmup = { ...drafts[0], kind: 'warmup' as const, stableSetId: 'warmup',
++    setIndex: 3, weightText: '999', repsText: '99', rpeText: '10' };
++  expect(workoutCompletionPresentation({ ...input, drafts: [warmup, ...drafts] }))
++    .toEqual(workoutCompletionPresentation(input));
++});
+diff --git a/src/features/training/all-day-sheet.ts b/src/features/training/all-day-sheet.ts
+index 5f92bad..181c9ea 100644
+--- a/src/features/training/all-day-sheet.ts
++++ b/src/features/training/all-day-sheet.ts
+@@ -60,6 +60,6 @@ export function allDayLogRequest(row: WorkoutSetDraft): SetLogUpsertRequest {
+ export function completionWrites(sheet: AllDaySheet, exerciseId?: string) {
+   return sheet.exercises.filter(block => !exerciseId || block.exercise.id === exerciseId).flatMap(block =>
+     block.rows.filter(row => row.kind !== 'warmup' || Boolean(row.weightText.trim())).filter(row => !(row.kind && !row.sourceLog && !row.weightText.trim() && !row.repsText.trim() && !row.rpeText.trim()))
+-      .filter(row => exerciseId || !row.sourceLog || row.sourceLog.assumed)
++      .filter(row => exerciseId || !row.sourceLog || row.sourceLog.assumed || (!row.sourceLog.completed && !row.sourceLog.failed))
+       .map(row => ({ row, request: allDayLogRequest(row) })));
+ }
+diff --git a/src/features/training/completion-presentation.ts b/src/features/training/completion-presentation.ts
+index 4296e9c..284a0bf 100644
+--- a/src/features/training/completion-presentation.ts
++++ b/src/features/training/completion-presentation.ts
+@@ -35,7 +35,8 @@ function average(values: (number | null)[]): number | null {
+ }
+ const oneDecimal = (value: number) => (Math.round((value + Number.EPSILON) * 10) / 10).toFixed(1);
+ 
+-export function workoutCompletionPresentation({ planDay, drafts, references, exerciseNames, weekCode, coachName, date, previousVolumeChangePercent }: Input) {
++export function workoutCompletionPresentation({ planDay, drafts: allDrafts, references, exerciseNames, weekCode, coachName, date, previousVolumeChangePercent }: Input) {
++  const drafts = allDrafts.filter(draft => draft.kind !== 'warmup' && !draft.sourceLog?.is_warmup);
+   const completed = drafts.filter(isDraftTerminal);
+   const failedCount = completed.filter(draft => draft.status === 'failed').length;
+   const mainId = planDay.exercises[0]?.id;
+diff --git a/src/features/training/set-sync/__tests__/queue.test.ts b/src/features/training/set-sync/__tests__/queue.test.ts
+index f9d9c1b..f2deb12 100644
+--- a/src/features/training/set-sync/__tests__/queue.test.ts
++++ b/src/features/training/set-sync/__tests__/queue.test.ts
+@@ -256,3 +256,19 @@ test('112 offline warm-ups survive restart and reconnect with their marker and o
+   expect(s.send.mock.calls.map(([entry]) => [entry.request?.set_index, entry.request?.is_warmup])).toEqual([[3, true], [4, undefined]]);
+   expect(q.pending()).toHaveLength(0); s.stop();
+ });
++
++test('112 repair 1: original weights remain account/date scoped and deletion clears their provenance', async () => {
++  const s = setup(); const q = s.create(); await q.ready;
++  await q.rememberOriginalWeight('one', '2026-11-05', '60');
++  await q.rememberOriginalWeight('one', '2026-11-05', '70');
++  const restored = s.create(); await restored.ready;
++  expect(restored.snapshot().originalWeights?.one).toEqual({ weightText: '60', loggedDate: '2026-11-05' });
++  const other = s.create('bob'); await other.ready;
++  expect(other.snapshot().originalWeights?.one).toBeUndefined();
++  await restored.rememberOriginalWeight('one', '2026-11-06', '80');
++  expect(restored.snapshot().originalWeights?.one).toEqual({ weightText: '80', loggedDate: '2026-11-06' });
++  await restored.discardDraft('one');
++  const afterDelete = s.create(); await afterDelete.ready;
++  expect(afterDelete.snapshot().originalWeights?.one).toBeUndefined();
++  s.stop();
++});
+diff --git a/src/features/training/set-sync/queue.ts b/src/features/training/set-sync/queue.ts
+index 25364b8..4be6bbe 100644
+--- a/src/features/training/set-sync/queue.ts
++++ b/src/features/training/set-sync/queue.ts
+@@ -12,7 +12,7 @@ export type PendingSet = Omit<SetWrite, 'request'> & {
+   id: number; request?: SetLogUpsertRequest; log: SetLog; remove: boolean;
+   status: 'pending' | 'failed'; attempts: number; retryAt: number;
+ };
+-export type SetSyncSnapshot = { drafts?: Readonly<Record<string, WorkoutSetDraft>>; pending: readonly PendingSet[]; confirmed: Readonly<Record<string, PendingSet>> };
++export type SetSyncSnapshot = { originalWeights?: Readonly<Record<string, { weightText: string; loggedDate: string }>>; drafts?: Readonly<Record<string, WorkoutSetDraft>>; pending: readonly PendingSet[]; confirmed: Readonly<Record<string, PendingSet>> };
+ export type SetSender = (entry: PendingSet, replaceRequest: (request: SetLogUpsertRequest) => Promise<void>) => Promise<SetLogUpsertResponse | void>;
+ export type QueueDependencies = {
+   storage: SyncStorage; send: SetSender; clock?: SyncClock;
+@@ -139,6 +139,13 @@ export class SetSyncQueue {
+     await this.persist(); this.kick();
+     return { id: log.id, logged_at: log.logged_at };
+   }
++  /** Display provenance outlives acknowledged receipts and never enters an API request. */
++  async rememberOriginalWeight(stableSetId: string, loggedDate: string, weightText: string) {
++    await this.ready;
++    if (this.disposed || this.state.originalWeights?.[stableSetId]?.loggedDate === loggedDate) return;
++    this.state = { ...this.state, originalWeights: { ...this.state.originalWeights, [stableSetId]: { weightText, loggedDate } } };
++    this.emit(); await this.persist();
++  }
+   async saveDraft(draft: WorkoutSetDraft) {
+     await this.ready;
+     if (this.disposed) throw new Error('Set sync stopped');
+@@ -149,14 +156,16 @@ export class SetSyncQueue {
+     await this.ready;
+     if (this.disposed) throw new Error('Set sync stopped');
+     const drafts = { ...this.state.drafts }; delete drafts[stableSetId];
+-    this.state = { ...this.state, drafts }; this.emit(); await this.persist();
++    const originalWeights = { ...this.state.originalWeights }; delete originalWeights[stableSetId];
++    this.state = { ...this.state, drafts, originalWeights }; this.emit(); await this.persist();
+   }
+   async remove(input: { stableSetId: string; dayId: string; log: SetLog }) {
+     await this.ready;
+     if (this.disposed) throw new Error('Set sync stopped');
+     const entry: PendingSet = { ...input, exerciseId: input.log.exercise_id, loggedDate: input.log.logged_date,
+       id: ++this.sequence, remove: true, status: 'pending', attempts: 0, retryAt: 0 };
+-    this.state = { ...this.state, pending: [...this.state.pending, entry] }; this.emit();
++    const originalWeights = { ...this.state.originalWeights }; delete originalWeights[input.stableSetId];
++    this.state = { ...this.state, pending: [...this.state.pending, entry], originalWeights }; this.emit();
+     await this.persist(); this.kick();
+   }
+   async sendNow(dayId?: string, retryFailed = false) {
+diff --git a/src/i18n/__tests__/t.test.ts b/src/i18n/__tests__/t.test.ts
+index 7edd51b..c103ac4 100644
+--- a/src/i18n/__tests__/t.test.ts
++++ b/src/i18n/__tests__/t.test.ts
+@@ -119,3 +119,12 @@ test('missing Traditional falls back to Simplified, then unknown key; interpolat
+   expect(t('missing.key')).toBe('missing.key');
+   expect(t('student.filter.accessibilityLabel %@', ['我的卧推'])).toContain('我的卧推');
+ });
++
++test.each<['training.pad.filledUp' | 'training.pad.filledDown', string, string]>([['training.pad.filledUp', 'above', '上方'], ['training.pad.filledDown', 'below', '下方']])(
++  '112 repair 1: %s uses English set/sets and retains Chinese copy', (key, direction, chineseDirection) => {
++    expect(t(key, [1, 'weight'], 'en')).toBe(`Filled weight in 1 set ${direction}`);
++    expect(t(key, [2, 'weight'], 'en')).toBe(`Filled weight in 2 sets ${direction}`);
++    expect(t(key, [1, '重量'], 'zh')).toBe(`已改${chineseDirection} 1 组的重量`);
++    expect(t(key, [2, '重量'], 'zh')).toBe(`已改${chineseDirection} 2 组的重量`);
++  },
++);
+diff --git a/src/i18n/catalog/RnExtras.json b/src/i18n/catalog/RnExtras.json
+index baa3e9a..30b0518 100644
+--- a/src/i18n/catalog/RnExtras.json
++++ b/src/i18n/catalog/RnExtras.json
+@@ -1,6 +1,6 @@
+ {
+-"training.pad.filledUp": {"en": "Filled {1} in {0} sets above", "zh": "已改上方 {0} 组的{1}"},
+-"training.pad.filledDown": {"en": "Filled {1} in {0} sets below", "zh": "已改下方 {0} 组的{1}"},
++"training.pad.filledUp": {"en": {"one": "Filled {1} in {0} set above", "other": "Filled {1} in {0} sets above"}, "zh": "已改上方 {0} 组的{1}"},
++"training.pad.filledDown": {"en": {"one": "Filled {1} in {0} set below", "other": "Filled {1} in {0} sets below"}, "zh": "已改下方 {0} 组的{1}"},
+ "training.pad.emptyUp": {"en": "No sets above", "zh": "上方没有组了"},
+ "training.pad.emptyDown": {"en": "No sets below", "zh": "下方没有组了"},
+ 

@@ -35,7 +35,8 @@ function average(values: (number | null)[]): number | null {
 }
 const oneDecimal = (value: number) => (Math.round((value + Number.EPSILON) * 10) / 10).toFixed(1);
 
-export function workoutCompletionPresentation({ planDay, drafts, references, exerciseNames, weekCode, coachName, date, previousVolumeChangePercent }: Input) {
+export function workoutCompletionPresentation({ planDay, drafts: allDrafts, references, exerciseNames, weekCode, coachName, date, previousVolumeChangePercent }: Input) {
+  const drafts = allDrafts.filter(draft => draft.kind !== 'warmup' && !draft.sourceLog?.is_warmup);
   const completed = drafts.filter(isDraftTerminal);
   const failedCount = completed.filter(draft => draft.status === 'failed').length;
   const mainId = planDay.exercises[0]?.id;

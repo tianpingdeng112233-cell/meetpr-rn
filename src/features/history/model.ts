@@ -56,7 +56,7 @@ export const LIFT_FAMILIES: readonly LiftFamily[] = [
 ];
 
 export function completedHistoryLogs(logs: readonly SetLog[]): SetLog[] {
-  return logs.filter((log) => log.completed && !log.assumed);
+  return logs.filter((log) => log.completed && !log.assumed && !log.is_warmup);
 }
 
 export function isoWeekStart(dateText: string): string {

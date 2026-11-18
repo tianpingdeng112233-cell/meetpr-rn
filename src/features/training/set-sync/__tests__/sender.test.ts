@@ -24,3 +24,12 @@ test('ambiguous unavailable plan is retained as failed rather than rewriting unr
   const send = createSetSender({ upsert, remove: jest.fn(async () => {}), missingExercise: async () => false, nextAddedIndex: async () => 0 });
   await expect(send(entry, jest.fn(async () => {}))).rejects.toBe(missing); expect(upsert).toHaveBeenCalledTimes(1);
 });
+
+test('112 a removed warm-up parent retains the failed write instead of converting it to unsupported adhoc', async () => {
+  const missing = { status: 400, code: 'SETS_PLAN_EXERCISE_NOT_PUBLISHED' };
+  const upsert = jest.fn<(request: SetLogUpsertRequest) => Promise<SetLogUpsertResponse>>().mockRejectedValueOnce(missing).mockResolvedValue({ id: 'server', logged_at: entry.log.logged_at });
+  const replace = jest.fn(async (_request: SetLogUpsertRequest) => {});
+  const send = createSetSender({ upsert, remove: jest.fn(async () => {}), missingExercise: async () => true, nextAddedIndex: async () => 2 });
+  await expect(send({ ...entry, request: { ...entry.request!, is_warmup: true } }, replace)).rejects.toBe(missing);
+  expect(replace).not.toHaveBeenCalled();
+});

@@ -20,3 +20,11 @@ test('delete uses DELETE sets/id, accepts an already deleted row and propagates 
   jest.mocked(authenticatedRequest).mockRejectedValueOnce(Object.assign(new ApiError('backend', 'Rated', { status: 409 }), { code: 'SET_HAS_COACH_FEEDBACK' }));
   await expect(setsRepository.remove(id)).rejects.toMatchObject({ code: 'SET_HAS_COACH_FEEDBACK' });
 });
+
+test('112 warm-up writes retain is_warmup and legacy reads default to false', async () => {
+  expect(SetLogSchema.parse(raw).is_warmup).toBe(false);
+  expect(SetLogSchema.parse({ ...raw, is_warmup: true }).is_warmup).toBe(true);
+  jest.mocked(authenticatedRequest).mockResolvedValueOnce({ id, logged_at: raw.logged_at });
+  await setsRepository.upsert({ plan_exercise_id: id, set_index: 0, weight_kg: '20', reps: 5, completed: true, is_warmup: true });
+  expect(authenticatedRequest).toHaveBeenLastCalledWith('/sets/log', expect.objectContaining({ body: expect.objectContaining({ is_warmup: true }) }));
+});

@@ -1,0 +1,14 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/api/domains/__tests__/student-added-sets.test.ts
+
+PASS src/api/domains/__tests__/student-added-sets.test.ts
+  ✓ old responses default plan_day_id to null and new responses retain the training day (6 ms)
+  ✓ delete uses DELETE sets/id, accepts an already deleted row and propagates feedback conflicts (2 ms)
+  ✓ 112 warm-up writes retain is_warmup and legacy reads default to false (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        2.221 s
+Ran all test suites matching /src\/api\/domains\/__tests__\/student-added-sets.test.ts/i.

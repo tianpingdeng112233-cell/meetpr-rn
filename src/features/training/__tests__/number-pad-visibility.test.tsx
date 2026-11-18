@@ -153,7 +153,8 @@ test.each(['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => (
     await act(async () => scroll.props.onContentSizeChange(400, contentY + 120 + padding()));
     expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(500 - spacing.lg);
     expect(120 + contentY - offset).toBeGreaterThanOrEqual(120);
-    await act(async () => pad().props.onNext(7.5));
+    await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'reps' && node.props.onPress)[0].props.onPress());
+    expect(pad().props.field).toBe('reps');
     await act(async () => pad().props.onPanelLayout(500, 300));
     expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(500 - spacing.lg);
     scrollTo.mockClear();

@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { append, appendAccessory, accessoryValue, snapped } from '../number-pad';
+import { append, appendAccessory, accessoryValue, snapped, settledAccessoryText } from '../number-pad';
 
 test('accessory entry preserves light weights and validates each field without barbell snapping', () => {
   expect(accessoryValue('0', 'weight')).toBe(0);
@@ -56,4 +56,12 @@ test('RPE input snaps half steps and stays inside the approved scale', () => {
   expect(snapped(12, 'rpe')).toBe(10);
   expect(append('8', '.', 'rpe')).toBe('8.');
   expect(append('8.5', '5', 'rpe')).toBe('8.5');
+});
+
+test('112 settlement restores invalid/empty required cells and permits clearing effort', () => {
+  expect(settledAccessoryText('', 'weight', '80')).toBe('80');
+  expect(settledAccessoryText('100', 'reps', '5')).toBe('5');
+  expect(settledAccessoryText('3', 'rpe', '8.5')).toBe('8.5');
+  expect(settledAccessoryText('', 'rpe', '8.5')).toBe('');
+  expect(settledAccessoryText('0', 'rir', '2')).toBe('0');
 });

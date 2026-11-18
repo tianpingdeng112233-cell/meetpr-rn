@@ -18,7 +18,7 @@ export type DraftStatus = 'pending' | 'complete' | 'failed';
 
 export type WorkoutSetDraft = {
   /** Absent on existing prescription drafts. */
-  kind?: 'extra' | 'added';
+  kind?: 'extra' | 'added' | 'warmup';
   loggedDate?: string;
   stableSetId: string;
   exercise: PlanExercise;
@@ -35,6 +35,7 @@ export type WorkoutSetDraft = {
   previousWeightKg?: number | null;
   weightPrefilledFromHistory?: boolean;
   weightEdited?: boolean;
+  originalWeightText?: string;
 };
 
 export type WeightSuggestion = {

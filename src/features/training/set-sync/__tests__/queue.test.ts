@@ -245,3 +245,30 @@ test('an old account response cannot overwrite a newly logged-in account outbox'
   fresh.dispose(); const restored = s.create(); await restored.ready;
   expect(restored.pending().map(entry => entry.stableSetId)).toEqual(['one', 'new-set']); s.stop();
 });
+
+test('112 offline warm-ups survive restart and reconnect with their marker and original identity', async () => {
+  const s = setup(); s.offline(); let q = s.create(); await q.ready;
+  await q.enqueue({ ...input('warmup'), request: { ...request, set_index: 3, is_warmup: true } });
+  await q.enqueue({ ...input('extra'), request: { ...request, set_index: 4 } });
+  q.dispose(); q = s.create(); await q.ready;
+  expect(overlaySetLogs([], q.snapshot()).map(log => [log.set_index, log.is_warmup])).toEqual([[3, true], [4, false]]);
+  s.reconnect(); await flush();
+  expect(s.send.mock.calls.map(([entry]) => [entry.request?.set_index, entry.request?.is_warmup])).toEqual([[3, true], [4, undefined]]);
+  expect(q.pending()).toHaveLength(0); s.stop();
+});
+
+test('112 repair 1: original weights remain account/date scoped and deletion clears their provenance', async () => {
+  const s = setup(); const q = s.create(); await q.ready;
+  await q.rememberOriginalWeight('one', '2026-11-05', '60');
+  await q.rememberOriginalWeight('one', '2026-11-05', '70');
+  const restored = s.create(); await restored.ready;
+  expect(restored.snapshot().originalWeights?.one).toEqual({ weightText: '60', loggedDate: '2026-11-05' });
+  const other = s.create('bob'); await other.ready;
+  expect(other.snapshot().originalWeights?.one).toBeUndefined();
+  await restored.rememberOriginalWeight('one', '2026-11-06', '80');
+  expect(restored.snapshot().originalWeights?.one).toEqual({ weightText: '80', loggedDate: '2026-11-06' });
+  await restored.discardDraft('one');
+  const afterDelete = s.create(); await afterDelete.ready;
+  expect(afterDelete.snapshot().originalWeights?.one).toBeUndefined();
+  s.stop();
+});

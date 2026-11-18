@@ -1,0 +1,30 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/design/__tests__/number-pad.test.ts
+
+FAIL src/design/__tests__/number-pad.test.ts
+  ✓ accessory entry preserves light weights and validates each field without barbell snapping (3 ms)
+  ✓ limits decimal entry and digit counts while replacing a leading zero
+  ✓ confirmation snaps weights to quarters and clamps each field
+  ✓ RPE input snaps half steps and stays inside the approved scale
+  ✕ 112 settlement restores invalid/empty required cells and permits clearing effort (1 ms)
+
+  ● 112 settlement restores invalid/empty required cells and permits clearing effort
+
+    TypeError: (0 , _numberPad.settledAccessoryText) is not a function
+
+      60 |
+      61 | test('112 settlement restores invalid/empty required cells and permits clearing effort', () => {
+    > 62 |   expect(settledAccessoryText('', 'weight', '80')).toBe('80');
+         |                              ^
+      63 |   expect(settledAccessoryText('100', 'reps', '5')).toBe('5');
+      64 |   expect(settledAccessoryText('3', 'rpe', '8.5')).toBe('8.5');
+      65 |   expect(settledAccessoryText('', 'rpe', '8.5')).toBe('');
+
+      at Object.<anonymous> (src/design/__tests__/number-pad.test.ts:62:30)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        2.163 s
+Ran all test suites matching /src\/design\/__tests__\/number-pad.test.ts/i.

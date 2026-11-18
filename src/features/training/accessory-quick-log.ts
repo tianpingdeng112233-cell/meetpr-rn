@@ -12,7 +12,7 @@ export function isAccessoryExercise(exerciseType: string | null | undefined): bo
 }
 
 export type AccessoryRow = {
-  kind?: 'extra' | 'added';
+  kind?: WorkoutSetDraft['kind'];
   stableSetId: string;
   setIndex: number;
   status: DraftStatus;

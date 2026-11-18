@@ -1,0 +1,61 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand src/features/history/__tests__/history-points.test.ts -t 112
+
+FAIL src/features/history/__tests__/history-points.test.ts
+  ✕ 112 warm-ups do not change growth e1RM, records, volume or session counts (5 ms)
+  ○ skipped growth displays stored points even when their source logs are missing, retaining equal-valued days
+  ○ skipped replayed server calibration retains both RPE sources and an existing saved point is never recalculated
+  ○ skipped a coach-calibrated stored point participates using its effective RPE without rewriting the saved value
+  ○ skipped replay admits only eligible real logs and breaks equal timestamps by set identity
+  ○ skipped unreadable storage is never overwritten by migration (not-json)
+  ○ skipped unreadable storage is never overwritten by migration ({"points":null,"prs":[]})
+  ○ skipped unreadable storage is never overwritten by migration ({"points":[],"prs":[],"rpeTableVersions":null})
+  ○ skipped 107 a server-confirmed null weight retires only that set estimate, retaining orphaned history
+
+  ● 112 warm-ups do not change growth e1RM, records, volume or session counts
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  0
+    + Received  + 14
+
+    @@ -11,6 +11,20 @@
+          "sourceRPE": 10,
+          "sourceReps": 1,
+          "sourceWeightKg": 100,
+          "studentId": "student",
+        },
+    +   Object {
+    +     "computedAt": 2026-09-15T12:00:00.000Z,
+    +     "confidence": "low",
+    +     "e1RMKg": 200,
+    +     "exerciseId": "squat",
+    +     "id": "history-warmup",
+    +     "origin": "logged",
+    +     "setLogId": "warmup",
+    +     "sourceCoachRPE": null,
+    +     "sourceRPE": 10,
+    +     "sourceReps": 1,
+    +     "sourceWeightKg": 200,
+    +     "studentId": "student",
+    +   },
+      ]
+
+      101 |   const baseline = await loadGrowthHistory(new InMemoryE1RMRepository(), 'student', [log], families);
+      102 |   const actual = await loadGrowthHistory(new InMemoryE1RMRepository(), 'student', [log, warmup], families);
+    > 103 |   expect(actual).toEqual(baseline);
+          |                  ^
+      104 |   expect(historyStats([log, warmup])).toEqual(historyStats([log]));
+      105 |   expect(chartBuckets([log, warmup])).toEqual(chartBuckets([log]));
+      106 | });
+
+      at Object.toEqual (src/features/history/__tests__/history-points.test.ts:103:18)
+      at asyncGeneratorStep (../meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (../meetpr-rn-wt-110/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 8 skipped, 9 total
+Snapshots:   0 total
+Time:        0.853 s
+Ran all test suites matching /src\/features\/history\/__tests__\/history-points.test.ts/i with tests matching "112".

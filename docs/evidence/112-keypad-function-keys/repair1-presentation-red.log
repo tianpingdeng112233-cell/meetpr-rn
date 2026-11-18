@@ -1,0 +1,93 @@
+
+> meetpr-rn@1.0.0 test
+> jest --runInBand --forceExit src/features/training/__tests__/completion-presentation.test.ts -t 112 repair 1
+
+FAIL src/features/training/__tests__/completion-presentation.test.ts
+  ✕ 112 repair 1: warm-ups never contribute to completion counts, volume, best set, PR or effort (167 ms)
+  ○ skipped completed session counts failed sets in work, but not in successful sets
+  ○ skipped exercise performance chooses weight then reps and compares with historical best
+  ○ skipped receipt, weekday, volume comparison and metadata use canonical localized copy
+  ○ skipped main RPE 8 compares raw average and formats as 8
+  ○ skipped main RPE 8.5 compares raw average and formats as 8.5
+  ○ skipped main RPE 7.5 compares raw average and formats as 7.5
+  ○ skipped main RPE 9 compares raw average and formats as 9
+  ○ skipped main RPE 7 compares raw average and formats as 7
+  ○ skipped main RPE 8.96 compares raw average and formats as 9.0
+  ○ skipped legacy missing weight and reps use prescription but absent RPE stays absent
+  ○ skipped rehydrated review uses precise recorded decimals before UI-rounded draft text
+  ○ skipped a recorded set without actual RPE remains empty
+  ○ skipped extra work contributes actual volume without inflating prescription completion totals
+
+  ● 112 repair 1: warm-ups never contribute to completion counts, volume, best set, PR or effort
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 10
+    + Received  + 10
+
+    @@ -1,21 +1,21 @@
+      Object {
+    -   "averageRPEText": "8.5",
+    +   "averageRPEText": "8.9",
+        "coachReceiptText": "Your coach received your training log",
+    -   "completedSetCount": 3,
+    +   "completedSetCount": 4,
+        "completedSuccessfulSets": 2,
+        "dateSubtitle": "9/9 · Wed · W1D3",
+        "exerciseCount": 2,
+        "exercises": Array [
+          Object {
+    -       "bestSetText": "100kg × 5 @8",
+    -       "completedSetCount": 2,
+    +       "bestSetText": "999kg × 99 @10",
+    +       "completedSetCount": 3,
+            "failedSetCount": 0,
+            "id": "main",
+            "isPersonalRecord": false,
+            "name": "Squat",
+    -       "statusText": "All 2 sets completed",
+    +       "statusText": "All 3 sets completed",
+          },
+          Object {
+            "bestSetText": "20kg × 5 @9",
+            "completedSetCount": 1,
+            "failedSetCount": 1,
+    @@ -24,17 +24,17 @@
+            "name": "Bench",
+            "statusText": "Sets: 1 · Failed: 1",
+          },
+        ],
+        "hasPersonalRecord": false,
+    -   "mainRPEText": "8.3",
+    -   "metaText": "15 reps · Main-lift RPE 8.3 · On plan",
+    +   "mainRPEText": "8.8",
+    +   "metaText": "114 reps · Main-lift RPE 8.8 · Above plan",
+        "personalRecordText": "",
+    -   "planComparisonText": "On plan",
+    +   "planComparisonText": "Above plan",
+        "setCompletionLabel": "Completed 1 set with reduced weight",
+        "totalPlannedSets": 3,
+    -   "totalReps": 15,
+    -   "totalVolumeText": "1,050",
+    +   "totalReps": 114,
+    +   "totalVolumeText": "99,951",
+        "volumeComparisonText": "Completed as planned",
+        "weekCode": "W1D3",
+        "weekDayLabel": "Workout 3 this week",
+      }
+
+      93 |     setIndex: 3, weightText: '999', repsText: '99', rpeText: '10' };
+      94 |   expect(workoutCompletionPresentation({ ...input, drafts: [warmup, ...drafts] }))
+    > 95 |     .toEqual(workoutCompletionPresentation(input));
+         |      ^
+      96 | });
+      97 |
+
+      at Object.toEqual (src/features/training/__tests__/completion-presentation.test.ts:95:6)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 13 skipped, 14 total
+Snapshots:   0 total
+Time:        3.84 s
+Ran all test suites matching /src\/features\/training\/__tests__\/completion-presentation.test.ts/i with tests matching "112 repair 1".
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
