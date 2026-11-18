@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-11-18 · CN16 已发布**（spec 110 / 111 / 112 / 113，同批 iOS 1.0(42)）。双 APK 哈希、latest.json=16、no-cache 及 CN15 升级提示均已核验。[发布记录](docs/journal/2026-11-18-release-cn16.md)
 > **2026-11-17 spec 112 键盘功能键 + 学员自加热身组（PR #205，David 2026-11-18 真机验收通过并放行进下一班车）**：Android allDay 四功能键、跨格结算、RPE/RIR 快选、自加热身组、热身/额外组左滑删除；依赖后端 068（国内 staging 已部署）。vivo 真机与真后端全链路由 David 人工验收：统计排除、教练 App/网页隐藏、重启保留、iPhone 同账号跨端读取。[JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)
 
 > **2026-11-18 spec 113 独立聊天视频（P1，#207已合并，国内跨端验收通过）**：学员「＋ → 视频」相册单选、预览与独立发送；Android MP4→iOS教练、iOS MOV→Android教练、四角色完整回播和冷启动历史通过。backend #429 / 0089已部署；按David要求进下一CN包，当前仍CN15，未发布新APK。[本卡JOURNAL](docs/journal/2026-11-17-113-android.md) · [验收正典与限制](https://github.com/tianpingdeng112233-cell/MeetPR-backend/blob/staging/docs/evidence/069-chat-video/interop-2026-11-18/README.md)。
