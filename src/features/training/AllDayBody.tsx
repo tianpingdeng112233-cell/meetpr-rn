@@ -105,10 +105,13 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
           {expanded ? <>
             {editable && block.rows[0]?.kind === 'added' ? <Pressable onPress={() => onRemoveExercise(block.exercise)}><Text style={{ color: colors.danger }}>{t('student.added.remove')}</Text></Pressable> : null}
             {block.exercise.notes ? <Text style={{ ...font.body(12), color: colors.goldText }}>{t('training.allDay.coachNote', [block.exercise.notes])}</Text> : null}
-            {editable && !block.exercise.id.startsWith('added:') ? <Pressable accessibilityRole="button" accessibilityLabel={t(warmups.length >= 5 ? 'training.warmup.limit' : 'training.warmup.add')} disabled={warmups.length >= 5}
-              accessibilityState={{ disabled: warmups.length >= 5 }} onPress={() => onAddWarmup?.(block.exercise)} style={{ minHeight: 44, justifyContent: 'center' }}>
-              <Text style={{ ...font.body(13, 'semibold'), color: warmups.length >= 5 ? colors.textMuted : colors.goldText }}>{warmups.length >= 5 ? t('training.warmup.limit') : `＋ ${t('training.warmup.add')}`}</Text>
-            </Pressable> : null}
+            {editable && !block.exercise.id.startsWith('added:') ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t(warmups.length >= 5 ? 'training.warmup.limit' : 'training.warmup.add')} disabled={warmups.length >= 5}
+                accessibilityState={{ disabled: warmups.length >= 5 }} onPress={() => onAddWarmup?.(block.exercise)} style={{ minHeight: 44, justifyContent: 'center' }}>
+                <Text style={{ ...font.body(13, 'semibold'), color: warmups.length >= 5 ? colors.textMuted : colors.goldText }}>{warmups.length >= 5 ? t('training.warmup.limit') : `＋ ${t('training.warmup.add')}`}</Text>
+              </Pressable>
+              {onNote && block.rows[0] ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /></Pressable> : null}
+            </View> : null}
             <GestureHandlerRootView style={{}}>
             <View style={{ borderRadius: 12, backgroundColor: colors.surfaceCard, overflow: 'hidden' }}>
               {block.rows.map(row => {
@@ -179,8 +182,8 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
             </View>
             </GestureHandlerRootView>
             {editable ? <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Pressable accessibilityRole="button" accessibilityLabel={`＋ ${t('student.added.addSet')}`} onPress={() => onAddSet(block.exercise)}><Text style={{ ...font.body(13), color: colors.goldText }}>{`＋ ${t('student.added.addSet')}`}</Text></Pressable>
-              {onNote && block.rows[0] ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /></Pressable> : null}
+              <Pressable accessibilityRole="button" accessibilityLabel={`＋ ${t('student.added.addSet')}`} onPress={() => onAddSet(block.exercise)}><Text style={{ ...font.body(13, 'semibold'), color: colors.goldText }}>{`＋ ${t('student.added.addSet')}`}</Text></Pressable>
+              {onNote && block.rows[0] && block.exercise.id.startsWith('added:') ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.allDay.note', [name])} onPress={() => onNote(block.rows[0])} style={{ alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44 }}><MaterialCommunityIcons name="message-outline" size={16} color={colors.textSecondary} /></Pressable> : null}
             </View> : null}
           </> : null}
         </View>
