@@ -1,5 +1,7 @@
 # 113 Android 验证证据
 
+**当前（2026-11-18）**：真实国内双向收发与历史回播已通过，P1进入下一CN包候选；[完整验收与限制](https://github.com/tianpingdeng112233-cell/MeetPR-backend/blob/staging/docs/evidence/069-chat-video/interop-2026-11-18/README.md)。下文Demo/磁盘压力/待联调记录为11月17日本地开发阶段，后续全量CI为227 suites / 2440 tests通过。
+
 代码基底 `8995895`，完整过程见 [JOURNAL](../../journal/2026-11-17-113-android.md)。[红绿与定向回归原始摘要](red-green.txt) 包含 outbox / 历史确认、三语文案、既有 route coachId、固定 wire body 的失败复现及通过结果。
 
 - 学员、实时、旧组分享入口：3 suites / 86 tests 通过。
