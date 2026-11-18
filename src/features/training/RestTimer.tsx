@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import AsyncStorage from "@/demo/storage";
-import { font, useColors } from "@/design";
+import { font, useColors, useTheme } from "@/design";
 import { t } from "@/i18n";
 import { RestTimerSettingsScreen } from "@/features/settings/RestTimerSettingsScreen";
 import {
@@ -107,6 +107,7 @@ export function RestTimer({
 }: Props) {
   const shellBlocked = useContext(StartupOverlayContext);
   const colors = useColors();
+  const { scheme } = useTheme();
   const window = useWindowDimensions();
   const [area, setArea] = useState({
     width: window.width,
@@ -332,6 +333,9 @@ export function RestTimer({
         0,
         Math.min(1, snapshot.remaining / Math.max(1, snapshot.total)),
       );
+  const ringLeft = drag?.x ?? x;
+  const hintOnRight = ringLeft + RING / 2 < area.width / 2;
+  const hintText = scheme === "light" ? colors.holdTrack : colors.textPrimary;
   if (!visible || startupBlocked || shellBlocked) return null;
   return (
     <View
@@ -351,21 +355,52 @@ export function RestTimer({
           }}
         >
           {hint && !settings && !running && !done ? (
+            // Anchored to the ring's inner edge with an 8pt gap; follows drags and flips sides at the midline.
             <View
               pointerEvents="none"
               style={{
                 position: "absolute",
-                [position.side === "right" ? "right" : "left"]: RING + 12,
-                top: 4,
-                width: Math.min(200, area.width - (EDGE * 2 + RING + 12)),
-                padding: 10,
-                borderRadius: 10,
-                backgroundColor: colors.gold200,
+                [hintOnRight ? "left" : "right"]: RING + 8,
+                top: 0,
+                height: RING,
+                justifyContent: "center",
+                alignItems: hintOnRight ? "flex-start" : "flex-end",
+                width: area.width - (EDGE * 2 + RING + 8),
               }}
             >
-              <Text style={{ ...font.body(12), color: colors.holdTrack }}>
-                {t("training.restRing.hint")}
-              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor:
+                    scheme === "light"
+                      ? colors.gold200
+                      : colors.surfaceElevated,
+                  borderWidth: scheme === "light" ? 1 : 0,
+                  borderColor: colors.gold500,
+                }}
+              >
+                {hintOnRight ? (
+                  <MaterialCommunityIcons
+                    name="arrow-left"
+                    size={14}
+                    color={hintText}
+                  />
+                ) : null}
+                <Text style={{ ...font.body(12), color: hintText }}>
+                  {t("training.restRing.hint")}
+                </Text>
+                {hintOnRight ? null : (
+                  <MaterialCommunityIcons
+                    name="arrow-right"
+                    size={14}
+                    color={hintText}
+                  />
+                )}
+              </View>
             </View>
           ) : null}
           <Animated.View style={{ transform: [{ scale }] }}>
