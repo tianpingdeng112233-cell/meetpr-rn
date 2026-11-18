@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import AsyncStorage from "@/demo/storage";
-import { font, useColors } from "@/design";
+import { font, useColors, useTheme } from "@/design";
 import { t } from "@/i18n";
 import { RestTimerSettingsScreen } from "@/features/settings/RestTimerSettingsScreen";
 import {
@@ -35,6 +35,9 @@ import {
 } from "./rest-timer-notification";
 
 const POSITION_KEY = "meetpr.rest-ring.position.v1";
+/** Floating ring diameter; edges keep 16 from the screen side and 12 from the header / completion button. */
+const RING = 76;
+const EDGE = 16;
 type Position = { side: "left" | "right"; y: number | null };
 type Props = {
   studentId: string;
@@ -104,6 +107,7 @@ export function RestTimer({
 }: Props) {
   const shellBlocked = useContext(StartupOverlayContext);
   const colors = useColors();
+  const { scheme } = useTheme();
   const window = useWindowDimensions();
   const [area, setArea] = useState({
     width: window.width,
@@ -134,9 +138,9 @@ export function RestTimer({
   const held = useRef(false);
   const dragging = useRef(false);
   const origin = useRef({ x: 0, y: 0 });
-  const maxY = Math.max(top, area.height - bottom - 12 - 64);
+  const maxY = Math.max(top, area.height - bottom - 12 - RING);
   const clampY = (y: number) => Math.max(top, Math.min(maxY, y));
-  const x = position.side === "left" ? 16 : area.width - 80;
+  const x = position.side === "left" ? EDGE : area.width - EDGE - RING;
   const y = clampY(position.y ?? maxY);
   const liveGeometry = useRef({ x, y, width: area.width, top, maxY });
   useEffect(() => {
@@ -167,8 +171,11 @@ export function RestTimer({
         const geometry = liveGeometry.current;
         setDrag({
           x: Math.max(
-            16,
-            Math.min(geometry.width - 80, origin.current.x + gesture.dx),
+            EDGE,
+            Math.min(
+              geometry.width - EDGE - RING,
+              origin.current.x + gesture.dx,
+            ),
           ),
           y: Math.max(
             geometry.top,
@@ -180,7 +187,7 @@ export function RestTimer({
         const geometry = liveGeometry.current;
         const next: Position = {
           side:
-            origin.current.x + gesture.dx + 32 < geometry.width / 2
+            origin.current.x + gesture.dx + RING / 2 < geometry.width / 2
               ? "left"
               : "right",
           y: Math.max(
@@ -326,6 +333,9 @@ export function RestTimer({
         0,
         Math.min(1, snapshot.remaining / Math.max(1, snapshot.total)),
       );
+  const ringLeft = drag?.x ?? x;
+  const hintOnRight = ringLeft + RING / 2 < area.width / 2;
+  const hintText = scheme === "light" ? colors.holdTrack : colors.textPrimary;
   if (!visible || startupBlocked || shellBlocked) return null;
   return (
     <View
@@ -340,26 +350,57 @@ export function RestTimer({
             position: "absolute",
             left: drag?.x ?? x,
             top: drag?.y ?? y,
-            width: 64,
-            height: 64,
+            width: RING,
+            height: RING,
           }}
         >
           {hint && !settings && !running && !done ? (
+            // Anchored to the ring's inner edge with an 8pt gap; follows drags and flips sides at the midline.
             <View
               pointerEvents="none"
               style={{
                 position: "absolute",
-                [position.side === "right" ? "right" : "left"]: 76,
-                top: 4,
-                width: Math.min(200, area.width - 108),
-                padding: 10,
-                borderRadius: 10,
-                backgroundColor: colors.gold200,
+                [hintOnRight ? "left" : "right"]: RING + 8,
+                top: 0,
+                height: RING,
+                justifyContent: "center",
+                alignItems: hintOnRight ? "flex-start" : "flex-end",
+                width: area.width - (EDGE * 2 + RING + 8),
               }}
             >
-              <Text style={{ ...font.body(12), color: colors.holdTrack }}>
-                {t("training.restRing.hint")}
-              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor:
+                    scheme === "light"
+                      ? colors.gold200
+                      : colors.surfaceElevated,
+                  borderWidth: scheme === "light" ? 1 : 0,
+                  borderColor: colors.gold500,
+                }}
+              >
+                {hintOnRight ? (
+                  <MaterialCommunityIcons
+                    name="arrow-left"
+                    size={14}
+                    color={hintText}
+                  />
+                ) : null}
+                <Text style={{ ...font.body(12), color: hintText }}>
+                  {t("training.restRing.hint")}
+                </Text>
+                {hintOnRight ? null : (
+                  <MaterialCommunityIcons
+                    name="arrow-right"
+                    size={14}
+                    color={hintText}
+                  />
+                )}
+              </View>
             </View>
           ) : null}
           <Animated.View style={{ transform: [{ scale }] }}>
@@ -408,9 +449,9 @@ export function RestTimer({
                   openSettings();
               }}
               style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
+                width: RING,
+                height: RING,
+                borderRadius: RING / 2,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: colors.surfaceRaised,
@@ -419,17 +460,17 @@ export function RestTimer({
               }}
             >
               {running || done ? (
-                <ProgressRing size={64} stroke={4} progress={progress} />
+                <ProgressRing size={RING} stroke={5} progress={progress} />
               ) : (
                 <MaterialCommunityIcons
                   name={loadError ? "reload" : "timer-outline"}
-                  size={20}
+                  size={24}
                   color={colors.accent}
                 />
               )}
               <Text
                 style={{
-                  ...font.mono(done ? 13 : running ? 17 : 12, "bold"),
+                  ...font.mono(done ? 15 : running ? 20 : 14, "bold"),
                   textAlign: "center",
                   color:
                     running && snapshot.remaining <= 10
