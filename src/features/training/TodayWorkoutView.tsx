@@ -47,7 +47,7 @@ import { completionVideoSummary } from './video-upload/completion-delivery';
 import { hydrateRemoteVideoAttachments, hydrateVideoUploads, useVideoUploadStore, type VideoAttachmentSet } from './video-upload/store';
 import { VideoCompletionControl } from './video-upload/VideoCompletionControl';
 
-import { AnalyticsEvent, track } from '@/analytics';
+import { AnalyticsEvent, AnalyticsScreen, track } from '@/analytics';
 import { planKeys, useDayCompletion, usePlan, usePlanHandoff, currentPlanSummary, type PlanHandoff, type PlanSummary, type PlanDetail, type PlanExercise } from '@/api/domains/plans';
 import { setKeys, useSetLogs, useUpsertSetLog, useWeightSuggestions } from '@/api/domains/sets';
 import { useSessionStore } from '@/api/session';
@@ -200,7 +200,13 @@ export function TodayWorkoutView() {
   const currentSummary = currentPlanSummary(plansQuery.data);
   const [retained, setRetained] = useState<{ owner: string; summary: PlanSummary | null } | null>(null);
   const pendingSync = syncSnapshot.pending.length > 0 || completionGate.pendingDays().length > 0;
-  const activeSummary = retained?.owner === studentId ? retained.summary : pendingSync && savedWorkout.snapshot ? savedWorkout.snapshot.plan : currentSummary ?? (!plansQuery.data ? savedWorkout.snapshot?.plan ?? null : null);
+  // A cycle the server has fully settled is over: leftover outbox or upload state must not keep it on screen.
+  const settledCycle = (handoff: PlanHandoff | undefined, planId: string | undefined) => {
+    const summary = handoff?.plans.find(item => item.id === planId);
+    return Boolean(summary && handoff?.current_plan_id && handoff.current_plan_id !== planId &&
+      summary.total_training_days > 0 && summary.completed_training_days === summary.total_training_days);
+  };
+  const activeSummary = retained?.owner === studentId ? retained.summary : pendingSync && savedWorkout.snapshot && !settledCycle(plansQuery.data, savedWorkout.snapshot.plan.id) ? savedWorkout.snapshot.plan : currentSummary ?? (!plansQuery.data ? savedWorkout.snapshot?.plan ?? null : null);
   if (syncReadyOwner === studentId && savedWorkout.ready && (plansQuery.data || activeSummary) && retained?.owner !== studentId) setRetained({ owner: studentId, summary: activeSummary });
   const enterPlan = useRef<() => void>(() => {});
   const [browsing, setBrowsing] = useState<{ summary: PlanSummary; edge: 'first' | 'last' } | null>(null);
@@ -855,10 +861,18 @@ export function TodayWorkoutView() {
   const contentBottomPadding = stickyCompletion || preview
     ? completionDockHeight + spacing.md
     : styles.content.paddingBottom;
-  const transitionLocked = () => weightEditing.current || videoInteractions.current.size > 0 || pendingSync || savingSets.current > 0 || completionPhase || editor.editing || pickerVisible || noteRow || Object.entries(useVideoUploadStore.getState().records).some(([key, record]) => key.startsWith(`${studentId}:`) && ['pending', 'preparing', 'uploading', 'waiting'].includes(record.status));
+  const uploadsIn = (statuses: readonly string[]) => Object.entries(useVideoUploadStore.getState().records).some(([key, record]) => key.startsWith(`${studentId}:`) && statuses.includes(record.status));
+  // On-screen work and uploads actually in flight always hold the page; both end on their own.
+  const interactionLocked = () => Boolean(weightEditing.current || videoInteractions.current.size > 0 || savingSets.current > 0 || completionPhase || editor.editing || pickerVisible || noteRow || uploadsIn(['preparing', 'uploading']));
+  // Queued sync and waiting uploads can outlive the session, so they only hold a cycle that is not settled yet.
+  const transitionLocked = () => interactionLocked() || pendingSync || uploadsIn(['pending', 'waiting']);
   useEffect(() => { enterPlan.current = () => {
     const fresh = queryClient.getQueryData<PlanHandoff>(planKeys.handoff(studentId));
-    if (transitionLocked() || !fresh) return;
+    if (!fresh || (settledCycle(fresh, activeSummary?.id) ? interactionLocked() : transitionLocked())) return;
+    if (settledCycle(fresh, activeSummary?.id) && transitionLocked()) {
+      const kind = syncSnapshot.pending.length ? 'outbox' : completionGate.pendingDays().length ? 'gate' : uploadsIn(['waiting']) ? 'upload_waiting' : 'upload_pending';
+      void track(AnalyticsEvent.ClientError, { domain: 'persistence', code: `handoff.settled_skip.${kind}`, screen: AnalyticsScreen.TodayWorkout });
+    }
     setRetained({ owner: studentId, summary: currentPlanSummary(fresh) }); setBrowsing(null); setEditingPlan(null); setRequestedDayID(null);
   }; });
   const browsePlan = (summary: PlanSummary, edge: 'first' | 'last') => {

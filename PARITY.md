@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-11-22 spec 110 返修 · 旧周期练完被本机遗留状态卡住（PR 待放行，随下一个 CN 包）**：已练完的周期只被屏幕上的操作和上传中的视频拦住，发件箱、结算等待、等待中的上传不再拦；跳过时上报 `handoff.settled_skip.*`。首例李小龙（CN16）。[JOURNAL](docs/journal/2026-11-22-110-handoff-finished-cycle.md)
 > **2026-11-18 · CN16 已发布**（spec 110 / 111 / 112 / 113，同批 iOS 1.0(42)）。双 APK 哈希、latest.json=16、no-cache 及 CN15 升级提示均已核验。[发布记录](docs/journal/2026-11-18-release-cn16.md)
 > **2026-11-17 spec 112 键盘功能键 + 学员自加热身组（PR #205，David 2026-11-18 真机验收通过并放行进下一班车）**：Android allDay 四功能键、跨格结算、RPE/RIR 快选、自加热身组、热身/额外组左滑删除；依赖后端 068（国内 staging 已部署）。vivo 真机与真后端全链路由 David 人工验收：统计排除、教练 App/网页隐藏、重启保留、iPhone 同账号跨端读取。[JOURNAL](docs/journal/2026-11-17-112-keypad-function-keys-android.md)
 
