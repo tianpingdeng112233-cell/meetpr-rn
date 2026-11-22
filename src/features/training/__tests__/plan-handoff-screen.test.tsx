@@ -28,10 +28,12 @@ import { BodyWeightSheet } from '@/features/history/BodyWeightSheet';
 import { writeDailyWeight } from '@/features/settings/daily-weight';
 import { CameraRecorder } from '../video-upload/CameraRecorder';
 import { NumberPad } from '@/design/NumberPad';
+import { AnalyticsEvent, track } from '@/analytics';
 jest.mock('expo-media-library', () => ({}));
 jest.mock('expo-camera', () => ({ CameraView: 'CameraView', Camera: { requestCameraPermissionsAsync: async () => ({ granted: true }), requestMicrophonePermissionsAsync: async () => ({ granted: true }), isAvailableAsync: async () => true } }));
 jest.mock('react-native-compressor', () => ({}));
 jest.mock('react-native-video', () => 'Video');
+jest.mock('@/analytics', () => ({ ...jest.requireActual<typeof import('@/analytics')>('@/analytics'), track: jest.fn(async () => {}) }));
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -341,4 +343,60 @@ test('110 preview remaining count belongs to the retained cycle during a backgro
   await settle();
   expect(copy()).toContain('Preview only');
   expect(copy()).toContain(t('training.handoff.remaining', [0]));
+});
+
+// A finished cycle must not be held by background state left on the phone (Android CN16, first real handoff).
+const finishedPlan = (): PlanDetail => ({ ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) });
+const slowHandoff = () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith('/plan-handoff')) await new Promise(resolve => setTimeout(resolve, 60));
+    return original(path, options);
+  });
+};
+const finishedColdStart = async () => {
+  servedPlan = finishedPlan(); currentPlanID = upcoming.id;
+  await saveWorkoutSnapshot(studentId, servedPlan, []);
+};
+const enterAfterSlowHandoff = async () => { await mount(); await enterTraining(); await settle(); await settle(); await settle(); };
+test('110 a finished cycle hands off on cold start despite a rejected set left in the outbox', async () => {
+  await finishedColdStart();
+  const day = plan.days[0]; const exercise = day.exercises[0];
+  await AsyncStorage.setItem(`training.set-sync.v1.${studentId}`, JSON.stringify({ confirmed: {}, pending: [{
+    stableSetId: 'rejected', dayId: day.id, exerciseId: exercise.exercise_id, loggedDate: '2026-09-01',
+    request: { plan_exercise_id: exercise.id, set_index: 0, weight_kg: 80, reps: 5, completed: true },
+    log: { id: 'local:rejected', student_id: studentId, plan_day_id: null, plan_exercise_id: exercise.id, exercise_id: exercise.exercise_id,
+      set_index: 0, weight_kg: '80', reps: 5, rpe: null, completed: true, failed: false, logged_date: '2026-09-01', logged_at: '2026-09-01T12:00:00Z' },
+    id: 1, remove: false, status: 'failed', attempts: 1, retryAt: 0 }] }));
+  await enterAfterSlowHandoff();
+  expect(copy()).toContain('Next block · 4 weeks');
+});
+test('110 a finished cycle hands off on cold start despite a stale waiting video from an earlier day', async () => {
+  await finishedColdStart(); slowHandoff();
+  useVideoUploadStore.setState({ records: { [`${studentId}:stale`]: { ...EMPTY_VIDEO_UPLOAD, status: 'waiting', createdAt: 1 } } });
+  await enterAfterSlowHandoff();
+  expect(copy()).toContain('Next block · 4 weeks');
+});
+test('110 a finished cycle hands off on cold start while the completion gate still holds a day the server already settled', async () => {
+  await finishedColdStart();
+  const setLogId = '90000000-0000-4000-8000-000000000000';
+  await AsyncStorage.setItem('training.videoUploads.v1', JSON.stringify({ version: 1, records: { [`${studentId}:gate-set`]: { ...EMPTY_VIDEO_UPLOAD, status: 'failed', createdAt: 1, setLogId } } }));
+  await AsyncStorage.setItem(`training.completion-gate.v1.${studentId}`, JSON.stringify({ [plan.days[0].id]: { completed: false, released: true,
+    video: { sets: [{ stableSetId: 'gate-set', setLogId }], exerciseIds: [], heldAt: Date.now() - 3_600_000, timedOut: true } } }));
+  await enterAfterSlowHandoff();
+  expect(copy()).toContain('Next block · 4 weeks');
+});
+test('110 a finished cycle still holds while a video upload is in flight', async () => {
+  await finishedColdStart(); slowHandoff();
+  useVideoUploadStore.setState({ records: { [`${studentId}:live`]: { ...EMPTY_VIDEO_UPLOAD, status: 'uploading', createdAt: Date.now() } } });
+  await enterAfterSlowHandoff();
+  expect(copy()).toContain('Strength · 4 weeks');
+});
+test('110 skipping leftover state on a finished cycle reports which state it was', async () => {
+  await finishedColdStart(); slowHandoff();
+  useVideoUploadStore.setState({ records: { [`${studentId}:stale`]: { ...EMPTY_VIDEO_UPLOAD, status: 'waiting', createdAt: 1 } } });
+  const tracked = jest.mocked(track);
+  await enterAfterSlowHandoff();
+  expect(copy()).toContain('Next block · 4 weeks');
+  expect(tracked).toHaveBeenCalledWith(AnalyticsEvent.ClientError, { domain: 'persistence', code: 'handoff.settled_skip.upload_waiting', screen: 'today_workout' });
 });
