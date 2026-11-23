@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { day, plan } from '@/domain/plan/test-fixtures';
 import { trainingWeekStrip } from '@/domain/plan/week-strip';
 import { setLocaleOverride } from '@/i18n';
@@ -50,4 +50,33 @@ test('the compact strip contains only calendar cells and fixed navigation, witho
   expect(next().props.accessibilityState.disabled).toBe(true);
   act(() => previous().props.onPress());
   expect(select).toHaveBeenLastCalledWith('first');
+});
+
+test('week arrows sit in the row with a 44dp-wide target instead of floating in the page gutter', () => {
+  const fixture = plan([day('first'), day('last', { week_number: 2 })]);
+  act(() => { renderer = create(<TrainingWeekStrip plan={fixture} strip={trainingWeekStrip(fixture, null, '2026-09-07')} onSelect={jest.fn()} />); });
+  for (const label of ['Previous week', 'Next week']) {
+    const arrow = StyleSheet.flatten(renderer.root.findAllByProps({ accessibilityLabel: label })[0].props.style);
+    expect(arrow.width).toBeGreaterThanOrEqual(44);
+    expect(arrow.minHeight).toBeGreaterThanOrEqual(64);
+    expect(arrow.position).not.toBe('absolute');
+    expect(arrow.left ?? 0).toBeGreaterThanOrEqual(0);
+    expect(arrow.right ?? 0).toBeGreaterThanOrEqual(0);
+  }
+});
+
+test('date circles shrink to fit a 360dp screen and the selection ring takes no layout width', () => {
+  const fixture = plan([day('first'), day('second', { day_of_week: 2 })]);
+  act(() => { renderer = create(<TrainingWeekStrip plan={fixture} strip={trainingWeekStrip(fixture, 'first', '2026-09-07')} onSelect={jest.fn()} />); });
+  const layout = (width: number) => act(() => renderer.root.findAll(node => typeof node.type === 'string' && typeof node.props.onLayout === 'function')[0]
+    .props.onLayout({ nativeEvent: { layout: { width } } }));
+  const circle = () => StyleSheet.flatten(renderer.root.findAllByProps({ testID: 'week-day-circle-first' })[0].props.style);
+  layout(360 - 88);
+  expect(circle().width).toBe(32);
+  expect(circle().height).toBe(32);
+  layout(393 - 88);
+  expect(circle().width).toBe(36);
+  const rings = renderer.root.findAll(node => typeof node.type === 'string' && node.props.testID === 'week-day-ring');
+  expect(rings).toHaveLength(1);
+  expect(StyleSheet.flatten(rings[0].props.style).position).toBe('absolute');
 });
