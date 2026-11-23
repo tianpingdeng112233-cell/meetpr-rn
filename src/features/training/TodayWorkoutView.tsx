@@ -901,7 +901,7 @@ export function TodayWorkoutView() {
         </View> : null}
         <MeetWeightStrip readOnly={preview} onEditingChange={onWeightEditing} studentId={studentId} profile={profileQuery.data} today={localDateText(clockNow)} />
         {state.kind !== 'loading' && !showEmpty && plan ? (
-          <View onLayout={event => setRestTop(event.nativeEvent.layout.y + event.nativeEvent.layout.height + 12)}><TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} preview={preview}
+          <View style={{ marginHorizontal: -spacing.base }} onLayout={event => setRestTop(event.nativeEvent.layout.y + event.nativeEvent.layout.height + 12)}><TrainingWeekStrip plan={plan} strip={weekStrip} onSelect={selectDay} preview={preview}
             onPreviousPlan={previousPlan ? () => browsePlan(previousPlan, 'last') : undefined}
             onNextPlan={nextPlan ? () => browsePlan(nextPlan, 'first') : undefined} /></View>
         ) : null}
