@@ -39,6 +39,7 @@ export function GrowthScreen() {
     { id: 'history', title: t('student.e1rmSourceHistory'), value: values?.history ?? '', icon: 'clock-outline', onPress: () => router.push('/training-history') },
     { id: 'body-weight', title: t('student.dashboardProfileMetricsView.copy001'), value: weightValue, icon: 'scale-bathroom', onPress: () => router.navigate('/(student)/body-weight') },
     { id: 'intensity', title: t('student.progressMenu.intensity'), value: values?.intensity ?? '', icon: 'chart-bar', onPress: () => router.push('/progress/intensity') },
+    { id: 'rpe-table', title: t('rpeTable.title'), value: '', icon: 'table', onPress: () => router.push('/progress/rpe-table') },
   ] as const;
   return <Screen edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={{ gap: spacing.space3, paddingHorizontal: spacing.pageHorizontal, paddingTop: spacing.space2, paddingBottom: spacing.point28 }} showsVerticalScrollIndicator={false}

@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 
-const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.dashboardProfileMetricsView.copy001'), t('student.progressMenu.intensity')];
+const rowLabels = () => [t('student.progressMenu.e1rm'), t('student.e1rmSourceHistory'), t('student.dashboardProfileMetricsView.copy001'), t('student.progressMenu.intensity'), t('rpeTable.title')];
 function expectRows() {
   const rows = buttons().filter(node => rowLabels().some(label => node.props.accessibilityLabel?.startsWith(label)));
   expect(rows.map(node => node.props.accessibilityLabel)).toEqual(rowLabels());
@@ -65,10 +65,10 @@ function expectRows() {
   return rows;
 }
 
-test('four ordered rows remain tappable without charts or tiles in both languages', async () => {
+test('five ordered rows remain tappable without charts or tiles in both languages', async () => {
   await render();
   const rows = expectRows();
-  const routes = ['/progress/e1rm', '/training-history', '/(student)/body-weight', '/progress/intensity'];
+  const routes = ['/progress/e1rm', '/training-history', '/(student)/body-weight', '/progress/intensity', '/progress/rpe-table'];
   rows.forEach((row, index) => { act(() => row.props.onPress()); expect(mockNavigate).toHaveBeenLastCalledWith(routes[index]); });
   expect(texts().filter(text => text === '—')).toHaveLength(4);
   setLocaleOverride('zh');

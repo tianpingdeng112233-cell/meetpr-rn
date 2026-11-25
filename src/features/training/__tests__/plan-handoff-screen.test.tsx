@@ -19,7 +19,7 @@ import { planKeys, type PlanDetail } from '@/api/domains/plans';
 import { setLocaleOverride, t } from '@/i18n';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
-import { Alert, Text } from 'react-native';
+import { Alert, ScrollView, Text } from 'react-native';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
 import { resetVideoUploadStoreForTests, useVideoUploadStore } from '../video-upload/store';
@@ -29,6 +29,7 @@ import { writeDailyWeight } from '@/features/settings/daily-weight';
 import { CameraRecorder } from '../video-upload/CameraRecorder';
 import { NumberPad } from '@/design/NumberPad';
 import { AnalyticsEvent, track } from '@/analytics';
+jest.mock('react-native-safe-area-context', () => (jest.requireActual('react-native-safe-area-context/jest/mock') as { default: unknown }).default);
 jest.mock('expo-media-library', () => ({}));
 jest.mock('expo-camera', () => ({ CameraView: 'CameraView', Camera: { requestCameraPermissionsAsync: async () => ({ granted: true }), requestMicrophonePermissionsAsync: async () => ({ granted: true }), isAvailableAsync: async () => true } }));
 jest.mock('react-native-compressor', () => ({}));
@@ -399,4 +400,63 @@ test('110 skipping leftover state on a finished cycle reports which state it was
   await enterAfterSlowHandoff();
   expect(copy()).toContain('Next block · 4 weeks');
   expect(tracked).toHaveBeenCalledWith(AnalyticsEvent.ClientError, { domain: 'persistence', code: 'handoff.settled_skip.upload_waiting', screen: 'today_workout' });
+});
+
+const serveCompetitionCatalog = () => {
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/exercises' ? { exercises: [{ id: plan.days[0].exercises[0].exercise_id, name: '竞技深蹲', name_en: 'Squat', exercise_type: 'main', main_lift_family: 'squat', is_competition_lift: true, competition_stance: null, muscle_groups: [], equipment: [], movement_pattern: null, created_by_coach_id: null, created_at: plan.created_at }] } as never : original(path, options));
+};
+const outlookButton = () => renderer.root.findAll(node => node.props.onPress && node.props.testID === 'cycle-outlook-entry');
+
+test('114 only shows the capsule for a published plan containing competition lifts', async () => {
+  await mount(); expect(outlookButton()).toHaveLength(0);
+  act(() => renderer.unmount()); client.clear(); serveCompetitionCatalog();
+  await mount(); expect(outlookButton().length).toBeGreaterThan(0);
+  servedPlan = { ...plan, status: 'draft' };
+  await act(async () => { await client.invalidateQueries({ queryKey: planKeys.all }); }); await settle();
+  expect(outlookButton()).toHaveLength(0);
+});
+
+test('114 tapping a column closes the sheet and selects its day in the existing all-day view', async () => {
+  serveCompetitionCatalog();
+  const second = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000002', week_number: 2, exercises: plan.days[0].exercises.map(ex => ({ ...ex, id: '50000000-0000-4000-8000-000000000002', plan_day_id: '40000000-0000-4000-8000-000000000002' })) };
+  servedPlan = { ...plan, days: [...plan.days, second] };
+  await mount(); await act(async () => outlookButton()[0].props.onPress()); await settle();
+  await act(async () => renderer.root.findAll(node => node.props.onPress && node.props.testID === 'cycle-outlook-squat-2')[0].props.onPress());
+  expect(renderer.root.findAllByProps({ testID: 'cycle-outlook-sheet' })).toHaveLength(0);
+  expect(copy()).toContain('W2');
+  expect(renderer.root.findAllByProps({ testID: `all-day-exercise-${second.exercises[0].id}` }).length).toBeGreaterThan(0);
+});
+
+test('114 preview opens the next plan outlook and column navigation remains read-only without writes', async () => {
+  serveCompetitionCatalog(); await mount(); await press(t('student.trainingWeekStrip.next')); await settle();
+  await act(async () => outlookButton()[0].props.onPress()); await settle();
+  expect(copy()).toContain('Next block · 4 weeks · Starts after your current cycle');
+  expect(copy()).toContain('Scheduled 1 / 4 weeks');
+  expect(copy()).not.toContain('This week');
+  await act(async () => renderer.root.findAll(node => node.props.onPress && node.props.testID === 'cycle-outlook-squat-1')[0].props.onPress());
+  expect(copy()).toContain('Preview only');
+  expect(renderer.root.findAllByType(HoldToCompleteButton)).toHaveLength(0);
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([, options]) => options?.method && options.method !== 'GET')).toHaveLength(0);
+});
+
+test('114 late-current-week positioning survives initial native clamping and all three rows follow a drag', async () => {
+  const families = ['squat', 'bench', 'deadlift'] as const;
+  const ids = families.map((_, index) => `60000000-0000-4000-8000-00000000000${index}`);
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => path === '/exercises' ? { exercises: families.map((family, index) => ({ id: ids[index], name: family, name_en: family, exercise_type: 'main', main_lift_family: family, is_competition_lift: true, competition_stance: null, muscle_groups: [], equipment: [], movement_pattern: null, created_by_coach_id: null, created_at: plan.created_at })) } as never : original(path, options));
+  servedPlan = { ...plan, plan_weeks: 12, days: Array.from({ length: 12 }, (_, index) => ({ ...plan.days[0], id: `40000000-0000-4000-8000-0000000000${String(index).padStart(2, '0')}`, week_number: index + 1, completed_at: index < 11 ? '2026-09-07T12:00:00Z' : null, exercises: families.map((_, familyIndex) => ({ ...plan.days[0].exercises[0], id: `50000000-0000-4000-8000-000000000${index}${familyIndex}`, exercise_id: ids[familyIndex] })) })) };
+  await mount(); await act(async () => outlookButton()[0].props.onPress()); await settle();
+  const rows = renderer.root.findAllByType(ScrollView).filter(node => node.props.horizontal);
+  expect(rows).toHaveLength(3);
+  const spies = rows.map(node => jest.spyOn(node.instance, 'scrollTo'));
+  await act(async () => rows[0].props.onScroll({ nativeEvent: { contentOffset: { x: 416 } } }));
+  rows.forEach(node => node.props.onContentSizeChange());
+  spies.forEach(spy => expect(spy).toHaveBeenLastCalledWith({ x: 600, animated: false }));
+  await act(async () => {
+    rows[1].props.onScrollBeginDrag();
+    rows[1].props.onScroll({ nativeEvent: { contentOffset: { x: 120 } } });
+  });
+  expect(spies[0]).toHaveBeenLastCalledWith({ x: 120, animated: false });
+  expect(spies[2]).toHaveBeenLastCalledWith({ x: 120, animated: false });
 });
