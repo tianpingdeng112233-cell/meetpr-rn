@@ -213,6 +213,6 @@ P-31 显式预览语义客户端/后端已实现，兼容老服务及同名用�
 
 ## 2026-11-24 · 114 本周期主项走势与 RPE 对照表
 
-- 安卓卡 114-A 已实装，待收货方模拟器验收。对应 iOS 同批 114-B：训练页 `Wn` 旁「整个周期」与底部主项走势；成长列表末行与 RPE 对照表页。视觉依据 `specs/114-cycle-outlook/approved-prototype.html` 与 `approved-round3.html` 的「定稿」，不是历史 build 22 中已有页面。
+- 2026-11-25 收货通过、David 放行（PR #220，随下一个 CN 包）：模拟器 meetpr16 亲眼验收弹层、横滑、点柱跳天、RPE 对照表、浅色 / 深色，截图在 `docs/evidence/114-A/`。iOS 同批 meetpr#492。对应 iOS 同批 114-B：训练页 `Wn` 旁「整个周期」与底部主项走势；成长列表末行与 RPE 对照表页。视觉依据 `specs/114-cycle-outlook/approved-prototype.html` 与 `approved-round3.html` 的「定稿」，不是历史 build 22 中已有页面。
 - 覆盖实际组、M2 混合周、百分比锚点、12 周联动横滑、交接预览只读跳转、kg/lb 与三语。训练页首屏仅增加胶囊；不改历史预填开关、导航或训练写入。
-- 开发验证及边界见 [114-A JOURNAL](docs/journal/2026-11-24-114-A-android.md)。未声称已完成两端视觉对齐或老账号原生升级验收。
+- 开发验证及边界见 [114-A JOURNAL](docs/journal/2026-11-24-114-A-android.md)。两端视觉已对齐（iOS 返修 1 轮）；未验：带历史老账号升级后第一屏、12 周计划，需 staging 真账号。
