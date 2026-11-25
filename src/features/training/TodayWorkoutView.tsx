@@ -1,3 +1,4 @@
+import { CycleOutlookSheet } from './CycleOutlookSheet';
 import { useEffortChoices, historicalEffortChoices } from './effort-preferences';
 import { decodePrescription } from '@/domain/plan/prescription';
 import { weightSuggestionOutcome } from './suggestion-gating';
@@ -79,6 +80,7 @@ export function TodayWorkoutView() {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const workoutScroll = useRef<ScrollView>(null);
+  const [outlookOwner, setOutlookOwner] = useState<string | null>(null);
   const [restTop, setRestTop] = useState(160);
   const [restCompletionSignal, setRestCompletionSignal] = useState(0);
   const accessoryPad = useRef<{ row: View; top: number; height: number } | null>(null);
@@ -219,6 +221,9 @@ export function TodayWorkoutView() {
   const planQuery = usePlan(selectedPlan?.id ?? '');
   const savedPlan = savedWorkout.snapshot?.plan.id === selectedPlan?.id ? savedWorkout.snapshot : null;
   const plan = editingPlan && editingPlan.id === selectedPlan?.id ? editingPlan : planQuery.data ?? savedPlan?.plan;
+  const outlookKey = `${studentId}:${plan?.id}`;
+  const outlookOpen = outlookOwner === outlookKey;
+  const hasOutlook = plan?.status === 'published' && plan.days.some(day => day.week_number >= 1 && day.week_number <= plan.plan_weeks && day.exercises.some(exercise => resolveExerciseMetadata(exercise.exercise_id)?.competitionFamily && exercise.sets.some(set => set.set_type !== 'warmup')));
   const navigablePlans = plansQuery.data?.plans.filter(item => item.total_training_days > 0 || item.id === activeSummary?.id) ?? [];
   const planIndex = navigablePlans.findIndex(item => item.id === selectedPlan?.id);
   const nextPlan = planIndex >= 0 ? navigablePlans[planIndex + 1] : undefined;
@@ -430,6 +435,7 @@ export function TodayWorkoutView() {
       return () => {
         active = false;
         setTrainingVisible(false);
+        setOutlookOwner(null);
         setRequestedDayID(null);
       };
     }, [setRequestedDayID]),
@@ -863,9 +869,9 @@ export function TodayWorkoutView() {
     : styles.content.paddingBottom;
   const uploadsIn = (statuses: readonly string[]) => Object.entries(useVideoUploadStore.getState().records).some(([key, record]) => key.startsWith(`${studentId}:`) && statuses.includes(record.status));
   // On-screen work and uploads actually in flight always hold the page; both end on their own.
-  const interactionLocked = () => Boolean(weightEditing.current || videoInteractions.current.size > 0 || savingSets.current > 0 || completionPhase || editor.editing || pickerVisible || noteRow || uploadsIn(['preparing', 'uploading']));
+  const interactionLocked = (ignoreOutlook = false) => Boolean((outlookOpen && !ignoreOutlook) || weightEditing.current || videoInteractions.current.size > 0 || savingSets.current > 0 || completionPhase || editor.editing || pickerVisible || noteRow || uploadsIn(['preparing', 'uploading']));
   // Queued sync and waiting uploads can outlive the session, so they only hold a cycle that is not settled yet.
-  const transitionLocked = () => interactionLocked() || pendingSync || uploadsIn(['pending', 'waiting']);
+  const transitionLocked = (ignoreOutlook = false) => interactionLocked(ignoreOutlook) || pendingSync || uploadsIn(['pending', 'waiting']);
   useEffect(() => { enterPlan.current = () => {
     const fresh = queryClient.getQueryData<PlanHandoff>(planKeys.handoff(studentId));
     if (!fresh || (settledCycle(fresh, activeSummary?.id) ? interactionLocked() : transitionLocked())) return;
@@ -875,15 +881,15 @@ export function TodayWorkoutView() {
     }
     setRetained({ owner: studentId, summary: currentPlanSummary(fresh) }); setBrowsing(null); setEditingPlan(null); setRequestedDayID(null);
   }; });
-  const browsePlan = (summary: PlanSummary, edge: 'first' | 'last') => {
-    if (transitionLocked()) return;
-    editor.close(); setEditingPlan(null); setRequestedDayID(null); setBrowsing({ summary, edge });
+  const browsePlan = (summary: PlanSummary, edge: 'first' | 'last', dayId: string | null = null) => {
+    if (transitionLocked(Boolean(outlookOpen && dayId))) return;
+    editor.close(); setEditingPlan(null); setRequestedDayID(dayId); setBrowsing({ summary, edge });
   };
   const backToCurrent = () => { editor.close(); setBrowsing(null); setEditingPlan(null); setRequestedDayID(null); };
   return (
     <Screen style={styles.screen}>
       <View style={[styles.nav, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-        <View style={{ flex: 1, gap: spacing.xs }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}><Text style={{ ...font.display(30), color: preview ? colors.textSecondary : colors.textPrimary }}>{showEmpty ? emptyState?.kind === 'next' ? `W${emptyState.week}` : t('student.studentRootView.copy002') : `W${viewedWeek?.number ?? '—'}`}</Text>{preview ? <Text style={styles.weekBadge}>{t('training.handoff.newCycle')}</Text> : null}</View>
+        <View style={{ flex: 1, gap: spacing.xs }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}><Text style={{ ...font.display(30), color: preview ? colors.textSecondary : colors.textPrimary }}>{showEmpty ? emptyState?.kind === 'next' ? `W${emptyState.week}` : t('student.studentRootView.copy002') : `W${viewedWeek?.number ?? '—'}`}</Text>{hasOutlook ? <Pressable testID="cycle-outlook-entry" accessibilityRole="button" accessibilityLabel={t('cycleOutlook.title')} onPress={() => { editor.close(); setOutlookOwner(outlookKey); }} hitSlop={8} style={{ flexShrink: 1, borderRadius: radius.pill, backgroundColor: colors.goldSoft, paddingHorizontal: spacing.sm, paddingVertical: spacing.point2 }}><Text numberOfLines={1} adjustsFontSizeToFit style={{ ...font.body(12, 'semibold'), color: colors.goldText }}>{t('cycleOutlook.title')} ›</Text></Pressable> : null}{preview ? <Text style={styles.weekBadge}>{t('training.handoff.newCycle')}</Text> : null}</View>
         {plan ? <Text style={{ ...font.body(13), color: colors.textSecondary }}>{t('training.handoff.subtitle', [plan.name, plan.plan_weeks])}{preview ? ` · ${t('training.handoff.startsAfter')}` : ''}</Text> : null}</View>
 
       </View>
@@ -959,7 +965,7 @@ export function TodayWorkoutView() {
       <RestTimer key={studentId} studentId={studentId} exerciseName={restExercise ? exerciseTitle(resolveExerciseMetadata(restExercise.exercise_id)) : ''}
         prescribed={restExercise?.sets.slice().sort((a, b) => a.set_number - b.set_number).find(set => set.rest_seconds !== null)?.rest_seconds}
         accessory={isAccessoryExercise(restExercise ? resolveExerciseMetadata(restExercise.exercise_id)?.exerciseType : undefined)}
-        startupBlocked={trainingModalVisible || !notice.ready || (!preview && !browsing && notice.visible)}
+        startupBlocked={outlookOpen || trainingModalVisible || !notice.ready || (!preview && !browsing && notice.visible)}
         visible={trainingVisible && editable && state.kind === 'loaded' && !showEmpty && Boolean(restExercise) && !editor.editing && accessoryPadHeight === 0 && !completionPhase && !pickerVisible && !noteRow}
         top={restTop} bottom={completionDockHeight - spacing.md} completionSignal={restCompletionSignal} />
       </View>
@@ -1042,6 +1048,14 @@ export function TodayWorkoutView() {
           }}
         />
       ) : null}
+      {outlookOpen && hasOutlook && plan ? <CycleOutlookSheet key={outlookKey} studentId={studentId} resolveExercise={resolveExerciseMetadata}
+        input={{ plan, resolveExercise: resolveExerciseMetadata, logs: availableLogs, unit: workoutProfile?.unit_preference === 'lb' ? 'lb' : 'kg', currentWeek: cursor?.week_number ?? null, preview,
+          registeredOneRM: { squat: parseFiniteDecimal(workoutProfile?.squat_1rm_kg ?? ''), bench: parseFiniteDecimal(workoutProfile?.bench_1rm_kg ?? ''), deadlift: parseFiniteDecimal(workoutProfile?.deadlift_1rm_kg ?? '') } }}
+        onClose={() => setOutlookOwner(null)} onSelect={id => {
+          setOutlookOwner(null);
+          if (preview && selectedPlan) browsePlan(selectedPlan, 'first', id);
+          else selectDay(id);
+        }} /> : null}
       {editor.panel}
     </Screen>
   );

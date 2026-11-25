@@ -1,4 +1,18 @@
 {
+"cycleOutlook.title": {"en": "Entire cycle", "zh": "整个周期"},
+"cycleOutlook.partial": {"en": "Scheduled {0} / {1} weeks", "zh": "已排 {0} / {1} 周"},
+"cycleOutlook.unscheduled": {"en": "Unscheduled", "zh": "未排"},
+"cycleOutlook.notTrained": {"en": "No lift", "zh": "没练"},
+"cycleOutlook.skipped": {"en": "Not done", "zh": "没做"},
+"cycleOutlook.current": {"en": "This week", "zh": "本周"},
+"cycleOutlook.approximate": {"en": "≈", "zh": "约"},
+"cycleOutlook.close": {"en": "Close cycle outlook", "zh": "关闭整个周期"},
+"rpeTable.title": {"en": "RPE table", "zh": "RPE 对照表"},
+"rpeTable.reps": {"en": "Reps", "zh": "次数"},
+"rpeTable.squat": {"en": "Squat", "zh": "深蹲"},
+"rpeTable.bench": {"en": "Bench", "zh": "卧推"},
+"rpeTable.deadlift": {"en": "Deadlift", "zh": "硬拉"},
+
 "training.pad.filledUp": {"en": {"one": "Filled {1} in {0} set above", "other": "Filled {1} in {0} sets above"}, "zh": "已改上方 {0} 组的{1}"},
 "training.pad.filledDown": {"en": {"one": "Filled {1} in {0} set below", "other": "Filled {1} in {0} sets below"}, "zh": "已改下方 {0} 组的{1}"},
 "training.pad.emptyUp": {"en": "No sets above", "zh": "上方没有组了"},
