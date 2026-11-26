@@ -85,9 +85,8 @@ export function TodayWorkoutView() {
   const [outlookOwner, setOutlookOwner] = useState<string | null>(null);
   const [restTop, setRestTop] = useState(160);
   const [restCompletionSignal, setRestCompletionSignal] = useState(0);
-  const accessoryPad = useRef<{ row: View; top: number; height: number } | null>(null);
+  const accessoryPad = useRef<{ row: View; top: number } | null>(null);
   const workoutContent = useRef<View>(null!);
-  const [accessoryPadHeight, setAccessoryPadHeight] = useState(0);
   const userScrolling = useRef(false);
   const completedRowToReveal = useRef<string | null>(null);
   const [completionDockHeight, setCompletionDockHeight] = useState(spacing.completionControlHeight + spacing.md * 2 + StyleSheet.hairlineWidth);
@@ -100,21 +99,24 @@ export function TodayWorkoutView() {
     const stillActive = () => accessoryPad.current === target;
     target.row.measureInWindow((_x, y, _width, height) => {
       if (!stillActive()) return;
-      viewport.measureInWindow((_left, viewportTop) => {
-        if (!stillActive() || (y >= viewportTop && y + height + spacing.lg <= target.top)) return;
+      viewport.measureInWindow((_left, viewportTop, _width, viewportHeight) => {
+        const visibleBottom = Math.min(target.top, viewportTop + viewportHeight);
+        if (!stillActive() || (y >= viewportTop && y + height + spacing.lg <= visibleBottom)) return;
         target.row.measureLayout(content, (_rowX, contentY, _rowWidth, rowHeight) => {
           if (!stillActive()) return;
-          const offset = y < viewportTop ? contentY - spacing.lg : viewportTop + contentY + rowHeight + spacing.lg - target.top;
+          const offset = y < viewportTop ? contentY - spacing.lg : viewportTop + contentY + rowHeight + spacing.lg - visibleBottom;
           scroll.scrollTo({ y: Math.max(0, offset), animated: false });
         });
       });
     });
   }, []);
   const onAccessoryPadLayout = useCallback((row: View | null, panel: { top: number; height: number } | null) => {
-    accessoryPad.current = row && panel ? { row, ...panel } : null;
-    setAccessoryPadHeight(row && panel ? panel.height : 0);
-    if (row) completedRowToReveal.current = null;
-    revealAccessoryRow();
+    accessoryPad.current = row && panel ? { row, top: panel.top } : null;
+    if (row && panel) {
+      completedRowToReveal.current = null;
+      // The native scroll range changes when the keypad takes its place below the list.
+      requestAnimationFrame(revealAccessoryRow);
+    }
   }, [revealAccessoryRow]);
   const studentId = useSessionStore((state) => state.user?.id ?? '');
   const savedWorkout = useWorkoutSnapshot(studentId);
@@ -974,7 +976,7 @@ export function TodayWorkoutView() {
         onMomentumScrollEnd={() => { userScrolling.current = false; }}
         onContentSizeChange={revealAccessoryRow}
         onLayout={revealAccessoryRow}
-        contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding + (accessoryPadHeight > 0 ? accessoryPadHeight + spacing.lg : 0) }]}>
+        contentContainerStyle={[styles.content, { paddingBottom: editor.editing ? spacing.lg : contentBottomPadding }]}>
         {!preview && !browsing && notice.visible ? <View testID="handoff-notice" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.sm, borderRadius: radius.control, backgroundColor: colors.goldSoft }}>
           <Text style={{ ...font.body(13), color: colors.goldText, flex: 1 }}>{t('training.handoff.notice')}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel={t('training.handoff.dismiss')} onPress={() => void notice.dismiss().catch(() => {})} style={{ minWidth: spacing.minimumHitTarget, minHeight: spacing.minimumHitTarget, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="close" size={spacing.base} color={colors.goldText} /></Pressable>
@@ -1041,14 +1043,14 @@ export function TodayWorkoutView() {
         prescribed={restExercise?.sets.slice().sort((a, b) => a.set_number - b.set_number).find(set => set.rest_seconds !== null)?.rest_seconds}
         accessory={isAccessoryExercise(restExercise ? resolveExerciseMetadata(restExercise.exercise_id)?.exerciseType : undefined)}
         startupBlocked={!resume.ready || Boolean(resume.previous || resumeBusy || resumeMessage || (selectedDayID && completionGate.datedIntent(selectedDayID))) || outlookOpen || trainingModalVisible || !notice.ready || (!preview && !browsing && notice.visible)}
-        visible={trainingVisible && editable && state.kind === 'loaded' && !showEmpty && Boolean(restExercise) && !editor.editing && accessoryPadHeight === 0 && !completionPhase && !pickerVisible && !noteRow}
+        visible={trainingVisible && editable && state.kind === 'loaded' && !showEmpty && Boolean(restExercise) && !editor.editing && !completionPhase && !pickerVisible && !noteRow}
         top={restTop} bottom={completionDockHeight - spacing.md} completionSignal={restCompletionSignal} />
       </View>
       {preview ? <View testID="handoff-preview-dock" onLayout={event => setCompletionDockHeight(event.nativeEvent.layout.height)} style={{ padding: spacing.base, gap: spacing.sm, backgroundColor: colors.bgBase }}>
         <Text style={{ ...font.body(13), color: colors.textSecondary, textAlign: 'center' }}>{t('training.handoff.remaining', [Math.max(0, (activeProgress?.total_training_days ?? 0) - (activeProgress?.completed_training_days ?? 0))])}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t('training.handoff.back')} onPress={backToCurrent} style={{ minHeight: spacing.minimumHitTarget, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: radius.control, alignItems: 'center', justifyContent: 'center', padding: spacing.sm }}><Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t('training.handoff.back')}</Text></Pressable>
       </View> : null}
-      {stickyCompletion ? <View testID="workout-completion-dock"
+      {stickyCompletion && !editor.editing ? <View testID="workout-completion-dock"
         onLayout={event => setCompletionDockHeight(event.nativeEvent.layout.height)}
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0,
           paddingVertical: spacing.md, paddingHorizontal: spacing.base, borderTopWidth: StyleSheet.hairlineWidth,

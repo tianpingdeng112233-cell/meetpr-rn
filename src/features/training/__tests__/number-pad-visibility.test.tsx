@@ -127,8 +127,9 @@ test.each(['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => (
     expect(renderer.root.findAllByType(TextInput).filter(node => node.props.editable !== false)).toHaveLength(0);
     const scroll = renderer.root.findAllByType(ScrollView)[0];
     const nativeScroll = scroll.find(node => typeof node.instance?.getNativeScrollRef === 'function').instance.getNativeScrollRef();
+    let viewportHeight = 680;
     jest.spyOn(nativeScroll, 'measureInWindow').mockImplementation((...args: unknown[]) => {
-      (args[0] as (x: number, y: number, width: number, height: number) => void)(0, 120, 400, 680);
+      (args[0] as (x: number, y: number, width: number, height: number) => void)(0, 120, 400, viewportHeight);
     });
     const rows = renderer.root.findAllByType(View).filter(node => node.props.testID?.startsWith('all-day-row-'));
     expect(rows.length).toBeGreaterThan(0);
@@ -137,7 +138,7 @@ test.each(['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => (
     const padding = () => StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom;
     const originalPadding = padding();
     const scrollTo = jest.spyOn(Commands, 'scrollTo').mockImplementation((_view, _x, y) => {
-      offset = Math.min(y, Math.max(0, contentY + 120 + padding() - 680));
+      offset = Math.min(y, Math.max(0, contentY + 120 + padding() - viewportHeight));
     });
     for (const row of rows) {
       jest.spyOn(row.instance, 'measureLayout').mockImplementation((...args: unknown[]) => {
@@ -149,14 +150,16 @@ test.each(['accessory', 'main_lift'].flatMap(kind => [0, 2, 5].map(position => (
     }
     await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'Edit set 1' && node.props.onPress)[0].props.onPress());
     const pad = () => renderer.root.findByType(NumberPad);
+    // The dismiss control occupies the strip between the scroll view and the number keys.
+    viewportHeight = 336;
     await act(async () => pad().props.onPanelLayout(500, 300));
     await act(async () => scroll.props.onContentSizeChange(400, contentY + 120 + padding()));
-    expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(500 - spacing.lg);
+    expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(120 + viewportHeight - spacing.lg);
     expect(120 + contentY - offset).toBeGreaterThanOrEqual(120);
     await act(async () => renderer.root.findAll(node => node.props.accessibilityLabel === 'reps' && node.props.onPress)[0].props.onPress());
     expect(pad().props.field).toBe('reps');
     await act(async () => pad().props.onPanelLayout(500, 300));
-    expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(500 - spacing.lg);
+    expect(120 + contentY + 52 - offset).toBeLessThanOrEqual(120 + viewportHeight - spacing.lg);
     scrollTo.mockClear();
     await act(async () => pad().props.onCancel());
     expect(padding()).toBe(originalPadding);

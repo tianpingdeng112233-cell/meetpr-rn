@@ -1,5 +1,6 @@
 # PARITY — 1:1 复刻台账
 > **2026-11-26 · spec 115 跨日训练续接，P1 / 下一班 CN18 候选。** 学员可在默认游标补记实际完成日期，或继续原训练。Android 与 iOS 同口径，依赖后端 071 / 0091 在目标环境返回日期能力位。CN17 已签。见[规格](specs/115-session-resume/SPEC.md)与[Android 验收](docs/journal/2026-11-26-115-A-android.md)。
+> **2026-11-26 学员训练数字键盘（P1）**：底部训练组会滚到键盘上方，支持连续加组与切换 RPE / RIR。已在 AVD meetpr 实测。[本卡记录](docs/journal/2026-11-26-107-keypad-visibility-android.md)
 > **2026-11-22 · CN17 已签名，点对点分发**（#214 接续修复）。备案空窗期 dl.meetpr.cn 返回 403，所以没传 OSS、没改 `latest.json`（线上仍是 16）。下号后补传。[记录](docs/journal/2026-11-22-release-cn17.md)
 > **2026-11-22 spec 110 返修 · 旧周期练完被本机遗留状态卡住（PR 待放行，随下一个 CN 包）**：已练完的周期只被屏幕上的操作和上传中的视频拦住，发件箱、结算等待、等待中的上传不再拦；跳过时上报 `handoff.settled_skip.*`。首例李小龙（CN16）。[JOURNAL](docs/journal/2026-11-22-110-handoff-finished-cycle.md)
 > **2026-11-18 · CN16 已发布**（spec 110 / 111 / 112 / 113，同批 iOS 1.0(42)）。双 APK 哈希、latest.json=16、no-cache 及 CN15 升级提示均已核验。[发布记录](docs/journal/2026-11-18-release-cn16.md)
