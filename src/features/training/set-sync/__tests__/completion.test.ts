@@ -176,3 +176,20 @@ test('115 a dated completion survives a restart while its set writes are still o
   expect(s.complete).toHaveBeenCalledWith('day', '2026-11-24');
   reopened.dispose(); s.stop();
 });
+
+test('115 a persisted dated receipt refreshes after restart without repeating the acknowledged POST', async () => {
+  const s = setup();
+  const post = jest.fn(async () => '2026-11-24');
+  const read = jest.fn<() => Promise<void>>().mockRejectedValueOnce(new TypeError('Network lost')).mockResolvedValue(undefined);
+  const first = new CompletionGate('alice', s.storage, post, undefined, undefined, undefined, read);
+  await first.arm('day', undefined, '2026-11-24');
+  const ready = { setsSynchronized: true, videosDelivered: true };
+  await expect(first.updateConditions('day', ready)).rejects.toThrow('Network lost');
+  first.dispose();
+  const restored = new CompletionGate('alice', s.storage, post, undefined, undefined, undefined, read);
+  await restored.updateConditions('day', ready);
+  expect(post).toHaveBeenCalledTimes(1);
+  expect(read).toHaveBeenCalledTimes(2);
+  expect(restored.pendingDays()).toEqual([]);
+  restored.dispose(); s.stop();
+});

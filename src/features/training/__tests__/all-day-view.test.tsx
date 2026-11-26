@@ -35,6 +35,7 @@ import { DayCompletionBanner, WorkoutCompletionFlowView } from '../CompletionCon
 import { VideoAttachmentControls } from '../video-upload/VideoAttachmentControls';
 import { SetSyncQueue } from '../set-sync/queue';
 import { ApiError } from '@/api/client';
+import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { resetVideoUploadStoreForTests } from '../video-upload/store';
 
 
@@ -1521,13 +1522,15 @@ test('115 a definitive day rejection after filling a missing set keeps the origi
     .toEqual([{ actual_completion_date: '2026-11-24' }, { actual_completion_date: '2026-11-24' }]);
 });
 
-test('115 a post-receipt plan refresh skips a concurrently finished day', async () => {
+test.each([false, true])('115 a post-receipt plan refresh skips a concurrently finished day, lost connection %s', async (offlineAfterReceipt) => {
   await seedReminder();
   const second = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 3 };
   const third = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000003', day_of_week: 5 };
   servedPlan = { ...servedPlan, days: [...plan.days, second, third] };
   const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
   let complete = false;
+  let loseConnection = offlineAfterReceipt;
+  let failedReads = 0;
   jest.mocked(authenticatedRequest).mockImplementation(async (path, opts) => {
     if (path.endsWith('/complete')) {
       complete = true;
@@ -1535,11 +1538,25 @@ test('115 a post-receipt plan refresh skips a concurrently finished day', async 
       servedPlan = { ...servedPlan, days: servedPlan.days.map(day => day.id === third.id ? day : { ...day, completed_at, actual_completion_date: '2026-11-24' }) };
       return { id: 'completion', plan_day_id: plan.days[0].id, student_id: studentId, source: 'manual', completed_at, actual_completion_date: '2026-11-24' } as never;
     }
-    if (complete && path === `/plans/${plan.id}`) await new Promise(resolve => setTimeout(resolve, 60));
+    if (complete && path === `/plans/${plan.id}`) {
+      await new Promise(resolve => setTimeout(resolve, 60));
+      if (loseConnection) { failedReads++; throw new ApiError('network', 'Connection interrupted while refreshing'); }
+    }
     return original(path, opts);
   });
   await mount(); await confirmReminder();
   await act(async () => { await new Promise(resolve => setTimeout(resolve, 210)); });
+  if (offlineAfterReceipt) {
+    expect(failedReads).toBeGreaterThan(0);
+    const listeners = jest.mocked(NetInfo.addEventListener).mock.calls.map(([listener]) => listener);
+    await act(async () => {
+      listeners.forEach(listener => listener({ isConnected: false, isInternetReachable: false } as NetInfoState));
+      loseConnection = false;
+      listeners.forEach(listener => listener({ isConnected: true, isInternetReachable: true } as NetInfoState));
+      await new Promise(resolve => setTimeout(resolve, 220));
+    });
+  }
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(1);
   expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(third.id);
   expect(copy().some(label => label.includes('W1D1') && label.includes('W1D3'))).toBe(true);
 });

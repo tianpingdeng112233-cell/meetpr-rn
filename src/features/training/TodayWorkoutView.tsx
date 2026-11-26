@@ -290,17 +290,10 @@ export function TodayWorkoutView() {
   const upsert = useUpsertSetLog();
   const completion = useDayCompletion(plan?.id ?? '');
   const submitCompletion = completion.mutateAsync;
-  const completionPlanId = plan?.id;
   useEffect(() => {
-    if (preview || !completionPlanId || selectedPlan?.id !== activeSummary?.id) return;
-    return setCompletionHandler(async (id, actualDate) => {
-      const receipt = await submitCompletion(actualDate ? { dayId: id, actualDate } : id);
-      // A different device may have completed the following day before this receipt.
-      if (actualDate) await queryClient.fetchQuery({ queryKey: planKeys.detail(completionPlanId),
-        queryFn: () => plansRepository.detail(completionPlanId), staleTime: 0 });
-      return receipt;
-    });
-  }, [preview, completionPlanId, selectedPlan?.id, activeSummary?.id, setCompletionHandler, submitCompletion, queryClient]);
+    if (preview || !selectedPlan || selectedPlan.id !== activeSummary?.id) return;
+    return setCompletionHandler((id, actualDate) => submitCompletion(actualDate ? { dayId: id, actualDate } : id));
+  }, [preview, selectedPlan, activeSummary?.id, setCompletionHandler, submitCompletion]);
   const undoCompletion = useDayCompletion(plan?.id ?? '', true);
   const e1rmKey = `${studentId}:${planDay?.id ?? ''}`;
   const e1rmByExercise =
@@ -585,10 +578,17 @@ export function TodayWorkoutView() {
   const resumeKey = state.kind === 'loaded' && editable && trainingVisible && foreground && plan?.actual_completion_date_enabled && planDay && !planDay.completed_at && !browsing && !completionGate.pendingDays().includes(planDay.id)
     ? visitKey(studentId, plan.id, planDay.id) : null;
   const resume = useSessionResume(resumeKey, entryDay, !explicitEntry && !notificationDay && selectedDayID === cursor?.id);
-  useEffect(() => onSyncedDayCompletion((owner, dayId, actualDate) => {
+  const receiptScreen = useRef<string | null>(null);
+  useEffect(() => {
+    receiptScreen.current = trainingVisible ? reviewKey : null;
+    return () => { receiptScreen.current = null; };
+  }, [trainingVisible, reviewKey]);
+  useEffect(() => onSyncedDayCompletion(async (owner, dayId, actualDate) => {
     if (owner !== studentId) return;
     if (actualDate !== undefined && plan && selectedDayID === dayId && trainingVisible) {
-      const refreshed = queryClient.getQueryData<PlanDetail>(planKeys.detail(plan.id)) ?? plan;
+      const refreshed = await queryClient.fetchQuery({ queryKey: planKeys.detail(plan.id),
+        queryFn: () => plansRepository.detail(plan.id), staleTime: 0 });
+      if (useSessionStore.getState().user?.id !== owner || receiptScreen.current !== `${owner}:${dayId}`) return;
       const done = refreshed.days.find(day => day.id === dayId);
       const next = cursorDay(refreshed.days.filter(day => day.id !== dayId));
       if (done) {

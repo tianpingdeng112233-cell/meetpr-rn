@@ -16,8 +16,9 @@ import { completionVideoSummary, dayCompletionVideos } from '../video-upload/com
 
 type AccountSync = { dayVideos: (dayId: string, context?: VideoCompletionContext) => ReturnType<typeof dayCompletionVideos>; retryWaitingVideos: (dayId: string) => Promise<void>; queue: SetSyncQueue; gate: CompletionGate; stop: () => void; setCompletionHandler: (handler: (dayId: string, actualDate?: string) => Promise<DayCompletion | null>) => () => void };
 const accounts = new Map<string, AccountSync>();
-const completionListeners = new Set<(studentId: string, dayId: string, actualDate?: string | null) => void>();
-export const onSyncedDayCompletion = (fn: (studentId: string, dayId: string, actualDate?: string | null) => void) => { completionListeners.add(fn); return () => { completionListeners.delete(fn); }; };
+type CompletionListener = (studentId: string, dayId: string, actualDate?: string | null) => Promise<void> | void;
+const completionListeners = new Set<CompletionListener>();
+export const onSyncedDayCompletion = (fn: CompletionListener) => { completionListeners.add(fn); return () => { completionListeners.delete(fn); }; };
 async function publishedPlans(studentId: string): Promise<PlanDetail[]> {
   const { plans } = await plansRepository.list(studentId, { includeAll: true });
   return Promise.all(plans.filter(plan => plan.status === 'published').map(plan => plansRepository.detail(plan.id)));
@@ -67,9 +68,12 @@ export function accountSetSync(studentId: string): AccountSync {
     if (!active() || queue.pending(dayId).length || !completionVideoSummary(dayVideos(dayId).map(row => row.upload)).delivered) throw new Error('Completion conditions changed');
     const receipt = actualDate ? await completionHandler(dayId, actualDate) : await completionHandler(dayId);
     if (!active()) return;
-    completionListeners.forEach(fn => actualDate ? fn(studentId, dayId, receipt?.actual_completion_date ?? null) : fn(studentId, dayId));
+    if (actualDate) return receipt?.actual_completion_date ?? null;
+    await Promise.all([...completionListeners].map(fn => fn(studentId, dayId)));
   }, { summary: (dayId, context) => completionVideoSummary(dayVideos(dayId, context).map(row => row.upload)),
-    timeout: (dayId, count) => notify(dayId, count, 'timeout'), delivered: (dayId, count) => notify(dayId, count, 'complete') }, undefined, releaseResumeDate);
+    timeout: (dayId, count) => notify(dayId, count, 'timeout'), delivered: (dayId, count) => notify(dayId, count, 'complete') }, undefined, releaseResumeDate, async (dayId, date) => {
+    if (active()) await Promise.all([...completionListeners].map(fn => fn(studentId, dayId, date)));
+  });
   const retryWaitingVideos = async (dayId: string) => {
     await Promise.all([queue.ready, gate.ready, hydrateVideoUploads()]);
     if (!active() || !gate.videoIntent(dayId)) return;

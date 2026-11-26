@@ -290,7 +290,9 @@ export function useDayCompletion(planId: string, undo = false) {
         queryClient.setQueryData(planKeys.detail(planId), context.previous);
     },
     onSuccess: (completion, input) => {
-      const dayId = typeof input === 'string' ? input : input.dayId;
+      // A dated receipt is followed by an authoritative plan read in the completion gate.
+      if (typeof input !== 'string') return;
+      const dayId = input;
       queryClient.setQueryData<PlanDetail>(
         planKeys.detail(planId),
         (plan) =>
@@ -309,7 +311,8 @@ export function useDayCompletion(planId: string, undo = false) {
           },
       );
     },
-    onSettled: () => {
+    onSettled: (_, error, input) => {
+      if (!error && typeof input !== 'string') return;
       const refresh = queryClient.invalidateQueries({ queryKey: planKeys.all });
       // Completion acknowledgement/rollback must not wait for another request.
       if (undo) return refresh;

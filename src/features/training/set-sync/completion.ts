@@ -6,7 +6,7 @@ import { storageQueue, systemClock, type SetSyncQueue, type SyncClock, type Sync
 export type CompletionConditions = { setsSynchronized: boolean; videosDelivered: boolean };
 export type VideoCompletionContext = { sets: { stableSetId: string; setLogId?: string | null }[]; exerciseIds: string[] };
 export type VideoCompletionIntent = VideoCompletionContext & { heldAt: number; timedOut?: boolean };
-type GateDay = { completed: boolean; released: boolean; video?: VideoCompletionIntent; heldOffline?: boolean; actualDate?: string; visitKey?: string };
+type GateDay = { completed: boolean; released: boolean; video?: VideoCompletionIntent; heldOffline?: boolean; actualDate?: string; visitKey?: string; receipt?: { actualDate: string | null } };
 type CompletionVideos = {
   summary(dayId: string, context: VideoCompletionContext): ReturnType<typeof completionVideoSummary>;
   timeout(dayId: string, count: number): Promise<void>;
@@ -29,7 +29,7 @@ export class CompletionGate {
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   private emit() { this.revision++; this.listeners.forEach(fn => fn()); }
   videoIntent(dayId: string) { return this.days[dayId]?.released ? this.days[dayId].video : undefined; }
-  constructor(userId: string, private storage: SyncStorage, private complete: (dayId: string, actualDate?: string) => Promise<unknown>, private videos?: CompletionVideos, private clock: SyncClock = systemClock, private releaseVisit?: (key: string, rejected?: boolean) => Promise<void>) {
+  constructor(userId: string, private storage: SyncStorage, private complete: (dayId: string, actualDate?: string) => Promise<string | null | void>, private videos?: CompletionVideos, private clock: SyncClock = systemClock, private releaseVisit?: (key: string, rejected?: boolean) => Promise<void>, private afterReceipt?: (dayId: string, actualDate: string | null) => Promise<void>) {
     this.key = `training.completion-gate.v1.${userId}`;
     this.writes = storageQueue(storage, this.key);
     this.ready = this.writes.enqueue(async () => {
@@ -84,20 +84,28 @@ export class CompletionGate {
       if (this.disposed || !day || !day.released || day.completed) return;
       await this.checkTimeout(dayId);
       const summary = day.video && this.videos?.summary(dayId, day.video);
-      if (!conditions.setsSynchronized || !conditions.videosDelivered || (summary && !summary.delivered)) return;
-      try {
-        if (day.actualDate) await this.complete(dayId, day.actualDate);
-        else await this.complete(dayId);
-      } catch (error) {
-        // A definite rejection may be corrected. An ambiguous timeout keeps the original retry date.
-        if (day.actualDate && error instanceof ApiError && error.kind === 'backend' && error.status !== undefined
-            && error.status >= 400 && error.status < 500 && ![401, 408, 429].includes(error.status)) {
-          if (day.visitKey) await this.releaseVisit?.(day.visitKey, true);
-          this.rejections.set(dayId, error);
-          delete this.days[dayId]; this.clearTimer(dayId); await this.persist();
+      if (!day.receipt) {
+        if (!conditions.setsSynchronized || !conditions.videosDelivered || (summary && !summary.delivered)) return;
+        try {
+          if (day.actualDate) {
+            const actualDate = await this.complete(dayId, day.actualDate);
+            if (this.disposed) return;
+            day.receipt = { actualDate: actualDate ?? null };
+            await this.persist();
+          } else await this.complete(dayId);
+        } catch (error) {
+          // A definite rejection may be corrected. An ambiguous timeout keeps the original retry date.
+          if (day.actualDate && error instanceof ApiError && error.kind === 'backend' && error.status !== undefined
+              && error.status >= 400 && error.status < 500 && ![401, 408, 429].includes(error.status)) {
+            if (day.visitKey) await this.releaseVisit?.(day.visitKey, true);
+            this.rejections.set(dayId, error);
+            delete this.days[dayId]; this.clearTimer(dayId); await this.persist();
+          }
+          throw error;
         }
-        throw error;
       }
+      // A confirmed POST is durable before refreshing the cursor. Reconnects now retry only the GET.
+      if (day.receipt) await this.afterReceipt?.(dayId, day.receipt.actualDate);
       if (day.visitKey) await this.releaseVisit?.(day.visitKey);
 
       if (this.disposed) return;
