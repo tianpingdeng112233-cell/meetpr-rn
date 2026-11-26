@@ -1,5 +1,5 @@
 import type { PlanDay, PlanDetail, PlanSummary } from '@/api/domains/plans';
-import { gymDayRange, localDateText } from './workout-date-policy';
+import { gymDayToday, localDateText } from './workout-date-policy';
 
 export function sequenceDays<
   T extends Pick<PlanDay, 'week_number' | 'day_of_week' | 'sort_order' | 'id'>,
@@ -46,13 +46,12 @@ export function completedToday(
   days: readonly PlanDay[],
   now = new Date(),
 ): PlanDay | null {
-  const { start, end } = gymDayRange(now);
+  const today = gymDayToday(now);
   return (
     sequenceDays(days)
       .filter((day) => {
         if (!day.completed_at) return false;
-        const date = new Date(day.completed_at);
-        return date >= start && date < end;
+        return (day.actual_completion_date ?? gymDayToday(new Date(day.completed_at))) === today;
       })
       .sort((a, b) => Date.parse(a.completed_at!) - Date.parse(b.completed_at!))
       .pop() ?? null

@@ -6,7 +6,7 @@ import { storageQueue, systemClock, type SetSyncQueue, type SyncClock, type Sync
 export type CompletionConditions = { setsSynchronized: boolean; videosDelivered: boolean };
 export type VideoCompletionContext = { sets: { stableSetId: string; setLogId?: string | null }[]; exerciseIds: string[] };
 export type VideoCompletionIntent = VideoCompletionContext & { heldAt: number; timedOut?: boolean };
-type GateDay = { completed: boolean; released: boolean; video?: VideoCompletionIntent; heldOffline?: boolean };
+type GateDay = { completed: boolean; released: boolean; video?: VideoCompletionIntent; heldOffline?: boolean; actualDate?: string; visitKey?: string };
 type CompletionVideos = {
   summary(dayId: string, context: VideoCompletionContext): ReturnType<typeof completionVideoSummary>;
   timeout(dayId: string, count: number): Promise<void>;
@@ -24,11 +24,12 @@ export class CompletionGate {
   private revision = 0;
   private listeners = new Set<() => void>();
   private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private rejections = new Map<string, unknown>();
   snapshot = () => this.revision;
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   private emit() { this.revision++; this.listeners.forEach(fn => fn()); }
   videoIntent(dayId: string) { return this.days[dayId]?.released ? this.days[dayId].video : undefined; }
-  constructor(userId: string, private storage: SyncStorage, private complete: (dayId: string) => Promise<unknown>, private videos?: CompletionVideos, private clock: SyncClock = systemClock) {
+  constructor(userId: string, private storage: SyncStorage, private complete: (dayId: string, actualDate?: string) => Promise<unknown>, private videos?: CompletionVideos, private clock: SyncClock = systemClock, private releaseVisit?: (key: string, rejected?: boolean) => Promise<void>) {
     this.key = `training.completion-gate.v1.${userId}`;
     this.writes = storageQueue(storage, this.key);
     this.ready = this.writes.enqueue(async () => {
@@ -52,12 +53,14 @@ export class CompletionGate {
       this.days[dayId] = { ...this.days[dayId], heldOffline: true }; await this.persist();
     });
   }
+  datedIntent(dayId: string) { return this.days[dayId]?.actualDate; }
   pendingDays() { return Object.keys(this.days).filter(day => this.days[day].released && !this.days[day].completed); }
-  async arm(dayId: string, video?: VideoCompletionIntent) {
+  async arm(dayId: string, video?: VideoCompletionIntent, actualDate?: string, visitKey?: string) {
     await this.ready;
     return this.serial.enqueue(async () => {
       if (this.disposed) return;
-      if (!this.days[dayId]) { this.days[dayId] = { completed: false, released: false, ...(video ? { video } : {}) }; await this.persist(); }
+      this.rejections.delete(dayId);
+      if (!this.days[dayId]) { this.days[dayId] = { completed: false, released: Boolean(actualDate), ...(actualDate ? { actualDate, visitKey } : {}), ...(video ? { video } : {}) }; await this.persist(); }
       else if (video && !this.days[dayId].video) { this.days[dayId].video = video; await this.persist(); }
     });
   }
@@ -76,11 +79,27 @@ export class CompletionGate {
     await this.ready;
     return this.serial.enqueue(async () => {
       const day = this.days[dayId];
+      // The background queue may already have received the rejection before the screen's own check.
+      if (!day && this.rejections.has(dayId)) throw this.rejections.get(dayId);
       if (this.disposed || !day || !day.released || day.completed) return;
       await this.checkTimeout(dayId);
       const summary = day.video && this.videos?.summary(dayId, day.video);
       if (!conditions.setsSynchronized || !conditions.videosDelivered || (summary && !summary.delivered)) return;
-      await this.complete(dayId);
+      try {
+        if (day.actualDate) await this.complete(dayId, day.actualDate);
+        else await this.complete(dayId);
+      } catch (error) {
+        // A definite rejection may be corrected. An ambiguous timeout keeps the original retry date.
+        if (day.actualDate && error instanceof ApiError && error.kind === 'backend' && error.status !== undefined
+            && error.status >= 400 && error.status < 500 && ![401, 408, 429].includes(error.status)) {
+          if (day.visitKey) await this.releaseVisit?.(day.visitKey, true);
+          this.rejections.set(dayId, error);
+          delete this.days[dayId]; this.clearTimer(dayId); await this.persist();
+        }
+        throw error;
+      }
+      if (day.visitKey) await this.releaseVisit?.(day.visitKey);
+
       if (this.disposed) return;
       delete this.days[dayId];
       this.clearTimer(dayId);
@@ -130,14 +149,14 @@ export class SetCompletionCoordinator {
   private timer?: ReturnType<typeof setTimeout>;
   private unsubscribe?: () => void;
   constructor(private queue: SetSyncQueue, private gate: CompletionGate, private callbacks: {
-    reward: () => void; prepareVideos?: () => Promise<void>; videosDelivered: (dayId: string, context?: VideoCompletionContext) => boolean; error?: (error: unknown) => void;
+    reward: (actualDate?: string) => void; prepareVideos?: () => Promise<void>; videosDelivered: (dayId: string, context?: VideoCompletionContext) => boolean; error?: (error: unknown) => void;
   }, private clock: SyncClock = systemClock) {}
   snapshot = () => this.state;
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => { this.listeners.delete(fn); }; };
   private set(state: SetCompletionState) { this.state = state; this.listeners.forEach(fn => fn()); }
   private clear() { if (this.timer) this.clock.clearTimeout(this.timer); this.unsubscribe?.(); this.unsubscribe = undefined; }
   reset() { this.generation++; this.clear(); this.set('idle'); }
-  async begin(dayId: string, retry = false, context?: VideoCompletionContext) {
+  async begin(dayId: string, retry = false, context?: VideoCompletionContext, actualDate?: string, visitKey?: string) {
     if (this.preparingVideos || this.state === 'syncing' || this.state === 'reward') return;
     const generation = ++this.generation;
     const heldAt = this.clock.now();
@@ -146,11 +165,15 @@ export class SetCompletionCoordinator {
     catch (error) { if (generation === this.generation) this.callbacks.error?.(error); return; }
     finally { this.preparingVideos = false; }
     if (generation !== this.generation) return;
+    // Once every missing set has been enqueued durably, its chosen date and completion
+    // intent must survive losing the screen (including a cold restart while offline).
+    const video = context && !this.callbacks.videosDelivered(dayId, context) ? { ...context, heldAt } : undefined;
+    if (actualDate) await this.gate.arm(dayId, video, actualDate, visitKey);
     const reward = async () => {
       this.clear();
-      await this.gate.arm(dayId, context && !this.callbacks.videosDelivered(dayId, context) ? { ...context, heldAt } : undefined);
+      if (!actualDate) await this.gate.arm(dayId, video);
       if (generation !== this.generation) return;
-      this.set('reward'); this.callbacks.reward();
+      this.set('reward'); this.callbacks.reward(actualDate);
       try { await this.gate.release(dayId); await this.gate.updateConditions(dayId, { setsSynchronized: this.queue.pending(dayId).length === 0, videosDelivered: this.callbacks.videosDelivered(dayId, context) }); }
       catch (error) {
         // Offline after every set and video is in: the gate keeps the released day and the

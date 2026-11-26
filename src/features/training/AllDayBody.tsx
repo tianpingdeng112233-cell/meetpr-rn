@@ -53,7 +53,7 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
   const body = <>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
       <Text style={{ ...font.body(15, 'semibold'), color: colors.textPrimary }}>{t('training.allDay.summary', [title, sheet.exercises.length])}</Text>
-      <Text style={{ ...font.body(12), color: colors.textMuted, flexShrink: 1 }}>{t(editable ? 'training.allDay.hint' : 'training.allDay.setCount', [count])}</Text>
+      {!editable && <Text style={{ ...font.body(12), color: colors.textMuted, flexShrink: 1 }}>{t('training.allDay.setCount', [count])}</Text>}
     </View>
     <View testID="all-day-timeline" style={{ gap: 0 }}>
     {sheet.exercises.map((block, index) => {

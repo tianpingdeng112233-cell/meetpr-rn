@@ -162,3 +162,17 @@ test('a normal online completion without videos sends no completion notice', asy
   expect(s.complete).toHaveBeenCalledTimes(1); expect(delivered).not.toHaveBeenCalled();
   flow.reset(); gate.dispose(); s.stop();
 });
+
+test('115 a dated completion survives a restart while its set writes are still offline', async () => {
+  const s = setup();
+  s.send(async () => new Promise(() => {}));
+  await s.enqueue();
+  void s.flow.begin('day', false, { sets: [], exerciseIds: [] }, '2026-11-24');
+  await flush();
+  const reopened = new CompletionGate('alice', s.storage, s.complete);
+  await reopened.ready;
+  expect(reopened.pendingDays()).toContain('day');
+  await reopened.updateConditions('day', { setsSynchronized: true, videosDelivered: true });
+  expect(s.complete).toHaveBeenCalledWith('day', '2026-11-24');
+  reopened.dispose(); s.stop();
+});
