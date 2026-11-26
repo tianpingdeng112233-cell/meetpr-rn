@@ -55,7 +55,7 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
     current_plan_id: current.id, plans: plans.map(plan => ({ ...plan, completed_training_days: plan.days.filter(day => day.completed_at).length, total_training_days: plan.days.length, handoff_status: plan.id === current.id ? 'current' : plan.id === state.upcoming.id ? 'upcoming' : 'past' })),
   };
   else if (method === 'GET' && route === `${student}/plans`) payload = { plans: url.searchParams.get('include_all') === 'true' || current.id === state.upcoming.id ? plans : [state.plan] };
-  else if (method === 'GET' && plans.some(plan => route === `/plans/${plan.id}`)) payload = plans.find(plan => route === `/plans/${plan.id}`);
+  else if (method === 'GET' && plans.some(plan => route === `/plans/${plan.id}`)) payload = { ...plans.find(plan => route === `/plans/${plan.id}`), actual_completion_date_enabled: true };
   else if (method === 'GET' && route === `${student}/sets`) payload = { logs: state.logs.filter(log => log.logged_date >= (url.searchParams.get('from') ?? '') && log.logged_date < (url.searchParams.get('to') ?? '9999')) };
   else if (method === 'GET' && route === '/students/me/body-weights') payload = { records: state.bodyWeights };
   else if (['PUT', 'DELETE'].includes(method) && /^\/students\/me\/body-weights\/[^/]+$/.test(route)) {
@@ -102,7 +102,8 @@ export async function demoResponse(path: string, options: ApiRequestOptions<unkn
     else {
       day.completed_at = method === 'POST' ? now : null;
       day.completion_source = method === 'POST' ? 'manual' : null;
-      payload = method === 'POST' ? { id: demoId(serial++), plan_day_id: day.id, student_id: state.user.id, source: 'manual', completed_at: now } : {};
+      day.actual_completion_date = method === 'POST' ? (options.body as { actual_completion_date?: string } | undefined)?.actual_completion_date ?? null : null;
+      payload = method === 'POST' ? { id: demoId(serial++), plan_day_id: day.id, student_id: state.user.id, source: 'manual', completed_at: now, actual_completion_date: day.actual_completion_date } : {};
     }
   } else if (method === 'PUT' && route === '/students/me/onboarding') {
     Object.assign(state.profile, OnboardingUpsertRequestSchema.parse(options.body), { updated_at: now });

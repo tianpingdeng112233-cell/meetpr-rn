@@ -3,20 +3,22 @@ import NetInfo from '@react-native-community/netinfo';
 import { AppState } from 'react-native';
 import { useMemo, useSyncExternalStore } from 'react';
 import { useSessionStore } from '@/api/session';
-import { plansRepository, type PlanDetail } from '@/api/domains/plans';
+import { plansRepository, type PlanDetail, type DayCompletion } from '@/api/domains/plans';
 import { setsRepository, type SetLogUpsertRequest } from '@/api/domains/sets';
 import { trainingE1RMRepository } from '../storage';
 import { gymDayText } from '../policy';
+import { releaseResumeDate } from '../session-resume';
 import { SetSyncQueue, type PendingSet } from './queue';
 import { createSetSender } from './sender';
 import { CompletionGate, type VideoCompletionContext } from './completion';
 import { hydrateVideoUploads, useVideoUploadStore, videoUploadsForCompletion } from '../video-upload/store';
 import { completionVideoSummary, dayCompletionVideos } from '../video-upload/completion-delivery';
 
-type AccountSync = { dayVideos: (dayId: string, context?: VideoCompletionContext) => ReturnType<typeof dayCompletionVideos>; retryWaitingVideos: (dayId: string) => Promise<void>; queue: SetSyncQueue; gate: CompletionGate; stop: () => void; setCompletionHandler: (handler: (dayId: string) => Promise<unknown>) => () => void };
+type AccountSync = { dayVideos: (dayId: string, context?: VideoCompletionContext) => ReturnType<typeof dayCompletionVideos>; retryWaitingVideos: (dayId: string) => Promise<void>; queue: SetSyncQueue; gate: CompletionGate; stop: () => void; setCompletionHandler: (handler: (dayId: string, actualDate?: string) => Promise<DayCompletion | null>) => () => void };
 const accounts = new Map<string, AccountSync>();
-const completionListeners = new Set<(studentId: string, dayId: string) => void>();
-export const onSyncedDayCompletion = (fn: (studentId: string, dayId: string) => void) => { completionListeners.add(fn); return () => { completionListeners.delete(fn); }; };
+type CompletionListener = (studentId: string, dayId: string, actualDate?: string | null) => Promise<void> | void;
+const completionListeners = new Set<CompletionListener>();
+export const onSyncedDayCompletion = (fn: CompletionListener) => { completionListeners.add(fn); return () => { completionListeners.delete(fn); }; };
 async function publishedPlans(studentId: string): Promise<PlanDetail[]> {
   const { plans } = await plansRepository.list(studentId, { includeAll: true });
   return Promise.all(plans.filter(plan => plan.status === 'published').map(plan => plansRepository.detail(plan.id)));
@@ -46,7 +48,8 @@ export function accountSetSync(studentId: string): AccountSync {
   });
   const queue = new SetSyncQueue(studentId, { storage: AsyncStorage, isActive: active, send,
     network: { isOnline: () => online, subscribe: fn => { networkListeners.add(fn); return () => { networkListeners.delete(fn); }; } } });
-  let completionHandler: (dayId: string) => Promise<unknown> = dayId => plansRepository.completeDay(dayId);
+  let completionHandler = (dayId: string, actualDate?: string): Promise<DayCompletion | null> => actualDate
+    ? plansRepository.completeDay(dayId, undefined, actualDate) : plansRepository.completeDay(dayId);
   const defaultCompletionHandler = completionHandler;
   const dayVideos = (dayId: string, context?: VideoCompletionContext): ReturnType<typeof dayCompletionVideos> => {
     const snapshot = queue.snapshot();
@@ -60,14 +63,17 @@ export function accountSetSync(studentId: string): AccountSync {
     const { notifyVideoCompletion } = await import('../video-upload/failure-notifier');
     if (active()) await notifyVideoCompletion(kind, count, studentId, dayId);
   };
-  const gate = new CompletionGate(studentId, AsyncStorage, async dayId => {
+  const gate = new CompletionGate(studentId, AsyncStorage, async (dayId, actualDate) => {
     await hydrateVideoUploads();
     if (!active() || queue.pending(dayId).length || !completionVideoSummary(dayVideos(dayId).map(row => row.upload)).delivered) throw new Error('Completion conditions changed');
-    await completionHandler(dayId);
+    const receipt = actualDate ? await completionHandler(dayId, actualDate) : await completionHandler(dayId);
     if (!active()) return;
-    completionListeners.forEach(fn => fn(studentId, dayId));
+    if (actualDate) return receipt?.actual_completion_date ?? null;
+    await Promise.all([...completionListeners].map(fn => fn(studentId, dayId)));
   }, { summary: (dayId, context) => completionVideoSummary(dayVideos(dayId, context).map(row => row.upload)),
-    timeout: (dayId, count) => notify(dayId, count, 'timeout'), delivered: (dayId, count) => notify(dayId, count, 'complete') });
+    timeout: (dayId, count) => notify(dayId, count, 'timeout'), delivered: (dayId, count) => notify(dayId, count, 'complete') }, undefined, releaseResumeDate, async (dayId, date) => {
+    if (active()) await Promise.all([...completionListeners].map(fn => fn(studentId, dayId, date)));
+  });
   const retryWaitingVideos = async (dayId: string) => {
     await Promise.all([queue.ready, gate.ready, hydrateVideoUploads()]);
     if (!active() || !gate.videoIntent(dayId)) return;
@@ -99,7 +105,7 @@ export function accountSetSync(studentId: string): AccountSync {
   });
   const appState = AppState.addEventListener('change', state => { if (state === 'active' && active()) { queue.sendNow(); retryWaiting(); void resumeGate().catch(() => {}); } });
   const stopSession = useSessionStore.subscribe(state => { if (state.user?.id !== studentId) { accounts.get(studentId)?.stop(); accounts.delete(studentId); } });
-  const account = { queue, gate, dayVideos, retryWaitingVideos, setCompletionHandler: (handler: (dayId: string) => Promise<unknown>) => {
+  const account = { queue, gate, dayVideos, retryWaitingVideos, setCompletionHandler: (handler: (dayId: string, actualDate?: string) => Promise<DayCompletion | null>) => {
     completionHandler = handler; return () => { if (completionHandler === handler) completionHandler = defaultCompletionHandler; };
   }, stop: () => { disposed = true; queue.dispose(); gate.dispose(); stopVideos(); stopReceipts(); stopNetwork(); appState.remove(); stopSession(); } };
   accounts.set(studentId, account);

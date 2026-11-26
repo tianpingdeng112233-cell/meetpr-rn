@@ -1,3 +1,5 @@
+import { SessionResumeSheet, ResumeCompletionNotice, resumeDateLabel } from './SessionResumeSheet';
+import { pinResumeDate, releaseResumeDate, storedResumeDate, useSessionResume, visitKey } from './session-resume';
 import { CycleOutlookSheet } from './CycleOutlookSheet';
 import { useEffortChoices, historicalEffortChoices } from './effort-preferences';
 import { decodePrescription } from '@/domain/plan/prescription';
@@ -49,7 +51,7 @@ import { hydrateRemoteVideoAttachments, hydrateVideoUploads, useVideoUploadStore
 import { VideoCompletionControl } from './video-upload/VideoCompletionControl';
 
 import { AnalyticsEvent, AnalyticsScreen, track } from '@/analytics';
-import { planKeys, useDayCompletion, usePlan, usePlanHandoff, currentPlanSummary, type PlanHandoff, type PlanSummary, type PlanDetail, type PlanExercise } from '@/api/domains/plans';
+import { plansRepository, planKeys, useDayCompletion, usePlan, usePlanHandoff, currentPlanSummary, type PlanHandoff, type PlanSummary, type PlanDetail, type PlanExercise } from '@/api/domains/plans';
 import { setKeys, useSetLogs, useUpsertSetLog, useWeightSuggestions } from '@/api/domains/sets';
 import { useSessionStore } from '@/api/session';
 import { Card, Screen, font, radius, spacing, typography, useColors, type Colors } from '@/design';
@@ -125,10 +127,18 @@ export function TodayWorkoutView() {
   const [requestedDayID, setRequestedDayID] = useState<string | null>(() =>
     handoff?.plan.trainee_id === studentId ? handoff.dayID : null,
   );
+  const [explicitEntry, setExplicitEntry] = useState(handoff?.plan.trainee_id === studentId);
+  const [entryDay, setEntryDay] = useState(() => gymDayText(new Date()));
+  const [foreground, setForeground] = useState(AppState.currentState !== 'background');
+  const [resumeMessage, setResumeMessage] = useState<{ owner: string; text: string } | null>(null);
+  const clearResumeMessage = useCallback(() => setResumeMessage(null), []);
+  const resumeSubmitting = useRef(false);
+  const [resumeBusy, setResumeBusy] = useState(false);
   const notificationDay = useStudentTabsStore(store => store.videoNotificationDay);
   useEffect(() => {
     if (notificationDay?.studentId !== studentId) return;
     void Promise.resolve().then(() => {
+      setExplicitEntry(true);
       setRequestedDayID(notificationDay.dayId);
       useStudentTabsStore.setState({ videoNotificationDay: null });
     });
@@ -153,6 +163,7 @@ export function TodayWorkoutView() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [draftOwner, setDraftOwner] = useState(studentId);
   if (draftOwner !== studentId) {
+    setExplicitEntry(false); setResumeMessage(null);
     setDraftOwner(studentId); setRequestedDayID(null); setDraftOverrides({}); setRemovedLogs(new Set()); setPickerVisible(false);
   }
   useEffect(() => { pinnedDates.current.clear(); }, [studentId]);
@@ -213,6 +224,9 @@ export function TodayWorkoutView() {
   const activeSummary = retained?.owner === studentId ? retained.summary : pendingSync && savedWorkout.snapshot && !settledCycle(plansQuery.data, savedWorkout.snapshot.plan.id) ? savedWorkout.snapshot.plan : currentSummary ?? (!plansQuery.data ? savedWorkout.snapshot?.plan ?? null : null);
   if (syncReadyOwner === studentId && savedWorkout.ready && (plansQuery.data || activeSummary) && retained?.owner !== studentId) setRetained({ owner: studentId, summary: activeSummary });
   const enterPlan = useRef<() => void>(() => {});
+  const reenterAfterGymDay = useRef<() => void>(() => {});
+  const lastEntryDay = useRef(entryDay);
+  useEffect(() => { lastEntryDay.current = entryDay; }, [entryDay]);
   const [browsing, setBrowsing] = useState<{ summary: PlanSummary; edge: 'first' | 'last' } | null>(null);
   const selectedPlan = (browsing?.summary.trainee_id === studentId ? browsing.summary : null) ?? (editingPlan?.trainee_id === studentId ? editingPlan : activeSummary ?? (plansQuery.data ? null : savedWorkout.snapshot?.plan));
   const activeIndex = plansQuery.data?.plans.findIndex(item => item.id === activeSummary?.id) ?? -1;
@@ -275,7 +289,11 @@ export function TodayWorkoutView() {
   );
   const upsert = useUpsertSetLog();
   const completion = useDayCompletion(plan?.id ?? '');
-  useEffect(() => !preview && selectedPlan?.id === activeSummary?.id ? setCompletionHandler(completion.mutateAsync) : undefined, [setCompletionHandler, completion.mutateAsync, preview, selectedPlan?.id, activeSummary?.id]);
+  const submitCompletion = completion.mutateAsync;
+  useEffect(() => {
+    if (preview || !selectedPlan || selectedPlan.id !== activeSummary?.id) return;
+    return setCompletionHandler((id, actualDate) => submitCompletion(actualDate ? { dayId: id, actualDate } : id));
+  }, [preview, selectedPlan, activeSummary?.id, setCompletionHandler, submitCompletion]);
   const undoCompletion = useDayCompletion(plan?.id ?? '', true);
   const e1rmKey = `${studentId}:${planDay?.id ?? ''}`;
   const e1rmByExercise =
@@ -431,12 +449,14 @@ export function TodayWorkoutView() {
     useCallback(() => {
       enterPlan.current();
       setTrainingVisible(true);
+      setEntryDay(gymDayText(new Date()));
       setClockNow(new Date());
       let active = true;
       void refreshRef.current(throttle.current.refreshWhenReturning()).then(() => { if (active) enterPlan.current(); });
       return () => {
         active = false;
         setTrainingVisible(false);
+        setExplicitEntry(false);
         setOutlookOwner(null);
         setRequestedDayID(null);
       };
@@ -444,7 +464,11 @@ export function TodayWorkoutView() {
   );
   useEffect(() => {
     const listener = AppState.addEventListener('change', (state) => {
+      setForeground(state === 'active');
       if (state === 'active') {
+        const currentDay = gymDayText(new Date());
+        if (currentDay !== lastEntryDay.current) reenterAfterGymDay.current();
+        setEntryDay(currentDay);
         setClockNow(new Date());
         void refreshRef.current(throttle.current.refreshWhenReturning());
       }
@@ -464,8 +488,9 @@ export function TodayWorkoutView() {
           setKeys.range(studentId, planLogRange(handoff.plan)),
           { logs: handoff.existingLogs },
         );
+        setExplicitEntry(true);
         setRequestedDayID(handoff.dayID);
-      } else setRequestedDayID(null);
+      } else { setExplicitEntry(false); setRequestedDayID(null); }
       setEditingPlan(handoff?.plan.trainee_id === studentId ? handoff.plan : null);
       void refreshRef.current(throttle.current.refreshWhenReturning());
     });
@@ -500,6 +525,7 @@ export function TodayWorkoutView() {
     setE1rmState(current => current.key === key ? { key, values: { ...current.values, [exerciseId]: value } } : current);
   };
   const selectDay = (id: string | null) => {
+    setExplicitEntry(id !== null);
     // Re-selecting the current day must not clear data whose load key is unchanged.
     if ((id ?? weekStrip.todayDay?.id) === selectedDayID) {
       setRequestedDayID(id ?? cursor?.id ?? null);
@@ -541,7 +567,7 @@ export function TodayWorkoutView() {
   const waitingForNetwork = Boolean(selectedDayID && completionGate.awaitingNetwork(selectedDayID)) && dayState?.kind !== 'completed';
   const waitingForVideos = (Boolean(selectedDayID && completionGate.videoIntent(selectedDayID)) && dayState?.kind !== 'completed') || waitingForNetwork;
   const completionCoordinator = useMemo(() => new SetCompletionCoordinator(setSyncQueue, completionGate, {
-    reward: () => { setCompletionPhase('celebration'); },
+    reward: actualDate => { if (!actualDate) setCompletionPhase('celebration'); },
     prepareVideos: hydrateVideoUploads,
     videosDelivered: (dayId, context) => completionVideoSummary(dayVideos(dayId, context).map(row => row.upload)).delivered,
     error: error => { setCompletionPhase(null); Alert.alert(t('student.todayWorkoutScreen.copy001'), completionError(error, false)); },
@@ -549,28 +575,69 @@ export function TodayWorkoutView() {
   const syncCompletionState = useSyncExternalStore(completionCoordinator.subscribe, completionCoordinator.snapshot);
   useEffect(() => () => completionCoordinator.reset(), [completionCoordinator, selectedDayID]);
   useFocusEffect(useCallback(() => () => completionCoordinator.reset(), [completionCoordinator]));
-  useEffect(() => onSyncedDayCompletion((owner) => {
+  const resumeKey = state.kind === 'loaded' && editable && trainingVisible && foreground && plan?.actual_completion_date_enabled && planDay && !planDay.completed_at && !browsing && !completionGate.pendingDays().includes(planDay.id)
+    ? visitKey(studentId, plan.id, planDay.id) : null;
+  const resume = useSessionResume(resumeKey, entryDay, !explicitEntry && !notificationDay && selectedDayID === cursor?.id);
+  const receiptScreen = useRef<string | null>(null);
+  useEffect(() => {
+    receiptScreen.current = trainingVisible ? reviewKey : null;
+    return () => { receiptScreen.current = null; };
+  }, [trainingVisible, reviewKey]);
+  useEffect(() => onSyncedDayCompletion(async (owner, dayId, actualDate) => {
     if (owner !== studentId) return;
+    if (actualDate !== undefined && plan && selectedDayID === dayId && trainingVisible) {
+      const refreshed = await queryClient.fetchQuery({ queryKey: planKeys.detail(plan.id),
+        queryFn: () => plansRepository.detail(plan.id), staleTime: 0 });
+      if (useSessionStore.getState().user?.id !== owner || receiptScreen.current !== `${owner}:${dayId}`) return;
+      const done = refreshed.days.find(day => day.id === dayId);
+      const next = cursorDay(refreshed.days.filter(day => day.id !== dayId));
+      if (done) {
+        const args = [dayCode(done, refreshed.days)];
+        if (actualDate) args.push(resumeDateLabel(actualDate, gymDayText(new Date())));
+        if (next) args.push(dayCode(next, refreshed.days));
+        setResumeMessage({ owner, text: t(actualDate === null ? 'training.resume.already' : next ? 'training.resume.advanced' : 'training.resume.finished', args) });
+      }
+      setExplicitEntry(false); setEditingPlan(null); setRequestedDayID(next?.id ?? null); setBrowsing(null); setRetained(null);
+    }
     bumpCompletion();
     void queryClient.invalidateQueries({ queryKey: planKeys.all });
     void queryClient.invalidateQueries({ queryKey: setKeys.all });
-  }), [studentId, queryClient, bumpCompletion]);
-  const completeDay = async (undo = false) => {
-    if (preview || !planDay || completion.isPending || undoCompletion.isPending) return;
+  }), [studentId, queryClient, bumpCompletion, plan, selectedDayID, trainingVisible]);
+  const completeDay = async (undo = false, actualDate?: string) => {
+    if (preview || !planDay || completion.isPending || undoCompletion.isPending || resumeSubmitting.current) return;
+    if (actualDate && (!plan?.actual_completion_date_enabled || !resume.previous || actualDate < resume.previous || actualDate > gymDayText(new Date()))) return;
+    if (!undo && !actualDate) {
+      actualDate = completionGate.datedIntent(planDay.id) ?? resume.selected;
+      if (!actualDate && resumeKey && !resume.ready) actualDate = await storedResumeDate(resumeKey);
+    }
     setRequestedDayID(planDay.id);
     if (!undo) {
+      if (actualDate) { resumeSubmitting.current = true; setResumeBusy(true); }
       setRestCompletionSignal(value => value + 1);
       try {
+        const writes = completionWrites(sheet).filter(({ row }) => !actualDate || !row.sourceLog);
         editor.close();
-        for (const row of liveDrafts.filter(item => item.kind === 'warmup' && !item.weightText.trim())) {
+        for (const row of liveDrafts.filter(item => item.kind === 'warmup' && !item.weightText.trim() && (!actualDate || !item.sourceLog))) {
           if (row.sourceLog) await setSyncQueue.remove({ stableSetId: row.stableSetId, dayId: planDay.id, log: row.sourceLog });
           await setSyncQueue.discardDraft(row.stableSetId);
           accessoryDraftsRef.current = accessoryDraftsRef.current.filter(item => item.stableSetId !== row.stableSetId);
           setDraftOverrides(current => { const next = { ...current }; delete next[row.stableSetId]; return next; });
         }
-        for (const { row, request } of completionWrites(sheet)) await saveRow(row, request);
-        await completionCoordinator.begin(planDay.id, syncCompletionState === 'failed', videoContext);
+        if (actualDate && resumeKey && resume.previous) await pinResumeDate(resumeKey, resume.previous, actualDate, writes.length > 0);
+        let filled = 0;
+        for (const { row, request } of writes) {
+          try { await saveRow(row, request, actualDate); }
+          catch (error) {
+            const snapshot = setSyncQueue.snapshot();
+            const accepted = snapshot.confirmed[row.stableSetId] || snapshot.pending.some(item => item.stableSetId === row.stableSetId);
+            if (actualDate && resumeKey && !resume.fillsSets && !filled && !accepted) await releaseResumeDate(resumeKey);
+            throw error;
+          }
+          filled++;
+        }
+        await completionCoordinator.begin(planDay.id, syncCompletionState === 'failed', videoContext, actualDate, resumeKey ?? undefined);
       } catch (error) { Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error)); }
+      finally { if (actualDate) { resumeSubmitting.current = false; setResumeBusy(false); } }
       return;
     }
     try {
@@ -592,6 +659,7 @@ export function TodayWorkoutView() {
     attachmentOnly?: boolean;
     accessory?: { request: SetLogUpsertRequest; mode: 'single' | 'all' };
     quickLogDate?: string;
+    completionDate?: string;
     originalWeightText?: string;
   }): Promise<string | undefined> => {
     const operation = async () => {
@@ -616,11 +684,11 @@ export function TodayWorkoutView() {
         );
         throw new Error('Selected day is no longer writable');
       }
-      const logDate = !input.quickLogDate && draft.sourceLog && !isLocalSetId(draft.sourceLog.id)
+      const logDate = input.completionDate ?? (!input.quickLogDate && draft.sourceLog && !isLocalSetId(draft.sourceLog.id)
         ? draft.sourceLog.logged_date
         : draft.kind === 'added'
           ? draft.loggedDate ?? pinnedDates.current.get(draft.exercise.id) ?? gymDayText(new Date())
-          : input.quickLogDate ?? gymDayText(new Date());
+          : input.quickLogDate ?? gymDayText(new Date()));
       if (draft.kind === 'added') pinnedDates.current.set(draft.exercise.id, logDate);
       const completed = input.completed ?? true;
       const weight = parseFiniteDecimal(input.weightText);
@@ -727,7 +795,7 @@ export function TodayWorkoutView() {
 
         if (draft.kind !== 'warmup' && !input.failed && completed && weight !== null) {
           const e1rm = await recordTrainingSetE1RM({
-            recorder: input.quickLogDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon(input.quickLogDate!), resolveFamily: resolveE1RMFamily }) : recorder,
+            recorder: input.quickLogDate || input.completionDate ? new E1RMRecorder(trainingE1RMRepository, { now: () => localNoon((input.quickLogDate ?? input.completionDate)!), resolveFamily: resolveE1RMFamily }) : recorder,
             repository: trainingE1RMRepository,
             resolveExerciseMetadata,
             input: {
@@ -770,7 +838,7 @@ export function TodayWorkoutView() {
     return input.attachmentOnly ? saved.then(id => id ? setSyncQueue.waitForSet(input.stableSetId) : undefined) : saved;
   };
 
-  const saveRow = async (row: WorkoutSetDraft, request = allDayLogRequest(row)) => {
+  const saveRow = async (row: WorkoutSetDraft, request = allDayLogRequest(row), completionDate?: string) => {
     if (row.kind === 'warmup' && !row.weightText.trim()) {
       accessoryDraftsRef.current = accessoryDraftsRef.current.map(item => item.stableSetId === row.stableSetId ? row : item);
       setDraftOverrides(current => ({ ...current, [row.stableSetId]: row }));
@@ -779,7 +847,7 @@ export function TodayWorkoutView() {
     }
     const id = await commit({ stableSetId: row.stableSetId, weightText: row.weightText, repsText: row.repsText,
       rpeText: row.rpeText, effortKind: row.effortKind, failed: false, completed: true,
-      originalWeightText: row.originalWeightText, accessory: { request, mode: 'all' } });
+      originalWeightText: row.originalWeightText, completionDate, accessory: { request, mode: 'all' } });
     if (!id) throw new Error('Set unavailable');
     return id;
   };
@@ -883,6 +951,12 @@ export function TodayWorkoutView() {
     }
     setRetained({ owner: studentId, summary: currentPlanSummary(fresh) }); setBrowsing(null); setEditingPlan(null); setRequestedDayID(null);
   }; });
+  useEffect(() => {
+    reenterAfterGymDay.current = () => {
+      if (transitionLocked() || resumeBusy) return;
+      setExplicitEntry(false); setBrowsing(null); setEditingPlan(null); setRequestedDayID(null);
+    };
+  });
   const browsePlan = (summary: PlanSummary, edge: 'first' | 'last', dayId: string | null = null) => {
     if (transitionLocked(Boolean(outlookOpen && dayId))) return;
     editor.close(); setEditingPlan(null); setRequestedDayID(dayId); setBrowsing({ summary, edge });
@@ -913,6 +987,7 @@ export function TodayWorkoutView() {
             onPreviousPlan={previousPlan ? () => browsePlan(previousPlan, 'last') : undefined}
             onNextPlan={nextPlan ? () => browsePlan(nextPlan, 'first') : undefined} /></View>
         ) : null}
+        {resumeMessage?.owner === studentId && <ResumeCompletionNotice message={resumeMessage.text} onHide={clearResumeMessage} />}
         {state.kind === 'loading' ? (
           <ActivityIndicator
             color={colors.gold500}
@@ -967,7 +1042,7 @@ export function TodayWorkoutView() {
       <RestTimer key={studentId} studentId={studentId} exerciseName={restExercise ? exerciseTitle(resolveExerciseMetadata(restExercise.exercise_id)) : ''}
         prescribed={restExercise?.sets.slice().sort((a, b) => a.set_number - b.set_number).find(set => set.rest_seconds !== null)?.rest_seconds}
         accessory={isAccessoryExercise(restExercise ? resolveExerciseMetadata(restExercise.exercise_id)?.exerciseType : undefined)}
-        startupBlocked={outlookOpen || trainingModalVisible || !notice.ready || (!preview && !browsing && notice.visible)}
+        startupBlocked={!resume.ready || Boolean(resume.previous || resumeBusy || resumeMessage || (selectedDayID && completionGate.datedIntent(selectedDayID))) || outlookOpen || trainingModalVisible || !notice.ready || (!preview && !browsing && notice.visible)}
         visible={trainingVisible && editable && state.kind === 'loaded' && !showEmpty && Boolean(restExercise) && !editor.editing && !completionPhase && !pickerVisible && !noteRow}
         top={restTop} bottom={completionDockHeight - spacing.md} completionSignal={restCompletionSignal} />
       </View>
@@ -997,6 +1072,12 @@ export function TodayWorkoutView() {
           <SetSyncCompletionControl state={syncCompletionState} disabled={completion.isPending} onComplete={() => void completeDay()} />
         </VideoCompletionControl>}
       </View> : null}
+      {resume.previous && plan && planDay && <SessionResumeSheet key={`${resumeKey}:${resume.previous}`}
+        previous={resume.previous} lockedDate={resume.selected} today={today} code={dayCode(planDay, plan.days)}
+        recorded={liveDrafts.filter(row => row.kind !== 'warmup' && row.sourceLog && !row.sourceLog.assumed).length}
+        total={liveDrafts.filter(row => row.kind !== 'warmup').length} busy={resumeBusy || syncCompletionState === 'syncing'}
+        onContinue={() => { void resume.resume(gymDayText(new Date())).catch(error => Alert.alert(t('student.setEntrySheet.copy010'), saveErrorCopy(error))); }}
+        onComplete={date => { void completeDay(false, date); }} />}
       {noteRow && binding.data?.bind_request?.status === 'accepted' ? <ExerciseNoteSheet studentId={studentId} coachId={binding.data.bind_request.coach_id}
         reference={{ v: 1, exercise_name: exerciseTitle(resolveExerciseMetadata(noteRow.exercise.exercise_id)), day_date: noteRow.sourceLog?.logged_date ?? today, plan_day_id: noteRow.exercise.plan_day_id, plan_exercise_id: noteRow.kind === 'added' ? null : noteRow.exercise.id, exercise_id: noteRow.exercise.exercise_id }} onClose={() => setNoteRow(null)} /> : null}
       {pickerVisible && editable && planDay ? <StudentExercisePicker planned={planDay.exercises.map(exercise => exercise.exercise_id)} added={liveDrafts.filter(draft => draft.kind === 'added').map(draft => draft.exercise.exercise_id)} onClose={() => setPickerVisible(false)} onSelect={exerciseId => {

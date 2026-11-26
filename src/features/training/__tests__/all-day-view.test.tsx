@@ -33,6 +33,9 @@ import { StudentExercisePicker } from '../StudentExercisePicker';
 import { HoldToCompleteButton } from '../HoldToCompleteButton';
 import { DayCompletionBanner, WorkoutCompletionFlowView } from '../CompletionControls';
 import { VideoAttachmentControls } from '../video-upload/VideoAttachmentControls';
+import { SetSyncQueue } from '../set-sync/queue';
+import { ApiError } from '@/api/client';
+import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { resetVideoUploadStoreForTests } from '../video-upload/store';
 
 
@@ -85,7 +88,7 @@ beforeEach(() => {
   servedPlan = plan;
   useSessionStore.setState({ user: { id: studentId, phone: '', role: 'coached_student', created_at: plan.created_at } });
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } } });
-  jest.mocked(authenticatedRequest).mockImplementation(async (path) => {
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, options) => {
     if (path.endsWith('/plans')) return { plans: [servedPlan] } as never;
     if (path === `/plans/${plan.id}`) return servedPlan as never;
     if (path === '/exercises') return { exercises: [] } as never;
@@ -97,7 +100,7 @@ beforeEach(() => {
     if (path.endsWith('/complete')) {
       if (failCompletion) throw new Error('Offline');
       servedPlan = { ...plan, days: plan.days.map(day => ({ ...day, completed_at: '2026-09-01T12:00:00Z' })) };
-      return { id: 'completion', plan_day_id: plan.days[0].id, student_id: studentId, source: 'manual', completed_at: '2026-09-01T12:00:00Z' } as never;
+      return { id: 'completion', plan_day_id: plan.days[0].id, student_id: studentId, source: 'manual', completed_at: '2026-09-01T12:00:00Z', ...(options?.body ?? {}) as object } as never;
     }
     if (path === '/bind-requests/mine') return { bind_request: null } as never;
     if (path.includes('/readiness')) return { checkin: null } as never;
@@ -1387,4 +1390,186 @@ test('112 repair 1: slow original-weight storage cannot reverse rapid numeric ed
   expect(sheetRows().find(row => row.kind === 'warmup')?.weightText).toBe('70');
   const writes = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log');
   expect(writes.at(-1)?.[1]?.body).toMatchObject({ weight_kg: '70', completed: true, is_warmup: true });
+});
+
+test('115 returning to the same unfinished cursor across gym-days offers the actual date and posts chosen dates', async () => {
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'nextTick', 'setImmediate'] });
+  jest.setSystemTime(new Date(2026, 10, 24, 14));
+  servedPlan = { ...plan, actual_completion_date_enabled: true } as PlanDetail;
+  await mount();
+  expect(copy()).not.toContain('Did you finish your last workout?');
+  await act(async () => renderer.unmount());
+  jest.setSystemTime(new Date(2026, 11, 1, 10));
+  await mount();
+  expect(copy()).toContain('Did you finish your last workout?');
+  expect(copy()).toContain('Actual completion date');
+  await press('Change date');
+  const dates = renderer.root.findAllByType(FeedbackPressable).filter(node => String(node.props.testID ?? '').startsWith('resume-date-'));
+  expect(dates).toHaveLength(8);
+  await act(async () => renderer.root.findAll(node => node.props.testID === 'resume-date-2026-11-25' && node.props.onPress)[0].props.onPress());
+  await act(async () => renderer.root.findAll(node => node.props.testID === 'resume-complete' && node.props.onPress)[0].props.onPress());
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 80)); });
+  expect(jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path === '/sets/log')?.[1]?.body).toMatchObject({ logged_date: '2026-11-25' });
+  expect(jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path.endsWith('/complete'))?.[1]?.body).toEqual({ actual_completion_date: '2026-11-25' });
+});
+
+test('115 a visit to a different exercise day cannot trigger the cursor reminder, and Continue consumes it through 04:00', async () => {
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'nextTick', 'setImmediate'] });
+  jest.setSystemTime(new Date(2026, 10, 25, 3, 59));
+  const later = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 3 };
+  servedPlan = { ...plan, actual_completion_date_enabled: true, days: [...plan.days, later] };
+  await AsyncStorage.setItem(`training.session-visit.v1.${studentId}.${plan.id}.${later.id}`, '2026-11-23');
+  await mount();
+  expect(copy()).not.toContain('Did you finish your last workout?');
+  await act(async () => renderer.root.findByType(TrainingWeekStrip).props.onSelect(later.id));
+  expect(copy()).not.toContain('Did you finish your last workout?');
+  await act(async () => renderer.unmount());
+  jest.setSystemTime(new Date(2026, 10, 25, 4));
+  await mount();
+  expect(copy()).toContain('Did you finish your last workout?');
+  await press('Continue this workout');
+  expect(copy()).not.toContain('Did you finish your last workout?');
+  await act(async () => renderer.unmount());
+  await mount();
+  expect(copy()).not.toContain('Did you finish your last workout?');
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(0);
+});
+
+test('115 partial group fill restores the chosen date before retrying after a cold screen restart', async () => {
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'nextTick', 'setImmediate'] });
+  jest.setSystemTime(new Date(2026, 10, 26, 12));
+  const exercise = plan.days[0].exercises[0];
+  servedPlan = { ...plan, actual_completion_date_enabled: true, days: [{ ...plan.days[0], exercises: [{ ...exercise,
+    sets: [...exercise.sets, { ...exercise.sets[0], id: '70000000-0000-4000-8000-000000000002', set_number: 2 }] }] }] };
+  await AsyncStorage.setItem(`training.session-visit.v1.${studentId}.${plan.id}.${plan.days[0].id}`, '2026-11-24');
+  const save = SetSyncQueue.prototype.enqueue;
+  let second = true;
+  jest.spyOn(SetSyncQueue.prototype, 'enqueue').mockImplementation(function(this: SetSyncQueue, entry) {
+    if (second && entry.request.set_index === 1) { second = false; return Promise.reject(new Error('Local write interrupted')); }
+    return save.call(this, entry);
+  });
+  await mount();
+  await press('Change date');
+  await act(async () => renderer.root.findAllByType(FeedbackPressable).find(n => n.props.testID === 'resume-date-2026-11-25')!.props.onPress!({} as never));
+  await act(async () => renderer.root.findAll(node => node.props.testID === 'resume-complete' && node.props.onPress)[0].props.onPress());
+  await act(async () => renderer.unmount());
+  await mount();
+  expect(copy()).toContain('Finished on Nov 25');
+  expect(copy()).not.toContain('Change date');
+  await press('Continue this workout');
+  await act(async () => renderer.unmount());
+  await mount();
+  expect(copy()).not.toContain('Did you finish your last workout?');
+  await act(async () => renderer.root.findByType(HoldToCompleteButton).props.onComplete());
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  const written = jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log').map(([,opts]) => opts?.body);
+  expect(written).toHaveLength(2);
+  expect(written.every(body => (body as {logged_date:string}).logged_date === '2026-11-25')).toBe(true);
+});
+
+test('115 a definite date rejection preserves existing recorded rows and allows a corrected completion date', async () => {
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'nextTick', 'setImmediate'] });
+  jest.setSystemTime(new Date(2026, 10, 26, 12));
+  servedPlan = { ...plan, actual_completion_date_enabled: true };
+  const existing = { id: '90000000-0000-4000-8000-000000000000', student_id: studentId, plan_exercise_id: plan.days[0].exercises[0].id,
+    plan_day_id: plan.days[0].id, exercise_id: plan.days[0].exercises[0].exercise_id, set_index: 0, reps: 4, weight_kg: '79', rpe: '8', logged_date: '2026-11-24',
+    logged_at: '2026-11-24T13:00:00Z', completed: false, failed: false, assumed: false, adhoc: false, is_warmup: false };
+  const respond = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, opts) => {
+    if (path.endsWith('/complete')) throw new ApiError('backend','Rejected date',{status:400});
+    if (path.includes('/sets?')) return { logs: [existing] } as never;
+    return respond(path, opts);
+  });
+  await AsyncStorage.setItem(`training.session-visit.v1.${studentId}.${plan.id}.${plan.days[0].id}`, '2026-11-24');
+  await mount();
+  await act(async () => renderer.root.findAll(node => node.props.testID === 'resume-complete' && node.props.onPress)[0].props.onPress());
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path === '/sets/log')).toHaveLength(0);
+  expect(copy()).toContain('Change date');
+});
+
+const confirmReminder = () => act(async () => renderer.root.findAllByType(FeedbackPressable).find(n => n.props.testID === 'resume-complete')!.props.onPress!({} as never));
+const seedReminder = async () => {
+  jest.useFakeTimers({ doNotFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'queueMicrotask', 'nextTick', 'setImmediate'] });
+  jest.setSystemTime(new Date(2026, 10, 26, 12));
+  servedPlan = { ...plan, actual_completion_date_enabled: true };
+  await AsyncStorage.setItem(`training.session-visit.v1.${studentId}.${plan.id}.${plan.days[0].id}`, '2026-11-24');
+};
+
+test('115 the first rejected set write with zero persisted changes releases the date', async () => {
+  await seedReminder();
+  jest.spyOn(SetSyncQueue.prototype, 'enqueue').mockRejectedValueOnce(new Error('Local storage unavailable'));
+  await mount(); await confirmReminder();
+  expect(copy()).toContain('Change date');
+});
+
+test('115 a definitive day rejection after filling a missing set keeps the original date for ordinary completion', async () => {
+  await seedReminder();
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  let rejected = false;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, opts) => {
+    if (!rejected && path.endsWith('/complete')) { rejected = true; throw new ApiError('backend', 'Rejected', { status: 400 }); }
+    return original(path, opts);
+  });
+  await mount(); await confirmReminder();
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  expect(copy()).toContain('Finished on Nov 24');
+  expect(copy()).not.toContain('Change date');
+  await press('Continue this workout');
+  await act(async () => renderer.root.findByType(HoldToCompleteButton).props.onComplete());
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 100)); });
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete')).map(([,options]) => options?.body))
+    .toEqual([{ actual_completion_date: '2026-11-24' }, { actual_completion_date: '2026-11-24' }]);
+});
+
+test.each([false, true])('115 a post-receipt plan refresh skips a concurrently finished day, lost connection %s', async (offlineAfterReceipt) => {
+  await seedReminder();
+  const second = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000002', day_of_week: 3 };
+  const third = { ...plan.days[0], id: '40000000-0000-4000-8000-000000000003', day_of_week: 5 };
+  servedPlan = { ...servedPlan, days: [...plan.days, second, third] };
+  const original = jest.mocked(authenticatedRequest).getMockImplementation()!;
+  let complete = false;
+  let loseConnection = offlineAfterReceipt;
+  let failedReads = 0;
+  jest.mocked(authenticatedRequest).mockImplementation(async (path, opts) => {
+    if (path.endsWith('/complete')) {
+      complete = true;
+      const completed_at = new Date().toISOString();
+      servedPlan = { ...servedPlan, days: servedPlan.days.map(day => day.id === third.id ? day : { ...day, completed_at, actual_completion_date: '2026-11-24' }) };
+      return { id: 'completion', plan_day_id: plan.days[0].id, student_id: studentId, source: 'manual', completed_at, actual_completion_date: '2026-11-24' } as never;
+    }
+    if (complete && path === `/plans/${plan.id}`) {
+      await new Promise(resolve => setTimeout(resolve, 60));
+      if (loseConnection) { failedReads++; throw new ApiError('network', 'Connection interrupted while refreshing'); }
+    }
+    return original(path, opts);
+  });
+  await mount(); await confirmReminder();
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 210)); });
+  if (offlineAfterReceipt) {
+    expect(failedReads).toBeGreaterThan(0);
+    const listeners = jest.mocked(NetInfo.addEventListener).mock.calls.map(([listener]) => listener);
+    await act(async () => {
+      listeners.forEach(listener => listener({ isConnected: false, isInternetReachable: false } as NetInfoState));
+      loseConnection = false;
+      listeners.forEach(listener => listener({ isConnected: true, isInternetReachable: true } as NetInfoState));
+      await new Promise(resolve => setTimeout(resolve, 220));
+    });
+  }
+  expect(jest.mocked(authenticatedRequest).mock.calls.filter(([path]) => path.endsWith('/complete'))).toHaveLength(1);
+  expect(renderer.root.findByType(TrainingWeekStrip).props.strip.selectedDay.id).toBe(third.id);
+  expect(copy().some(label => label.includes('W1D1') && label.includes('W1D3'))).toBe(true);
+});
+
+test('115 an open date picker spans the 04:00 boundary while the app stays active', async () => {
+  await seedReminder();
+  jest.setSystemTime(new Date(2026, 10, 26, 3, 59, 59, 800));
+  await mount(); await press('Change date');
+  expect(renderer.root.findAllByProps({ testID: 'resume-date-2026-11-26' })).toHaveLength(0);
+  jest.setSystemTime(new Date(2026, 10, 26, 4, 0, 1));
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 230)); });
+  const day = renderer.root.findAllByType(FeedbackPressable).find(n => n.props.testID === 'resume-date-2026-11-26');
+  expect(day).toBeDefined();
+  await act(async () => day!.props.onPress!({} as never)); await confirmReminder();
+  expect(jest.mocked(authenticatedRequest).mock.calls.find(([path]) => path.endsWith('/complete'))?.[1]?.body).toEqual({ actual_completion_date: '2026-11-26' });
 });

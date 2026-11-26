@@ -221,3 +221,12 @@ test('an older completion within seven days cannot undo when another day was com
   expect(canUndoCompletion(days, 'older', now)).toBe(false);
   expect(canUndoCompletion(days, 'latest', now)).toBe(true);
 });
+
+test('115 late completion belongs to the picked gym-day and undo still starts when it was submitted', () => {
+  const submitted = new Date(2026, 11, 1, 9).toISOString();
+  const days = [day('late', { completed_at: submitted, actual_completion_date: '2026-11-24' }), day('next', { day_of_week: 2 })];
+  expect(completedToday(days, new Date(2026, 11, 1, 10))).toBeNull();
+  expect(completedToday(days, new Date(2026, 10, 25, 3, 59))?.id).toBe('late');
+  expect(canUndoCompletion(days, 'late', new Date(2026, 11, 2, 9))).toBe(true);
+  expect(cursorDay(days)?.id).toBe('next');
+});

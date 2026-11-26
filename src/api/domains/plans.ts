@@ -87,6 +87,7 @@ export const PlanDaySchema = z.object({
   /** Nullable DATE-text column. */
   shifted_to_date: DateTextSchema.nullable(),
   completed_at: TimestampSchema.nullable().optional(),
+  actual_completion_date: DateTextSchema.nullable().optional(),
   completion_source: z
     .enum(['manual', 'auto', 'backfill'])
     .nullable()
@@ -95,6 +96,7 @@ export const PlanDaySchema = z.object({
 });
 
 export const PlanDetailSchema = PlanSummarySchema.extend({
+  actual_completion_date_enabled: z.boolean().optional(),
   days: z.array(PlanDaySchema),
 });
 
@@ -108,6 +110,7 @@ export const DayCompletionSchema = z.object({
   student_id: UuidSchema,
   source: z.enum(['manual', 'auto', 'backfill']),
   completed_at: TimestampSchema,
+  actual_completion_date: DateTextSchema.nullable().optional(),
 });
 
 /** Backend 067 summaries omit legacy shift metadata. */
@@ -178,13 +181,15 @@ async function detail(planId: string): Promise<PlanDetail> {
   return authenticatedRequest(`/plans/${id}`, { schema: PlanDetailSchema });
 }
 
-async function completeDay(dayId: string, signal?: AbortSignal): Promise<DayCompletion> {
+async function completeDay(dayId: string, signal?: AbortSignal, actualDate?: string): Promise<DayCompletion> {
   const id = UuidSchema.parse(dayId);
-  return authenticatedRequest(`/plans/days/${id}/complete`, {
+  const completion = await authenticatedRequest(`/plans/days/${id}/complete`, {
     method: 'POST',
+    ...(actualDate ? { body: { actual_completion_date: DateTextSchema.parse(actualDate) } } : {}),
     schema: DayCompletionSchema,
     signal,
   });
+  return completion;
 }
 
 async function undoDayCompletion(dayId: string): Promise<void> {
@@ -231,7 +236,8 @@ export function usePlan(planId: string) {
 export function useDayCompletion(planId: string, undo = false) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (dayId: string) => {
+    mutationFn: async (input: string | { dayId: string; actualDate: string }) => {
+      const dayId = typeof input === 'string' ? input : input.dayId;
       if (undo) {
         await plansRepository.undoDayCompletion(dayId);
         return null;
@@ -241,7 +247,7 @@ export function useDayCompletion(planId: string, undo = false) {
       try {
         // Racing also settles locally if the transport ignores cancellation.
         return await Promise.race([
-          plansRepository.completeDay(dayId, controller.signal),
+          typeof input === 'string' ? plansRepository.completeDay(dayId, controller.signal) : plansRepository.completeDay(dayId, controller.signal, input.actualDate),
           new Promise<never>((_, reject) => {
             timer = setTimeout(() => {
               reject(new Error('Day completion timed out'));
@@ -253,7 +259,10 @@ export function useDayCompletion(planId: string, undo = false) {
         clearTimeout(timer);
       }
     },
-    onMutate: async (dayId) => {
+    onMutate: async (input) => {
+      // Dated completion changes the visible cursor only after the server receipt.
+      if (typeof input !== 'string') return;
+      const dayId = input;
       await queryClient.cancelQueries({ queryKey: planKeys.detail(planId) });
       const previous = queryClient.getQueryData<PlanDetail>(
         planKeys.detail(planId),
@@ -280,7 +289,10 @@ export function useDayCompletion(planId: string, undo = false) {
       if (context?.previous)
         queryClient.setQueryData(planKeys.detail(planId), context.previous);
     },
-    onSuccess: (completion, dayId) => {
+    onSuccess: (completion, input) => {
+      // A dated receipt is followed by an authoritative plan read in the completion gate.
+      if (typeof input !== 'string') return;
+      const dayId = input;
       queryClient.setQueryData<PlanDetail>(
         planKeys.detail(planId),
         (plan) =>
@@ -291,6 +303,7 @@ export function useDayCompletion(planId: string, undo = false) {
                 ? {
                     ...day,
                     completed_at: completion?.completed_at ?? null,
+                    actual_completion_date: completion?.actual_completion_date ?? null,
                     completion_source: completion?.source ?? null,
                   }
                 : day,
@@ -298,7 +311,8 @@ export function useDayCompletion(planId: string, undo = false) {
           },
       );
     },
-    onSettled: () => {
+    onSettled: (_, error, input) => {
+      if (!error && typeof input !== 'string') return;
       const refresh = queryClient.invalidateQueries({ queryKey: planKeys.all });
       // Completion acknowledgement/rollback must not wait for another request.
       if (undo) return refresh;
