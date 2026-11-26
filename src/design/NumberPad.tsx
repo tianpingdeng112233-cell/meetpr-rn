@@ -77,12 +77,14 @@ export const NumberPad = forwardRef<NumberPadHandle, NumberPadProps>(function Nu
         <Text style={{ ...font.body(12, 'semibold'), color: selected ? colors.goldText : colors.textPrimary }}>{subtitle ? t('training.pad.fill') : label}</Text>
         {subtitle ? <Text style={{ ...font.body(10), color: colors.textSecondary }}>{subtitle}</Text> : null}
       </Pressable>;
-    return <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', zIndex: 100 }]}>
-      <View pointerEvents="box-none" style={{ paddingTop: 44 }}>
+    return <View pointerEvents="box-none">
+      <View style={{ flexDirection: 'row', paddingRight: 16 }}>
+        <Pressable accessible={false} feedback="none" onPress={dismiss} style={{ flex: 1 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('training.pad.hide')} onPress={dismiss}
-          style={{ position: 'absolute', right: 16, top: 0, width: 48, height: 44, borderRadius: 12, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
+          style={{ width: 48, height: 44, borderRadius: 12, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' }}>
           <MaterialCommunityIcons name="keyboard-close" size={24} color={colors.textSecondary} />
         </Pressable>
+      </View>
       <View ref={panel} onLayout={onPanelLayout ? () => panel.current?.measureInWindow((_x, top, _width, height) => onPanelLayout(top, height)) : undefined}
         style={{ padding: 16, paddingBottom: 22, gap: 12, backgroundColor: colors.surfaceCard, borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal }}>
         <Text style={{ ...font.body(12), color: colors.textSecondary }}>{contextText}</Text>
@@ -111,7 +113,6 @@ export const NumberPad = forwardRef<NumberPadHandle, NumberPadProps>(function Nu
             {functionKey((props.effortKind ?? 'rpe').toUpperCase(), props.onEffort, undefined, effort)}
           </View>
         </View>
-      </View>
       </View>
     </View>;
   }
