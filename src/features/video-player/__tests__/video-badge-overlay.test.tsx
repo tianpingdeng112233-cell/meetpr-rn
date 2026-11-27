@@ -1,9 +1,8 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import Svg, { Text as SvgText } from 'react-native-svg';
+import { MeetPRMark } from '@/design';
 import { FeedbackVideoPlayer } from '../FeedbackVideoPlayer';
 import { VideoBadgeCard } from '../VideoBadgeCard';
-import { VideoBadgePalette as palette } from '../badge-palette';
 
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('react-native-video', () => ({ __esModule: true, default: 'Video' }));
@@ -15,18 +14,11 @@ const props = { videoId: 'video', url: 'https://video', refreshURL: async () => 
 const badge = { exerciseName: 'Squat', weightKg: 100, reps: 5, rpe: 8, setOrdinal: 2 };
 const buttons = (id: string) => renderer.root.findAll(node => node.props.testID === id && typeof node.props.onPress === 'function', { deep: false });
 
-test('the badge card keeps its wordmark slot and colors without interlocking letters', () => {
+test('a half-width badge uses the on-dark artwork at half its base height', () => {
   act(() => { renderer = create(<VideoBadgeCard info={badge} width={234} />); });
-  const layers = renderer.root.findAllByType(SvgText);
-  expect(layers).toHaveLength(2);
-  expect(layers.filter(layer => layer.props.letterSpacing === -1.76)).toHaveLength(0);
-  expect(layers.map(layer => layer.props.letterSpacing)).toEqual([0, 0]);
-  expect(layers[0].props).toMatchObject({ stroke: palette.ink, fill: palette.ink });
-  expect(layers[1].props.fill).toBe(palette.wordmarkCounter);
-  const mark = renderer.root.findAllByType(Svg).find(node => node.props.accessibilityLabel === 'MEETPR');
-  expect(mark).toBeDefined();
-  expect(mark!.props.width).toBeCloseTo(32.3333333333);
-  expect(mark!.props.height).toBe(8);
+  expect(renderer.root.findByType(MeetPRMark).props).toMatchObject({
+    variant: 'onDark', height: 10.5, accessibilityLabel: 'MEETPR',
+  });
 });
 
 test('a playback session starts expanded and the card toggles in both directions', async () => {

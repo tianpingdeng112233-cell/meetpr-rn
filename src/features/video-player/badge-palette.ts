@@ -9,6 +9,4 @@ export const VideoBadgePalette = {
   cardFill: 'rgba(10,10,12,0.62)',
   cardStroke: 'rgba(255,255,255,0.10)',
   scrim: '#050507',
-  /** Counter-fill inside the outlined wordmark letters (card base colour, opaque). */
-  wordmarkCounter: '#0A0A0C',
 } as const;
