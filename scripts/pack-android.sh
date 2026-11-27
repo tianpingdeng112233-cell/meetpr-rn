@@ -110,6 +110,8 @@ if [[ ! -f "$apk" ]]; then
   exit 1
 fi
 
+bash scripts/verify-video-player-apk.sh "$apk"
+
 apksigner_path=$(command -v apksigner || true)
 if [[ -z "$apksigner_path" ]]; then
   # Pick the highest installed stable build-tools version, without GNU sort -V.
