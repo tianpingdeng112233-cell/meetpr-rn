@@ -517,3 +517,15 @@ test('signup code button keeps pending and countdown text legible while invalid 
   expect(textColor(t('auth.getCode'))).toBe(design.colors.textDisabled);
   expect(button(t('auth.getCode')).props.accessibilityState.disabled).toBe(true);
 });
+
+
+test.each(['global', 'china'] as const)('%s login links to the shared Terms of Service', async track => {
+  if (track === 'china') china();
+  const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  act(() => { renderer = create(<GlobalLoginScreen />); });
+  const terms = renderer.root.findAllByType(Text).find(node => node.props.accessibilityRole === 'link' && node.props.children === 'Terms of Service');
+  expect(terms).toBeDefined();
+  await act(async () => { terms!.props.onPress(); });
+  expect(openURL).toHaveBeenCalledWith('https://meetpr.app/terms');
+  expect(copy()).toContain('By continuing, you agree to our Terms of Service and Privacy Policy');
+});

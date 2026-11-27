@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { configure, flushNow, resetAnalyticsForTests } from '@/analytics/client';
-import { ANALYTICS_PRIVACY_NOTICE_KEY } from '@/analytics/storage';
+import { LEGAL_ACCEPTED_VERSION_KEY } from '@/analytics/storage';
+import { LEGAL_VERSION } from '@/analytics/legal';
 import { useSessionStore } from '@/api/session';
 import { plansRepository } from '@/api/domains/plans';
 import { setsRepository } from '@/api/domains/sets';
@@ -413,7 +414,7 @@ test('upload lifecycle emits the backend stage/context contract', async () => {
 
 test('a retry whose retained file disappeared sends a source-file diagnostic', async () => {
   const events: { name: string; props: Record<string, unknown> }[] = [];
-  await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await AsyncStorage.setItem(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   await configure({ accessTokenProvider: async () => 'test-token', fetch: async (_url, request) => {
     if (request?.method === 'POST') events.push(...JSON.parse(String(request.body)).events);
     return { status: request?.method === 'POST' ? 204 : 200,
@@ -449,7 +450,7 @@ test.each([
 
 test('an album export above the passthrough bitrate is compressed and uploaded without a diagnostic', async () => {
   const events: { name: string; props: Record<string, unknown> }[] = [];
-  await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await AsyncStorage.setItem(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   await configure({ accessTokenProvider: async () => 'test-token', fetch: async (_url, request) => {
     if (request?.method === 'POST') events.push(...JSON.parse(String(request.body)).events);
     return { status: request?.method === 'POST' ? 204 : 200,
@@ -469,7 +470,7 @@ test('an album export above the passthrough bitrate is compressed and uploaded w
 
 test('an album export inspection failure sends only its symbolic code and keeps the retained file', async () => {
   const events: { name: string; props: Record<string, unknown> }[] = [];
-  await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await AsyncStorage.setItem(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   await configure({ accessTokenProvider: async () => 'test-token', fetch: async (_url, request) => {
     if (request?.method === 'POST') events.push(...JSON.parse(String(request.body)).events);
     return { status: request?.method === 'POST' ? 204 : 200,

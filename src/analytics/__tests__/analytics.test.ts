@@ -3,13 +3,14 @@ import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { LEGAL_VERSION } from '../legal';
 import { setLocaleOverride, type Locale } from '@/i18n';
 import { getAccessToken } from '@/api/token-store';
 
 import {
   ANALYTICS_DEFERRED_EVENT_IDS_KEY,
   ANALYTICS_OVERSIZE_STRIKES_KEY,
-  ANALYTICS_PRIVACY_NOTICE_KEY,
+  LEGAL_ACCEPTED_VERSION_KEY,
   ANALYTICS_QUEUE_KEY,
   ANALYTICS_FLUSH_INTERVAL_MS,
   ANALYTICS_MAX_REQUEST_BYTES,
@@ -380,7 +381,7 @@ test('flush truncates a batch at 50 events', async () => {
 
 test('the 30-second periodic trigger flushes, while enqueue itself does not', async () => {
   jest.useFakeTimers();
-  storedValues.set(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  storedValues.set(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   let posts = 0;
   const fetchImplementation = jest.fn<typeof fetch>(async (input) => {
     if (String(input).endsWith('/events/config')) {
@@ -401,7 +402,7 @@ test('the 30-second periodic trigger flushes, while enqueue itself does not', as
 
 test('an unreachable-to-reachable network edge triggers a flush', async () => {
   jest.useFakeTimers();
-  storedValues.set(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  storedValues.set(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   let networkListener: ((state: NetInfoState) => void) | undefined;
   mockedNetInfo.addEventListener.mockImplementation((listener) => {
     networkListener = listener;
@@ -432,7 +433,7 @@ test('an unreachable-to-reachable network edge triggers a flush', async () => {
 
 test('configured batches read the current stored access token for the request header', async () => {
   jest.useFakeTimers();
-  storedValues.set(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  storedValues.set(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   mockedGetAccessToken.mockResolvedValue('stored-access-token');
   let postHeaders: HeadersInit | undefined;
   const fetchImplementation = jest.fn<typeof fetch>(async (input, init) => {
@@ -585,13 +586,13 @@ test('privacy confirmation persists and is the trigger that releases queued even
 
   await confirmPrivacyNotice({ waitForFlush: true });
 
-  expect(storedValues.get(ANALYTICS_PRIVACY_NOTICE_KEY)).toBe('true');
+  expect(storedValues.get(LEGAL_ACCEPTED_VERSION_KEY)).toBe(LEGAL_VERSION);
   expect(posts).toBe(1);
 });
 
 test('config failure is fail-open and collection continues', async () => {
   jest.useFakeTimers();
-  storedValues.set(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  storedValues.set(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   let calls = 0;
   const fetchImplementation = jest.fn<typeof fetch>(async () => {
     calls += 1;
@@ -612,7 +613,7 @@ test('config failure is fail-open and collection continues', async () => {
 test('30-minute background boundary resets session and seq, while shorter gaps preserve both', async () => {
   jest.useFakeTimers();
   jest.setSystemTime(new Date('2026-07-19T12:00:00.000Z'));
-  storedValues.set(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  storedValues.set(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   let appStateListener: ((state: AppStateStatus) => void) | undefined;
   jest.spyOn(AppState, 'addEventListener').mockImplementation((_type, listener) => {
     appStateListener = listener;

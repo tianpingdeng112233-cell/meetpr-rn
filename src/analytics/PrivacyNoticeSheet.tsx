@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Linking, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
+import { BackHandler, Linking, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { t } from '@/i18n';
 import { BUILD_TRACK } from '@/config/build-track';
@@ -9,8 +8,9 @@ import { useColors } from '@/design/theme';
 import { type Colors, radius, spacing, typography } from '@/design/tokens';
 
 import { confirmPrivacyNotice } from './client';
+import { PRIVACY_POLICY_URL, TERMS_URL } from './legal';
 
-export const PRIVACY_POLICY_URL = 'https://meetpr.app/privacy';
+export { PRIVACY_POLICY_URL, TERMS_URL } from './legal';
 
 export type PrivacyNoticeSheetProps = {
   visible: boolean;
@@ -23,6 +23,7 @@ export function PrivacyNoticeSheet({
 }: PrivacyNoticeSheetProps) {
   const colors = useColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [declined, setDeclined] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
   const handleConfirm = async () => {
@@ -53,25 +54,41 @@ export function PrivacyNoticeSheet({
         accessibilityViewIsModal
         style={styles.backdrop}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>{t('appShell.privacy.analytics.title')}</Text>
-          <ScrollView style={styles.bodyScroll}>
-            <Text style={styles.body}>{t(BUILD_TRACK === 'china'
-              ? 'appShell.privacy.analytics.bodyChina'
-              : 'appShell.privacy.analytics.body')}</Text>
-          </ScrollView>
-          <Pressable
-            accessibilityRole="link"
-            onPress={openPrivacyPolicy}
-            style={({ pressed }) => pressed && styles.linkPressed}>
-            <Text style={styles.link}>{t('appShell.privacy.policy')}</Text>
-          </Pressable>
-          <AppButton
-            disabled={confirming}
-            label={t('appShell.acknowledge')}
-            onPress={() => void handleConfirm()}
-            style={styles.button}
-            variant="primary"
-          />
+          <Text style={styles.title}>{t('appShell.privacy.title')}</Text>
+          {declined ? <>
+            <Text style={styles.body}>{t('appShell.privacy.declined')}</Text>
+            <AppButton key="review" label={t('appShell.privacy.review')} onPress={() => setDeclined(false)} style={styles.button} variant="secondary" />
+            <AppButton key="exit" label={t('appShell.privacy.exit')} onPress={() => BackHandler.exitApp()} style={styles.button} variant="secondary" />
+          </> : <>
+            <ScrollView style={styles.bodyScroll}>
+              <Text style={styles.body}>
+                {t('appShell.privacy.intro')}
+                <Text accessibilityRole="link" accessibilityLabel={t('appShell.privacy.terms')} onPress={() => void Linking.openURL(TERMS_URL)} style={styles.link}>{t('appShell.privacy.terms')}</Text>
+                {t('appShell.privacy.and')}
+                <Text accessibilityRole="link" accessibilityLabel={t('appShell.privacy.policy')} onPress={openPrivacyPolicy} style={styles.link}>{t('appShell.privacy.policy')}</Text>
+                {t('appShell.privacy.protection')}
+              </Text>
+              <Text style={styles.body}>{t(BUILD_TRACK === 'china'
+                ? 'appShell.privacy.analytics.bodyChina'
+                : 'appShell.privacy.analytics.body')}</Text>
+            </ScrollView>
+            <AppButton
+              key="agree"
+              disabled={confirming}
+              label={t('appShell.privacy.agree')}
+              onPress={() => void handleConfirm()}
+              style={styles.button}
+              variant="primary"
+            />
+            <AppButton
+              key="disagree"
+              disabled={confirming}
+              label={t('appShell.privacy.disagree')}
+              onPress={() => setDeclined(true)}
+              style={styles.button}
+              variant="secondary"
+            />
+          </>}
         </View>
       </View>
     </Modal>
@@ -110,15 +127,10 @@ const createStyles = (colors: Colors) => StyleSheet.create({
   },
   link: {
     color: colors.textPrimary,
-    marginTop: spacing.base,
     textDecorationLine: 'underline',
     ...typography.bodyEmphasis,
   },
-  linkPressed: {
-    opacity: 0.7,
-  },
   button: {
-    alignSelf: 'flex-end',
     marginTop: spacing.lg,
   },
 });

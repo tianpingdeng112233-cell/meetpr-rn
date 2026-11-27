@@ -5,6 +5,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
 import { getLocale, t } from '@/i18n';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '@/analytics/legal';
 import { BUILD_TRACK } from '@/config/build-track';
 import { useSessionStore } from '@/api/session';
 import { font, useColors } from '@/design';
@@ -52,13 +53,20 @@ export default function GlobalLoginScreen() {
     </View>
     {BUILD_TRACK === 'global' ? <GoogleLoginAction busy={busy} run={run} /> : null}
     <Text style={{ ...font.body(12), ...authTypography(), color: colors.textMuted, textAlign: 'center' }}>
-      {t('auth.consent')}{getLocale() === 'en' ? ' ' : ''}
+      {t('auth.consent')}{getLocale() === 'en' ? ' ' : '《'}
       <Text accessibilityRole="link" style={{ color: colors.goldText, textDecorationLine: 'underline' }} onPress={() => {
-        void Linking.openURL(BUILD_TRACK === 'china' ? 'https://meetpr.app/privacy' : 'https://meetpr.app/privacy/en').catch(error => {
+        void Linking.openURL(TERMS_URL).catch(error => {
           setPasswordResetNotice(false);
           setMessage(globalAuthErrorMessage(error));
         });
-      }}>{t('auth.privacy')}</Text>
+      }}>{t('appShell.privacy.terms')}</Text>
+      {t('appShell.privacy.and')}
+      <Text accessibilityRole="link" style={{ color: colors.goldText, textDecorationLine: 'underline' }} onPress={() => {
+        void Linking.openURL(BUILD_TRACK === 'china' ? PRIVACY_POLICY_URL : 'https://meetpr.app/privacy/en').catch(error => {
+          setPasswordResetNotice(false);
+          setMessage(globalAuthErrorMessage(error));
+        });
+      }}>{t('auth.privacy')}</Text>{getLocale() === 'en' ? '.' : '》。'}
     </Text>
   </AuthForm>;
 }

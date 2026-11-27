@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { t } from '@/i18n';
+import { isDemoMode } from '@/demo/mode';
 import { authTypography } from '@/features/auth/auth-typography';
 import { BUILD_TRACK } from '@/config/build-track';
 import { Toast } from '@/design/Toast';
@@ -150,7 +151,7 @@ function ThemedRoot() {
         if (!mounted) {
           return;
         }
-        setPrivacyNoticeVisible(!confirmed);
+        setPrivacyNoticeVisible(!isDemoMode() && !confirmed);
         setPrivacyChecked(true);
       })
       .catch(() => undefined);

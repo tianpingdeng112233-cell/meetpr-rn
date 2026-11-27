@@ -7,11 +7,12 @@ import { resetSessionForTests, useSessionStore } from '@/api/session';
 import { createElement } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import type { InviteDependencies } from '../use-invite-codes';
+import { CoachPrivacyTermsSheet } from '../CoachProfileSheets';
 import { CoachMyProfileScreen } from '../CoachMyProfileScreen';
 import { InviteCodesScreen } from '../InviteCodesScreen';
 import { inviteCopyText } from '../invite-message';
 import { setLocaleOverride, t } from '@/i18n';
-import { Share, Text } from 'react-native';
+import { Linking, Share, Text } from 'react-native';
 import { AppButton } from '@/design';
 import { FeedbackPressable } from '@/design/FeedbackPressable';
 import { router } from 'expo-router';
@@ -278,4 +279,17 @@ test('refresh failures retain the last good list and failed writes still re-list
   expect(JSON.parse(fetcher.mock.calls[2][1]!.body as string)).toEqual({ type: 'single_use' });
   expect(model.getSnapshot().codes).toEqual([]);
   expect(model.getSnapshot().actionError).toBe(true);
+});
+
+
+test('the coach privacy sheet opens the user agreement as an active link', async () => {
+  const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+  let renderer!: ReactTestRenderer;
+  try {
+    await act(async () => { renderer = create(createElement(CoachPrivacyTermsSheet, { onClose: jest.fn(), privacyPolicyURL: 'https://meetpr.app/privacy' })); });
+    const link = renderer.root.findAll(node => node.props.testID === 'coach.profile.userAgreement' && node.props.accessibilityRole === 'link')[0];
+    expect(link).toBeDefined();
+    await act(async () => { link.props.onPress(); });
+    expect(openURL).toHaveBeenCalledWith('https://meetpr.app/terms');
+  } finally { act(() => renderer?.unmount()); }
 });

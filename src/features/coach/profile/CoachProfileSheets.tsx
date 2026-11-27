@@ -4,6 +4,7 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 
 import { Card, font, radius, useColors } from '@/design';
 import { t } from '@/i18n';
+import { TERMS_URL } from '@/analytics/legal';
 import { ProfileSheet, ProfileText, profileStyles } from './ProfileComponents';
 
 export function CoachHelpFeedbackSheet({ onClose }: { onClose: () => void }) {
@@ -30,14 +31,15 @@ export function CoachPrivacyTermsSheet({ onClose, privacyPolicyURL }: { onClose:
   return <ProfileSheet title={t('coach.profile.privacyAndTerms')} subtitle={t('coach.profile.privacyAndTermsSubtitle')} onClose={onClose}>
     <Card style={{ padding: 0 }}>
       {(['userAgreement', 'privacyPolicy', 'studentDataUsage'] as const).map((document, index) => {
-        const enabled = document === 'privacyPolicy' && !!privacyPolicyURL;
+        const url = document === 'userAgreement' ? TERMS_URL : document === 'privacyPolicy' ? privacyPolicyURL : null;
+        const enabled = !!url;
         const content = <>
           <ProfileText style={{ flex: 1, color: enabled || document === 'studentDataUsage' ? colors.textPrimary : colors.textDisabled }}>{t(`coach.profile.${document}`)}</ProfileText>
           <ProfileText style={{ ...font.mono(11), color: colors.textDisabled }}>{t('coach.profile.documentDate')}</ProfileText>
         </>;
         const style = [profileStyles.row, { borderTopWidth: index ? 1 : 0, borderColor: colors.borderHairline }];
-        return enabled ? <Pressable key={document} testID="coach.profile.privacyPolicy" accessibilityRole="link" style={style}
-          onPress={() => { setFailed(false); void Linking.openURL(privacyPolicyURL!).catch(() => setFailed(true)); }}>{content}</Pressable>
+        return enabled ? <Pressable key={document} testID={`coach.profile.${document}`} accessibilityRole="link" style={style}
+          onPress={() => { setFailed(false); void Linking.openURL(url!).catch(() => setFailed(true)); }}>{content}</Pressable>
           : <View key={document} accessible accessibilityRole="text" testID={`coach.profile.${document}${document !== 'studentDataUsage' ? '.unavailable' : ''}`} style={style}>{content}</View>;
       })}
     </Card>

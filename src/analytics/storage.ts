@@ -1,3 +1,4 @@
+import { LEGAL_VERSION } from './legal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -14,6 +15,8 @@ export const ANALYTICS_OVERSIZE_STRIKES_KEY =
 export const ANALYTICS_ANON_ID_KEY = 'meetpr.analytics.anon_id';
 export const ANALYTICS_PRIVACY_NOTICE_KEY =
   'meetpr.analytics.privacy_notice_confirmed';
+
+export const LEGAL_ACCEPTED_VERSION_KEY = 'meetpr.legal.accepted_version';
 
 export type AnalyticsStorage = Pick<
   typeof AsyncStorage,
@@ -244,13 +247,13 @@ export async function isPrivacyNoticeConfirmed(
   storage: AnalyticsStorage = AsyncStorage,
 ): Promise<boolean> {
   return (
-    (await storage.getItem(ANALYTICS_PRIVACY_NOTICE_KEY).catch(() => null)) ===
-    'true'
+    (await storage.getItem(LEGAL_ACCEPTED_VERSION_KEY).catch(() => null)) ===
+    LEGAL_VERSION
   );
 }
 
 export async function persistPrivacyNoticeConfirmation(
   storage: AnalyticsStorage = AsyncStorage,
 ): Promise<void> {
-  await storage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  await storage.setItem(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
 }
