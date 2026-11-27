@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, expect, jest, test } from '@jest/globals';
 import { configure, flushNow, resetAnalyticsForTests, confirmPrivacyNotice } from '@/analytics/client';
-import { ANALYTICS_PRIVACY_NOTICE_KEY } from '@/analytics/storage';
+import { LEGAL_ACCEPTED_VERSION_KEY } from '@/analytics/storage';
+import { LEGAL_VERSION } from '@/analytics/legal';
 import { ColorSchemeProvider, resolveColors } from '@/design/theme';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import Video from 'react-native-video';
@@ -481,7 +482,7 @@ async function collectDiagnostics(options: { offline?: boolean; consent?: boolea
   const bodies: { events: { name: string; props: Record<string, unknown> }[] }[] = [];
   await AsyncStorage.clear();
   await AsyncStorage.setItem(VIDEO_UPLOAD_CONSENT_KEY, 'true');
-  if (options.consent !== false) await AsyncStorage.setItem(ANALYTICS_PRIVACY_NOTICE_KEY, 'true');
+  if (options.consent !== false) await AsyncStorage.setItem(LEGAL_ACCEPTED_VERSION_KEY, LEGAL_VERSION);
   await configure({
     accessTokenProvider: async () => 'test-token',
     retryDelaysMs: [],
