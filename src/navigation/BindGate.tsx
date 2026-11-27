@@ -50,6 +50,7 @@ import {
   type InviteStash,
 } from '@/features/onboarding';
 
+import { useReportBindGateLaunchState } from '@/features/launch/launch-ready';
 import { loadTrainingBinding } from '@/features/onboarding/offline-binding';
 import { firstRunStorage } from '@/features/onboarding/first-run-storage';
 import { WelcomeScreen } from '@/features/onboarding/WelcomeScreen';
@@ -76,6 +77,7 @@ export function BindGate({ children, studentId: explicitStudentId }: BindGatePro
   const router = useRouter();
   const enteringToday = useRef(false);
   const [state, setState] = useState<BindGateViewState>('loading');
+  useReportBindGateLaunchState(state === 'loading');
   const [notice, setNotice] = useState<string | null>(null);
   const [prefillDisplayName, setPrefillDisplayName] = useState('');
   const [snapshot, setSnapshot] = useState<Snapshot>({ profile: null, request: null, stash: null });

@@ -31,6 +31,8 @@ import { StartupOverlayContext } from '@/navigation/startup-overlay';
 import { PlanNotificationSession } from '@/features/notifications/PlanNotificationSession';
 import { TrainingReminderSession } from '@/features/settings/TrainingReminderSession';
 import { AndroidUpdateSession } from '@/features/updates/AndroidUpdateSession';
+import { LaunchSplash } from '@/features/launch/LaunchSplash';
+import { useLaunchReady } from '@/features/launch/launch-ready';
 import { QueryProvider } from '@/api/query';
 import { useSessionStore } from '@/api/session';
 import { useChatRealtimeLifecycle } from '@/features/chat/realtime';
@@ -116,6 +118,9 @@ function ThemedRoot() {
   const [privacyChecked, setPrivacyChecked] = useState(false);
   const [updateBlocked, setUpdateBlocked] = useState(true);
   const bootstrapped = useSessionStore((state) => state.bootstrapped);
+  // Cold-start splash (spec 099): app-shell sheets wait until it has left.
+  const [splashGone, setSplashGone] = useState(false);
+  const launchReady = useLaunchReady();
 
   useEffect(() => {
     void bootstrap();
@@ -170,18 +175,19 @@ function ThemedRoot() {
     <QueryProvider>
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
-        <StartupOverlayContext.Provider value={!privacyChecked || privacyNoticeVisible || updateBlocked}>
+        <StartupOverlayContext.Provider value={!splashGone || !privacyChecked || privacyNoticeVisible || updateBlocked}>
           <RootNavigator />
         </StartupOverlayContext.Provider>
-        <AndroidUpdateSession enabled={bootstrapped && privacyChecked && !privacyNoticeVisible} onBlockingChange={setUpdateBlocked} />
+        <AndroidUpdateSession enabled={splashGone && bootstrapped && privacyChecked && !privacyNoticeVisible} onBlockingChange={setUpdateBlocked} />
         <TrainingReminderSession />
         <PlanNotificationSession />
         <VideoUploadNotificationSession />
         <Toast />
         <PrivacyNoticeSheet
           onConfirmed={() => setPrivacyNoticeVisible(false)}
-          visible={privacyNoticeVisible}
+          visible={splashGone && privacyNoticeVisible}
         />
+        {splashGone ? null : <LaunchSplash onGone={() => setSplashGone(true)} ready={launchReady} />}
       </NavigationThemeProvider>
     </QueryProvider>
   );
