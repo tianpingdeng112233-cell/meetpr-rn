@@ -28,7 +28,8 @@ internal data class VideoTrimInfo(
 ) {
   val displayWidth get() = if (rotation % 180 == 0) width else height
   val displayHeight get() = if (rotation % 180 == 0) height else width
-  fun toMap() = mapOf("durationMs" to durationMs, "videoTrackCount" to videoTrackCount)
+  fun toMap() = mapOf("durationMs" to durationMs, "videoTrackCount" to videoTrackCount,
+    "displayWidth" to displayWidth, "displayHeight" to displayHeight)
 }
 
 internal data class VideoTrackSummary(

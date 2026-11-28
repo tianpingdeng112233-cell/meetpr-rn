@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { startRecordingSave, videoTranscodes } from '../recording-gallery';
 import { configure, flushNow, resetAnalyticsForTests } from '@/analytics/client';
 import { LEGAL_ACCEPTED_VERSION_KEY } from '@/analytics/storage';
 import { LEGAL_VERSION } from '@/analytics/legal';
@@ -489,4 +490,31 @@ test('an album export inspection failure sends only its symbolic code and keeps 
   const record = useVideoUploadStore.getState().records['student:set'];
   expect(record.status).toBe('waiting');
   expect(mockFiles.get(record.source!.uri)).toBe(350000);
+});
+
+test.each(['success', 'failure'])('gallery starts after the actual compressor settles on %s', async outcome => {
+  mockNeedsTranscode = true;
+  let started!: () => void;
+  const encoding = new Promise<void>(resolve => { started = resolve; });
+  let finish!: (value: string) => void;
+  let fail!: (error: Error) => void;
+  jest.mocked(Compressor.Video.compress).mockImplementationOnce(() => {
+    started();
+    return new Promise<string>((resolve, reject) => { finish = resolve; fail = reject; });
+  });
+  const burn = jest.fn(async () => true);
+  const saved = startRecordingSave(source.uri, 'badge', async preparation => {
+    await preparation;
+    return videoTranscodes.enqueue(burn);
+  });
+  const attached = videoUploadManager.attach(id, source, async () => 'set-log');
+  await encoding;
+  expect(burn).not.toHaveBeenCalled();
+  if (outcome === 'success') {
+    const compressed = 'file:///cache/11111111-1111-4111-8111-111111111111.mp4';
+    mockFiles.set(compressed, 200_000);
+    finish(compressed);
+  } else fail(new Error('encoder failed'));
+  await Promise.all([attached, saved]);
+  expect(burn).toHaveBeenCalledTimes(1);
 });

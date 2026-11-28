@@ -1960,6 +1960,7 @@
   "student.videoAttachmentV3Controls.copy008": "上傳失敗",
   "student.videoAttachmentV3Controls.copy009": "重試",
   "student.videoAttachmentV3Previews.copy001": "影片",
+  "student.videoAttachment.incompleteFile": "影片檔案不完整。請將原影片完整儲存到手機後重新選擇。",
   "student.videoAttachmentViewModel.copy001": "影片處理失敗,請重試",
   "student.videoAttachmentViewModel.copy002": "本地影片已不存在,請刪除後重新選擇",
   "student.videoAttachmentViewModel.copy003": "影片超過 {0} 秒上限,請截短後再上傳",

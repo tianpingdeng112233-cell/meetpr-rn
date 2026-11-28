@@ -67,6 +67,7 @@ export type VideoUploadEvent =
   | { type: 'partCompleted'; part: UploadCompleteRequest['parts'][number] }
   | { type: 'sessionExpired' }
   | { type: 'waiting'; retry: RetryState }
+  | { type: 'savedToPhotos' }
   | { type: 'localCleared' }
   | {
       type: 'attach';
@@ -132,6 +133,8 @@ export function videoUploadReducer(
       return { ...state, session: null, parts: [], attachmentId: null };
     case 'waiting':
       return { ...state, status: 'waiting', retry: event.retry };
+    case 'savedToPhotos':
+      return { ...state, savedToPhotos: true };
     case 'localCleared':
       return {
         ...state,

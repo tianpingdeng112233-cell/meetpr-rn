@@ -2,6 +2,9 @@
 
 > **2026-11-28 · spec 111**　休息设置圆盘下方移除常驻提示。点空白处保存，写入失败时仍显示重试提示。见[本卡记录](docs/journal/2026-11-28-111-rest-settings-hint.md)。
 
+> **2026-11-28 · spec 116 B，P2 / 再下一班 CN 包** 学员录完预览和全屏回放已接入角标导出，上传继续使用原片。Jest 与原生 JVM 单测通过，调试包、成片和冻结机型待验。[卡 B 验证记录](docs/journal/2026-11-28-116-video-badge-android-b.md)
+> **2026-11-28 · 下一班 Android 包候选** 相册读到截断的视频时自动重读一次；仍缺数据则提示保存完整原片，保留本组旧视频。[复现与回归](docs/journal/2026-11-28-android-incomplete-album-video.md)
+> **2026-11-28 · 下一班安卓包候选** 学员拍摄或从相册选视频上传时，预览允许其他应用继续播放音乐。[验证记录](docs/journal/2026-11-28-upload-music-android.md)
 > **2026-11-27 · 下一班 Android 包** 修复 CN18 学员相册选片和教练反馈回看闪退。打包时核验最终 APK 的播放器兼容补丁。[复现与验收](docs/journal/2026-11-27-android-video-player-packaging.md)
 > **2026-11-26 · CN18 已签名，供点对点分发。** 已验证正式 CN17 登录态覆盖升级、周期走势与 RPE 对照表。[切包记录](docs/journal/2026-11-26-release-cn18.md)
 > **2026-11-26 · spec 115 跨日训练续接，P1 / 下一班 CN18 候选。** 学员可在默认游标补记实际完成日期，或继续原训练。Android 与 iOS 同口径，依赖后端 071 / 0091 在目标环境返回日期能力位。CN17 已签。见[规格](specs/115-session-resume/SPEC.md)与[Android 验收](docs/journal/2026-11-26-115-A-android.md)。

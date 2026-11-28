@@ -18,8 +18,10 @@ android {
 
 dependencies {
   testImplementation "junit:junit:4.13.2"
+  testImplementation "org.objenesis:objenesis:2.6"
   // Matches the resolved app classpath (CameraX 1.6.0 / expo-camera 57.0.4).
   def media3Version = '1.9.0'
   implementation "androidx.media3:media3-common:${media3Version}"
+  implementation "androidx.media3:media3-effect:${media3Version}"
   implementation "androidx.media3:media3-transformer:${media3Version}"
 }

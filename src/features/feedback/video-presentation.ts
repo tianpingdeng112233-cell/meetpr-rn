@@ -1,3 +1,5 @@
+import { setsRepository } from '@/api/domains/sets';
+import { addDays } from '@/features/training/policy';
 import type { StudentVideo } from '@/api/domains/videos';
 import type { FeedbackVideo } from '@/api/domains/feedback';
 import type { VideoBadgeInfo } from '@/features/video-player/types';
@@ -37,4 +39,17 @@ export function feedbackVideoBadge(video: FeedbackVideo | null | undefined): Vid
     setOrdinal: video.set_index !== null ? video.set_index + 1 : null,
     coachName: null,
   };
+}
+
+/** Feedback embeds display metadata. Resolve the attachment's actual set log again at export time. */
+export async function currentFeedbackExportBadge(studentId: string, video: StudentVideo | undefined,
+  day: string | null | undefined, display: FeedbackVideo) {
+  const date = day ?? video?.logged_at?.slice(0, 10);
+  if (!video?.set_log_id || !date) throw new Error('Set log unavailable');
+  // A timestamp fallback can fall on the adjacent local training date.
+  const range = day ? { from: date, to: addDays(date, 1) } : { from: addDays(date, -1), to: addDays(date, 2) };
+  const { logs } = await setsRepository.range(studentId, { ...range, scope: 'all' });
+  const log = logs.find(row => row.id === video.set_log_id);
+  if (!log) throw new Error('Set log unavailable');
+  return feedbackVideoBadge({ ...display, weight_kg: log.weight_kg, reps: log.reps, rpe: log.rpe, set_index: log.set_index })!;
 }

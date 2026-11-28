@@ -17,9 +17,7 @@ export function AuthForm({ children, title, subtitle, brand = false, footer }: P
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
         <View style={[styles.form, footer ? { flexGrow: 1 } : undefined]}>
           <View style={styles.heading}>
-            <View style={styles.wordmark} accessible={false} accessibilityElementsHidden>
-              <MeetPRMark fontSize={15} />
-            </View>
+            <MeetPRMark height={23} />
             <View>
               <Text style={{ ...font.display(44, 'extraBold'), letterSpacing: -1.1, lineHeight: 44 * 0.95, color: colors.textPrimary, ...(!brand ? authTypography('title') : {}) }}>{title}</Text>
               <View style={{ width: 44, height: 3, borderRadius: 2, backgroundColor: colors.gold500, marginTop: 16 }} />
@@ -53,6 +51,5 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, alignItems: 'center' },
   form: { width: '100%', maxWidth: 520, paddingHorizontal: 24, paddingTop: 44, paddingBottom: 26 },
   heading: { gap: 18, alignItems: 'flex-start' },
-  wordmark: { width: 15 / 0.34 * 2.05, height: 15 / 0.34, justifyContent: 'center', alignItems: 'flex-start' },
   fields: { gap: 14, marginTop: 24 },
 });

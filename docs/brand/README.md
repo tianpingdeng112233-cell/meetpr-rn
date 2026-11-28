@@ -45,3 +45,13 @@ magick /tmp/app-icon.png -background '#F5F6F8' -alpha remove -alpha off -colorsp
 - **启动页**：`assets/images/splash-icon.png` 现在是个 1×1 占位，`app.json` 里 splash 底色为
   `#F5F6F8`。定稿附带的图标动效（圆盘淡入 → 折线画出 → 圆点弹入 → 上弧扫出）也没实装。
   两件都不在这波里。
+
+## 字标
+
+浅色背景使用 `meetpr-wordmark-final.svg`，深色背景使用 `meetpr-wordmark-final-on-dark.svg`。两份定稿均按 2443∶605 等比显示。
+
+| 位置 | 高度（dp） | 版本 |
+|---|---:|---|
+| 成长、我的页头 | 18 | 跟随 App 当前主题 |
+| 登录、注册等 AuthForm 页面 | 23 | 跟随 App 当前主题 |
+| 视频角标 | 21 × 卡片宽度 / 468 | 固定深色背景版 |

@@ -4,7 +4,7 @@ import Svg, { Circle, G, Path, Text as SvgText } from 'react-native-svg';
 
 import { font, useColors } from '@/design';
 
-import { dayMonth, formingTrendGeometry } from './charts/growth-geometry';
+import { axisDate, formingTrendGeometry } from './charts/growth-geometry';
 
 export function GrowthFormingTrendChart({ recordedCount, threshold, currentKg, latestRecordDate, height = 68 }: {
   recordedCount: number;
@@ -29,7 +29,7 @@ export function GrowthFormingTrendChart({ recordedCount, threshold, currentKg, l
       </G>)}
       <G fontFamily={font.mono(10).fontFamily} fontSize={10}>
         {geometry.axisValues?.map((value, index) => <SvgText alignmentBaseline="central" key={index} x={geometry.axisX} y={geometry.axisYs[index]} textAnchor="end" fill={index === 1 ? colors.textMuted : colors.textTertiary}>{value}</SvgText>)}
-        <SvgText alignmentBaseline="central" x={geometry.dateX} y={geometry.dateY} textAnchor="middle" fill={colors.textMuted}>{dayMonth(latestRecordDate)}</SvgText>
+        <SvgText alignmentBaseline="central" x={geometry.dateX} y={geometry.dateY} textAnchor="middle" fill={colors.textMuted}>{axisDate(latestRecordDate)}</SvgText>
       </G>
     </Svg>
   </View>;

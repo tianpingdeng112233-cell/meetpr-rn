@@ -26,12 +26,14 @@ test('one bucket is centered; multiple buckets span the first and last bar slots
 });
 
 
-test('date slots use DD/MM and retain alternating invisible labels', () => {
-  expect([0, 1, 2, 3, 4, 5].map(index => volumeDateLabel('2026-08-03', index))).toEqual([
-    { text: '03/08', opacity: 1 }, { text: '03/08', opacity: 0 },
-    { text: '03/08', opacity: 1 }, { text: '03/08', opacity: 0 },
-    { text: '03/08', opacity: 1 }, { text: '03/08', opacity: 0 },
+test('date slots follow the region order and retain alternating invisible labels', () => {
+  expect([0, 1, 2, 3, 4, 5].map(index => volumeDateLabel('2026-08-03', index, 'zh-Hans-CN'))).toEqual([
+    { text: '08/03', opacity: 1 }, { text: '08/03', opacity: 0 },
+    { text: '08/03', opacity: 1 }, { text: '08/03', opacity: 0 },
+    { text: '08/03', opacity: 1 }, { text: '08/03', opacity: 0 },
   ]);
+  expect(volumeDateLabel('2026-08-03', 0, 'en-GB').text).toBe('03/08');
+  expect(volumeDateLabel('2026-08-03', 0, 'en-US').text).toBe('08/03');
 });
 
 

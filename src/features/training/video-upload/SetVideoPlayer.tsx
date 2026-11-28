@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ComponentProps } from 'react';
-import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video, { type VideoRef } from 'react-native-video';
@@ -8,12 +8,17 @@ import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import { font, fontMetrics, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import type { VideoBadgeInfo } from '@/features/video-player/types';
+import { BadgeCaptureHost } from '@/features/video-player/BadgeCaptureHost';
+import { presentBadge } from '@/features/video-player/badge-presentation';
+import { VideoBadgeOverlay } from '@/features/video-player/VideoBadgeOverlay';
+import { playbackCueLayout, videoBadgeLayout } from '@/features/video-player/video-badge-layout';
+import { GalleryExportButton } from '@/features/video-player/GalleryExportButton';
 import { timeText } from '@/features/video-player/time';
 import { useSetVideoPlayerHost } from './SetVideoPlayerHost';
 import { initialSetPlayback, setPlaybackRates, setPlaybackReducer } from './set-playback';
 
 /** The host keeps the native surface mounted across inline/full-screen layout changes. */
-export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClose, onReview }: { uri: string; refreshURL: () => Promise<string>; badge?: VideoBadgeInfo | null; readOnly?: boolean; onClose?: () => void; onReview?: () => void }) {
+export function SetVideoPlayer({ uri, videoId, refreshURL, badge, allowGalleryExport = false, readOnly = false, onClose, onReview }: { uri: string; videoId?: string; refreshURL: () => Promise<string>; badge?: VideoBadgeInfo | null; allowGalleryExport?: boolean; readOnly?: boolean; onClose?: () => void; onReview?: () => void }) {
   const availableHost = useSetVideoPlayerHost();
   const host = readOnly ? null : availableHost;
   const anchor = useRef<View>(null);
@@ -99,6 +104,8 @@ export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClo
   const centralPlayStyle = { width: spacing.point56, height: spacing.point56, borderRadius: radius.pill, backgroundColor: colors.modalShadow, alignItems: 'center', justifyContent: 'center' } as const;
   const centralPlayIcon = <MaterialCommunityIcons name="play" size={spacing.xl} color={colors.inkOnCTAFill} />;
   const surface = <View pointerEvents={inlineOverlay ? 'box-none' : 'auto'} style={state.expanded ? { flex: 1, backgroundColor: colors.chatImageBackground } : { backgroundColor: colors.videoWorkbenchFill, borderRadius: radius.card, overflow: 'hidden' }}>
+    {/* RN Modal is a separate window. Its capture host survives inline/full-screen changes. */}
+    <BadgeCaptureHost handoffOnDismiss>
     <View pointerEvents={inlineOverlay ? 'none' : 'auto'} style={state.expanded ? StyleSheet.absoluteFill : { width: '100%', aspectRatio: 16 / 9, minHeight: spacing.minimumHitTarget * setPlaybackRates.length + spacing.sm }}>
       {/* Keep the Android texture in the same view while its bounds/scroll transform change. */}
       <Video useTextureView key={attempt} ref={player} source={{ uri: source }} resizeMode="contain" controls={false} paused={state.paused || !loaded || state.restoring || scrubbing || failed} rate={state.rate}
@@ -119,6 +126,7 @@ export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClo
       {readOnly ? <>
         <View style={{ paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <PlayerIconButton name="close" label={t('chat.closePlayback')} onPress={() => onClose?.()} />
+          {allowGalleryExport && badge ? <GalleryExportButton uri={source} videoId={videoId} badge={badge} refreshURL={refreshURL} /> : null}
           {onReview ? <Pressable accessibilityRole="button" accessibilityLabel={t('training.coachReviewed')} onPress={onReview}
             style={{ minHeight: spacing.minimumHitTarget, justifyContent: 'center' }}>
             <View style={{ height: 30, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.videoReviewedFill, borderWidth: 1, borderColor: colors.videoReviewedBorder, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
@@ -127,17 +135,11 @@ export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClo
             </View>
           </Pressable> : null}
         </View>
-        <View style={{ flex: 1 }} />
       </> : null}
-      <View style={{ padding: spacing.base, paddingTop: readOnly ? spacing.sm : insets.top + spacing.sm, backgroundColor: colors.modalShadow }}>
-        <Text style={{ ...font.body(fontMetrics.size17, 'semibold'), color: colors.inkOnCTAFill }}>{badge?.exerciseName}</Text>
-        <Text style={{ ...font.body(fontMetrics.size13), color: colors.inkOnCTAFill }}>{[
-          badge?.setOrdinal != null ? t('chat.setPosition %@', [badge.setOrdinal]) : null,
-          [badge?.weightKg != null ? `${badge.weightKg}kg` : null, badge?.reps != null ? `${badge.reps}` : null].filter(Boolean).join(' × '),
-          badge?.rpe != null ? `${t('chat.rpeMetric')} ${badge.rpe}` : null,
-        ].filter(Boolean).join(' · ')}</Text>
-      </View>
-      {!readOnly ? <View style={{ flex: 1 }} /> : null}
+      {!readOnly && allowGalleryExport && badge ? <View style={{ position: 'absolute', top: insets.top, right: spacing.sm, zIndex: 1 }}>
+        <GalleryExportButton uri={source} videoId={videoId} badge={badge} refreshURL={refreshURL} />
+      </View> : null}
+      <View style={{ flex: 1 }} />
     </> : null}
     {controls}
     {state.expanded ? <StatusBar style="light" /> : null}
@@ -147,6 +149,7 @@ export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClo
         {centralPlayIcon}
       </Pressable>}
     </View> : null}
+    {state.expanded && badge && presentBadge(badge, 'playback') ? <SetPlaybackBadge key={videoId ?? uri} info={badge} controlsHeight={controlsHeight} /> : null}
     {ratesVisible ? <View style={{ position: 'absolute', bottom: controlsHeight, right: spacing.minimumHitTarget + spacing.xs, padding: spacing.xs, borderRadius: radius.control, backgroundColor: colors.videoWorkbenchFill }}>
         {setPlaybackRates.map(rate => <Pressable key={rate} accessibilityRole="button" accessibilityState={{ selected: state.rate === rate }} accessibilityLabel={`${rate}×`}
           onPress={() => { dispatch({ type: 'rate', rate }); setRatesVisible(false); }}
@@ -154,6 +157,7 @@ export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClo
           <Text style={{ ...font.body(fontMetrics.size14, 'semibold'), color: state.rate === rate ? colors.gold500 : colors.inkOnCTAFill }}>{rate}×</Text>
         </Pressable>)}
       </View> : null}
+    </BadgeCaptureHost>
   </View>;
   useLayoutEffect(() => {
     host?.update({ node: surface, anchor, expanded: state.expanded, togglePlayback, collapse: () => {
@@ -170,6 +174,19 @@ export function SetVideoPlayer({ uri, refreshURL, badge, readOnly = false, onClo
     <Pressable testID="set-video-inline-picture" feedback="none" accessibilityRole="button" accessibilityLabel={t(state.paused ? 'chat.playVideo' : 'training.previewPause')}
       disabled={state.expanded || !loaded || failed} onPress={host.togglePlayback}
       style={[StyleSheet.absoluteFill, { bottom: inlineControlsHeight }]} />
+  </View>;
+}
+
+function SetPlaybackBadge({ info, controlsHeight }: { info: VideoBadgeInfo; controlsHeight: number }) {
+  const { fontScale } = useWindowDimensions();
+  const [bounds, setBounds] = useState({ width: 0, height: 0 });
+  const [expanded, setExpanded] = useState(true);
+  const geometry = videoBadgeLayout(bounds.width, bounds.height, 'playback', fontScale);
+  const { badgeBottom } = playbackCueLayout(geometry, 0, controlsHeight, fontScale);
+  return <View testID="set-video-badge-layer" pointerEvents="box-none" style={StyleSheet.absoluteFill}
+    onLayout={({ nativeEvent: { layout: { width, height } } }) => setBounds({ width, height })}>
+    {geometry.scale > 0 ? <VideoBadgeOverlay info={info} expanded={expanded} onToggle={() => setExpanded(value => !value)}
+      geometry={{ ...geometry, bottom: badgeBottom }} /> : null}
   </View>;
 }
 

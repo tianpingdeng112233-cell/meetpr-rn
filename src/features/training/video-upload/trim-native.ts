@@ -4,8 +4,13 @@ import { deleteLocalVideo } from './native';
 import type { TrimmedVideo } from './trim-session';
 import { reportVideoProcessingFailure } from './diagnostics';
 
+export type BadgeBitmap = { release(): void };
+export type GalleryReservation = { finish(replacement: string | null): Promise<boolean>; release(): void };
 type TrimNativeModule = {
-  trimInfo(uri: string): Promise<{ durationMs: number; videoTrackCount: number }>;
+  cancelBadge(uri: string, jobId: string): Promise<void>;
+  reserveGalleryOriginal(uri: string, timeoutMs: number, jobId: string): Promise<GalleryReservation>;
+  burnBadge(uri: string, bitmap: BadgeBitmap, left: number, bottom: number, scale: number, jobId: string): Promise<TrimmedVideo>;
+  trimInfo(uri: string): Promise<{ durationMs: number; videoTrackCount: number; displayWidth: number; displayHeight: number }>;
   thumbnails(uri: string, count: number): Promise<string[]>;
   trim(uri: string, startMs: number, endMs: number): Promise<TrimmedVideo>;
   cancelTrim(uri: string): Promise<void>;

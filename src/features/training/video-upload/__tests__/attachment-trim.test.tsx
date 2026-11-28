@@ -272,6 +272,7 @@ test('handles seek to their edge and Play stays within the selected 2–6 second
   await adjust(t('student.videoTrimTimeline.copy004'), 'decrement');
   await adjust(t('student.videoTrimTimeline.copy004'), 'decrement');
   expect(mockSeek).toHaveBeenLastCalledWith(6, 0);
+  expect(renderer.root.findByType(Video).props.disableFocus).toBe(true);
   expect(renderer.root.findByType(Video).props.paused).toBe(true);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain('Selected 0:04');
   await press(t('student.videoTrimView.copy005'));
@@ -742,4 +743,20 @@ test.each(['picker', 'export'])('compact %s failure uses an Alert without adding
     expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.videoAttachmentViewModel.copy001'));
     expect(videoUploadManager.attach).not.toHaveBeenCalled();
   } finally { alert.mockRestore(); }
+});
+
+test('a truncated album replacement explains how to recover and preserves the uploaded set video', async () => {
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce({ code: 'ERR_INCOMPLETE_VIDEO' });
+  const diagnostics = await collectDiagnostics();
+  await mount(true);
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children))
+    .toContain('Save the full original video to your phone, then select it again.');
+  expect(useVideoUploadStore.getState().records['trim-student:trim-set']).toMatchObject({
+    status: 'uploaded', localUri: 'file:///documents/existing.mp4',
+  });
+  expect(mockDeleted).toEqual([]);
+  expect(videoUploadManager.attach).not.toHaveBeenCalled();
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: expect.objectContaining({
+    code: 'video.picker.ERR_INCOMPLETE_VIDEO',
+  }) })]);
 });

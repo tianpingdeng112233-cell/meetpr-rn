@@ -20,9 +20,8 @@ export function BodyWeightChart({ records }: { records: readonly BodyWeightRecor
         return <ViewlessGrid key={index} y={y} value={value.toFixed(2)} />;
       })}
       <Path d={linePath(points)} fill="none" stroke={colors.chartLine} strokeWidth={2.4} />
-      {points.map((point, index) => <Circle key={point.recorded_on} accessibilityLabel={`${point.recorded_on}, ${point.weight_kg} kg`}
-        cx={points.length === 1 ? 173 : point.x} cy={point.y} r={index === points.length - 1 ? 4 : 3}
-        fill={index === points.length - 1 ? colors.gold500 : colors.surfaceCard} stroke={colors.chartLine} strokeWidth={1.2} />)}
+      {last ? <Circle accessibilityLabel={`${last.recorded_on}, ${last.weight_kg} kg`}
+        cx={points.length === 1 ? 173 : last.x} cy={last.y} r={4} fill={colors.gold500} stroke={colors.chartLine} strokeWidth={1.2} /> : null}
       {last && points.length === 1 ? <SvgText x={173} y={last.y - 10} textAnchor="middle" fontFamily={font.mono(10, 'bold').fontFamily} fontSize={10} fill={colors.textSecondary}>{last.weight_kg}</SvgText> : null}
       {points.length ? <SvgText x={points.length === 1 ? 173 : 46} y={104} textAnchor={points.length === 1 ? 'middle' : 'start'} fontFamily={font.mono(9).fontFamily} fontSize={9} fill={colors.textMuted}>{dateText(points[0].recorded_on)}</SvgText> : null}
       {last && points.length > 1 ? <SvgText x={300} y={104} textAnchor="end" fontFamily={font.mono(9).fontFamily} fontSize={9} fill={colors.textMuted}>{dateText(last.recorded_on)}</SvgText> : null}

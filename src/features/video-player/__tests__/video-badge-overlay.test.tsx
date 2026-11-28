@@ -1,32 +1,40 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import Svg, { Text as SvgText } from 'react-native-svg';
+import { readFileSync } from 'node:fs';
+import { SvgXml } from 'react-native-svg';
+import { Text } from 'react-native';
+import { type Locale, setLocaleOverride } from '@/i18n';
+import { FeedbackVideoMarkerPanel } from '../FeedbackVideoMarkerPanel';
 import { FeedbackVideoPlayer } from '../FeedbackVideoPlayer';
+import { BadgeCaptureHost } from '../BadgeCaptureHost';
 import { VideoBadgeCard } from '../VideoBadgeCard';
-import { VideoBadgePalette as palette } from '../badge-palette';
+import { VideoBadgeLogoMark } from '../VideoBadgeLogoMark';
 
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('react-native-video', () => ({ __esModule: true, default: 'Video' }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: jest.requireActual<typeof import('react-native')>('react-native').View }));
 
 let renderer: ReactTestRenderer;
-afterEach(() => { act(() => renderer?.unmount()); });
+afterEach(() => { act(() => renderer?.unmount()); setLocaleOverride(null); });
 const props = { videoId: 'video', url: 'https://video', refreshURL: async () => 'https://video', onClose: () => {} };
 const badge = { exerciseName: 'Squat', weightKg: 100, reps: 5, rpe: 8, setOrdinal: 2 };
 const buttons = (id: string) => renderer.root.findAll(node => node.props.testID === id && typeof node.props.onPress === 'function', { deep: false });
 
-test('the badge card keeps its wordmark slot and colors without interlocking letters', () => {
-  act(() => { renderer = create(<VideoBadgeCard info={badge} width={234} />); });
-  const layers = renderer.root.findAllByType(SvgText);
-  expect(layers).toHaveLength(2);
-  expect(layers.filter(layer => layer.props.letterSpacing === -1.76)).toHaveLength(0);
-  expect(layers.map(layer => layer.props.letterSpacing)).toEqual([0, 0]);
-  expect(layers[0].props).toMatchObject({ stroke: palette.ink, fill: palette.ink });
-  expect(layers[1].props.fill).toBe(palette.wordmarkCounter);
-  const mark = renderer.root.findAllByType(Svg).find(node => node.props.accessibilityLabel === 'MEETPR');
-  expect(mark).toBeDefined();
-  expect(mark!.props.width).toBeCloseTo(32.3333333333);
-  expect(mark!.props.height).toBe(8);
+test('export renders the plain wordmark at the supplied scale and omits the set', () => {
+  act(() => { renderer = create(<VideoBadgeCard info={badge} form="export" scale={0.5} />); });
+  const wordmark = renderer.root.findByType(SvgXml);
+  expect(wordmark.props.height).toBe(10.5);
+  expect(wordmark.props.xml.trim()).toBe(readFileSync('docs/brand/meetpr-wordmark-plain-on-dark.svg', 'utf8').trim());
+  const labels = () => renderer.root.findAllByType(Text).map(node => node.props.children);
+  expect(labels()).not.toContain('Set 2');
+  act(() => { renderer.update(<VideoBadgeCard info={badge} form="playback" scale={0.5} />); });
+  expect(labels()).toContain('Set 2');
+});
+
+test.each<[Locale, string]>([['en', 'Set 2'], ['zh', '第 2 组'], ['zh-Hant', '第 2 組']])('uses the existing %s set label', (locale, label) => {
+  setLocaleOverride(locale);
+  act(() => { renderer = create(<VideoBadgeCard info={badge} form="playback" scale={1} />); });
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain(label);
 });
 
 test('a playback session starts expanded and the card toggles in both directions', async () => {
@@ -46,15 +54,14 @@ test('disabling expansion fixes the badge at the noninteractive logo', async () 
   expect(renderer.root.findByProps({ testID: 'feedback.video.badge.collapsed' }).props.accessibilityRole).toBeUndefined();
 });
 
-test('only badged playback renders a scrim and overlay', async () => {
+test('playback has no scrim and ordinary chat has no badge', async () => {
   await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} badge={badge} />); });
-  expect(renderer.root.findAllByProps({ testID: 'feedback.video.badge.scrim' }).length).toBeGreaterThan(0);
+  expect(renderer.root.findAllByProps({ testID: 'feedback.video.badge.scrim' })).toHaveLength(0);
   await act(async () => { renderer.update(<FeedbackVideoPlayer {...props} badge={null} />); });
   for (const testID of ['feedback.video.badge.scrim', 'feedback.video.badge.expanded', 'feedback.video.badge.collapsed']) {
     expect(renderer.root.findAllByProps({ testID })).toHaveLength(0);
   }
 });
-
 
 test('a new playback session resets a collapsed badge to expanded', async () => {
   await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} badge={badge} />); });
@@ -63,16 +70,79 @@ test('a new playback session resets a collapsed badge to expanded', async () => 
   expect(buttons('feedback.video.badge.expanded')).toHaveLength(1);
 });
 
-test('annotation selection hides badge controls from touch and accessibility until closed', async () => {
+test.each(['expanded', 'collapsed'])('drawing hides the %s badge and keeps timeline and cue interactive', async state => {
   await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} badge={badge}
     markers={[{ id: 'marker', timeMs: 0, note: 'Check depth', annotationURL: 'https://annotation' }]} />); });
-  const marker = renderer.root.find(node => typeof node.props.onPress === 'function' && node.props.accessibilityLabel === '✏️ Jump to 0:00');
-  act(() => marker.props.onPress());
-  let controls = buttons('feedback.video.badge.expanded')[0].parent;
-  while (controls && controls.props.importantForAccessibility !== 'no-hide-descendants') controls = controls.parent;
-  expect(controls?.props.pointerEvents).toBe('none');
-  expect(controls?.props.accessibilityElementsHidden).toBe(true);
+  act(() => renderer.root.find(node => (node.type as unknown) === 'Video').props.onLoad({ duration: 10 }));
+  if (state === 'collapsed') act(() => buttons('feedback.video.badge.expanded')[0].props.onPress());
+  act(() => buttons('feedback.video.marker.tick.marker')[0].props.onPress());
+  expect(buttons('feedback.video.badge.' + state)).toHaveLength(0);
+  for (const node of [buttons('feedback.video.marker.cue')[0], renderer.root.findByProps({ testID: 'feedback.video.scrubber' })]) {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+      expect(parent.props.pointerEvents).not.toBe('none');
+      expect(parent.props.importantForAccessibility).not.toBe('no-hide-descendants');
+    }
+  }
   act(() => buttons('feedback.video.annotationOverlay')[0].props.onPress());
-  expect(renderer.root.findAllByProps({ testID: 'feedback.video.annotationOverlay' })).toHaveLength(0);
-  expect(buttons('feedback.video.badge.expanded')).toHaveLength(1);
+  expect(buttons('feedback.video.badge.' + state)).toHaveLength(1);
+});
+
+test('nearby ticks select the closest timestamp, and the cue opens the same drawing', async () => {
+  const onSeek = jest.fn();
+  const markers = [
+    { id: 'first', timeMs: 3000, note: 'First' },
+    { id: 'second', timeMs: 3300, note: 'Next', annotationURL: 'https://drawing' },
+  ];
+  await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} markers={markers} onSeek={onSeek} />); });
+  act(() => renderer.root.find(node => (node.type as unknown) === 'Video').props.onLoad({ duration: 10 }));
+  expect(renderer.root.findAllByType(FeedbackVideoMarkerPanel)).toHaveLength(0);
+  expect(renderer.root.findAll(n => n.props.testID?.startsWith('feedback.video.marker.tick.') && typeof n.props.onPress === 'function', { deep: false })).toHaveLength(2);
+  const track = renderer.root.findByProps({ testID: 'feedback.video.scrubber' });
+  act(() => track.props.onLayout({ nativeEvent: { layout: { width: 200 } } }));
+  const touch = { nativeEvent: { locationX: 65 } };
+  act(() => { track.props.onResponderGrant(touch); track.props.onResponderRelease(touch); });
+  expect(onSeek).toHaveBeenLastCalledWith(3300);
+  expect(buttons('feedback.video.annotationOverlay')).toHaveLength(1);
+  act(() => buttons('feedback.video.annotationOverlay')[0].props.onPress());
+  act(() => buttons('feedback.video.marker.cue')[0].props.onPress());
+  expect(buttons('feedback.video.annotationOverlay')).toHaveLength(1);
+  expect(onSeek).toHaveBeenCalledTimes(2);
+});
+
+test('failed marker loading keeps a retry action until fresh markers arrive', async () => {
+  const refresh = jest.fn<() => void>();
+  await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} markersFailed onMarkersRefresh={refresh} />); });
+  act(() => buttons('feedback.video.marker.retry')[0].props.onPress());
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(buttons('feedback.video.marker.retry')).toHaveLength(1);
+  await act(async () => { renderer.update(<FeedbackVideoPlayer {...props} markers={[]} onMarkersRefresh={refresh} />); });
+  expect(buttons('feedback.video.marker.retry')).toHaveLength(0);
+});
+
+test('leaving a selected note restores its three-line preview on a later visit', async () => {
+  const markers = [{ id: 'plain', timeMs: 0, note: 'A long note' }];
+  await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} markers={markers} />); });
+  act(() => renderer.root.find(node => (node.type as unknown) === 'Video').props.onLoad({ duration: 10 }));
+  const note = () => buttons('feedback.video.marker.cue')[0].findAllByType(Text).find(n => n.props.children === markers[0].note);
+  expect(note()?.props.numberOfLines).toBe(3);
+  act(() => buttons('feedback.video.marker.tick.plain')[0].props.onPress());
+  expect(note()?.props.numberOfLines).toBeUndefined();
+  const adjust = (actionName: string) => renderer.root.findByProps({ testID: 'feedback.video.scrubber' })
+    .props.onAccessibilityAction({ nativeEvent: { actionName } });
+  act(() => adjust('increment'));
+  expect(buttons('feedback.video.marker.cue')).toHaveLength(0);
+  act(() => adjust('decrement'));
+  expect(note()?.props.numberOfLines).toBe(3);
+});
+
+test('the header mark is 27u so its disc matches the wordmark', () => {
+  act(() => { renderer = create(<VideoBadgeCard info={badge} form="export" scale={2} />); });
+  expect(renderer.root.findByType(VideoBadgeLogoMark).props.size).toBe(54);
+});
+
+test('the full-screen player owns a capture host, so export works inside a Modal window', async () => {
+  await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} badge={badge} allowGalleryExport />); });
+  const hosts = renderer.root.findAllByType(BadgeCaptureHost);
+  expect(hosts).toHaveLength(1);
+  expect(hosts[0]!.props.handoffOnDismiss).toBe(true);
 });

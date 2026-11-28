@@ -1,7 +1,7 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { createRef, type ComponentProps } from 'react';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import { ActivityIndicator, Animated, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Modal, ScrollView, StyleSheet, Text, ToastAndroid, View } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import Video, { type VideoRef } from 'react-native-video';
 import { FeedbackPressable } from '@/design/FeedbackPressable';
@@ -15,12 +15,37 @@ import { resolveColors, spacing } from '@/design';
 import { ColorSchemeProvider } from '@/design/theme';
 import { VideoAttachmentControls } from '../VideoAttachmentControls';
 import { EMPTY_VIDEO_UPLOAD } from '../model';
+import { FeedbackVideoPlayer } from '@/features/video-player/FeedbackVideoPlayer';
+import { VideoBadgeOverlay } from '@/features/video-player/VideoBadgeOverlay';
 import { SetVideoPlayer } from '../SetVideoPlayer';
 import { SetVideoPlayerHost } from '../SetVideoPlayerHost';
 
-jest.mock('expo-media-library', () => ({}));
+const mockSave = jest.fn(async (_uri: string) => {});
+jest.mock('expo-media-library', () => ({ getPermissionsAsync: async () => ({ granted: true }), Asset: { create: (uri: string) => mockSave(uri) } }));
+const mockBitmap = { release: jest.fn() };
+const mockCapture = jest.fn(async () => mockBitmap);
+jest.mock('@/features/video-player/BadgeCaptureHost', () => ({
+  ...jest.requireActual<typeof import('@/features/video-player/BadgeCaptureHost')>('@/features/video-player/BadgeCaptureHost'),
+  useBadgeCapture: () => mockCapture,
+}));
+const mockBurn = jest.fn(async () => ({ uri: 'file:///cache/badged.mp4' }));
+jest.mock('../trim-native', () => ({ trainingVideoTrim: () => ({
+  trimInfo: async () => ({ displayWidth: 1080, displayHeight: 1920 }), burnBadge: mockBurn,
+  reserveGalleryOriginal: async () => ({ finish: mockSave, release: jest.fn() }),
+}) }));
+const mockDownload = jest.fn(async (_uri: string, _destination: unknown) => {});
+
 jest.mock('react-native-compressor', () => ({}));
-jest.mock('expo-file-system', () => ({ File: class { exists = true; } }));
+jest.mock('expo-file-system', () => ({
+  Paths: { cache: { uri: 'file:///cache' }, document: { uri: 'file:///docs' } },
+  File: class {
+    exists = true;
+    uri: string;
+    constructor(parent: string | { uri: string }, name?: string) { this.uri = name ? `${(parent as { uri: string }).uri}/${name}` : String(parent); }
+    static async downloadFileAsync(uri: string, destination: unknown): Promise<void> { await mockDownload(uri, destination); }
+    delete() {}
+  },
+}));
 
 
 jest.mock('@react-native-async-storage/async-storage', () =>
@@ -208,7 +233,18 @@ test.each([false, true])('the set-entry sheet keeps its player mounted across re
   act(() => renderer.root.findByType(Video).props.onProgress?.({ currentTime: 24 } as never));
   const decoder = renderer.root.findByType(Video);
   press(t('training.previewExpand'));
-  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).toContain('Set 1 · 50kg × 5 · RPE 8');
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children)).not.toContain('Set 1 · 50kg × 5 · RPE 8');
+  act(() => renderer.root.findByProps({ testID: 'set-video-badge-layer' }).props.onLayout({ nativeEvent: { layout: { width: 540, height: 960 } } }));
+  const badge = () => renderer.root.findByType(VideoBadgeOverlay);
+  expect(badge().props.geometry.left).toBe(44);
+  expect(badge().props.geometry.bottom).toBeGreaterThan(spacing.minimumHitTarget);
+  expect(badge().props.expanded).toBe(true);
+  expect(badge().findAllByType(Text).map(node => node.props.children)).toEqual(expect.arrayContaining(['Set 1', 'Squat', '50', '× 5', 'RPE', '8']));
+  press(t('chat.videoBadge.collapse'));
+  expect(badge().props.expanded).toBe(false);
+  press(t('chat.videoBadge.expand'));
+  expect(badge().props.expanded).toBe(true);
+  press(t('chat.videoBadge.collapse'));
   expect(mockUnmounted).not.toHaveBeenCalled();
   expect(mockMounted).toHaveBeenCalledTimes(1);
   expect(renderer.root.findByType(Video)).toBe(decoder);
@@ -219,7 +255,10 @@ test.each([false, true])('the set-entry sheet keeps its player mounted across re
   expect(renderer.root.findByType(Video)).toBe(decoder);
   expect(decoder.props).toMatchObject({ paused: !playing, rate: 1.5 });
   expect(renderer.root.findByType(ScrollView)).toBe(scrollingPage);
+  expect(renderer.root.findAllByType(VideoBadgeOverlay)).toHaveLength(0);
   press(t('training.previewExpand'));
+  act(() => renderer.root.findByProps({ testID: 'set-video-badge-layer' }).props.onLayout({ nativeEvent: { layout: { width: 540, height: 960 } } }));
+  expect(badge().props.expanded).toBe(true);
   act(() => renderer.root.findByType(Modal).props.onRequestClose());
   expect(renderer.root.findByType(Video)).toBe(decoder);
   expect(decoder.props).toMatchObject({ paused: !playing, rate: 1.5 });
@@ -310,4 +349,73 @@ test.each(['light', 'dark'] as const)('replay colors use semantic tokens in %s',
   expect(StyleSheet.flatten(pill.props.style)).toMatchObject({ backgroundColor: colors.videoReviewedFill, borderColor: colors.videoReviewedBorder });
   expect(StyleSheet.flatten(pill.findAllByType(Text).find(node => node.props.children === t('training.coachReviewed'))!.props.style).color).toBe(colors.videoReviewedText);
   expect(pill.findByType(MaterialCommunityIcons).props.color).toBe(colors.videoReviewedText);
+});
+
+test.each(['training', 'feedback'])('%s replay downloads the source and saves one badged video with current RPE', async surface => {
+  let finish!: (value: { uri: string }) => void;
+  mockBurn.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const toast = jest.spyOn(ToastAndroid, 'show').mockImplementation(() => {});
+  const badge = { exerciseName: 'Squat', reps: 5, rpe: 8 };
+  const remote = 'https://example.invalid/set.mp4';
+  try {
+    await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}>
+      {surface === 'feedback'
+        ? <FeedbackVideoPlayer videoId="set" url={remote} refreshURL={async () => remote} badge={badge} allowGalleryExport />
+        : <SetVideoPlayer uri={remote} refreshURL={async () => remote} badge={badge} readOnly allowGalleryExport />}
+    </SafeAreaInsetsContext.Provider>); });
+    const button = () => renderer.root.findAllByType(FeedbackPressable).find(n => n.props.testID === 'feedback.video.export')!;
+    expect(button()).toBeDefined();
+    await act(async () => { button().props.onPress(); button().props.onPress(); });
+    expect(button().props.disabled).toBe(true);
+    expect(button().findAllByType(ActivityIndicator)).toHaveLength(1);
+    expect(mockDownload).toHaveBeenCalledWith(remote, expect.objectContaining({ uri: expect.stringMatching(/^file:/) }));
+    expect(mockCapture).toHaveBeenCalledWith(badge, expect.any(Number), expect.anything());
+    expect(mockBurn).toHaveBeenCalledTimes(1);
+    expect(mockBurn).toHaveBeenCalledWith(expect.stringMatching(/^file:/), mockBitmap, 88, 428, 1, expect.any(String));
+    await act(async () => finish({ uri: 'file:///cache/badged.mp4' }));
+    expect(mockSave).toHaveBeenCalledWith('file:///cache/badged.mp4');
+    expect(toast).toHaveBeenCalledWith(t('chat.videoExport.saved'), ToastAndroid.SHORT);
+    expect(button().props.disabled).toBe(false);
+  } finally { toast.mockRestore(); }
+});
+
+test('export retries an expired video URL once using the current playback resolver', async () => {
+  mockDownload.mockRejectedValueOnce(new Error('HTTP 403'));
+  const refreshURL = jest.fn(async () => 'https://example.invalid/renewed');
+  await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 24, bottom: 24, left: 0, right: 0 }}>
+    <SetVideoPlayer uri="https://example.invalid/expired" refreshURL={refreshURL} badge={{ rpe: 8 }} readOnly allowGalleryExport />
+  </SafeAreaInsetsContext.Provider>); });
+  await act(async () => { renderer.root.findAllByType(FeedbackPressable).find(n => n.props.testID === 'feedback.video.export')!.props.onPress(); });
+  expect(refreshURL).toHaveBeenCalledTimes(1);
+  expect(mockDownload).toHaveBeenLastCalledWith('https://example.invalid/renewed', expect.anything());
+  expect(mockSave).toHaveBeenCalledWith('file:///cache/badged.mp4');
+});
+
+test('a failed replay export reports failure without publishing the original', async () => {
+  const toast = jest.spyOn(ToastAndroid, 'show').mockImplementation(() => {});
+  mockBurn.mockRejectedValueOnce(new Error('encoder'));
+  try {
+    await act(async () => { renderer = create(<SafeAreaInsetsContext.Provider value={{ top: 0, bottom: 0, left: 0, right: 0 }}>
+      <SetVideoPlayer uri="file:///original" refreshURL={async () => 'file:///original'} badge={{ rpe: 8 }} readOnly allowGalleryExport />
+    </SafeAreaInsetsContext.Provider>); });
+    await act(async () => renderer.root.findAllByType(FeedbackPressable).find(n => n.props.testID === 'feedback.video.export')!.props.onPress());
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(t('chat.videoExport.failed'), ToastAndroid.LONG);
+  } finally { toast.mockRestore(); }
+});
+
+test('a reopened replay joins its pending save even when the signed URL has changed', async () => {
+  let finish!: (result: { uri: string }) => void;
+  mockBurn.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const player = (url: string) => <SafeAreaInsetsContext.Provider value={{ top: 0, bottom: 0, left: 0, right: 0 }}>
+    <FeedbackVideoPlayer videoId="same-attachment" url={url} refreshURL={async () => url} badge={{ rpe: 8 }} allowGalleryExport />
+  </SafeAreaInsetsContext.Provider>;
+  const save = async () => { await act(async () => renderer.root.findAllByType(FeedbackPressable).find(n => n.props.testID === 'feedback.video.export')!.props.onPress()); };
+  await act(async () => { renderer = create(player('https://example.invalid/one')); });
+  await save();
+  await act(async () => renderer.update(player('https://example.invalid/two')));
+  await save();
+  try { expect(mockDownload).toHaveBeenCalledTimes(1); }
+  finally { await act(async () => finish({ uri: 'file:///cache/badged.mp4' })); }
+  expect(mockSave).toHaveBeenCalledTimes(1);
 });

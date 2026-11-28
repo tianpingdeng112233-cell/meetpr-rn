@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { Text } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { Circle } from 'react-native-svg';
+import { Circle, Path } from 'react-native-svg';
 import { resetSessionForTests, useSessionStore } from '@/api/session';
 import { useOnboardingProfile } from '@/api/domains/onboarding';
 import { BodyWeightScreen } from '@/features/history/BodyWeightScreen';
@@ -53,7 +53,11 @@ afterEach(() => {
 test('108-3 demo weight page loads its curve and a strip entry updates both surfaces without a load error', async () => {
   await act(async () => { renderer = create(<QueryClientProvider client={client}><WeightSurfaces /></QueryClientProvider>); });
   await settle();
-  expect(renderer.root.findAllByType(Circle)).toHaveLength(10);
+  // The curve is a line through every record; only the latest weigh-in keeps a dot.
+  const curvePoints = () => renderer.root.findAllByType(Path).map(path => String(path.props.d)).find(d => d.includes(' L '))?.split(' L ').length;
+  const dots = () => renderer.root.findAllByType(Circle).map(point => point.props.accessibilityLabel);
+  expect(curvePoints()).toBe(10);
+  expect(dots()).toEqual([expect.stringMatching(/, 83\.50 kg$/)]);
   expect(texts()).toContain('83.50 kg');
   expect(texts()).not.toContain('加载失败');
   const strip = () => renderer.root.findByType(MeetWeightStrip);
@@ -65,7 +69,8 @@ test('108-3 demo weight page loads its curve and a strip entry updates both surf
   expect(renderer.root.findAllByType(NumberPad)).toHaveLength(0);
   expect(strip().findAllByType(Text).map(node => node.props.children)).toContain('84.1');
   expect(texts()).toContain('84.10 kg');
-  expect(renderer.root.findAllByType(Circle)).toHaveLength(11);
+  expect(curvePoints()).toBe(11);
+  expect(dots()).toEqual([expect.stringMatching(/, 84\.10 kg$/)]);
   expect(texts()).not.toContain('加载失败');
   expect(global.fetch).not.toHaveBeenCalled();
 });

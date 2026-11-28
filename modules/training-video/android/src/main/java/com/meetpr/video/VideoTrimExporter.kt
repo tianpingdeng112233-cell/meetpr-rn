@@ -5,6 +5,8 @@ import android.media.MediaCodecList
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
+import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.AudioEncoderSettings
@@ -27,10 +29,23 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import kotlin.math.abs
 
+internal fun badgeTimeoutMs(durationMs: Long) = maxOf(60_000L, 4 * durationMs)
+
+internal fun badgeOutputError(source: VideoTrimInfo, output: VideoTrimInfo): String? = when {
+  source.displayWidth.compareTo(source.displayHeight) * output.displayWidth.compareTo(output.displayHeight) < 0 -> "BADGE_ORIENTATION_CHANGED"
+  abs(source.displayWidth - output.displayWidth) > 2 || abs(source.displayHeight - output.displayHeight) > 2 -> "BADGE_RESOLUTION_CHANGED"
+  abs(source.durationMs - output.durationMs) > 100 -> "BADGE_DURATION_CHANGED"
+  source.audioTrackCount != output.audioTrackCount -> "BADGE_AUDIO_CHANGED"
+  else -> null
+}
+
+private class InvalidBadgeOutput(val code: String) : IllegalStateException(code)
+
 /** Transformer and job ownership are confined to the main looper, including cancellation. */
 @UnstableApi
 internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> Unit) {
-  private class Job(var output: File, val promise: Promise) {
+  private class Job(var output: File, val promise: Promise, val badge: BurnInBadge?) {
+    var watchdog: Runnable? = null
     var transformer: Transformer? = null
     var work: Future<*>? = null
     var cancelled = false
@@ -41,20 +56,29 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
   private val worker = Executors.newSingleThreadExecutor()
   private val jobs = mutableMapOf<String, Job>()
 
-  fun trim(context: Context, uri: String, startMs: Double, endMs: Double, promise: Promise) {
+  fun export(context: Context, uri: String, startMs: Double, requestedEndMs: Double?, promise: Promise, badge: BurnInBadge? = null) {
     check(Looper.myLooper() == Looper.getMainLooper())
-    if (!startMs.isFinite() || !endMs.isFinite() || startMs < 0 || endMs <= startMs || endMs - startMs > 120_000 || jobs.containsKey(uri)) {
+    val invalidSelection = badge == null && (requestedEndMs == null || !requestedEndMs.isFinite() ||
+      !startMs.isFinite() || startMs < 0 || requestedEndMs <= startMs || requestedEndMs - startMs > 120_000)
+    if (invalidSelection || jobs.containsKey(uri)) {
+      if (badge != null) Log.w("TrainingVideo", "BURN_BUSY")
       promise.reject("ERR_VIDEO_TRIM_INVALID_SELECTION", "Invalid or busy trim selection", null)
       return
     }
-    val job = Job(File(context.cacheDir, "training-trim-${UUID.randomUUID()}.mp4"), promise)
+    val job = Job(File(context.cacheDir, "training-trim-${UUID.randomUUID()}.mp4"), promise, badge)
     jobs[uri] = job
+    if (badge != null) {
+      job.watchdog = Runnable { fail(uri, job, InvalidBadgeOutput("BADGE_TIMEOUT")) }.also {
+        main.postDelayed(it, badgeTimeoutMs(0))
+      }
+    }
     job.work = worker.submit {
       try {
-        val info = VideoTrimMedia.inspect(context, uri, measureBitrate = true)
+        val info = VideoTrimMedia.inspect(context, uri, measureBitrate = badge == null)
         require(info.videoTrackCount == 1 && info.durationMs > 0 && info.width > 0 && info.height > 0) { "Invalid video source" }
+        val endMs = requestedEndMs ?: info.durationMs.toDouble()
         require(endMs <= info.durationMs && startMs < info.durationMs) { "Selection exceeds source" }
-        if (canCopyTrimSource(info, startMs.toLong(), endMs.toLong())) {
+        if (badge == null && canCopyTrimSource(info, startMs.toLong(), endMs.toLong())) {
           // A distinct export file belongs to TrimSession; never hand off its working source.
           context.contentResolver.openInputStream(Uri.parse(uri)).use { input ->
             if (input == null) throw IOException("Cannot open trim source")
@@ -71,13 +95,17 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
           complete(context, uri, startMs.toLong(), endMs.toLong(), info, job, job.output, info.audioTrackCount > 0)
           return@submit
         }
-        val audioDecoderAvailable = info.audioMime?.let { mime ->
+        val audioDecoderAvailable = badge != null || info.audioMime?.let { mime ->
           MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { codec ->
             !codec.isEncoder && codec.supportedTypes.any { it.equals(mime, ignoreCase = true) }
           }
         } ?: false
         main.post {
           if (jobs[uri] === job) {
+            job.watchdog?.let {
+              main.removeCallbacks(it)
+              main.postDelayed(it, badgeTimeoutMs(info.durationMs))
+            }
             val attempt = nextVideoTrimAttempt(info, audioDecoderAvailable, cancelled = job.cancelled) ?: return@post
             videoTrimFallbackCode(info.audioTrackCount > 0, null, attempt)?.let { onDiagnostic(uri, it) }
             start(context, uri, startMs.toLong(), endMs.toLong(), info, job, attempt)
@@ -105,7 +133,9 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
     val spec = videoTrimExportSpec(info)
     val delegate = DefaultEncoderFactory.Builder(context)
       .setEnableFallback(true)
-      .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(spec.videoBitrate).build())
+      .apply {
+        if (job.badge == null) setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(spec.videoBitrate).build())
+      }
       .setRequestedAudioEncoderSettings(AudioEncoderSettings.Builder().setBitrate(spec.audioBitrate ?: 128_000).build())
       .build()
     // Decode from the preceding keyframe but encode only the selected frames. Never export
@@ -134,16 +164,20 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
         }
 
       })
-    if (attempt.retainAudio) spec.audioMime?.let { builder.setAudioMimeType(it) }
+    if (attempt.retainAudio && job.badge == null) spec.audioMime?.let { builder.setAudioMimeType(it) }
 
     val transformer = builder.build()
     job.transformer = transformer
-    val item = MediaItem.Builder().setUri(uri).setClippingConfiguration(
-      MediaItem.ClippingConfiguration.Builder().setStartPositionMs(startMs).setEndPositionMs(endMs).build()
-    ).build()
-    val edited = EditedMediaItem.Builder(item).setRemoveAudio(!attempt.retainAudio).setEffects(Effects(emptyList(), listOf(
+    val item = MediaItem.Builder().setUri(uri).apply {
+      if (job.badge == null) setClippingConfiguration(
+        MediaItem.ClippingConfiguration.Builder().setStartPositionMs(startMs).setEndPositionMs(endMs).build()
+      )
+    }.build()
+    val effects: List<Effect> = job.badge?.let { listOf(it.effect(info)) } ?: listOf(
       Presentation.createForWidthAndHeight(spec.displayWidth, spec.displayHeight, Presentation.LAYOUT_SCALE_TO_FIT)
-    ))).build()
+    )
+    val edited = EditedMediaItem.Builder(item).setRemoveAudio(!attempt.retainAudio)
+      .setEffects(Effects(emptyList(), effects)).build()
     val sequence = if (!attempt.retainAudio) EditedMediaItemSequence.withVideoFrom(listOf(edited))
       else EditedMediaItemSequence.withAudioAndVideoFrom(listOf(edited))
     val composition = Composition.Builder(sequence)
@@ -166,7 +200,7 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
       else -> TrimFailure.OTHER
     }
     val next = nextVideoTrimAttempt(info, true, attempt, failure, job.cancelled)
-    if (next == null) { fail(uri, job, error); return }
+    if (next == null || (job.badge != null && info.audioTrackCount > 0 && !next.retainAudio)) { fail(uri, job, error); return }
     // Invalidate this listener before cancellation; callbacks can arrive after cancel().
     job.attempt = next
     runCatching { job.transformer?.cancel() }
@@ -183,13 +217,17 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
   /** Runs on the worker for both a byte copy and Transformer output. */
   private fun complete(context: Context, uri: String, startMs: Long, endMs: Long, source: VideoTrimInfo, job: Job, file: File, retainAudio: Boolean, attempt: VideoTrimAttempt? = null) {
     if (Thread.currentThread().isInterrupted) throw InterruptedException()
-    val output = VideoTrimMedia.inspect(context, Uri.fromFile(file).toString(), measureBitrate = true)
+    val output = VideoTrimMedia.inspect(context, Uri.fromFile(file).toString(), measureBitrate = job.badge == null)
     require(output.videoTrackCount == 1 && output.durationMs > 0 && file.length() > 0) { "Empty trim output" }
-    require(abs(output.durationMs - (endMs - startMs)) <= 100) { "Inaccurate trim duration requested ${endMs - startMs} ms from $startMs got ${output.durationMs} ms" }
-    require(!retainAudio || output.audioTrackCount > 0) { "Trim lost audio" }
-    require(retainAudio || output.audioTrackCount == 0) { "Trim added audio" }
+    if (job.badge != null) {
+      badgeOutputError(source, output)?.let { throw InvalidBadgeOutput(it) }
+    } else {
+      require(abs(output.durationMs - (endMs - startMs)) <= 100) { "Inaccurate trim duration requested ${endMs - startMs} ms from $startMs got ${output.durationMs} ms" }
+      require(!retainAudio || output.audioTrackCount > 0) { "Trim lost audio" }
+      require(retainAudio || output.audioTrackCount == 0) { "Trim added audio" }
+      require(output.displayWidth <= source.displayWidth && output.displayHeight <= source.displayHeight) { "Trim enlarged source" }
+    }
     require(!output.isHdr) { "Trim output is HDR" }
-    require(output.displayWidth <= source.displayWidth && output.displayHeight <= source.displayHeight) { "Trim enlarged source" }
     // Even-edge rounding and encoder alignment may move the short edge by up to two pixels.
     val sameOrientation = source.displayWidth.compareTo(source.displayHeight) * output.displayWidth.compareTo(output.displayHeight) >= 0
     val aspectError = abs(output.displayWidth.toDouble() * source.displayHeight - output.displayHeight.toDouble() * source.displayWidth) /
@@ -198,6 +236,7 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
     main.post {
       if (jobs[uri] === job && job.attempt === attempt) {
         jobs.remove(uri)
+        job.watchdog?.let(main::removeCallbacks)
         job.promise.resolve(mapOf("uri" to Uri.fromFile(file).toString(), "durationMs" to output.durationMs))
       } else { file.delete() }
     }
@@ -209,17 +248,28 @@ internal class VideoTrimExporter(private val onDiagnostic: (String, String) -> U
       return
     }
     jobs.remove(uri)
+    job.watchdog?.let(main::removeCallbacks)
     job.cancelled = true
     job.work?.cancel(true)
     runCatching { job.transformer?.cancel() }
     job.output.delete()
-    job.promise.reject(videoTrimErrorCode(error), error.message ?: "Video trim failed", error)
+    val code = (error as? InvalidBadgeOutput)?.code ?: videoTrimErrorCode(error)
+    if (job.badge != null) Log.w("TrainingVideo", "BURN_FAILED $code")
+    job.promise.reject(code, error.message ?: "Video trim failed", error)
   }
 
   fun cancel(uri: String) {
     check(Looper.myLooper() == Looper.getMainLooper())
     val job = jobs[uri] ?: return
     fail(uri, job, IllegalStateException("Video trim cancelled"))
+  }
+
+  fun cancelBadge(uri: String, jobId: String) {
+    if (jobs[uri]?.badge?.jobId == jobId) cancel(uri)
+  }
+
+  fun interruptBadges() {
+    jobs.filterValues { it.badge != null }.keys.toList().forEach(::cancel)
   }
 
   fun close() {
