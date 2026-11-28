@@ -20,9 +20,7 @@ export function VideoBadgeCard({ info, width, includesCoachAttribution = false }
     borderRadius: 14 * s, backgroundColor: palette.cardFill, borderColor: palette.cardStroke, borderWidth: Math.max(1, s) }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 * s }}>
       <VideoBadgeLogoMark size={22 * s} />
-      {/* Convert the 16*s slot height to the canonical 16pt / 24dp scale. */}
-      <MeetPRMark fontSize={16 * s * (16 / 24)} strokeColor={palette.ink}
-        fillColor={palette.wordmarkCounter} accessibilityLabel="MEETPR" />
+      <MeetPRMark height={21 * s} variant="onDark" accessibilityLabel="MEETPR" />
       <View style={{ flex: 1, minWidth: 8 * s }} />
       {badge.setOrdinal !== null ? <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 * s }}>
         <Text style={{ ...font.mono(10 * s), color: palette.muted }}>{t('chat.videoBadge.setPrefix')}</Text>
