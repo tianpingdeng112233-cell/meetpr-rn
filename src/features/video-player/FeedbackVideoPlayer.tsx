@@ -15,6 +15,7 @@ import { presentBadge } from './badge-presentation';
 import { playbackCueLayout, videoBadgeLayout } from './video-badge-layout';
 import { FeedbackVideoFailureCard, FeedbackVideoWorkbenchPlayer } from './FeedbackVideoWorkbenchPlayer';
 import { FeedbackVideoScrubber } from './FeedbackVideoScrubber';
+import { BadgeCaptureHost } from './BadgeCaptureHost';
 import { GalleryExportButton } from './GalleryExportButton';
 import { VideoBadgeOverlay } from './VideoBadgeOverlay';
 import { cycleRate, rateText } from './rate';
@@ -45,7 +46,11 @@ export type FeedbackVideoPlayerProps = {
 /** Shared playback session with full-screen and embedded coach surfaces. */
 export function FeedbackVideoPlayer(props: FeedbackVideoPlayerProps) {
   // Identity changes start a fresh session, including the non-persistent rate.
-  return <PlayerSession key={`${props.videoId}:${props.url}`} {...props} />;
+  // Screens present this player in an RN Modal, which is a separate window: a capture host
+  // behind it never receives layout. Owning one here keeps the export working in any window.
+  return <BadgeCaptureHost handoffOnDismiss>
+    <PlayerSession key={`${props.videoId}:${props.url}`} {...props} />
+  </BadgeCaptureHost>;
 }
 
 function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, markersFailed = false, badge = null, allowGalleryExport = false, getExportBadge, allowsExpansion = true, onProgress, onSeek, refreshURL, onMarkersRefresh, onAddMarker, selectedAnnotationMarker, onAnnotationClose, onClose }: FeedbackVideoPlayerProps) {

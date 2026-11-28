@@ -22,8 +22,10 @@ export function VideoBadgeCard({ info, form, scale: s }: {
   return <View style={{ alignSelf: 'flex-start', maxWidth: 452 * s, borderRadius: 22 * s,
     paddingHorizontal: 22 * s, paddingTop: 17 * s, paddingBottom: 19 * s, backgroundColor: palette.cardFill }}>
     <View style={{ flexDirection: 'row', alignItems: 'center', height: 23 * s }}>
-      <VideoBadgeLogoMark size={23 * s} />
-      <View style={{ marginLeft: 7 * s }}>
+      {/* The artwork carries its own margin: at 27u the amber disc matches the 21u wordmark.
+          The row keeps its 23u height; the mark overflows by 2u above and below. */}
+      <View style={{ marginVertical: -2 * s }}><VideoBadgeLogoMark size={27 * s} /></View>
+      <View style={{ marginLeft: 6 * s }}>
         <SvgXml xml={badgeWordmark} width={21 * s * 2443 / 605} height={21 * s} accessibilityLabel="MEETPR" />
       </View>
       {setOrdinal !== null ? <Text allowFontScaling={false} style={{ ...font.body(15 * s), includeFontPadding: false,

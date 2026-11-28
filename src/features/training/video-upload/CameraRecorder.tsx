@@ -232,7 +232,8 @@ export function CameraRecorder({
     if (changed && workingUri && current?.active) {
       setPlaying(false);
       try {
-        result = await videoTranscodes.enqueue(async () => {
+        // The user is waiting on this trim: it never queues behind another video's background work.
+        result = await videoTranscodes.runUserTask(async () => {
           if (!current.active) throw new Error('Trim cancelled');
           return trainingVideoTrim().trim(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
         });

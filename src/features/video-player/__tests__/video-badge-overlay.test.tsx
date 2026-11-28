@@ -6,7 +6,9 @@ import { Text } from 'react-native';
 import { type Locale, setLocaleOverride } from '@/i18n';
 import { FeedbackVideoMarkerPanel } from '../FeedbackVideoMarkerPanel';
 import { FeedbackVideoPlayer } from '../FeedbackVideoPlayer';
+import { BadgeCaptureHost } from '../BadgeCaptureHost';
 import { VideoBadgeCard } from '../VideoBadgeCard';
+import { VideoBadgeLogoMark } from '../VideoBadgeLogoMark';
 
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 jest.mock('react-native-video', () => ({ __esModule: true, default: 'Video' }));
@@ -131,4 +133,16 @@ test('leaving a selected note restores its three-line preview on a later visit',
   expect(buttons('feedback.video.marker.cue')).toHaveLength(0);
   act(() => adjust('decrement'));
   expect(note()?.props.numberOfLines).toBe(3);
+});
+
+test('the header mark is 27u so its disc matches the wordmark', () => {
+  act(() => { renderer = create(<VideoBadgeCard info={badge} form="export" scale={2} />); });
+  expect(renderer.root.findByType(VideoBadgeLogoMark).props.size).toBe(54);
+});
+
+test('the full-screen player owns a capture host, so export works inside a Modal window', async () => {
+  await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} badge={badge} allowGalleryExport />); });
+  const hosts = renderer.root.findAllByType(BadgeCaptureHost);
+  expect(hosts).toHaveLength(1);
+  expect(hosts[0]!.props.handoffOnDismiss).toBe(true);
 });

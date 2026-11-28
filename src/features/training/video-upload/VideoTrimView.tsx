@@ -39,7 +39,8 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
     setExporting(true);
     setPlaying(false);
     try {
-      const result = await videoTranscodes.enqueue(async () => {
+      // The user is waiting on this trim: it never queues behind another video's background work.
+      const result = await videoTranscodes.runUserTask(async () => {
         if (!current.active) throw new Error('Trim cancelled');
         return trimAlbumVideo(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
       });

@@ -165,7 +165,7 @@ test('Use hands off the original while burn-in is pending and saves only the fin
   expect(renderer.root.findByType(VideoBadgeCard).props).toMatchObject({ form: 'export', info: squat });
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(onUse.mock.calls[0][0]).toBe(uri);
-  expect(mockMedia.reserveGalleryOriginal).toHaveBeenCalledWith(uri, 60000, expect.any(String));
+  expect(mockMedia.reserveGalleryOriginal).toHaveBeenCalledWith(uri, 660000, expect.any(String));
   expect(mockMedia.burnBadge).toHaveBeenCalledWith(uri, mockBitmap, 88, 428, 1, expect.any(String));
   expect(MediaLibrary.Asset.create).not.toHaveBeenCalled();
   act(() => renderer.unmount());
@@ -185,7 +185,7 @@ test.each(['failed', 'background'])('a %s burn leaves an original in Photos afte
   expect(mockMedia.burnBadge).toHaveBeenCalled();
   if (mode === 'background') await changeAppState('background');
   else await act(async () => fail(new Error('encoder')));
-  expect(mockMedia.reserveGalleryOriginal).toHaveBeenCalledWith(uri, 60000, expect.any(String));
+  expect(mockMedia.reserveGalleryOriginal).toHaveBeenCalledWith(uri, 660000, expect.any(String));
   expect(mockCommit).toHaveBeenCalledWith(null);
   expect(await onUse.mock.calls[0][1]).toBe(true);
   if (mode === 'background') await act(async () => fail(new Error('cancelled')));
@@ -748,14 +748,34 @@ test('recording waits for upload preparation and replay joins the same gallery p
   expect(MediaLibrary.Asset.create).not.toHaveBeenCalled();
 });
 
-test('watchdog publishes the staged original during upload preparation and skips late burn', async () => {
+test('the wait cap publishes the staged original during upload preparation and skips a late burn', async () => {
   const { onUse } = await mountCamera('light', true, squat, false);
   await completeRecording();
   await press(t('student.cameraRecorderComponents.copy010'));
-  await act(async () => jest.advanceTimersByTime(60001));
+  // Waiting for upload preparation does not spend the 60 s burn budget.
+  await act(async () => jest.advanceTimersByTime(60_001));
+  expect(mockCommit).not.toHaveBeenCalled();
+  await act(async () => jest.advanceTimersByTime(600_000));
   expect(mockCommit).toHaveBeenCalledWith(null);
   expect(await onUse.mock.calls[0][1]).toBe(true);
   expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+});
+
+test('a burn that starts after a long upload wait still gets its full budget and saves the badged clip', async () => {
+  let finish!: (result: { uri: string }) => void;
+  mockMedia.burnBadge.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const { onUse } = await mountCamera('light', true, squat, false);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  await act(async () => jest.advanceTimersByTime(90_000));
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+  await act(async () => uploadPreparationFinished(uri));
+  expect(mockMedia.burnBadge).toHaveBeenCalledTimes(1);
+  await act(async () => jest.advanceTimersByTime(59_000));
+  expect(mockMedia.cancelBadge).not.toHaveBeenCalled();
+  await act(async () => finish({ uri: burnt }));
+  expect(mockCommit.mock.calls).toEqual([[burnt]]);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
 });
 
 test('a stalled foreground burn is cancelled by its watchdog and a late output is discarded', async () => {

@@ -22,7 +22,9 @@ type SetReplayStage = (stage: ReplayStage) => void;
 
 const remoteVideo = /^https?:\/\//i;
 
-async function burn(uri: string, badge: VideoBadgeInfo, capture: CaptureVideoBadge, watch: ReturnType<typeof watchExport>, jobId: string, onDuration?: (durationMs: number) => void, setStage?: SetReplayStage) {
+type BurnHooks = { onStart?: () => void; onYield?: () => void };
+
+async function burn(uri: string, badge: VideoBadgeInfo, capture: CaptureVideoBadge, watch: ReturnType<typeof watchExport>, jobId: string, onDuration?: (durationMs: number) => void, setStage?: SetReplayStage, hooks?: BurnHooks) {
   const { signal } = watch;
   // Cancellation can publish the original while a late native callback is still settling.
   const release = holdLocalVideo(uri);
@@ -44,13 +46,20 @@ async function burn(uri: string, badge: VideoBadgeInfo, capture: CaptureVideoBad
     try {
       if (signal.aborted) throw new Error('Badge capture interrupted');
       setStage?.('TRANSCODE_QUEUE');
-      const result = await videoTranscodes.enqueue(async () => {
+      // Burning is background work: it yields to a trim the user is waiting on and starts over afterwards.
+      const result = await videoTranscodes.enqueuePreemptible(async yielded => {
         if (signal.aborted) throw new Error('Badge export interrupted');
         const cancel = () => { void native.cancelBadge(uri, jobId).catch(() => {}); };
+        const yieldToUser = () => { hooks?.onYield?.(); cancel(); };
         signal.addEventListener('abort', cancel, { once: true });
+        yielded.addEventListener('abort', yieldToUser, { once: true });
         setStage?.('BURN');
+        hooks?.onStart?.();
         try { return await native.burnBadge(uri, bitmap, left, bottom, 1, jobId); }
-        finally { signal.removeEventListener('abort', cancel); }
+        finally {
+          signal.removeEventListener('abort', cancel);
+          yielded.removeEventListener('abort', yieldToUser);
+        }
       });
       if (signal.aborted) {
         deleteLocalVideo(result.uri);
@@ -82,6 +91,9 @@ function watchExport(timeoutMs?: number) {
 
 const deadline = (durationMs: number) => Math.max(60_000, 4 * (durationMs || 0));
 
+/** The burn budget starts when the burn does. Waiting for upload preparation and the queue has this looser cap. */
+export const badgeTiming = { waitCapMs: 600_000 };
+
 /** Staging proceeds immediately. Only the optional encode waits for upload preparation. */
 export function saveRecordingVideo(uri: string, badge: VideoBadgeInfo | null | undefined, capture: CaptureVideoBadge,
   permission: Promise<boolean>, durationMs: number) {
@@ -89,7 +101,9 @@ export function saveRecordingVideo(uri: string, badge: VideoBadgeInfo | null | u
   return startRecordingSave(uri, JSON.stringify(badge && presentBadge(badge, 'export')), async prepared => {
     if (!(await permission)) throw new Error('Photos permission denied');
     if (badge && presentBadge(badge, 'export')) {
-      const timeout = deadline(durationMs);
+      const burnBudget = deadline(durationMs);
+      // The native reservation publishes the original when this outer bound passes.
+      const timeout = badgeTiming.waitCapMs + burnBudget;
       const watch = watchExport(timeout);
       let exported: string | null = null;
       try {
@@ -99,7 +113,10 @@ export function saveRecordingVideo(uri: string, badge: VideoBadgeInfo | null | u
           if (!watch.signal.aborted) {
             try {
               await Promise.race([prepared, watch.interrupted]);
-              if (!watch.signal.aborted) exported = await Promise.race([burn(uri, badge, capture, watch, jobId), watch.interrupted]);
+              if (!watch.signal.aborted) exported = await Promise.race([burn(uri, badge, capture, watch, jobId, undefined, undefined, {
+                onStart: () => watch.reset(burnBudget),
+                onYield: () => watch.reset(badgeTiming.waitCapMs),
+              }), watch.interrupted]);
             } catch (error) { reportVideoProcessingFailure('badge_export', error); }
           }
           if (watch.signal.aborted) reportVideoProcessingFailure('badge_export', watch.reason());
@@ -183,10 +200,12 @@ async function exportReplay(uri: string, badge: VideoBadgeInfo, capture: Capture
     }
     if (watch.signal.aborted) throw new Error('Badge export interrupted');
     const active = watch;
-    active.reset(deadline(0));
-    exported = await Promise.race([burn(source, badge, capture, active, uuid.v4(), ms => {
-      if (!active.signal.aborted) active.reset(deadline(ms));
-    }, setStage), active.interrupted]);
+    let durationMs = 0;
+    active.reset(badgeTiming.waitCapMs);
+    exported = await Promise.race([burn(source, badge, capture, active, uuid.v4(), ms => { durationMs = ms; }, setStage, {
+      onStart: () => { if (!active.signal.aborted) active.reset(deadline(durationMs)); },
+      onYield: () => { if (!active.signal.aborted) active.reset(badgeTiming.waitCapMs); },
+    }), active.interrupted]);
     if (!exported) throw new Error('Badge export interrupted');
     setStage('PUBLISH');
     await MediaLibrary.Asset.create(exported);
