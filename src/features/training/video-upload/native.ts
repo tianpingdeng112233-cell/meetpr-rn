@@ -96,6 +96,9 @@ export async function pickTrainingVideo(
     selectionLimit: 1,
   }).catch(error => {
     reportVideoProcessingFailure('picker', error);
+    if (error?.code === 'ERR_INCOMPLETE_VIDEO') {
+      throw new VideoNativeError(t('student.videoAttachment.incompleteFile'), { cause: error, deterministic: true });
+    }
     throw error;
   });
   if (result.canceled || !result.assets[0]) return null;

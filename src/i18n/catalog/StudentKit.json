@@ -3467,6 +3467,10 @@
 "en": "Video",
 "zh": "视频"
 },
+"student.videoAttachment.incompleteFile": {
+"en": "Save the full original video to your phone, then select it again.",
+"zh": "视频文件不完整。请将原视频完整保存到手机后重新选择。"
+},
 "student.videoAttachmentViewModel.copy001": {
 "en": "Could not process video. Try again",
 "zh": "视频处理失败,请重试"

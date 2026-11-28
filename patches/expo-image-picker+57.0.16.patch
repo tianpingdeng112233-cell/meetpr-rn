@@ -1,0 +1,132 @@
+diff --git a/node_modules/expo-image-picker/android/build.gradle b/node_modules/expo-image-picker/android/build.gradle
+index 5d6ddfb..ee6fb0f 100644
+--- a/node_modules/expo-image-picker/android/build.gradle
++++ b/node_modules/expo-image-picker/android/build.gradle
+@@ -19,6 +19,7 @@ android {
+ }
+ 
+ dependencies {
++  testImplementation "junit:junit:4.13.2"
+   implementation "androidx.activity:activity-ktx:1.11.0"
+   implementation "androidx.appcompat:appcompat:1.7.1"
+   implementation "androidx.core:core-ktx:1.17.0"
+diff --git a/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/CompleteVideoCopy.kt b/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/CompleteVideoCopy.kt
+new file mode 100644
+index 0000000..063f4d7
+--- /dev/null
++++ b/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/CompleteVideoCopy.kt
+@@ -0,0 +1,47 @@
++package expo.modules.imagepicker
++
++import expo.modules.kotlin.exception.CodedException
++import java.io.File
++import java.io.RandomAccessFile
++
++/** The provider may return a short stream without throwing. Reopen it while we still have the grant. */
++internal suspend fun copyPickedVideo(target: File, copyFromProvider: suspend () -> Unit) {
++  var keepCopy = false
++  try {
++    repeat(2) {
++      copyFromProvider()
++      if (!isShortVideoCopy(target)) {
++        keepCopy = true
++        return
++      }
++    }
++    throw CodedException("ERR_INCOMPLETE_VIDEO", "Incomplete video file", null)
++  } finally {
++    if (!keepCopy) target.delete()
++  }
++}
++
++// Inspect box headers only. Unknown containers and open-ended boxes retain the platform's normal handling.
++private fun isShortVideoCopy(target: File): Boolean = RandomAccessFile(target, "r").use { file ->
++  val end = file.length()
++  if (end == 0L) return true
++  if (end < 8) return false
++  file.seek(4)
++  if (file.readInt() != 0x66747970) return false // ftyp
++  var position = 0L
++  // Bound seeks on highly fragmented or malformed files; leave inconclusive cases to the decoder.
++  repeat(8192) {
++    if (end - position < 8) return false
++    file.seek(position)
++    val size32 = file.readInt().toLong() and 0xffffffffL
++    val type = file.readInt()
++    if (size32 == 0L) return false // extends to EOF
++    val extended = size32 == 1L
++    if (extended && end - position < 16) return type == 0x6d646174
++    val size = if (extended) file.readLong() else size32
++    if (size < (if (extended) 16 else 8)) return false
++    if (size > end - position) return type == 0x6d646174 // mdat extends past EOF
++    position += size
++  }
++  false
++}
+diff --git a/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/MediaHandler.kt b/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/MediaHandler.kt
+index 22076ad..fcc9d59 100644
+--- a/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/MediaHandler.kt
++++ b/node_modules/expo-image-picker/android/src/main/java/expo/modules/imagepicker/MediaHandler.kt
+@@ -99,7 +99,7 @@ internal class MediaHandler(
+     sourceUri: Uri
+   ): ImagePickerAsset {
+     val outputFile = createOutputFile(cacheDirectory, ".mp4")
+-    copyFile(sourceUri, outputFile, context.contentResolver)
++    copyPickedVideo(outputFile) { copyFile(sourceUri, outputFile, context.contentResolver) }
+     val outputUri = outputFile.toUri()
+ 
+     try {
+diff --git a/node_modules/expo-image-picker/android/src/test/java/expo/modules/imagepicker/CompleteVideoCopyTest.kt b/node_modules/expo-image-picker/android/src/test/java/expo/modules/imagepicker/CompleteVideoCopyTest.kt
+new file mode 100644
+index 0000000..e8ac843
+--- /dev/null
++++ b/node_modules/expo-image-picker/android/src/test/java/expo/modules/imagepicker/CompleteVideoCopyTest.kt
+@@ -0,0 +1,48 @@
++package expo.modules.imagepicker
++
++import expo.modules.kotlin.exception.CodedException
++import java.nio.ByteBuffer
++import kotlinx.coroutines.runBlocking
++import org.junit.Assert.*
++import org.junit.Rule
++import org.junit.Test
++import org.junit.rules.TemporaryFolder
++
++class CompleteVideoCopyTest {
++  @get:Rule val folder = TemporaryFolder()
++  private val ftyp = ByteBuffer.allocate(16).putInt(16).put("ftypisom".toByteArray()).putInt(0).array()
++  private fun mdat(size: Int) = ByteBuffer.allocate(12).putInt(size).put("mdat".toByteArray()).putInt(42).array()
++
++  @Test fun reopensProviderAfterShortRead() = runBlocking {
++    val cache = folder.newFile()
++    val full = ftyp + mdat(12)
++    var reads = 0
++    copyPickedVideo(cache) { cache.writeBytes(if (++reads == 1) full.copyOf(full.size - 2) else full) }
++    assertEquals(2, reads)
++    assertArrayEquals(full, cache.readBytes())
++  }
++
++  @Test fun rejectsPersistentShortReadsAndRemovesOnlyTheCacheCopy() {
++    val source = folder.newFile().apply { writeBytes(ftyp + mdat(4096)) }
++    val cache = folder.newFile()
++    var reads = 0
++    val error = assertThrows(CodedException::class.java) {
++      runBlocking { copyPickedVideo(cache) { reads++; source.copyTo(cache, overwrite = true) } }
++    }
++    assertEquals("ERR_INCOMPLETE_VIDEO", error.code)
++    assertEquals(2, reads)
++    assertFalse(cache.exists())
++    assertArrayEquals(ftyp + mdat(4096), source.readBytes())
++  }
++
++  @Test fun acceptsSupportedBoxSizesAndOtherContainersOnFirstRead() = runBlocking {
++    val extended = ByteBuffer.allocate(20).putInt(1).put("mdat".toByteArray()).putLong(20).putInt(42).array()
++    for (bytes in listOf(ftyp + mdat(12), ftyp + mdat(0), ftyp + extended, "other container".toByteArray())) {
++      val cache = folder.newFile()
++      var reads = 0
++      copyPickedVideo(cache) { reads++; cache.writeBytes(bytes) }
++      assertEquals(1, reads)
++      assertArrayEquals(bytes, cache.readBytes())
++    }
++  }
++}

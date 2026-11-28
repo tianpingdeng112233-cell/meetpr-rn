@@ -5,6 +5,7 @@ import { AppButton, font, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import type { SetLogUpsertRequest } from '@/api/domains/sets';
 import type { VideoBadgeInfo } from '@/features/video-player/types';
+import { VideoNativeError } from './native-error';
 import { useVideoUploadStore } from './store';
 
 export type RetryVideo = { stableSetId: string; badge?: VideoBadgeInfo };
@@ -16,19 +17,19 @@ export function useVideoDeliveryRetry(studentId: string, callbacks?: {
   const colors = useColors();
   const [missing, setMissing] = useState<RetryVideo[]>([]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const selected = missing[0];
   const record = useVideoUploadStore(state => selected ? state.records[`${studentId}:${selected.stableSetId}`] : undefined);
   const retry = async (videos: readonly RetryVideo[]) => {
     const { videoUploadManager } = await import('./manager');
     const absent = videos.filter(video => videoUploadManager.needsReselection({ studentId, stableSetId: video.stableSetId }));
-    setError(false);
+    setError(null);
     setMissing(absent);
     await Promise.all(videos.filter(video => !absent.includes(video)).map(video =>
       videoUploadManager.retry({ studentId, stableSetId: video.stableSetId }, callbacks?.ensureSetLog, callbacks?.buildLogRequest),
-    )).catch(() => setError(true));
+    )).catch(() => setError(t('student.videoAttachmentViewModel.copy001')));
   };
-  const close = () => { if (!busy) { setMissing([]); setError(false); } };
+  const close = () => { if (!busy) { setMissing([]); setError(null); } };
   const badge = selected?.badge;
   const details = [badge?.exerciseName, badge?.setOrdinal ? t('student.historyEntriesView.copy001', [badge.setOrdinal]) : null,
     badge?.weightKg != null && badge?.reps != null ? `${badge.weightKg} kg × ${badge.reps}` : null,
@@ -40,9 +41,9 @@ export function useVideoDeliveryRetry(studentId: string, callbacks?: {
         <MaterialCommunityIcons name="alert-circle-outline" color={colors.danger} size={28} />
         <Text style={{ ...font.body(20, 'bold'), color: colors.danger }}>{t('student.videoDelivery.missingTitle')}</Text>
         <Text style={{ ...font.body(15), color: colors.textSecondary }}>{t('student.videoDelivery.missingBody')}{record?.savedToPhotos ? ` ${t('student.videoDelivery.savedToPhotos')}` : ''}</Text>
-        {error ? <Text style={{ ...font.body(13), color: colors.danger }}>{t('student.videoAttachmentViewModel.copy001')}</Text> : null}
+        {error ? <Text style={{ ...font.body(13), color: colors.danger }}>{error}</Text> : null}
         <AppButton disabled={busy} label={t('student.videoDelivery.pickAgain')} onPress={() => {
-          setBusy(true); setError(false);
+          setBusy(true); setError(null);
           void (async () => {
             const { pickTrainingVideo } = await import('./native');
             const { videoUploadManager } = await import('./manager');
@@ -50,7 +51,7 @@ export function useVideoDeliveryRetry(studentId: string, callbacks?: {
             if (!video) return;
             await videoUploadManager.replaceMissing({ studentId, stableSetId: selected.stableSetId }, video, callbacks?.ensureSetLog);
             setMissing(current => current.slice(1));
-          })().catch(() => setError(true)).finally(() => setBusy(false));
+          })().catch(cause => setError(cause instanceof VideoNativeError ? cause.copy : t('student.videoAttachmentViewModel.copy001'))).finally(() => setBusy(false));
         }} />
         <AppButton variant="link" disabled={busy} label={t('student.videoDelivery.later')} onPress={close} />
       </View>

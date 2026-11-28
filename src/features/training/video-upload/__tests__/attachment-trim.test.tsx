@@ -743,3 +743,19 @@ test.each(['picker', 'export'])('compact %s failure uses an Alert without adding
     expect(videoUploadManager.attach).not.toHaveBeenCalled();
   } finally { alert.mockRestore(); }
 });
+
+test('a truncated album replacement explains how to recover and preserves the uploaded set video', async () => {
+  jest.mocked(ImagePicker.launchImageLibraryAsync).mockRejectedValueOnce({ code: 'ERR_INCOMPLETE_VIDEO' });
+  const diagnostics = await collectDiagnostics();
+  await mount(true);
+  expect(renderer.root.findAllByType(Text).map(node => node.props.children))
+    .toContain('Save the full original video to your phone, then select it again.');
+  expect(useVideoUploadStore.getState().records['trim-student:trim-set']).toMatchObject({
+    status: 'uploaded', localUri: 'file:///documents/existing.mp4',
+  });
+  expect(mockDeleted).toEqual([]);
+  expect(videoUploadManager.attach).not.toHaveBeenCalled();
+  expect(await diagnostics()).toEqual([expect.objectContaining({ props: expect.objectContaining({
+    code: 'video.picker.ERR_INCOMPLETE_VIDEO',
+  }) })]);
+});
