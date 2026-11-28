@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-11-28 · 下一班 Android 包候选** 相册读到截断的视频时自动重读一次；仍缺数据则提示保存完整原片，保留本组旧视频。[复现与回归](docs/journal/2026-11-28-android-incomplete-album-video.md)
 > **2026-11-28 · 下一班安卓包候选** 学员拍摄或从相册选视频上传时，预览允许其他应用继续播放音乐。[验证记录](docs/journal/2026-11-28-upload-music-android.md)
 > **2026-11-27 · 下一班 Android 包** 修复 CN18 学员相册选片和教练反馈回看闪退。打包时核验最终 APK 的播放器兼容补丁。[复现与验收](docs/journal/2026-11-27-android-video-player-packaging.md)
 > **2026-11-26 · CN18 已签名，供点对点分发。** 已验证正式 CN17 登录态覆盖升级、周期走势与 RPE 对照表。[切包记录](docs/journal/2026-11-26-release-cn18.md)

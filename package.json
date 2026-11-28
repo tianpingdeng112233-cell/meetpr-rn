@@ -76,6 +76,11 @@
     "test": "jest",
     "postinstall": "patch-package"
   },
+  "expo": {
+    "autolinking": {
+      "android": { "buildFromSource": ["expo-image-picker"] }
+    }
+  },
   "jest": {
     "preset": "jest-expo",
     "resolver": "react-native-worklets/jest/resolver",
