@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import Video from 'react-native-video';
+import { ChatVideoPreview } from '../ChatStandaloneVideo';
 import { useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useSessionStore } from '@/api/session';
 import { t } from '@/i18n';
 import { chatVideoOutbox, useChatVideos } from '../chat-videos';
 jest.mock('@react-native-async-storage/async-storage', () => jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
+jest.mock('react-native-video', () => 'Video');
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
 const mockDelete = jest.fn();
 const mockCopy = jest.fn<() => Promise<void>>();
@@ -75,4 +78,13 @@ test('logout during a delayed copy removes the late copy without decoding or sta
   expect(mockMetadata).not.toHaveBeenCalled(); expect(vm.preview).toBeNull();
   expect(mockDelete).toHaveBeenCalledWith(expect.stringContaining('file:///cache/'));
   expect(mockDelete).not.toHaveBeenCalledWith('file:///gallery/original.mp4');
+});
+
+test('the preview of a picked chat video leaves music focus with the other app', async () => {
+  await mount();
+  await act(async () => { await vm.pick(); });
+  await act(async () => {
+    renderer.update(<ChatVideoPreview video={vm.preview!} coachName="Coach" cancel={jest.fn()} reselect={jest.fn()} send={jest.fn()} />);
+  });
+  expect(renderer.root.findByType(Video).props.disableFocus).toBe(true);
 });
