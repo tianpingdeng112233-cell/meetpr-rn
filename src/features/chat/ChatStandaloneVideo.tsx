@@ -28,7 +28,7 @@ export function ChatPendingVideo({ item, retry }: { item: ChatVideoItem; retry: 
   const percent = Math.floor(item.progress * 100);
   return <View testID={`chat.video.pending.${item.draft.clientId}`} style={{ alignSelf: 'flex-end', gap: spacing.xs }}>
     <View style={{ width: 215, height: 245, overflow: 'hidden', borderRadius: radius.card, backgroundColor: colors.surfaceRaised }}>
-      <Video source={{ uri: item.draft.uri }} paused muted resizeMode="cover" style={StyleSheet.absoluteFill} />
+      <Video disableFocus source={{ uri: item.draft.uri }} paused muted resizeMode="cover" style={StyleSheet.absoluteFill} />
       <ChatVideoCover durationSeconds={item.draft.durationSeconds} />
       {item.state === 'sending' ? <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: 'rgba(0,0,0,0.65)' }]}>
         <Text accessibilityLiveRegion="polite" style={{ ...font.body(13), color: colors.ctaTopHighlight }}>{t(percent < 100 ? 'chat.standaloneVideoUploading' : 'chat.videoConfirming', [percent])}</Text>
@@ -54,7 +54,7 @@ export function ChatVideoPreview({ video, coachName, cancel, reselect, send }: {
       <Pressable accessibilityRole="button" onPress={cancel} style={styles.navButton}><Text style={{ ...font.body(15), color: colors.goldText }}>{t('chat.cancel')}</Text></Pressable>
     </View>
     <View style={{ flex: 1, backgroundColor: colors.chatImageBackground }}>
-      <Video source={{ uri: video.uri }} controls resizeMode="contain" style={StyleSheet.absoluteFill}
+      <Video disableFocus source={{ uri: video.uri }} controls resizeMode="contain" style={StyleSheet.absoluteFill}
         onLoad={() => { setReady(true); setFailed(false); }} onError={() => { setReady(false); setFailed(true); }} />
       {failed ? <Text accessibilityRole="alert" style={{ margin: spacing.md, ...font.body(14), color: colors.danger }}>{t('chat.standaloneVideoUnavailable')}</Text> : null}
     </View>
