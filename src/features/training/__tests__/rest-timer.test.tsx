@@ -3,6 +3,8 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { AppState, Text, Vibration } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setLocaleOverride, t } from "@/i18n";
+import { RestTimerSettingsScreen } from "@/features/settings/RestTimerSettingsScreen";
+import { defaultRestPreference } from "@/features/settings/rest-timer";
 import { RestTimer } from "../RestTimer";
 import { RestRingIntroduction } from "../rest-timer-session";
 import { StartupOverlayContext } from "@/navigation/startup-overlay";
@@ -68,6 +70,27 @@ const ring = () =>
   )[0];
 const copy = () =>
   renderer.root.findAllByType(Text).map((node) => node.props.children);
+
+test("settings show a footer only when tapping the backdrop fails to save", async () => {
+  const save = jest.fn<() => Promise<void>>()
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValueOnce(undefined);
+  await act(async () => {
+    renderer = create(<RestTimerSettingsScreen initial={defaultRestPreference} onSave={save} />);
+  });
+  const footer = () => renderer.root.findAllByType(Text)
+    .filter(node => node.props.accessibilityLiveRegion === "polite")
+    .map(node => node.props.children);
+  const tapBackdrop = () => act(async () => {
+    renderer.root.findAll(node => node.props.testID === "rest-settings-dismiss" && node.props.onPress)[0].props.onPress();
+  });
+  expect(footer()).toEqual([]);
+  await tapBackdrop();
+  expect(footer()).toEqual([t("training.restRing.saveError")]);
+  await tapBackdrop();
+  expect(save).toHaveBeenLastCalledWith(defaultRestPreference);
+  expect(footer()).toEqual([]);
+});
 
 test("first settings wait for other startup overlays to close and the student to return to training", async () => {
   const firstVisit = { ...props, studentId: "new-student", startupBlocked: true };

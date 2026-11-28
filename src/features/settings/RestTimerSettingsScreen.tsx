@@ -255,23 +255,21 @@ export function RestTimerSettingsScreen({
               ))}
             </View>
           </View>
-          <Text
-            accessibilityLiveRegion="polite"
-            style={{
-              position: "absolute",
-              top: 356,
-              width: 340,
-              textAlign: "center",
-              ...font.body(12),
-              color: colors.videoReviewedText,
-            }}
-          >
-            {t(
-              error
-                ? "training.restRing.saveError"
-                : "training.restRing.saveHint",
-            )}
-          </Text>
+          {error && (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={{
+                position: "absolute",
+                top: 356,
+                width: 340,
+                textAlign: "center",
+                ...font.body(12),
+                color: colors.videoReviewedText,
+              }}
+            >
+              {t("training.restRing.saveError")}
+            </Text>
+          )}
         </View>
       </View>
     </Modal>

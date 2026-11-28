@@ -46,7 +46,6 @@
 "training.restRing.done": {"en": "Rest\nfinished", "zh": "休息\n结束"},
 "training.restRing.context": {"en": "{0} · Rest {1}", "zh": "{0} · 休息 {1}"},
 "training.restRing.collapse": {"en": "Tap outside to close. Timer keeps running.", "zh": "点空白处收起，倒计时继续"},
-"training.restRing.saveHint": {"en": "Scroll to set duration · Tap outside to save", "zh": "上下滑动选时长 · 点空白处保存并收起"},
 "training.restRing.save": {"en": "Save rest settings", "zh": "保存休息设置"},
 "training.restRing.loadError": {"en": "Could not load rest settings. Tap to retry.", "zh": "无法加载休息设置，轻点重试"},
 "training.restRing.saveError": {"en": "Could not save. Please try again.", "zh": "保存失败，请重试"},
