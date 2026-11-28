@@ -1,4 +1,4 @@
-import { SerialTaskQueue } from '../serial-task-queue';
+import { videoTranscodes } from './recording-gallery';
 import { t } from '@/i18n';
 import { Directory, File, Paths } from 'expo-file-system';
 import { requireNativeModule, uuid } from 'expo-modules-core';
@@ -15,7 +15,6 @@ import { VideoNativeError } from './native-error';
 import { reportVideoProcessingFailure, type VideoProcessingStage } from './diagnostics';
 export type VideoSource = 'camera' | 'library';
 export { VideoNativeError } from './native-error';
-const exportsQueue = new SerialTaskQueue();
 // compressor 2.0.3 writes UUID-named MP4s directly to cache (including fast-start siblings).
 function cachedExports(): File[] {
   return new Directory(Paths.cache)
@@ -30,18 +29,18 @@ async function compressVideo(
   source: SelectedVideo,
   control: PrepareVideoControl,
 ): Promise<string> {
-  return exportsQueue.enqueue(async () => {
+  let cancellationId: string | null = null;
+  let abort!: () => void;
+  const cancelled = new Promise<never>((_, reject) => {
+    abort = () => {
+      cancelVideoCompression(cancellationId);
+      reject(new UploadCancelledError());
+    };
+  });
+  control.signal.addEventListener('abort', abort, { once: true });
+  const encode = videoTranscodes.enqueue(async () => {
     if (control.signal.aborted) throw new UploadCancelledError();
-    const before = new Set(cachedExports().map((file) => file.uri));
-    let cancellationId: string | null = null;
-    let abort: () => void = () => {};
-    const cancelled = new Promise<never>((_, reject) => {
-      abort = () => {
-        cancelVideoCompression(cancellationId);
-        reject(new UploadCancelledError());
-      };
-      control.signal.addEventListener('abort', abort, { once: true });
-    });
+    const before = new Set(cachedExports().map(file => file.uri));
     const pending = Compressor.Video.compress(source.uri, {
       compressionMethod: 'manual',
       maxSize: 1280,
@@ -52,24 +51,22 @@ async function compressVideo(
         control.setCompressionCancellationId(id);
       },
     });
-    // Some native cancellations settle late. A late output must never become an orphan.
-    void pending.then(
-      (uri) => {
-        if (control.signal.aborted && uri !== source.uri) deleteLocalVideo(uri);
-      },
-      () => undefined,
-    );
     try {
-      if (control.signal.aborted) abort();
-      return await Promise.race([pending, cancelled]);
+      const uri = await pending;
+      if (control.signal.aborted) {
+        if (uri !== source.uri) deleteLocalVideo(uri);
+        throw new UploadCancelledError();
+      }
+      return uri;
     } catch (error) {
-      for (const file of cachedExports())
-        if (!before.has(file.uri)) deleteLocalVideo(file.uri);
+      for (const file of cachedExports()) if (!before.has(file.uri)) deleteLocalVideo(file.uri);
       throw error;
-    } finally {
-      control.signal.removeEventListener('abort', abort);
     }
   });
+  try {
+    if (control.signal.aborted) abort();
+    return await Promise.race([encode, cancelled]);
+  } finally { control.signal.removeEventListener('abort', abort); }
 }
 const directory = () => {
   const folder = new Directory(Paths.document, 'training-videos');
@@ -218,6 +215,20 @@ export function localVideoSize(uri: string): number {
     return 0;
   }
 }
+const galleryReaders = new Map<string, { readers: number; deleteWhenFree: boolean }>();
+
+/** Upload may retire this same URI as soon as its durable source is ready. */
+export function holdLocalVideo(uri: string) {
+  const entry = galleryReaders.get(uri) ?? { readers: 0, deleteWhenFree: false };
+  galleryReaders.set(uri, entry);
+  entry.readers++;
+  return () => {
+    if (--entry.readers > 0) return;
+    galleryReaders.delete(uri);
+    if (entry.deleteWhenFree) deleteLocalVideo(uri);
+  };
+}
+
 /** Cleanup is best effort; ownership transfers must check the returned error. */
 export function deleteLocalVideo(uri: string | null): VideoNativeError | null {
   if (
@@ -225,6 +236,11 @@ export function deleteLocalVideo(uri: string | null): VideoNativeError | null {
     (!uri.startsWith(Paths.cache.uri) && !uri.startsWith(Paths.document.uri))
   )
     return null;
+  const held = galleryReaders.get(uri);
+  if (held) {
+    held.deleteWhenFree = true;
+    return null;
+  }
   try {
     const file = new File(uri);
     if (file.exists) file.delete();

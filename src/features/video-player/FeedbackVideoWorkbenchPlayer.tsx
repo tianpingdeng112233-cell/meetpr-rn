@@ -6,7 +6,6 @@ import { font, radius, spacing, useColors } from '@/design';
 import { t } from '@/i18n';
 import { rates, rateText, workbenchRateText } from './rate';
 import { VideoBadgeOverlay } from './VideoBadgeOverlay';
-import { VideoBadgeScrim } from './VideoBadgeScrim';
 import type { VideoBadgeInfo } from './types';
 
 /** Embedded chrome; playback, seeking and retry remain owned by the shared session. */
@@ -25,7 +24,6 @@ export function FeedbackVideoWorkbenchPlayer({ video, playbackControl, annotatio
     style={[styles.root, { backgroundColor: colors.videoWorkbenchFill }]}>
     <View style={[styles.stage, { backgroundColor: colors.videoStageFill, borderColor: colors.videoStageBorder }]}>
       {video}
-      {badge ? <VideoBadgeScrim /> : null}
       <View style={styles.center} pointerEvents={annotation ? 'none' : 'box-none'}
         accessibilityElementsHidden={Boolean(annotation)} importantForAccessibility={annotation ? 'no-hide-descendants' : 'auto'}>
         {playbackControl}

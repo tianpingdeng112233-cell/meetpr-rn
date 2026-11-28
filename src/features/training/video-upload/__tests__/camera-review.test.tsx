@@ -11,11 +11,19 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import Video from 'react-native-video';
 import { setLocaleOverride, t } from '@/i18n';
 import { CameraRecorder } from '../CameraRecorder';
+import type { VideoBadgeInfo } from '@/features/video-player/types';
+import { VideoBadgeCard } from '@/features/video-player/VideoBadgeCard';
+import { aliasRecordingSource, beginUploadPreparation, uploadPreparationFinished } from '../recording-gallery';
+import { saveReplayVideo } from '../gallery-save';
 import { deleteLocalVideo } from '../native';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'));
-jest.mock('../native', () => ({ deleteLocalVideo: jest.fn() }));
+jest.mock('react-native-compressor', () => ({}));
+jest.mock('../native', () => {
+  const native = jest.requireActual<typeof import('../native')>('../native');
+  return { ...native, deleteLocalVideo: jest.fn(native.deleteLocalVideo) };
+});
 jest.mock('expo-keep-awake', () => ({
   activateKeepAwakeAsync: jest.fn(async (_tag: string) => {}),
   deactivateKeepAwake: jest.fn(async (_tag: string) => {}),
@@ -56,17 +64,26 @@ jest.mock('expo-camera', () => {
   };
 });
 
+const mockBitmap = { release: jest.fn() };
+const mockCapture = jest.fn(async () => mockBitmap);
+jest.mock('@/features/video-player/BadgeCaptureHost', () => ({ useBadgeCapture: () => mockCapture }));
+const burnt = 'file:///cache/badged.mp4';
+const mockCommit = jest.fn(async (replacement: string | null) => replacement !== null);
 const mockMedia = {
-  trimInfo: jest.fn(async (_uri: string) => ({ durationMs: 3000, videoTrackCount: 1 })),
+  reserveGalleryOriginal: jest.fn(async (_uri: string) => ({ finish: mockCommit, release: jest.fn() })),
+  burnBadge: jest.fn(async () => ({ uri: burnt })),
+  trimInfo: jest.fn(async (_uri: string) => ({ durationMs: 3000, videoTrackCount: 1, displayWidth: 1080, displayHeight: 1920 })),
   thumbnails: jest.fn(async () => ['file:///cache/thumb.jpg']),
   trim: jest.fn(async () => ({ uri: 'file:///cache/trimmed.mp4', durationMs: 1000 })),
+  cancelBadge: jest.fn(async () => {}),
   cancelTrim: jest.fn(async () => {}),
 };
+const mockUnlink = jest.fn();
 jest.mock('expo-file-system', () => ({
   File: class {
     uri: string; exists = true; size = 100;
     constructor(...parts: (string | { uri: string })[]) { this.uri = parts.map(p => typeof p === 'string' ? p : p.uri).join('/'); }
-    copy() {} delete() {}
+    copy() {} delete() { mockUnlink(this.uri); }
   },
   Paths: { cache: { uri: 'file:///cache/' }, document: { uri: 'file:///documents/' } },
 }));
@@ -113,11 +130,11 @@ const press = async (label: string) => {
     node.props.onPress();
   });
 };
-const mountCamera = async (scheme: 'light' | 'dark' = 'light', unmountOnClose = true) => {
-  const onUse = jest.fn();
+const mountCamera = async (scheme: 'light' | 'dark' = 'light', unmountOnClose = true, badge?: VideoBadgeInfo, prepare = true) => {
+  const onUse = jest.fn<(_uri: string, saved: Promise<boolean>) => void>(source => { if (prepare) uploadPreparationFinished(source); });
   const onClose = jest.fn(() => { if (unmountOnClose) renderer.unmount(); });
   await act(async () => {
-    renderer = create(<ColorSchemeProvider scheme={scheme}><CameraRecorder onClose={onClose} onUse={onUse} /></ColorSchemeProvider>);
+    renderer = create(<ColorSchemeProvider scheme={scheme}><CameraRecorder badge={badge} onClose={onClose} onUse={onUse} /></ColorSchemeProvider>);
   });
   return { onUse, onClose };
 };
@@ -135,6 +152,57 @@ const completeRecording = async () => {
 const changeAppState = async (...states: AppStateStatus[]) => {
   for (const state of states) await act(async () => { changeState(state); });
 };
+
+const squat = { exerciseName: 'Squat', weightKg: 130, reps: 5 };
+test('Use hands off the original while burn-in is pending and saves only the finished badge', async () => {
+  let finish!: (value: { uri: string }) => void;
+  mockMedia.burnBadge.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const { onUse } = await mountCamera('light', true, squat);
+  await completeRecording();
+  expect(renderer.root.findAllByType(VideoBadgeCard)).toHaveLength(0);
+  act(() => renderer.root.findByProps({ testID: 'trim-video' }).props.onLayout({ nativeEvent: { layout: { width: 360, height: 640 } } }));
+  await act(async () => renderer.root.findByType(Video).props.onLoad({ duration: 3, naturalSize: { width: 720, height: 1280 } }));
+  expect(renderer.root.findByType(VideoBadgeCard).props).toMatchObject({ form: 'export', info: squat });
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(mockMedia.reserveGalleryOriginal).toHaveBeenCalledWith(uri, 660000, expect.any(String));
+  expect(mockMedia.burnBadge).toHaveBeenCalledWith(uri, mockBitmap, 88, 428, 1, expect.any(String));
+  expect(MediaLibrary.Asset.create).not.toHaveBeenCalled();
+  act(() => renderer.unmount());
+  await act(async () => finish({ uri: burnt }));
+  expect(mockCommit).toHaveBeenCalledTimes(1);
+  expect(mockCommit).toHaveBeenCalledWith(burnt);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
+  expect(deleteLocalVideo).toHaveBeenCalledWith(burnt);
+});
+
+test.each(['failed', 'background'])('a %s burn leaves an original in Photos after handoff', async mode => {
+  let fail!: (reason: Error) => void;
+  mockMedia.burnBadge.mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = reject; }));
+  const { onUse } = await mountCamera('light', true, squat);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(mockMedia.burnBadge).toHaveBeenCalled();
+  if (mode === 'background') await changeAppState('background');
+  else await act(async () => fail(new Error('encoder')));
+  expect(mockMedia.reserveGalleryOriginal).toHaveBeenCalledWith(uri, 660000, expect.any(String));
+  expect(mockCommit).toHaveBeenCalledWith(null);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
+  if (mode === 'background') await act(async () => fail(new Error('cancelled')));
+  expect(mockCommit).toHaveBeenCalledTimes(1);
+});
+
+test('a disabled Photos switch skips capture, burn and gallery writes', async () => {
+  await AsyncStorage.setItem('training.video.saveToPhotos.v1', 'false');
+  const { onUse } = await mountCamera('light', true, squat);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(await onUse.mock.calls[0][1]).toBe(false);
+  expect(mockCapture).not.toHaveBeenCalled();
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+  expect(MediaLibrary.Asset.create).not.toHaveBeenCalled();
+});
 
 test('camera appearance keeps the screen awake through recording and Stop releases it before review', async () => {
   await mountCamera();
@@ -279,7 +347,8 @@ test.each<[string, AppStateStatus[]]>([
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(onUse).toHaveBeenCalledTimes(1);
-  expect(onUse).toHaveBeenCalledWith(uri, true);
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
   act(() => renderer.unmount());
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
 });
@@ -313,7 +382,8 @@ test('Retry after returning from background deletes the old file and allows a ne
   await press(t('student.cameraRecorderComponents.copy003'));
   expect(renderer.root.findByType(Video).props.source.uri).toBe(nextUri);
   await press(t('student.cameraRecorderComponents.copy010'));
-  expect(onUse).toHaveBeenCalledWith(nextUri, true);
+  expect(onUse.mock.calls[0][0]).toBe(nextUri);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
   act(() => renderer.unmount());
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(nextUri);
 });
@@ -378,12 +448,33 @@ test('moving handles then Use exports the selected range, saves that file to Pho
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).toHaveBeenCalledWith(expect.any(String), 1000, 2000);
   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
-  expect(onUse).toHaveBeenCalledWith('file:///cache/trimmed.mp4', true);
+  expect(onUse.mock.calls[0][0]).toBe('file:///cache/trimmed.mp4');
+  expect(await onUse.mock.calls[0][1]).toBe(true);
   expect(deleteLocalVideo).toHaveBeenCalledWith(uri);
   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBe('true');
   act(() => renderer.unmount());
   expect(deleteLocalVideo).not.toHaveBeenCalledWith('file:///cache/trimmed.mp4');
+});
+
+test('upload cleanup of a trimmed handoff waits until gallery publication has finished', async () => {
+  const trimmed = 'file:///cache/trimmed.mp4';
+  let finish!: () => void;
+  mockCommit.mockImplementationOnce(() => new Promise(resolve => { finish = () => resolve(true); }));
+  const { onUse } = await mountCamera('light', true, squat);
+  await completeRecording();
+  await loadReview();
+  await adjust('start');
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(onUse.mock.calls[0][0]).toBe(trimmed);
+  expect(mockCommit).toHaveBeenCalledWith(burnt);
+  act(() => renderer.unmount());
+  deleteLocalVideo(trimmed);
+  expect(mockUnlink).not.toHaveBeenCalledWith(trimmed);
+  await act(async () => finish());
+  expect(await onUse.mock.calls[0][1]).toBe(true);
+  expect(mockUnlink).toHaveBeenCalledWith(trimmed);
+  expect(mockUnlink).toHaveBeenCalledWith(burnt);
 });
 
 test('review Play loops within the selection, ignores stale progress and preserves paused bounds across background', async () => {
@@ -463,7 +554,8 @@ test.each(['metadata', 'thumbnails'])('%s preparation failure hides trim tools a
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain(t('student.cameraRecorderComponents.copy007'));
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).not.toHaveBeenCalled();
-  expect(onUse).toHaveBeenCalledWith(uri, true);
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
 });
 
 test('Retry resets the previous selection and keeps handles disabled while the next clip is preparing', async () => {
@@ -472,13 +564,13 @@ test('Retry resets the previous selection and keeps handles disabled while the n
   await loadReview();
   await adjust('start');
   await press(t('student.cameraRecorderView.copy009'));
-  let finish!: (value: { durationMs: number; videoTrackCount: number }) => void;
+  let finish!: (value: Awaited<ReturnType<typeof mockMedia.trimInfo>>) => void;
   mockMedia.trimInfo.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await completeRecording();
   const handle = () => renderer.root.findAllByType(View).find(n => n.props.accessibilityLabel === t('student.videoTrimTimeline.copy003'))!;
   expect(handle().props.accessibilityState.disabled).toBe(true);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).not.toContain('Selected 0:02');
-  await act(async () => { finish({ durationMs: 3000, videoTrackCount: 1 }); });
+  await act(async () => { finish({ durationMs: 3000, videoTrackCount: 1, displayWidth: 1080, displayHeight: 1920 }); });
   expect(handle().props.accessibilityState.disabled).toBe(true);
   await loadReview();
   expect(handle().props.accessibilityState.disabled).toBe(false);
@@ -494,7 +586,8 @@ test('Use during thumbnail preparation delivers the original and cleans late thu
   expect(handle.props.accessibilityState.disabled).toBe(true);
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).not.toHaveBeenCalled();
-  expect(onUse).toHaveBeenCalledWith(uri, true);
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
   await act(async () => { finish(['file:///cache/late-thumb.jpg']); });
   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/late-thumb.jpg');
@@ -537,11 +630,9 @@ test.each(['Retry', 'Close', 'unmount'])('%s cleans review work files and late t
   expect(onUse).not.toHaveBeenCalled();
 });
 
-test.each(['export', 'Photos'])('unmount during %s cancels work, reclaims the output and never delivers it', async stage => {
+test('unmount during trim cancels work, reclaims the output and never delivers it', async () => {
   let finishExport!: (value: { uri: string; durationMs: number }) => void;
-  let finishPhotos!: () => void;
-  if (stage === 'export') mockMedia.trim.mockImplementationOnce(() => new Promise(resolve => { finishExport = resolve; }));
-  else jest.mocked(MediaLibrary.Asset.create).mockImplementationOnce(() => new Promise(resolve => { finishPhotos = () => resolve({} as never); }));
+  mockMedia.trim.mockImplementationOnce(() => new Promise(resolve => { finishExport = resolve; }));
   const { onUse } = await mountCamera();
   await completeRecording();
   await loadReview();
@@ -549,8 +640,7 @@ test.each(['export', 'Photos'])('unmount during %s cancels work, reclaims the ou
   await press(t('student.cameraRecorderComponents.copy010'));
   act(() => renderer.unmount());
   await act(async () => {
-    if (stage === 'export') finishExport({ uri: 'file:///cache/trimmed.mp4', durationMs: 2000 });
-    else finishPhotos();
+    finishExport({ uri: 'file:///cache/trimmed.mp4', durationMs: 2000 });
   });
   expect(mockMedia.cancelTrim).toHaveBeenCalledTimes(1);
   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/trimmed.mp4');
@@ -567,19 +657,20 @@ test('untouched Use does not export or suppress the hint and hands off only the 
   await press(t('student.cameraRecorderComponents.copy010'));
   expect(mockMedia.trim).not.toHaveBeenCalled();
   expect(MediaLibrary.Asset.create).toHaveBeenCalledWith(uri);
-  expect(onUse).toHaveBeenCalledWith(uri, true);
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
   expect(deleteLocalVideo).toHaveBeenCalledWith('file:///cache/thumb.jpg');
   expect(deleteLocalVideo).not.toHaveBeenCalledWith(uri);
   expect(await AsyncStorage.getItem('training.video.trimHintDismissed.v1')).toBeNull();
 });
 
 test('pausing during preparation stays paused when metadata becomes ready', async () => {
-  let finish!: (value: { durationMs: number; videoTrackCount: number }) => void;
+  let finish!: (value: Awaited<ReturnType<typeof mockMedia.trimInfo>>) => void;
   mockMedia.trimInfo.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
   await mountCamera();
   await completeRecording();
   await press(t('student.videoTrimView.copy004'));
-  await act(async () => { finish({ durationMs: 3000, videoTrackCount: 1 }); });
+  await act(async () => { finish({ durationMs: 3000, videoTrackCount: 1, displayWidth: 1080, displayHeight: 1920 }); });
   expect(renderer.root.findByType(Video).props.paused).toBe(true);
 });
 
@@ -623,5 +714,107 @@ test('a failed Photos save never claims the camera video has an album backup', a
   const { onUse } = await mountCamera();
   await completeRecording();
   await press(t('student.cameraRecorderComponents.copy010'));
-  expect(onUse).toHaveBeenCalledWith(uri, false);
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(await onUse.mock.calls[0][1]).toBe(false);
+});
+
+test('empty badge hands off during a slow gallery write and reports the actual outcome', async () => {
+  let finish!: () => void;
+  jest.mocked(MediaLibrary.Asset.create).mockImplementationOnce(() => new Promise(resolve => { finish = () => resolve({} as never); }));
+  const { onUse } = await mountCamera('light', true, { setOrdinal: 2 });
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(onUse.mock.calls[0][0]).toBe(uri);
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+  expect(MediaLibrary.Asset.create).toHaveBeenCalledWith(uri);
+  act(() => renderer.unmount());
+  finish();
+  expect(await onUse.mock.calls[0][1]).toBe(true);
+});
+
+test('recording waits for upload preparation and replay joins the same gallery publication', async () => {
+  const { onUse } = await mountCamera('light', true, squat, false);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  expect(onUse).toHaveBeenCalled();
+  expect(mockMedia.reserveGalleryOriginal).toHaveBeenCalled();
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+  aliasRecordingSource(uri, 'file:///prepared');
+  const replay = saveReplayVideo('file:///prepared', squat, mockCapture, async () => true);
+  await act(async () => uploadPreparationFinished('file:///prepared'));
+  await replay;
+  expect(mockMedia.burnBadge).toHaveBeenCalledTimes(1);
+  expect(mockCommit).toHaveBeenCalledTimes(1);
+  expect(MediaLibrary.Asset.create).not.toHaveBeenCalled();
+});
+
+test('the wait cap publishes the staged original during upload preparation and skips a late burn', async () => {
+  const { onUse } = await mountCamera('light', true, squat, false);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  // Waiting for upload preparation does not spend the 60 s burn budget.
+  await act(async () => jest.advanceTimersByTime(60_001));
+  expect(mockCommit).not.toHaveBeenCalled();
+  await act(async () => jest.advanceTimersByTime(600_000));
+  expect(mockCommit).toHaveBeenCalledWith(null);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+});
+
+test('a burn that starts after a long upload wait still gets its full budget and saves the badged clip', async () => {
+  let finish!: (result: { uri: string }) => void;
+  mockMedia.burnBadge.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const { onUse } = await mountCamera('light', true, squat, false);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  await act(async () => jest.advanceTimersByTime(90_000));
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+  await act(async () => uploadPreparationFinished(uri));
+  expect(mockMedia.burnBadge).toHaveBeenCalledTimes(1);
+  await act(async () => jest.advanceTimersByTime(59_000));
+  expect(mockMedia.cancelBadge).not.toHaveBeenCalled();
+  await act(async () => finish({ uri: burnt }));
+  expect(mockCommit.mock.calls).toEqual([[burnt]]);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
+});
+
+test('a stalled foreground burn is cancelled by its watchdog and a late output is discarded', async () => {
+  let finish!: (result: { uri: string }) => void;
+  mockMedia.burnBadge.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  const { onUse } = await mountCamera('light', true, squat);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  await act(async () => jest.advanceTimersByTime(60_001));
+  expect(mockMedia.cancelBadge).toHaveBeenCalledTimes(1);
+  expect(mockCommit.mock.calls).toEqual([[null]]);
+  expect(await onUse.mock.calls[0][1]).toBe(true);
+  await act(async () => finish({ uri: burnt }));
+  expect(mockCommit.mock.calls).toEqual([[null]]);
+  expect(deleteLocalVideo).toHaveBeenCalledWith(burnt);
+});
+
+test('replay waits for the recording then exports the revised RPE exactly once', async () => {
+  await mountCamera('light', true, squat, false);
+  await completeRecording();
+  await press(t('student.cameraRecorderComponents.copy010'));
+  const updated = { ...squat, rpe: 9 };
+  const first = saveReplayVideo(uri, updated, mockCapture, async () => true);
+  const second = saveReplayVideo(uri, updated, mockCapture, async () => true);
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+  await act(async () => uploadPreparationFinished(uri));
+  await Promise.all([first, second]);
+  expect(mockCommit.mock.calls).toEqual([[burnt]]);
+  expect(mockCapture).toHaveBeenLastCalledWith(updated, expect.any(Number), expect.anything());
+  expect(MediaLibrary.Asset.create).toHaveBeenCalledTimes(1);
+  expect(MediaLibrary.Asset.create).toHaveBeenCalledWith(burnt);
+});
+
+test('manual replay also waits for an upload when the recording Photos switch was off', async () => {
+  const finish = beginUploadPreparation(uri);
+  const replay = saveReplayVideo(uri, squat, mockCapture, async () => true);
+  await act(async () => {});
+  expect(mockMedia.burnBadge).not.toHaveBeenCalled();
+  finish();
+  await replay;
+  expect(mockMedia.burnBadge).toHaveBeenCalledTimes(1);
 });

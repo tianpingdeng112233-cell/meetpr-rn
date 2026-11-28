@@ -1,3 +1,4 @@
+import { BadgeCaptureHost } from '@/features/video-player/BadgeCaptureHost';
 import { useChatVideoSession } from '@/features/chat/chat-videos';
 import { startExerciseNoteOutbox } from '@/features/chat/exercise-note-outbox';
 import { restTimerNotifications } from '@/features/training/rest-timer-notification';
@@ -176,7 +177,7 @@ function ThemedRoot() {
       <NavigationThemeProvider value={navigationTheme}>
         <StatusBar style={scheme === 'light' ? 'dark' : 'light'} />
         <StartupOverlayContext.Provider value={!splashGone || !privacyChecked || privacyNoticeVisible || updateBlocked}>
-          <RootNavigator />
+          <BadgeCaptureHost><RootNavigator /></BadgeCaptureHost>
         </StartupOverlayContext.Provider>
         <AndroidUpdateSession enabled={splashGone && bootstrapped && privacyChecked && !privacyNoticeVisible} onBlockingChange={setUpdateBlocked} />
         <TrainingReminderSession />

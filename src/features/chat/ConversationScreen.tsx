@@ -234,7 +234,7 @@ export function ConversationScreen({ conversationId, studentName, status, initia
         </Pressable>
       </View>
     </View>
-    {selectedShare?.video_url ? <Modal visible animationType="slide" onRequestClose={() => setSelectedShare(null)}><FeedbackVideoPlayer videoId={selectedShare.id} url={selectedShare.video_url} badge={feedbackVideoBadge(selectedShare.set_ref, false)} refreshURL={() => refreshShareURL(selectedShare)} onClose={() => setSelectedShare(null)} /></Modal> : null}
+    {selectedShare?.video_url ? <Modal visible animationType="slide" onRequestClose={() => setSelectedShare(null)}><FeedbackVideoPlayer videoId={selectedShare.id} url={selectedShare.video_url} badge={feedbackVideoBadge(selectedShare.set_ref)} refreshURL={() => refreshShareURL(selectedShare)} onClose={() => setSelectedShare(null)} /></Modal> : null}
     {selectedImage ? <Modal visible animationType="fade" onRequestClose={() => setSelectedImage(null)}><SafeAreaView style={{ flex: 1, backgroundColor: colors.chatImageBackground }}>
       <ChatImage key={selectedImage.image_url} url={selectedImage.image_url} fullScreen />
       <Pressable accessibilityRole="button" accessibilityLabel={t('chat.close')} onPress={() => setSelectedImage(null)} style={{ position: 'absolute', top: 16, right: 16, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><MaterialCommunityIcons name="close-circle" size={30} color={colors.inkOnCTAFill} /></Pressable>

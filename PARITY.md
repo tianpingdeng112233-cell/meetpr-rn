@@ -1,4 +1,5 @@
 # PARITY — 1:1 复刻台账
+> **2026-11-28 · spec 116 B，P2 / 再下一班 CN 包** 学员录完预览和全屏回放已接入角标导出，上传继续使用原片。Jest 与原生 JVM 单测通过，调试包、成片和冻结机型待验。[卡 B 验证记录](docs/journal/2026-11-28-116-video-badge-android-b.md)
 > **2026-11-28 · 下一班 Android 包候选** 相册读到截断的视频时自动重读一次；仍缺数据则提示保存完整原片，保留本组旧视频。[复现与回归](docs/journal/2026-11-28-android-incomplete-album-video.md)
 > **2026-11-28 · 下一班安卓包候选** 学员拍摄或从相册选视频上传时，预览允许其他应用继续播放音乐。[验证记录](docs/journal/2026-11-28-upload-music-android.md)
 > **2026-11-27 · 下一班 Android 包** 修复 CN18 学员相册选片和教练反馈回看闪退。打包时核验最终 APK 的播放器兼容补丁。[复现与验收](docs/journal/2026-11-27-android-video-player-packaging.md)

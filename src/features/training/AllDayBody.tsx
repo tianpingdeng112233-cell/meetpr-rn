@@ -120,6 +120,12 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                 const active = editing?.row.stableSetId === row.stableSetId;
                 const removable = editable && !active && (row.kind === 'extra' || warmup);
                 const display = active ? editing.row : row;
+                const badge = {
+                  exerciseName: name, setOrdinal: row.setIndex + 1,
+                  weightKg: display.weightText ? Number(display.weightText) : null,
+                  reps: display.repsText ? Number(display.repsText) : null,
+                  rpe: display.effortKind !== 'rir' && display.rpeText ? Number(display.rpeText) : null,
+                };
                 const historyPrefill = Boolean(display.weightPrefilledFromHistory && !row.sourceLog);
                 const prescription = decodePrescription(row.planSet);
                 const percentage = prescription.intensity?.kind === 'pct' ? <Text style={{ ...font.body(11), color: colors.textSecondary, marginRight: 8 }}>{`${prescription.intensity.value}%`}</Text> : null;
@@ -167,8 +173,10 @@ export function AllDayBody({ onVideoActivity, sheet, editable, studentId, title,
                     </Pressable>
                     {percentage}
                   </View>}
-                  {warmup ? <View style={{ width: 44 }} /> : editable ? <VideoAttachmentControls onActivityChange={onVideoActivity} compact studentId={studentId} stableSetId={row.stableSetId} editable buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
-                    badge={{ exerciseName: name, setOrdinal: row.setIndex + 1, weightKg: row.weightText ? Number(row.weightText) : null, reps: row.repsText ? Number(row.repsText) : null, rpe: row.effortKind !== 'rir' && row.rpeText ? Number(row.rpeText) : null }} />}
+                  {warmup ? <View style={{ width: 44 }} /> : editable ? <VideoAttachmentControls onActivityChange={onVideoActivity} compact studentId={studentId} stableSetId={row.stableSetId} editable
+                    badge={badge}
+                    buildLogRequest={() => allDayLogRequest(display)} ensureSetLog={() => ensureSetLog(display)} /> : <CompletedSetVideo compact setLogId={row.sourceLog?.id ?? null} stableSetId={row.stableSetId}
+                    badge={badge} />}
                   </View>
                   {row.planSet.coach_note ? <Text style={{ paddingHorizontal: 8, ...font.body(11), color: colors.goldText }}>{t('training.allDay.coachNote', [row.planSet.coach_note])}</Text> : null}
                 </View>;

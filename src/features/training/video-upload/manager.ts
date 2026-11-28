@@ -1,3 +1,4 @@
+import { aliasRecordingSource, beginUploadPreparation, uploadPreparationFinished } from './recording-gallery';
 import { reportVideoProcessingFailure } from './diagnostics';
 import { ensureVideoSet } from '../set-sync/runtime';
 import { t } from '@/i18n';
@@ -51,6 +52,7 @@ const attachments = new Map<
   string,
   { sourceUri: string; done: Promise<void> }
 >();
+const pendingPhotoSaves = new Map<string, Promise<boolean>>();
 const mutations = new Map<string, SerialTaskQueue>();
 const jobs = new Map<string, ActiveJob>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -235,6 +237,8 @@ async function run(
         check();
       }
       const sourceUri = record.source.uri;
+      aliasRecordingSource(sourceUri, prepared.localUri);
+      uploadPreparationFinished(sourceUri);
       record = dispatch(id, { type: 'prepared', ...prepared });
       await flushVideoUploads();
       if (sourceUri !== prepared.localUri) deleteLocalVideo(sourceUri);
@@ -270,6 +274,7 @@ async function run(
     });
     check();
     const original = recordFor(id)?.source?.uri;
+    aliasRecordingSource(record.localUri!, attachmentId);
     dispatch(id, { type: 'succeeded', attachmentId });
     notify(id.studentId);
     await flushVideoUploads();
@@ -369,6 +374,7 @@ async function removeRecord(id: UploadIdentity): Promise<void> {
       if (!(error instanceof ApiError && error.status === 404)) throw error;
     });
   removedVideoUris(record).forEach(deleteLocalVideo);
+  pendingPhotoSaves.delete(keyFor(id));
   dispatch(id, { type: 'remove' });
   notify(id.studentId);
   ensureCallbacks.delete(keyFor(id));
@@ -441,24 +447,36 @@ export const videoUploadManager = {
   },
   attach(
     id: UploadIdentity,
-    source: SelectedVideo,
+    selection: SelectedVideo & { photoSave?: Promise<boolean> },
     ensure: EnsureSetLog,
     buildLogRequest?: () => SetLogUpsertRequest | undefined,
   ): Promise<void> {
     const key = keyFor(id);
+    const { photoSave, ...source } = selection;
     const pending = attachments.get(key);
     if (pending?.sourceUri === source.uri) return pending.done;
     const releaseEdit = preserveVideoAttachment(id.studentId, id.stableSetId, buildLogRequest?.());
+    const finishPreparation = beginUploadPreparation(source.uri);
     const done = (async () => {
       const retainedUri = await mutate(id, async () => {
         await useVideoUploadStore.getState().hydrate();
         const logRequest = buildLogRequest?.();
         const retained = await retainVideoSource(source);
+        aliasRecordingSource(source.uri, retained.uri);
         await stop(id);
         const previous = recordFor(id);
         // Publish the new durable copy before retiring the explicitly replaced local file.
         // Remote deletion is retryable work; it must never discard this new recording.
         dispatch(id, { type: 'attach', source: retained, logRequest, previousAttachmentId: previous?.attachmentId });
+        pendingPhotoSaves.delete(key);
+        if (photoSave) {
+          pendingPhotoSaves.set(key, photoSave);
+          void photoSave.then(saved => {
+            if (pendingPhotoSaves.get(key) !== photoSave) return;
+            pendingPhotoSaves.delete(key);
+            if (saved && recordFor(id)) dispatch(id, { type: 'savedToPhotos' });
+          });
+        }
         ensureCallbacks.set(keyFor(id), ensure);
         await flushVideoUploads();
         if (previous) removedVideoUris(previous).filter(uri => uri !== retained.uri).forEach(deleteLocalVideo);
@@ -475,6 +493,7 @@ export const videoUploadManager = {
       )
         await execute(id, ensure);
     })().finally(() => {
+      finishPreparation();
       if (attachments.get(key)?.done === done) attachments.delete(key);
       releaseEdit();
     });
