@@ -17,12 +17,12 @@ beforeEach(() => {
   ] });
 });
 
-test('weight page shows every curve point and reverse dated records, with today update action and three ranges', async () => {
+test('weight page draws the curve as a line with the latest point and reverse dated records, with today update action and three ranges', async () => {
   await render(<BodyWeightScreen />);
   expect(texts()).toEqual(expect.arrayContaining(['82.25', '30 days −0.75 kg', '83.00 kg', '82.25 kg', 'Records']));
   expect(button("Update today's weight")).toBeDefined();
-  expect(renderer.root.findAllByType(Circle)).toHaveLength(2);
-  expect(renderer.root.findAllByType(Circle).map(point => point.props.accessibilityLabel)).toEqual([`${yesterday}, 83.00 kg`, `${today}, 82.25 kg`]);
+  // A line alone carries the trend; only the latest weigh-in keeps a dot.
+  expect(renderer.root.findAllByType(Circle).map(point => point.props.accessibilityLabel)).toEqual([`${today}, 82.25 kg`]);
   const range = () => renderer.root.findAll(node => typeof node.props.onPress === 'function').find(node => node.props.accessibilityHint?.includes('range'))!;
   await act(async () => range().props.onPress());
   expect(texts()).toContain('90 days');
