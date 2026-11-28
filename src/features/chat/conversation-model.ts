@@ -96,8 +96,8 @@ export function applyReadState<T extends { id: string; unread_count: number; my_
   return conversations.map(conversation => conversation.id === conversationID && (conversation.my_last_read?.seq ?? 0) <= read.my_last_read.seq ? { ...conversation, ...read } : conversation);
 }
 
-/** Only snapshot metrics belong to a shared-set badge; coach attribution is opt-in. */
-export function feedbackVideoBadge(reference: ChatSetRef | null | undefined, includesCoachAttribution: boolean, coachName?: string): VideoBadgeInfo | null {
+/** Only snapshot metrics belong to a shared-set badge. */
+export function feedbackVideoBadge(reference: ChatSetRef | null | undefined): VideoBadgeInfo | null {
   if (!reference) return null;
   return {
     exerciseName: reference.exerciseName,
@@ -105,6 +105,6 @@ export function feedbackVideoBadge(reference: ChatSetRef | null | undefined, inc
     reps: reference.reps ?? null,
     rpe: reference.rpe == null ? null : Number(reference.rpe),
     setOrdinal: reference.setNumber,
-    coachName: includesCoachAttribution ? coachName ?? null : null,
+    coachName: null,
   };
 }

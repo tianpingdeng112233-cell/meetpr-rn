@@ -1,49 +1,56 @@
-import { Text, View } from 'react-native';
-import { font, MeetPRMark } from '@/design';
+import { StyleSheet, Text, View } from 'react-native';
+import { SvgXml } from 'react-native-svg';
+import { font } from '@/design';
 import { t } from '@/i18n';
-import { presentBadge } from './badge-presentation';
+import { presentBadge, type VideoBadgeForm } from './badge-presentation';
 import { VideoBadgePalette as palette } from './badge-palette';
+import { badgeWordmark } from './badge-wordmark';
 import { VideoBadgeLogoMark } from './VideoBadgeLogoMark';
 import type { VideoBadgeInfo } from './types';
 
-export function VideoBadgeCard({ info, width, includesCoachAttribution = false }: {
+export function VideoBadgeCard({ info, form, scale: s }: {
   info: VideoBadgeInfo;
-  width: number;
-  includesCoachAttribution?: boolean;
+  form: VideoBadgeForm;
+  scale: number;
 }) {
-  const badge = presentBadge(info);
-  // Android rejects a 0 font size (and letterSpacing on it); wait for a measured width.
-  if (!(width > 0)) return null;
-  const s = width / 468;
-  const suffix = t('chat.videoBadge.setSuffix');
-  return <View style={{ width, gap: 10 * s, paddingTop: 13 * s, paddingHorizontal: 14 * s, paddingBottom: 14 * s,
-    borderRadius: 14 * s, backgroundColor: palette.cardFill, borderColor: palette.cardStroke, borderWidth: Math.max(1, s) }}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 * s }}>
-      <VideoBadgeLogoMark size={22 * s} />
-      <MeetPRMark height={21 * s} variant="onDark" accessibilityLabel="MEETPR" />
-      <View style={{ flex: 1, minWidth: 8 * s }} />
-      {badge.setOrdinal !== null ? <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 * s }}>
-        <Text style={{ ...font.mono(10 * s), color: palette.muted }}>{t('chat.videoBadge.setPrefix')}</Text>
-        <Text style={{ ...font.display(13 * s, 'extraBold'), color: palette.text }}>{badge.setOrdinal}</Text>
-        {suffix ? <Text style={{ ...font.mono(10 * s), color: palette.muted }}>{suffix}</Text> : null}
-      </View> : null}
+  const badge = presentBadge(info, form);
+  if (!badge || !(s > 0)) return null;
+  const { exerciseName, weightText, reps, rpeText, setOrdinal } = badge;
+  const hasLoad = weightText !== null || reps !== null;
+  // Artwork uses design units in both playback dp and export pixels.
+  const number = (size: number) => [styles.number, font.body(size * s, 'semibold')];
+  return <View style={{ alignSelf: 'flex-start', maxWidth: 452 * s, borderRadius: 22 * s,
+    paddingHorizontal: 22 * s, paddingTop: 17 * s, paddingBottom: 19 * s, backgroundColor: palette.cardFill }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', height: 23 * s }}>
+      <VideoBadgeLogoMark size={23 * s} />
+      <View style={{ marginLeft: 7 * s }}>
+        <SvgXml xml={badgeWordmark} width={21 * s * 2443 / 605} height={21 * s} accessibilityLabel="MEETPR" />
+      </View>
+      {setOrdinal !== null ? <Text allowFontScaling={false} style={{ ...font.body(15 * s), includeFontPadding: false,
+        marginLeft: 'auto', paddingLeft: 24 * s, color: palette.ordinal }}>
+        {[t('chat.videoBadge.setPrefix'), setOrdinal, t('chat.videoBadge.setSuffix')].filter(value => value !== '').join(' ')}
+      </Text> : null}
     </View>
-    {badge.exerciseName !== null ? <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}
-      style={{ ...font.body(14 * s, 'bold'), letterSpacing: -0.14 * s, color: palette.text }}>{badge.exerciseName}</Text> : null}
-    {badge.hasLoad || badge.rpeText !== null ? <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 9 * s }}>
-      {badge.weightText !== null ? <>
-        <Text style={{ ...font.display(30 * s, 'extraBold'), fontVariant: ['tabular-nums'], letterSpacing: -0.6 * s, color: palette.text }}>{badge.weightText}</Text>
-        <Text style={{ ...font.mono(14 * s), color: palette.muted, paddingBottom: 3 * s }}>kg</Text>
-      </> : null}
-      {badge.reps !== null ? <Text style={{ ...font.display(20 * s, 'extraBold'), fontVariant: ['tabular-nums'], color: palette.dim, paddingBottom: s }}>{`× ${badge.reps}`}</Text> : null}
-      <View style={{ flex: 1, minWidth: 8 * s }} />
-      {badge.rpeText !== null ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 * s, paddingHorizontal: 9 * s,
-        height: 22 * s, borderRadius: 11 * s, backgroundColor: `${palette.gold}26`, borderColor: `${palette.gold}6B`, borderWidth: Math.max(1, s) }}>
-        <Text style={{ ...font.mono(9 * s), letterSpacing: 0.9 * s, color: palette.gold }}>RPE</Text>
-        <Text style={{ ...font.display(15 * s, 'extraBold'), color: palette.gold }}>{badge.rpeText}</Text>
+    {exerciseName !== null ? <Text allowFontScaling={false} numberOfLines={1} ellipsizeMode="tail"
+      style={{ ...font.body(19 * s, 'medium'), includeFontPadding: false, marginTop: 12 * s, color: palette.label }}>{exerciseName}</Text> : null}
+    {hasLoad || rpeText !== null ? <View style={[styles.row, { marginTop: (exerciseName ? 5 : 12) * s, columnGap: 30 * s }]}>
+      {hasLoad ? <View style={[styles.row, { columnGap: 7 * s }]}>
+        {weightText !== null ? <>
+          <Text allowFontScaling={false} style={number(38)}>{weightText}</Text>
+          <Text allowFontScaling={false} style={[styles.unit, font.body(20 * s, 'medium')]}>kg</Text>
+        </> : null}
+        {reps !== null ? <Text allowFontScaling={false} style={number(weightText === null ? 38 : 29)}>{`× ${reps}`}</Text> : null}
+      </View> : null}
+      {rpeText !== null ? <View style={[styles.row, { columnGap: 6 * s }]}>
+        <Text allowFontScaling={false} style={[styles.unit, font.body(17 * s, 'medium')]}>RPE</Text>
+        <Text allowFontScaling={false} style={number(24)}>{rpeText}</Text>
       </View> : null}
     </View> : null}
-    {includesCoachAttribution && badge.coachName !== null ? <Text numberOfLines={1}
-      style={{ ...font.mono(10 * s, 'medium'), color: palette.muted }}>{t('chat.videoBadge.coach %@', [badge.coachName])}</Text> : null}
   </View>;
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'baseline' },
+  number: { color: palette.text, fontVariant: ['tabular-nums'], includeFontPadding: false },
+  unit: { color: palette.unit, includeFontPadding: false },
+});
