@@ -1,3 +1,5 @@
+import { axisDate } from './growth-geometry';
+
 /** iOS volume canvas coordinates are 320 × 172; RPE has its own scale. */
 export function volumeScale(maximum: number) {
   const increment = maximum > 10000 ? 5000 : maximum > 2000 ? 1000 : 500;
@@ -18,8 +20,9 @@ export function volumeCenterX(index: number, count: number): number {
   return count === 1 ? 168 : 58 + index / (count - 1) * 220;
 }
 
-export function volumeDateLabel(startDate: string, index: number) {
-  return { text: `${startDate.slice(8, 10)}/${startDate.slice(5, 7)}`, opacity: index % 2 === 0 ? 1 : 0 };
+export function volumeDateLabel(startDate: string, index: number, locale?: string) {
+  const [year, month, day] = startDate.split('-').map(Number);
+  return { text: axisDate(new Date(year, month - 1, day), locale), opacity: index % 2 === 0 ? 1 : 0 };
 }
 
 export function volumeBarPath(center: number, volume: number, volumeMax: number): string {

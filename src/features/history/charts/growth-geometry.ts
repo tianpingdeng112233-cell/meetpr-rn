@@ -1,3 +1,5 @@
+import { getLocales } from 'expo-localization';
+
 export type PlotPoint = { x: number; y: number };
 export type GrowthValueDomain = { low: number; high: number };
 
@@ -61,8 +63,9 @@ export function monthDay(date: Date): string {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
-export function dayMonth(date: Date | null): string {
-  return date ? `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}` : '—';
+/** Two-digit month and day in the device region's order: 11/22 in China, 22/11 in the UK. */
+export function axisDate(date: Date | null, locale = getLocales()[0]?.languageTag ?? 'en-US'): string {
+  return date ? new Intl.DateTimeFormat(locale, { month: '2-digit', day: '2-digit' }).format(date) : '—';
 }
 
 export function growthChartGeometry(
