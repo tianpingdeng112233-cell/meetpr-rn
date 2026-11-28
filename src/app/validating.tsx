@@ -1,32 +1,24 @@
-import { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { t } from '@/i18n';
-import { Screen, useColors, type Colors, spacing, typography } from '@/design';
+import { Screen, useColors, spacing } from '@/design';
 
 export default function ValidatingScreen() {
   const colors = useColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Screen>
       <View style={styles.content}>
+        {/* Cold start hides this behind the launch splash (spec 099). */}
         <ActivityIndicator color={colors.gold500} size="large" />
-        <Text style={styles.message}>{t('appShell.root.validatingSession')}</Text>
       </View>
     </Screen>
   );
 }
 
-const createStyles = (colors: Colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     flex: 1,
-    gap: spacing.base,
     justifyContent: 'center',
     padding: spacing.lg,
-  },
-  message: {
-    color: colors.textSecondary,
-    ...typography.body,
   },
 });

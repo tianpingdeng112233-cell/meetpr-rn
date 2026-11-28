@@ -8,6 +8,7 @@ import {
   track,
 } from '@/analytics';
 import RootLayout from '@/app/_layout';
+import { useSessionStore } from '@/api/session';
 
 jest.mock('@/features/notifications/PlanNotificationSession', () => ({ PlanNotificationSession: () => null }));
 jest.mock('@/analytics', () => {
@@ -68,6 +69,18 @@ jest.mock('expo-router', () => {
   };
 });
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
+// Stand-in splash: leaves as soon as the first screen is ready (timing is covered in LaunchSplash.test).
+jest.mock('@/features/launch/LaunchSplash', () => {
+  // Jest hoists this factory before React imports are initialized.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const React = require('react');
+  return {
+    LaunchSplash: ({ ready, onGone }: { ready: boolean; onGone: () => void }) => {
+      React.useEffect(() => { if (ready) onGone(); }, [ready, onGone]);
+      return React.createElement('launch-splash', { testID: 'launch-splash' });
+    },
+  };
+});
 jest.mock('expo-splash-screen', () => ({ preventAutoHideAsync: jest.fn(), hideAsync: jest.fn() }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
@@ -121,6 +134,28 @@ test('the privacy sheet is not blocked by a pending analytics config request', a
     await Promise.resolve();
     renderer?.unmount();
   });
+});
+
+test('the launch splash covers startup until the first screen is ready', async () => {
+  const session = useSessionStore.getState() as unknown as { bootstrapped: boolean };
+  const splash = () => renderer.root.findAll(node => node.props.testID === 'launch-splash');
+  const sheet = () => renderer.root.findByProps({ testID: 'privacy-notice-sheet' });
+  let renderer!: ReactTestRenderer;
+  session.bootstrapped = false;
+  try {
+    await act(async () => { renderer = create(<RootLayout />); });
+    // Session restore still running: splash up, the consent sheet waits behind it.
+    expect(splash()).toHaveLength(1);
+    expect(sheet().props.visible).toBe(false);
+
+    session.bootstrapped = true;
+    await act(async () => { renderer.update(<RootLayout />); });
+    expect(splash()).toHaveLength(0);
+    expect(sheet().props.visible).toBe(true);
+  } finally {
+    session.bootstrapped = true;
+    act(() => renderer?.unmount());
+  }
 });
 
 jest.mock('@react-native-async-storage/async-storage', () =>

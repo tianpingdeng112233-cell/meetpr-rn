@@ -33,7 +33,6 @@
   "appShell.privacy.analytics.body": "為改進訓練流程，MeetPR 會收集產品互動、匿名裝置標識，以及你主動填寫的反饋文字。資料僅用於產品功能，存放在我們位於美國的 DigitalOcean 自有伺服器上，不接入第三方統計 SDK，也不用於追蹤或廣告。帳號存續期間我們會保留這些資料；刪除帳號後，它們會與你斷開關聯，成為無法識別你的匿名記錄。解除安裝會清除匿名安裝標識，你可透過刪除帳號或聯絡我們請求刪除。",
   "appShell.privacy.analytics.title": "使用資料說明",
   "appShell.privacy.policy": "隱私政策",
-  "appShell.root.validatingSession": "正在驗證會話…",
   "appShell.signup.eyebrow": "註冊 · 角色",
   "appShell.signup.multiRoleLater": "多角色支援在 V1.5 評估。",
   "appShell.signup.passwordMaximum": "最多 72 位元組",
