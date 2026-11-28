@@ -6,8 +6,8 @@ on:
   pull_request:
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -70,7 +70,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: npm ci
       - run: npx expo prebuild --platform android --no-install
-      - run: cd android && ./gradlew :expo-image-picker:testDebugUnitTest :training-video:testDebugUnitTest assembleDebug --no-daemon
+      - run: >-
+          cd android && ./gradlew :expo-image-picker:testDebugUnitTest :training-video:testDebugUnitTest assembleDebug --no-daemon
+          ${{ github.event_name == 'pull_request' && '-PreactNativeArchitectures=arm64-v8a' || '' }}
       - run: bash scripts/verify-video-player-apk.sh android/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
