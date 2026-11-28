@@ -86,8 +86,8 @@ export function VideoAttachmentControls({
 }: Props) {
   // Camera overlays keep the element created at presentation time. Resolve form
   // callbacks at handoff so async prefill and edits made meanwhile are included.
-  const logCallbacks = useRef({ ensureSetLog, buildLogRequest, inputReady });
-  useLayoutEffect(() => { logCallbacks.current = { ensureSetLog, buildLogRequest, inputReady }; });
+  const logCallbacks = useRef({ ensureSetLog, buildLogRequest, inputReady, badge });
+  useLayoutEffect(() => { logCallbacks.current = { ensureSetLog, buildLogRequest, inputReady, badge }; });
   const colors = useColors();
   const { width, fontScale } = useWindowDimensions();
   const compact = width / fontScale < 440;
@@ -146,14 +146,13 @@ export function VideoAttachmentControls({
         return;
       if (source === 'camera') {
         present(
-          <CameraRecorder
+          <CameraRecorder badge={badge} getBadge={() => logCallbacks.current.badge}
             onClose={dismiss}
             onLibrary={() => { dismiss(); void choose('library'); }}
-            onUse={(uri, savedToPhotos) => {
+            onUse={(uri, photoSave) => {
               dismiss();
               attach({
                 uri,
-                savedToPhotos,
                 width: 720,
                 height: 1280,
                 durationMs: null,
@@ -161,7 +160,7 @@ export function VideoAttachmentControls({
                 fileName: null,
                 codec: null,
                 rotationDegrees: 0,
-              });
+              }, photoSave);
             }}
           />,
         );
@@ -182,12 +181,12 @@ export function VideoAttachmentControls({
       setChoosing(false);
     }
   };
-  const attach = (video: SelectedVideo) => {
+  const attach = (video: SelectedVideo, photoSave?: Promise<boolean>) => {
     onActivityChange?.(stableSetId, true);
     setActionErrorMessage(null);
     setIsPreparing(true);
     void videoUploadManager
-      .attach(identity, video, () => {
+      .attach(identity, photoSave ? { ...video, photoSave } : video, () => {
         waitingForInput.current = !logCallbacks.current.inputReady;
         return logCallbacks.current.ensureSetLog();
       }, () => logCallbacks.current.inputReady ? logCallbacks.current.buildLogRequest() : undefined)
@@ -238,7 +237,7 @@ export function VideoAttachmentControls({
     </Pressable>
     {detailVisible ? <Modal visible animationType="slide" onRequestClose={() => setDetailVisible(false)}><View style={{ flex: 1, backgroundColor: colors.bgBase, padding: 16, paddingTop: 48 }}>
       <VideoAction icon="close" label={t('training.allDay.done')} disabled={false} onPress={() => setDetailVisible(false)} />
-      {playable ? <VideoPlayback inline localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => setDetailVisible(false)} /> : null}
+      {playable ? <VideoPlayback allowGalleryExport inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => setDetailVisible(false)} /> : null}
       <VideoAction icon="video" label={t('student.videoAttachmentV3Controls.copy001')} disabled={!editable || choosing || isPreparing} onPress={() => void choose('camera')} />
       {failed ? <VideoAction icon="refresh" label={t('student.videoAttachmentV3Controls.copy009')} disabled={!editable} onPress={() => void retry([{ stableSetId }])} /> : null}
       <VideoAction icon="trash-can-outline" label={t('student.videoAttachmentV3Controls.copy005')} disabled={!editable} onPress={() => void remove().then(() => setDetailVisible(false))} />
@@ -253,7 +252,7 @@ export function VideoAttachmentControls({
   </>;
   return (
     <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.card, paddingHorizontal: spacing.point14, paddingVertical: spacing.point11, gap: spacing.space2 }}>
-      {playable ? <VideoPlayback key={record.createdAt} inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => undefined} /> : null}
+      {playable ? <VideoPlayback allowGalleryExport key={record.createdAt} inline badge={badge} localUri={record.localUri ?? record.source?.uri ?? null} attachmentId={record.attachmentId} onClose={() => undefined} /> : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         {!playable && record.status === 'none' ? <Text style={{ color: colors.textPrimary, ...font.body(fontMetrics.size16, 'medium') }}>{t('student.videoAttachmentSection.copy001')}</Text> : null}
         {preparing ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flex: 1 }}>

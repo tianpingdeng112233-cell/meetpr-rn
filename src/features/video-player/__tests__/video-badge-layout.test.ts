@@ -1,5 +1,5 @@
 import { expect, test } from '@jest/globals';
-import { videoBadgeLayout } from '../video-badge-layout';
+import { playbackCueLayout, videoBadgeLayout } from '../video-badge-layout';
 
 test.each([
   [1080, 1920, 2, 88, 428, 300],
@@ -14,3 +14,11 @@ test('a short landscape player reserves a three-line cue and 44dp rail for playb
   expect(videoBadgeLayout(760, 360, 'playback').bottom).toBe(80.75);
   expect(videoBadgeLayout(760, 360, 'export').bottom).toBe(80.25);
 });
+
+test.each([[360, 740, 26, 44], [760, 360, 96, 44], [540, 960, 170, 66]])(
+  'wrapped cues fit between badge and rail at %s × %s', (w, h, measuredCue, railHeight) => {
+    const g = videoBadgeLayout(w, h, 'playback');
+    const footer = playbackCueLayout(g, measuredCue, railHeight, 1);
+    expect(footer.cueBottom - footer.trackPadding - railHeight).toBeCloseTo(8 * g.scale);
+    expect(footer.badgeBottom - footer.cueBottom - measuredCue).toBeGreaterThanOrEqual(10 * g.scale - 0.001);
+  });

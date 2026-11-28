@@ -13,3 +13,12 @@ export function videoBadgeLayout(width: number, height: number, form: VideoBadge
   const maxCue = (2 * cuePaddingUnits + cuePreviewLines * cueLineUnits * fontScale) * scale;
   return { scale, left, bottom: Math.max(150 * scale, 44 + maxCue + cueGapUnits * scale) };
 }
+
+/** Anchor both gaps to the full measured controls, including wrapped text and large fonts. */
+export function playbackCueLayout(geometry: ReturnType<typeof videoBadgeLayout>, cueHeight: number, railHeight: number, fontScale: number) {
+  const { scale, bottom } = geometry;
+  const preview = (2 * cuePaddingUnits + cuePreviewLines * cueLineUnits * fontScale) * scale;
+  const trackPadding = Math.max(0, Math.min(72 * scale - railHeight / 2, bottom - 18 * scale - preview - railHeight));
+  const cueBottom = trackPadding + railHeight + 8 * scale;
+  return { trackPadding, cueBottom, badgeBottom: Math.max(bottom, cueBottom + Math.max(cueHeight, preview) + 10 * scale) };
+}

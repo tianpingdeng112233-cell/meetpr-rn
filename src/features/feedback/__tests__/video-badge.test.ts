@@ -1,8 +1,9 @@
 import { afterEach, expect, jest, test } from '@jest/globals';
+import { setsRepository } from '@/api/domains/sets';
 import { FeedbackResponseSchema } from '@/api/domains/feedback';
 import { setLocaleOverride } from '@/i18n';
 import { StudentVideoSchema } from '@/api/domains/videos';
-import { feedbackVideoAssociation, feedbackVideoBadge, feedbackVideoName, feedbackVideoSummary } from '../video-presentation';
+import { currentFeedbackExportBadge, feedbackVideoAssociation, feedbackVideoBadge, feedbackVideoName, feedbackVideoSummary } from '../video-presentation';
 
 const wireVideo = {
   id: '00000000-0000-4000-8000-000000000001', set_log_id: null, plan_exercise_id: null,
@@ -57,4 +58,19 @@ test('feedback preserves Chinese names in Chinese and falls back when English me
   setLocaleOverride('en');
   expect(feedbackVideoName({ ...names, exercise_name_en: '  ' })).toBe('竞技深蹲');
   expect(feedbackVideoName({ exercise_name: null, exercise_name_en: null })).toBeNull();
+});
+
+test('feedback export reads this video’s current set log including a revised RPE', async () => {
+  const video = StudentVideoSchema.parse({ ...wireVideo, set_log_id: '00000000-0000-4000-8000-000000000002' });
+  const logs = [video.id, video.set_log_id!].map((id, i) => ({
+    id, student_id: 'student', exercise_id: 'exercise', plan_exercise_id: null, weight_kg: '100',
+    set_index: 1, reps: i + 5, rpe: i ? '9.0' : '5.0', completed: true, failed: false,
+    assumed: false, adhoc: false, logged_date: '2026-09-05', logged_at: wireVideo.created_at,
+  }));
+  const query = jest.spyOn(setsRepository, 'range').mockResolvedValue({ logs });
+  try {
+    const badge = await currentFeedbackExportBadge('student', video, '2026-09-05', { ...video, exercise_name_en: 'Squat' });
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(badge).toMatchObject({ exerciseName: 'Squat', rpe: 9, reps: 6, setOrdinal: 2 });
+  } finally { query.mockRestore(); }
 });

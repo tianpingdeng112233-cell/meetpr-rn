@@ -12,9 +12,10 @@ import { FeedbackVideoAnnotationOverlay } from './FeedbackVideoAnnotationOverlay
 import { FeedbackVideoMarkerCue } from './FeedbackVideoMarkerCue';
 import { markerAtTime } from './marker-window';
 import { presentBadge } from './badge-presentation';
-import { cueGapUnits, cueLineUnits, cuePaddingUnits, cuePreviewLines, videoBadgeLayout } from './video-badge-layout';
+import { playbackCueLayout, videoBadgeLayout } from './video-badge-layout';
 import { FeedbackVideoFailureCard, FeedbackVideoWorkbenchPlayer } from './FeedbackVideoWorkbenchPlayer';
 import { FeedbackVideoScrubber } from './FeedbackVideoScrubber';
+import { GalleryExportButton } from './GalleryExportButton';
 import { VideoBadgeOverlay } from './VideoBadgeOverlay';
 import { cycleRate, rateText } from './rate';
 import { FeedbackVideoScrubState } from './scrub-state';
@@ -28,6 +29,8 @@ export type FeedbackVideoPlayerProps = {
   markers?: FeedbackVideoMarker[] | null;
   markersFailed?: boolean;
   badge?: VideoBadgeInfo | null;
+  allowGalleryExport?: boolean;
+  getExportBadge?: () => Promise<VideoBadgeInfo>;
   allowsExpansion?: boolean;
   onProgress?: (seconds: number) => void;
   onSeek?: (milliseconds: number) => void;
@@ -45,7 +48,7 @@ export function FeedbackVideoPlayer(props: FeedbackVideoPlayerProps) {
   return <PlayerSession key={`${props.videoId}:${props.url}`} {...props} />;
 }
 
-function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, markersFailed = false, badge = null, allowsExpansion = true, onProgress, onSeek, refreshURL, onMarkersRefresh, onAddMarker, selectedAnnotationMarker, onAnnotationClose, onClose }: FeedbackVideoPlayerProps) {
+function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, markersFailed = false, badge = null, allowGalleryExport = false, getExportBadge, allowsExpansion = true, onProgress, onSeek, refreshURL, onMarkersRefresh, onAddMarker, selectedAnnotationMarker, onAnnotationClose, onClose }: FeedbackVideoPlayerProps) {
   const colors = useColors();
   const player = useRef<VideoRef>(null);
   const live = useRef(true);
@@ -57,7 +60,8 @@ function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, ma
   const [item, setItem] = useState({ uri: url, revision: 0 });
   const windowBounds = useWindowDimensions();
   const [bounds, setBounds] = useState<{ width: number; height: number } | null>(null);
-  const [tallestCueUnits, setTallestCueUnits] = useState(0);
+  const [cueMeasurement, setCueMeasurement] = useState({ key: '', height: 0 });
+  const [railHeight, setRailHeight] = useState<number>(spacing.minimumHitTarget);
   const [selectedCueID, setSelectedCueID] = useState<string | null>(null);
   const [badgeExpanded, setBadgeExpanded] = useState(true);
   const [rate, setRate] = useState(1);
@@ -197,26 +201,19 @@ function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, ma
   const { width, height } = bounds ?? windowBounds;
   const geometry = videoBadgeLayout(width, height, 'playback', windowBounds.fontScale);
   const hasBadge = badge && presentBadge(badge, 'playback') !== null;
-  const decorated = layout === 'fullScreen' && (hasBadge || markers?.length || markersFailed);
+  const decorated = layout === 'fullScreen' && Boolean(hasBadge || markers?.length || markersFailed);
   const s = geometry.scale;
-  // Preserve the prototype's rail position until a wrapped cue needs the lower margin.
-  // Remember the largest measured cue so shorter comments don't bounce the rail back.
-  const cueLineHeight = cueLineUnits * windowBounds.fontScale * s;
-  const cuePadding = 2 * cuePaddingUnits * s;
-  const cueHeight = Math.min(cuePadding + cuePreviewLines * cueLineHeight, Math.max(tallestCueUnits * s, cuePadding + cueLineHeight));
-  const cueTopFromBottom = geometry.bottom - cueGapUnits * s;
-  const trackPadding = Math.max(0, Math.min(72 * s - spacing.minimumHitTarget / 2,
-    cueTopFromBottom - cueHeight - spacing.minimumHitTarget));
   const selectMarker = (marker: FeedbackVideoMarker) => {
+    if (!marker.annotationURL && annotation) closeAnnotation();
     setSelectedCueID(marker.id);
     selection.select(marker);
   };
   const scrubber = <FeedbackVideoScrubber layout={layout} seconds={displayed} duration={duration}
         scale={decorated ? s : undefined} markers={decorated && !markersFailed ? markers ?? [] : undefined}
         select={decorated ? selectMarker : undefined}
-        begin={position => { scrub.begin(position, duration); setDragSeconds(scrub.displayedSeconds(seconds)); }}
+        begin={position => { if (layout === 'fullScreen' && annotation) closeAnnotation(); scrub.begin(position, duration); setDragSeconds(scrub.displayedSeconds(seconds)); }}
         move={position => { scrub.move(position, duration); setDragSeconds(scrub.displayedSeconds(seconds)); }}
-        finish={position => { scrub.finish(position, duration); setDragSeconds(null); }} />;
+        finish={position => { if (layout === 'fullScreen' && annotation) closeAnnotation(); scrub.finish(position, duration); setDragSeconds(null); }} />;
   const annotationMarker = selectedAnnotationMarker === undefined ? annotation : selectedAnnotationMarker;
   const annotationOverlay = annotationMarker?.annotationURL ? <FeedbackVideoAnnotationOverlay
     key={`${annotation?.generation ?? 0}:${annotationMarker.annotationURL}`}
@@ -236,42 +233,45 @@ function PlayerSession({ layout = 'fullScreen', videoId, url, markers = null, ma
   const cueMarker = annotation ?? markerAtTime(markers ?? [], displayed * 1000);
   if (selectedCueID !== null && selectedCueID !== cueMarker?.id) setSelectedCueID(null);
   const cueSelected = cueMarker !== null && cueMarker.id === selectedCueID;
-  const openCueAboveTrack = cueSelected && (!!annotationOverlay || !hasBadge);
+  const cueKey = JSON.stringify([cueMarker?.id, cueSelected, markersFailed, width, windowBounds.fontScale]);
+  const measuredHeight = cueMeasurement.key === cueKey ? cueMeasurement.height : 0;
+  const { trackPadding, cueBottom, badgeBottom } = playbackCueLayout(geometry, measuredHeight, railHeight, windowBounds.fontScale);
   const cue = <FeedbackVideoMarkerCue marker={cueMarker} selected={cueSelected}
     select={selectMarker} failed={markersFailed} retry={onMarkersRefresh} scale={s}
-    anchor={openCueAboveTrack ? { bottom: trackPadding + spacing.minimumHitTarget } : { top: '100%', marginTop: -cueTopFromBottom }}
-    maxTextHeight={openCueAboveTrack ? Math.max(cuePreviewLines * cueLineHeight, height - cueTopFromBottom - 80) : cuePreviewLines * cueLineHeight}
-    onHeight={height => { if (!openCueAboveTrack && s > 0) setTallestCueUnits(previous => Math.max(previous, height / s)); }} />;
-  return <View style={styles.root} onLayout={({ nativeEvent: { layout: { width, height } } }) => {
-    if (width > 0 && height > 0) setBounds({ width, height });
-  }}>
+    bottom={cueBottom} maxTextHeight={Math.max(44, height - cueBottom - (hasBadge && !annotationOverlay ? 220 * s : 0) - 60)}
+    onHeight={height => setCueMeasurement(previous => previous.key === cueKey && previous.height === height ? previous : { key: cueKey, height })} />;
+  return <View style={styles.root}>
     <StatusBar style="light" />
     {video}
-    <SafeAreaView style={styles.controls} pointerEvents={annotation ? 'none' : 'box-none'} accessibilityElementsHidden={Boolean(annotation)} importantForAccessibility={annotation ? 'no-hide-descendants' : 'auto'}>
-      <View style={styles.controls} pointerEvents="box-none">
-        <View style={styles.chrome}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('chat.closePlayback')} onPress={() => { scrub.cancel(); player.current?.pause(); onClose?.(); }} style={styles.close}>
-            <MaterialCommunityIcons name="close" size={20} color="white" />
-          </Pressable>
-          <Text style={styles.eyebrow}>{t('chat.videoPlayback')}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${t('chat.playbackSpeed')} ${rateText(rate)}`}
-            testID={`feedback.video.speed.${rateText(rate)}`} onPress={() => setRate(cycleRate)} style={styles.speed}>
-            <Text style={styles.rate}>{rateText(rate)}</Text>
-          </Pressable>
+    {annotationOverlay}
+    <SafeAreaView style={styles.controls} pointerEvents="box-none">
+      <View style={styles.controls} pointerEvents="box-none" onLayout={({ nativeEvent: { layout: { width, height } } }) => {
+        if (width > 0 && height > 0) setBounds({ width, height });
+      }}>
+        {!annotationOverlay ? <>
+          <View style={styles.chrome}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('chat.closePlayback')} onPress={() => { scrub.cancel(); player.current?.pause(); onClose?.(); }} style={styles.close}>
+              <MaterialCommunityIcons name="close" size={20} color="white" />
+            </Pressable>
+            <Text style={styles.eyebrow}>{t('chat.videoPlayback')}</Text>
+            {allowGalleryExport && hasBadge ? <GalleryExportButton uri={item.uri} videoId={videoId} badge={badge} getBadge={getExportBadge} refreshURL={() => refreshURL(videoId)} /> : null}
+            <Pressable accessibilityRole="button" accessibilityLabel={`${t('chat.playbackSpeed')} ${rateText(rate)}`}
+              testID={`feedback.video.speed.${rateText(rate)}`} onPress={() => setRate(cycleRate)} style={styles.speed}>
+              <Text style={styles.rate}>{rateText(rate)}</Text>
+            </Pressable>
+          </View>
+          <View style={[styles.center, hasBadge ? StyleSheet.absoluteFill : null]} pointerEvents="box-none">
+            {playbackControl}
+          </View>
+          {hasBadge ? <VideoBadgeOverlay geometry={{ ...geometry, bottom: badgeBottom }}
+              allowsExpansion={allowsExpansion} info={badge} expanded={badgeExpanded} onToggle={() => setBadgeExpanded(value => !value)} /> : null}
+        </> : null}
+        <View pointerEvents="box-none" style={[decorated && styles.footer, decorated ? { paddingBottom: trackPadding } : null]}>
+          <View onLayout={event => setRailHeight(event.nativeEvent.layout.height)}>{scrubber}</View>
         </View>
-        <View style={[styles.center, hasBadge ? StyleSheet.absoluteFill : null]} pointerEvents="box-none">
-          {playbackControl}
-        </View>
-        {hasBadge ? <VideoBadgeOverlay geometry={geometry}
-            allowsExpansion={allowsExpansion} info={badge} expanded={badgeExpanded} onToggle={() => setBadgeExpanded(value => !value)} /> : null}
-        <View pointerEvents="box-none" style={[hasBadge && styles.footer, decorated ? { paddingBottom: trackPadding } : null]}>{scrubber}</View>
-        {!annotationOverlay ? cue : null}
+        {cue}
       </View>
     </SafeAreaView>
-    {annotationOverlay}
-    {annotationOverlay ? <SafeAreaView pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-      <View pointerEvents="box-none" style={styles.controls}>{cue}</View>
-    </SafeAreaView> : null}
   </View>;
 }
 const material = { backgroundColor: 'rgba(0,0,0,0.35)', borderColor: 'rgba(255,255,255,0.18)', borderWidth: 1 };

@@ -1,9 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, Camera } from 'expo-camera';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import * as MediaLibrary from 'expo-media-library';
+import { useBadgeCapture } from '@/features/video-player/BadgeCaptureHost';
+import { VideoBadgeCard } from '@/features/video-player/VideoBadgeCard';
+import type { VideoBadgeInfo } from '@/features/video-player/types';
+import { videoBadgeLayout } from '@/features/video-player/video-badge-layout';
+import { galleryPermission, saveRecordingVideo } from './gallery-save';
 import { useEffect, useId, useRef, useState } from 'react';
-import { AppState, Linking, Modal, StatusBar, StyleSheet, Text, ToastAndroid, View } from 'react-native';
+import { AppState, Linking, Modal, StatusBar, StyleSheet, Text, ToastAndroid, useWindowDimensions, View } from 'react-native';
 import { FeedbackPressable as Pressable } from '@/design/FeedbackPressable';
 import Video from 'react-native-video';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +21,7 @@ import { deleteLocalVideo } from './native';
 import { VIDEO_MAX_DURATION_SECONDS } from './model';
 import { TrimTimeline } from './TrimTimeline';
 import { useTrimSource, warnTrimPreparation } from './useTrimSource';
+import { videoTranscodes } from './recording-gallery';
 import { trainingVideoTrim } from './trim-native';
 const SAVE_TO_PHOTOS_KEY = 'training.video.saveToPhotos.v1';
 const TRIM_HINT_DISMISSED_KEY = 'training.video.trimHintDismissed.v1';
@@ -25,19 +30,30 @@ const clockText = (seconds: number) =>
     .toString()
     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 type CameraRecorderProps = {
+  badge?: VideoBadgeInfo | null;
+  getBadge?: () => VideoBadgeInfo | null | undefined;
   onLibrary?: () => void;
   onClose: () => void;
-  onUse: (uri: string, savedToPhotos?: boolean) => void;
+  onUse: (uri: string, photoSave: Promise<boolean>) => void;
   maxDurationSeconds?: number;
 };
 
 export function CameraRecorder({
-  onLibrary,
+  badge, getBadge, onLibrary,
   onClose,
   onUse,
   maxDurationSeconds = VIDEO_MAX_DURATION_SECONDS,
 }: CameraRecorderProps) {
   const colors = useColors();
+  const capture = useBadgeCapture();
+  const window = useWindowDimensions();
+  const [bounds, setBounds] = useState<{ width: number; height: number } | null>(null);
+  const [aspect, setAspect] = useState<number | null>(null);
+  const frame = bounds ?? window;
+  const width = aspect ? Math.min(frame.width, frame.height * aspect) : frame.width;
+  const height = aspect ? width / aspect : frame.height;
+  const geometry = videoBadgeLayout(width, height, 'export');
+  const previewBadge = getBadge ? getBadge() : badge;
   const { scheme } = useTheme();
   const [dragging, setDragging] = useState(false);
   const camera = useRef<CameraView>(null);
@@ -91,16 +107,7 @@ export function CameraRecorder({
     closeRef.current = onClose;
   }, [onClose]);
   const requestPhotos = () => {
-    photosPermission.current ??= MediaLibrary.getPermissionsAsync(true, [
-      'video',
-    ])
-      .then(async (current) => {
-        if (current.granted) return true;
-        if (!current.canAskAgain) return false;
-        return (await MediaLibrary.requestPermissionsAsync(true, ['video']))
-          .granted;
-      })
-      .catch(() => false);
+    photosPermission.current ??= galleryPermission().catch(() => false);
     return photosPermission.current;
   };
   useEffect(() => {
@@ -215,6 +222,7 @@ export function CameraRecorder({
   };
   const use = async () => {
     if (!review || usingRef.current || closed.current) return;
+    const badgeAtUse = getBadge ? getBadge() : badge;
     usingRef.current = true;
     setUsing(true);
     const current = session.current;
@@ -224,8 +232,11 @@ export function CameraRecorder({
     if (changed && workingUri && current?.active) {
       setPlaying(false);
       try {
-        result = await trainingVideoTrim().trim(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
-        // Own before awaiting Photos so unmount also reclaims an export in that window.
+        result = await videoTranscodes.enqueue(async () => {
+          if (!current.active) throw new Error('Trim cancelled');
+          return trainingVideoTrim().trim(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
+        });
+        // The trim session owns a late result until handoff.
         current.own(result.uri);
         if (!current.active || closed.current) return;
       } catch (error) {
@@ -239,18 +250,12 @@ export function CameraRecorder({
       }
     }
     const output = result?.uri ?? review;
-    let savedToPhotos = false;
-    if (saveToPhotos) {
-      try {
-        if (!(await requestPhotos())) throw new Error('Photos denied');
-        if (closed.current) return;
-        await MediaLibrary.Asset.create(output);
-        savedToPhotos = true;
-      } catch {
-        if (!closed.current) ToastAndroid.show(t('student.cameraRecorderView.copy013'), ToastAndroid.LONG);
-      }
-    }
-    if (closed.current) return;
+    const photoSave = saveToPhotos
+      ? saveRecordingVideo(output, badgeAtUse, capture, requestPhotos(), result?.durationMs ?? (selection.sourceDurationSeconds || elapsed) * 1000).then(() => true, () => {
+        ToastAndroid.show(t('student.cameraRecorderView.copy013'), ToastAndroid.LONG);
+        return false;
+      })
+      : Promise.resolve(false);
     if (result) {
       current?.saved(result);
       deleteLocalVideo(ownedUri.current);
@@ -259,7 +264,7 @@ export function CameraRecorder({
       current?.dispose();
     }
     ownedUri.current = null;
-    onUse(output, savedToPhotos);
+    onUse(output, photoSave);
   };
   const close = () => {
     if (usingRef.current) return;
@@ -293,6 +298,7 @@ export function CameraRecorder({
               deleteLocalVideo(review);
               ownedUri.current = null;
               setReview(null);
+              setAspect(null);
               setReady(false);
               setError(false);
             }} /> : null}
@@ -311,7 +317,7 @@ export function CameraRecorder({
       <StatusBar barStyle={review && scheme === 'light' ? 'dark-content' : 'light-content'} />
       <SafeAreaView testID="trim-page" style={{ flex: 1, backgroundColor: review ? colors.bgBase : colors.chatImageBackground }}>
         {review ? toolbar : null}
-        <View testID="trim-video" style={{ flex: 1, minHeight: review ? 180 : undefined, marginHorizontal: review ? spacing.base : 0, backgroundColor: colors.chatImageBackground }}>
+        <View testID="trim-video" onLayout={({ nativeEvent: { layout } }) => setBounds(layout)} style={{ flex: 1, minHeight: review ? 180 : undefined, marginHorizontal: review ? spacing.base : 0, backgroundColor: colors.chatImageBackground }}>
           {permission === 'granted' ? review ? (
             <Video
               disableFocus
@@ -321,7 +327,12 @@ export function CameraRecorder({
               paused={!playing || using}
               resizeMode="contain"
               style={StyleSheet.absoluteFill}
-              onLoad={onLoad}
+              onLoad={event => {
+                if (event.naturalSize?.width > 0 && event.naturalSize.height > 0) {
+                  setAspect(event.naturalSize.width / event.naturalSize.height);
+                }
+                onLoad();
+              }}
               progressUpdateInterval={50}
               onSeek={onSeek}
               onProgress={onProgress}
@@ -346,6 +357,10 @@ export function CameraRecorder({
               }}
             />
           ) : null}
+          {review && aspect && bounds && previewBadge ? <View pointerEvents="none" style={{ position: 'absolute',
+            left: (frame.width - width) / 2 + geometry.left, bottom: (frame.height - height) / 2 + geometry.bottom }}>
+            <VideoBadgeCard info={previewBadge} form="export" scale={geometry.scale} />
+          </View> : null}
           {!review ? toolbar : null}
           {!review && !recording && onLibrary ? <Pressable accessibilityRole="button" accessibilityLabel={t('student.videoAttachmentV3Controls.copy002')} onPress={onLibrary} style={{ position: 'absolute', left: 20, bottom: 40, zIndex: 2, padding: 12 }}><MaterialCommunityIcons name="image-outline" size={26} color={colors.inkOnCTAFill} /><Text style={{ color: colors.inkOnCTAFill }}>{t('student.videoAttachmentV3Controls.copy002')}</Text></Pressable> : null}
           {review ? <View pointerEvents="box-none" style={{ position: 'absolute', bottom: spacing.base, left: spacing.base, right: spacing.base, alignItems: 'center', gap: spacing.space2 }}>

@@ -68,19 +68,21 @@ test('a new playback session resets a collapsed badge to expanded', async () => 
   expect(buttons('feedback.video.badge.expanded')).toHaveLength(1);
 });
 
-test('annotation selection hides badge controls from touch and accessibility until closed', async () => {
+test.each(['expanded', 'collapsed'])('drawing hides the %s badge and keeps timeline and cue interactive', async state => {
   await act(async () => { renderer = create(<FeedbackVideoPlayer {...props} badge={badge}
     markers={[{ id: 'marker', timeMs: 0, note: 'Check depth', annotationURL: 'https://annotation' }]} />); });
   act(() => renderer.root.find(node => (node.type as unknown) === 'Video').props.onLoad({ duration: 10 }));
-  const marker = buttons('feedback.video.marker.tick.marker')[0];
-  act(() => marker.props.onPress());
-  let controls = buttons('feedback.video.badge.expanded')[0].parent;
-  while (controls && controls.props.importantForAccessibility !== 'no-hide-descendants') controls = controls.parent;
-  expect(controls?.props.pointerEvents).toBe('none');
-  expect(controls?.props.accessibilityElementsHidden).toBe(true);
+  if (state === 'collapsed') act(() => buttons('feedback.video.badge.expanded')[0].props.onPress());
+  act(() => buttons('feedback.video.marker.tick.marker')[0].props.onPress());
+  expect(buttons('feedback.video.badge.' + state)).toHaveLength(0);
+  for (const node of [buttons('feedback.video.marker.cue')[0], renderer.root.findByProps({ testID: 'feedback.video.scrubber' })]) {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+      expect(parent.props.pointerEvents).not.toBe('none');
+      expect(parent.props.importantForAccessibility).not.toBe('no-hide-descendants');
+    }
+  }
   act(() => buttons('feedback.video.annotationOverlay')[0].props.onPress());
-  expect(renderer.root.findAllByProps({ testID: 'feedback.video.annotationOverlay' })).toHaveLength(0);
-  expect(buttons('feedback.video.badge.expanded')).toHaveLength(1);
+  expect(buttons('feedback.video.badge.' + state)).toHaveLength(1);
 });
 
 test('nearby ticks select the closest timestamp, and the cue opens the same drawing', async () => {

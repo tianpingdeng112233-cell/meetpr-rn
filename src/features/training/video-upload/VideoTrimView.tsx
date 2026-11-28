@@ -8,6 +8,7 @@ import { font, radius, spacing, useColors } from '@/design';
 import { useTheme } from '@/design/theme';
 import { TrimPlayButton } from './TrimPlayButton';
 import { t } from '@/i18n';
+import { videoTranscodes } from './recording-gallery';
 import { trimAlbumVideo } from './trim-native';
 import { type TrimOutcome } from './trim-session';
 import { isTrimSelectionValid } from './trim-selection';
@@ -38,7 +39,10 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
     setExporting(true);
     setPlaying(false);
     try {
-      const result = await trimAlbumVideo(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
+      const result = await videoTranscodes.enqueue(async () => {
+        if (!current.active) throw new Error('Trim cancelled');
+        return trimAlbumVideo(workingUri, Math.round(selection.startSeconds * 1000), Math.round(selection.endSeconds * 1000));
+      });
       current.saved(result);
     } catch (error) {
       if (!current.active) return;

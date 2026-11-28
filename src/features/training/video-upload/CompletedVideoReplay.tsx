@@ -47,7 +47,7 @@ export function CompletedVideoReplayProvider({ studentId, children, onNavigate }
   return <ReplayContext.Provider value={{ studentId, videos: result?.studentId === studentId ? result.videos : [], play: setSelection }}>
     {children}
     {selection ? <Modal visible animationType="fade" presentationStyle="fullScreen" onRequestClose={() => setSelection(null)}>
-      <VideoPlayback {...selection} readOnly onClose={() => setSelection(null)} onReview={feedbackId ? () => {
+      <VideoPlayback allowGalleryExport {...selection} readOnly onClose={() => setSelection(null)} onReview={feedbackId ? () => {
         setSelection(null);
         onNavigate?.();
         router.push({ pathname: '/(student)/feedback/[feedbackId]', params: { feedbackId } });

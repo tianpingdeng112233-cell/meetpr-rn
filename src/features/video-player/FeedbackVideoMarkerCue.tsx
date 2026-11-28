@@ -12,19 +12,19 @@ import type { FeedbackVideoMarker } from './types';
 const fadeIn = FadeIn.duration(250);
 const fadeOut = FadeOut.duration(250);
 
-export function FeedbackVideoMarkerCue({ marker, selected, select, failed, retry, scale: s, anchor, maxTextHeight, onHeight }: {
+export function FeedbackVideoMarkerCue({ marker, selected, select, failed, retry, scale: s, bottom, maxTextHeight, onHeight }: {
   marker: FeedbackVideoMarker | null;
   selected: boolean;
   select: (marker: FeedbackVideoMarker) => void;
   failed: boolean;
   retry?: () => void | Promise<void>;
   scale: number;
-  anchor: { top: '100%'; marginTop: number } | { bottom: number };
+  bottom: number;
   maxTextHeight: number;
   onHeight: (height: number) => void;
 }) {
   if ((!marker && !failed) || !(s > 0)) return null;
-  const position = { position: 'absolute', left: 44 * s, maxWidth: 452 * s, ...anchor } as const;
+  const position = { position: 'absolute', left: 44 * s, maxWidth: 452 * s, bottom } as const;
   const pill = { paddingVertical: cuePaddingUnits * s, paddingHorizontal: 20 * s, borderRadius: 22 * s, backgroundColor: palette.cardFill };
   const body = { ...font.body(20 * s), lineHeight: cueLineUnits * s, color: 'white', includeFontPadding: false, flexShrink: 1 };
   if (failed) return <View onLayout={event => onHeight(event.nativeEvent.layout.height)} style={[position, styles.row, pill, { columnGap: 12 * s }]}>

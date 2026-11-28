@@ -1,7 +1,7 @@
 import { flushNow, track } from '@/analytics/client';
 import { AnalyticsEvent, AnalyticsScreen } from '@/analytics/types';
 
-export type VideoProcessingStage = 'picker' | 'trim_copy' | 'trim_info' | 'trim_thumbnails' | 'trim_preview' | 'trim_export'
+export type VideoProcessingStage = 'badge_export' | 'picker' | 'trim_copy' | 'trim_info' | 'trim_thumbnails' | 'trim_preview' | 'trim_export'
   | 'retain_source' | 'retain_export' | 'source_file' | 'metadata' | 'tracks' | 'duration' | 'compress' | 'export_file';
 
 // compressor 2.0.3's Nitro adapter forwards message-only Errors. Exact known
