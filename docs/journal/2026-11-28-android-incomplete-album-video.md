@@ -9,3 +9,11 @@
 - Jest 在原实现上复现替换失败后只有通用提示，修复后相册剪辑用例 68 项通过，含原视频保留和错误码。
 - 原生回归覆盖首次短读后恢复、持续短读、原片保留、普通与扩展长度盒、无显式长度盒和其他容器。Android CI 从源码构建 expo-image-picker 并执行这些测试。
 - Spec、Standards 已独立审查。实际学员原片和设备尚未复验。没有对线上账号或上传记录做写操作。
+
+## 安装包验收
+
+- 使用修复分支的 Android release 构建，验收包使用独立应用 ID、debug 签名和演示后端。APK 的 classes5.dex 含新诊断码。
+- Android 15 AVD meetpr，训练组 → Record → Photos → 系统相册。选 H.264 残片后立即显示重新保存原片的提示，日志出现 `video.picker.ERR_INCOMPLETE_VIDEO`。再选完整的 4 秒样本，缩略图、保存、演示交付与播放均通过。用同一残片替换后，可以继续播放组内原视频到 0:04。
+- 以 release 编译产物复跑 H.264 和 HEVC 各三份截断文件，6 份均在两次读取后拒绝；两份完整 MP4 和一份 MOV 均只读一次，输出与输入逐字节一致。原生 JUnit 18 项通过。
+
+[Android 验收截图](../verification/android-incomplete-album-video.jpg)
