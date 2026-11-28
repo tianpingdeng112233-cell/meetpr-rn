@@ -2095,7 +2095,6 @@
   "training.restRing.done": "休息\n結束",
   "training.restRing.context": "{0} · 休息 {1}",
   "training.restRing.collapse": "點空白處收起，倒計時繼續",
-  "training.restRing.saveHint": "上下滑動選時長 · 點空白處儲存並收起",
   "training.restRing.save": "儲存休息設定",
   "training.restRing.loadError": "無法載入休息設定，輕點重試",
   "training.restRing.saveError": "儲存失敗，請重試",
