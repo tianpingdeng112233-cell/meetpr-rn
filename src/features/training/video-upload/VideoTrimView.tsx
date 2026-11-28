@@ -60,7 +60,7 @@ export function VideoTrimView({ uri, onOutcome }: { uri: string; onOutcome: (out
           </Pressable>
         </View>
         <View testID="trim-video" style={{ flex: 1, minHeight: 180, marginHorizontal: spacing.base, backgroundColor: colors.chatImageBackground }}>
-          {workingUri && canPreview ? <Video ref={player} source={{ uri: workingUri }} paused={!playing} resizeMode="contain" style={StyleSheet.absoluteFill}
+          {workingUri && canPreview ? <Video disableFocus ref={player} source={{ uri: workingUri }} paused={!playing} resizeMode="contain" style={StyleSheet.absoluteFill}
             progressUpdateInterval={50} onLoad={playback.onLoad} onError={event => {
               if (!session.current?.active || previewFailureReported.current) return;
               previewFailureReported.current = true;

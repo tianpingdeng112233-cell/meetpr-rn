@@ -355,6 +355,7 @@ test('review shows the shared timeline and Selected without Edit, Duration or na
   expect(labels).toContain('Selected 0:03');
   expect(labels).not.toContain(t('student.cameraRecorderComponents.copy009'));
   expect(labels).not.toContain('Duration 00:03');
+  expect(renderer.root.findByType(Video).props.disableFocus).toBe(true);
   expect(renderer.root.findByType(Video).props.controls).not.toBe(true);
   expect(renderer.root.findByType(Video).props.paused).toBe(false);
 });

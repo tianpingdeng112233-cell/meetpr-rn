@@ -314,6 +314,7 @@ export function CameraRecorder({
         <View testID="trim-video" style={{ flex: 1, minHeight: review ? 180 : undefined, marginHorizontal: review ? spacing.base : 0, backgroundColor: colors.chatImageBackground }}>
           {permission === 'granted' ? review ? (
             <Video
+              disableFocus
               source={{ uri: review }}
               ref={player}
               repeat={!trimReady}

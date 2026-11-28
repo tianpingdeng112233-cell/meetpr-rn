@@ -272,6 +272,7 @@ test('handles seek to their edge and Play stays within the selected 2–6 second
   await adjust(t('student.videoTrimTimeline.copy004'), 'decrement');
   await adjust(t('student.videoTrimTimeline.copy004'), 'decrement');
   expect(mockSeek).toHaveBeenLastCalledWith(6, 0);
+  expect(renderer.root.findByType(Video).props.disableFocus).toBe(true);
   expect(renderer.root.findByType(Video).props.paused).toBe(true);
   expect(renderer.root.findAllByType(Text).map(n => n.props.children)).toContain('Selected 0:04');
   await press(t('student.videoTrimView.copy005'));
